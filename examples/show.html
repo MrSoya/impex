@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div id="entry">
+        	<code>x &gt; 4 <i x-show="a.x > 4">true</i></code>
+            <br>
+            <code>x &lt; 4 <i x-show="a.x < 4">true</i></code>
+            <br>
+            x:<input x-bind="a.x" >
+        </div>
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.getElementById('entry'),new function(){
+                this.a = {
+                    x:0
+                }
+            });
+            
+        </script>
+    </body>
+</html>

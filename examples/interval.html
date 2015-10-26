@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	time：{{time}}
+        
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.body,new function(){
+                this.time = new Date().toTimeString();
+                this.onDisplay = function(){
+                    var that = this;
+                    setInterval(function(){
+                        that.time = new Date().toTimeString();
+                    },1000);
+                }
+            });
+            
+        </script>
+    </body>
+</html>

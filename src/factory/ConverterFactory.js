@@ -1,0 +1,32 @@
+/**
+ * 转换器工厂
+ */
+function _ConverterFactory(){
+	Factory.call(this,Converter);
+}
+Util.inherits(_ConverterFactory,Factory);
+Util.ext(_ConverterFactory.prototype,{
+	newInstanceOf : function(type,component){
+		if(!this.types[type])return null;
+
+		var rs = new this.types[type].clazz(this.baseClass,component);
+		Util.extProp(rs,this.types[type].props);
+
+		this.instances.push(rs);
+
+		//inject
+		var services = null;
+		if(this.services){
+			services = [];
+			for(var i=0;i<this.services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+				services.push(serv);
+			}
+		}
+		rs.onCreate && rs.onCreate.apply(rs,services);
+
+		return rs;
+	}
+});
+
+var ConverterFactory = new _ConverterFactory();

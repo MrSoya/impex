@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div id="entry">
+            <p>
+                {{#currency:¥:2 number }}
+            </p>
+            <p>
+                {{#currency:$:3 number }}
+            </p>
+            <p>
+                {{#currency:€:4 number }}
+            </p>
+            
+        </div>
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+            //转换器
+            impex.converter('currency',{
+                to:function(sym,decimal){
+                    var pair = this.$value.split('.');
+                    var integer = '';
+                    for(var i=0;i<pair[0].length;i++){
+                        integer += pair[0][i];
+                        if(i%3==0 && i+1<pair[0].length){
+                            integer += ',';
+                        }
+                    }
+                    return sym + ' ' + integer + parseFloat('0.'+pair[1]).toFixed(decimal).substr(1);
+                }
+            });
+
+            //渲染
+            impex.render(document.getElementById('entry'),new function(){
+                this.number = '4321234.5678';
+            });
+            
+            
+        </script>
+    </body>
+</html>

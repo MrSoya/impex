@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	<p>
+           a.b[b.d]： {{a.b[b.d]}} / a：{{JSON.stringify(a.b)}} 
+        </p>
+        <p>
+           a.b['y'][0]['z'] ： {{a.b['y'][0]['z']}}
+        </p>
+        <p>
+           a.b['y']['z'] ： {{a.b['y']['z']}}
+        </p>
+        <p>
+           a.b['x'] ： {{a.b['x']}}
+        </p>
+        <p>
+            a.b = 
+            <label>
+            	{x:10,y:{
+            		z:20
+            	}} <input type="radio" name="o" x-click="change('{x:10,y:{ z:20 }}')">
+            </label>
+
+            <label>
+            	{x:30} <input type="radio" name="o" x-click="change('{x:30}')">
+            </label>
+        </p>
+
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            var model = new function(){
+                this.a = {
+                    b:{
+                        x:20,
+                        y:[{
+                            z:'x'
+                        }],
+                        a:{
+                            z:3000
+                        }
+                    }
+                }
+                this.b = {
+                	d:'x'
+                }
+
+                this.change = function(b){
+                	this.a.b = new Function('return '+b)();
+                }
+            
+            }
+
+            //渲染
+            impex.render(document.body,model);
+            
+        </script>
+    </body>
+</html>

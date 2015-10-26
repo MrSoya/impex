@@ -1,0 +1,27 @@
+{
+  "name": "impex",
+  "description": "a powerful web application engine",
+  "version": "0.1.0",
+  "author": [
+    {
+      "name": "MrSoya",
+      "email": "kenyue@foxmail.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:MrSoya/impex.git"
+  },
+  "bugs":{
+      "url":"https://github.com/MrSoya/impex/issues"
+  },
+  "license": "MIT",
+  "main": "gulpfile.js",
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "gulp-concat": "~2.6.0",
+    "gulp-rename": "~1.2.0",
+    "gulp-uglify": "~1.2.0",
+    "del": "~1.2.1"
+  }
+}

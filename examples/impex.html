@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div id="entry">
+            {{#cap 'hello ' + title }}
+            <x-subtitle>
+                {{version}}
+            </x-subtitle>
+        </div>
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+            //转换器
+            impex.converter('cap',{
+                to:function(){
+                    var cap = this.$value[0].toUpperCase();
+                    return cap + this.$value.substr(1);
+                }
+            });
+            //组件
+            impex.component('x-subtitle',{
+                $template:"<sub>{{=tagBody}}</sub>"
+            });
+
+            //渲染
+            impex.render(document.getElementById('entry'),new function(){
+                this.title = 'impex';
+                this.version = impex.version.toString();
+            });
+            
+            
+        </script>
+    </body>
+</html>

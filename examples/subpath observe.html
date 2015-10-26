@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        subpath observe：
+    	a.b.c {{a.b.c}}
+        <label>
+            a.b.c:
+            <input x-bind="a.b.c"/>
+        </label>
+    
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.body,new function(){
+                this.onCreate = function(){
+                    this.watch('a.b.c',function(){
+                        console.log(arguments);
+                    });
+                }
+
+                this.a = {
+                        b:{
+                            c:12
+                        }
+                    };
+            });
+            
+        </script>
+    </body>
+</html>
