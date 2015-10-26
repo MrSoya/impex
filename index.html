@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Impex by MrSoya</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Impex</h1>
+      <h2 class="project-tagline">a powerful web application engine</h2>
+      <a href="https://github.com/MrSoya/impex" class="btn">View on GitHub</a>
+      <a href="https://github.com/MrSoya/impex/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/MrSoya/impex/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="impex--a-powerful-web-application-engine" class="anchor" href="#impex--a-powerful-web-application-engine" aria-hidden="true"><span class="octicon octicon-link"></span></a>Impex —— A powerful web application engine</h1>
+
+<p>impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端让你的web程序更好维护，更好开发。
+impex的目标是让开发者基于web技术以最低的学习成本获得最大的收益，所以impex会尽量简单。</p>
+
+<h2>
+<a id="一切皆组件" class="anchor" href="#%E4%B8%80%E5%88%87%E7%9A%86%E7%BB%84%E4%BB%B6" aria-hidden="true"><span class="octicon octicon-link"></span></a>一切皆组件</h2>
+
+<ul>
+<li><p><strong>为什么</strong>
+基本上所有的web开发都大量使用了各种不同的组件，包括浏览器内置的(video/audio/colorpicker...)或者第三方开发的(日历/Dialog...)，组件具有独立的作用域和控制方法，甚至拥有独立的样式，可以在适合的场景重复使用，
+让开发变的更简单，更高效。
+那么，还需要什么？
+当你使用了类似bootstrap之类的库时，一个modal组件就会导致你的页面上产生几十行的HTML代码，
+而仅仅是描述了一个弹窗，如果是10个就会产生大量的HTML描述标签，当你维护源码时一定会头痛。</p></li>
+<li><p><strong>impex组件</strong>
+impex提供让开发者定义web组件的能力，就像video标签样，看上去只有一行代码，而在运行时impex自动解析标签实现组件功能。组件可以嵌套组件，从而组合出强大的功能。如果你无法从web网站的开发中理解组件的价值，那么可以换个思路，如果使用HTML来开发移动应用，所有UI就是组件，面板、列表、表单等等</p></li>
+</ul>
+
+<h2>
+<a id="impex有多简单" class="anchor" href="#impex%E6%9C%89%E5%A4%9A%E7%AE%80%E5%8D%95" aria-hidden="true"><span class="octicon octicon-link"></span></a>impex有多简单？</h2>
+
+<ul>
+<li>
+<strong>组件</strong>
+
+<ul>
+<li>表现为自定义标签，减少代码量</li>
+<li>可重用的自包含逻辑实体，一处定义，多处使用</li>
+<li>表达式使用数据绑定技术，模型改变，视图自动刷新</li>
+<li>表达式使用js原生语法，让你不用担心学习成本{{ show('x'+x,y||3) }}</li>
+</ul>
+</li>
+<li>
+<strong>指令</strong>
+
+<ul>
+<li>表现为自定义属性，增强组件功能</li>
+<li>继承自组件，主要操作视图来实现功能，比如x-each/x-show</li>
+</ul>
+</li>
+<li>
+<strong>转换器</strong>
+
+<ul>
+<li>使用在表达式中，对输出结果进行转换，比如金额、大小写等</li>
+<li>如果不喜欢，也可以不用转换器，别忘了，impex支持调用域外函数</li>
+</ul>
+</li>
+<li>
+<strong>服务</strong>
+
+<ul>
+<li>如果需要自定义复杂的组件/指令/转换器，可以注入服务来辅助你。impex内置了一些不错的工具</li>
+</ul>
+</li>
+</ul>
+
+<h2>
+<a id="demo" class="anchor" href="#demo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Demo</h2>
+
+<p>一个复杂的demo</p>
+
+<div class="highlight highlight-text-html-basic"><pre>&lt;<span class="pl-ent">div</span> <span class="pl-e">id</span>=<span class="pl-s"><span class="pl-pds">"</span>entry<span class="pl-pds">"</span></span>&gt;
+    {{#cap 'hello ' + title }}
+    &lt;<span class="pl-ent">x</span><span class="pl-e">-subtitle</span>&gt;
+        {{version}}
+    &lt;/<span class="pl-ent">x</span><span class="pl-e">-subtitle</span>&gt;
+&lt;/<span class="pl-ent">div</span>&gt;
+<span class="pl-s1">&lt;<span class="pl-ent">script</span>&gt;</span>
+<span class="pl-s1">    <span class="pl-c">//转换器</span></span>
+<span class="pl-s1">    impex.converter(<span class="pl-s"><span class="pl-pds">'</span>cap<span class="pl-pds">'</span></span>,{</span>
+<span class="pl-s1">        <span class="pl-en">to</span><span class="pl-k">:</span><span class="pl-k">function</span>(){</span>
+<span class="pl-s1">            <span class="pl-k">var</span> cap <span class="pl-k">=</span> <span class="pl-v">this</span>.$value[<span class="pl-c1">0</span>].<span class="pl-c1">toUpperCase</span>();</span>
+<span class="pl-s1">            <span class="pl-k">return</span> cap <span class="pl-k">+</span> <span class="pl-v">this</span>.$value.<span class="pl-c1">substr</span>(<span class="pl-c1">1</span>);</span>
+<span class="pl-s1">        }</span>
+<span class="pl-s1">    });</span>
+<span class="pl-s1">    <span class="pl-c">//组件</span></span>
+<span class="pl-s1">    impex.component(<span class="pl-s"><span class="pl-pds">'</span>x-subtitle<span class="pl-pds">'</span></span>,{</span>
+<span class="pl-s1">        $template<span class="pl-k">:</span><span class="pl-s"><span class="pl-pds">"</span>&lt;sub&gt;{{=tagBody}}&lt;/sub&gt;<span class="pl-pds">"</span></span></span>
+<span class="pl-s1">    });</span>
+<span class="pl-s1"></span>
+<span class="pl-s1">    <span class="pl-c">//渲染</span></span>
+<span class="pl-s1">    impex.render(<span class="pl-c1">document</span>.<span class="pl-c1">getElementById</span>(<span class="pl-s"><span class="pl-pds">'</span>entry<span class="pl-pds">'</span></span>),<span class="pl-k">new</span> <span class="pl-en">function</span>(){</span>
+<span class="pl-s1">        <span class="pl-v">this</span>.<span class="pl-c1">title</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span>impex<span class="pl-pds">'</span></span>;</span>
+<span class="pl-s1">        <span class="pl-v">this</span>.<span class="pl-c1">version</span> <span class="pl-k">=</span> impex.<span class="pl-c1">version</span>.<span class="pl-c1">toString</span>();</span>
+<span class="pl-s1">    });</span>
+<span class="pl-s1"></span>
+<span class="pl-s1">&lt;/<span class="pl-ent">script</span>&gt;</span></pre></div>
+
+<h2>
+<a id="api-doc" class="anchor" href="#api-doc" aria-hidden="true"><span class="octicon octicon-link"></span></a>API Doc</h2>
+
+<p><a href="http://mrsoya.github.io/impex/doc">website here</a></p>
+
+<h2>
+<a id="如何构建" class="anchor" href="#%E5%A6%82%E4%BD%95%E6%9E%84%E5%BB%BA" aria-hidden="true"><span class="octicon octicon-link"></span></a>如何构建</h2>
+
+<p>impex为了通用，内置了一些指令，如果你不需要或者还需要内置其他东西，可以重新构建impex。
+Impex使用 <a href="http://gulpjs.com">gulp</a> 来构建源码，而在这之前你需要安装了nodejs，然后只需要在Impex工程目录执行如下命令</p>
+
+<p>1.安装依赖模块</p>
+
+<pre><code>npm install
+</code></pre>
+
+<p>2.执行gulp</p>
+
+<pre><code>gulp
+</code></pre>
+
+<p>看吧，这有多简单</p>
+
+<h3>
+<a id="兼容性" class="anchor" href="#%E5%85%BC%E5%AE%B9%E6%80%A7" aria-hidden="true"><span class="octicon octicon-link"></span></a>兼容性</h3>
+
+<ul>
+<li>IE9+</li>
+<li>FF38+</li>
+<li>chrome43+</li>
+<li>safari8+</li>
+<li>opera31+</li>
+<li>android4.0+</li>
+<li>IOS7.1+</li>
+</ul>
+
+<h3>
+<a id="应用场景" class="anchor" href="#%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF" aria-hidden="true"><span class="octicon octicon-link"></span></a>应用场景</h3>
+
+<p>impex可以使用在任何web环境来提高开发效率，比如在线网站或者本地web应用等。</p>
+
+<p>用于HTML5交互动画开发的IDE <a href="http://soya2d.com/ide/">Soya Studio</a> 就是基于impex开发的本地web应用。</p>
+
+<h3>
+<a id="github-issues" class="anchor" href="#github-issues" aria-hidden="true"><span class="octicon octicon-link"></span></a>Github Issues</h3>
+
+<p>如果有bug或者新的特性需求，请提交在issues中</p>
+
+<h3>
+<a id="faq" class="anchor" href="#faq" aria-hidden="true"><span class="octicon octicon-link"></span></a>FAQ</h3>
+
+<p>如果你遇见了问题或者发现了bug，请先查阅issues和wiki中，是否已经有了解决方案。如果你发现了满意的答案，那会为你节省很多时间。</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>Impex基于 <a href="http://opensource.org/licenses/MIT">MIT</a> 协议发布。请查阅LICENSE文件</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/MrSoya/impex">Impex</a> is maintained by <a href="https://github.com/MrSoya">MrSoya</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
