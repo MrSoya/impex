@@ -125,6 +125,40 @@ var Util = new function () {
             element.detachEvent(type,cbk);
         }
     }
+
+    function loadError(e){
+        impex.console.error('无法获取远程数据 : '+this.url);
+    }
+    function loadTimeout(){
+        impex.console.error('请求超时 : '+this.url);
+    }
+    function onload(){
+        if(this.status===0 || //native
+        ((this.status >= 200 && this.status <300) || this.status === 304) ){
+            this.cbk && this.cbk(this.responseText);
+        }
+    }
+
+    this.loadTemplate = function(url,cbk,timeout){
+        var xhr = new XMLHttpRequest();
+        xhr.open('get',url,true);
+        xhr.timeout = timeout || 5000;
+        xhr.ontimeout = loadTimeout;
+        xhr.onerror = loadError;
+        if(xhr.onload === null){
+            xhr.onload = onload;
+        }else{
+            xhr.onreadystatechange = onload;
+        }
+        xhr.cbk = cbk;
+        xhr.url = url;
+        try{
+            xhr.send(null);
+        }catch(e){
+            console.log(e)
+        }
+        
+    }
 }
 	//timer for dirty check
 	var RAF = (function(w){
@@ -1335,6 +1369,7 @@ ViewModel.prototype = {
  * </p>
  * 
  * @class 
+ * @extends ViewModel
  */
 function Component (view) {
 	//每个组件都保存顶级路径
@@ -1459,6 +1494,21 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
+		if(this.$templateURL){
+			var that = this;
+			Util.loadTemplate(this.$templateURL,function(tmplStr){
+				that.$view.__init(tmplStr);
+				that.__init();
+				that.display();
+			});
+		}else{
+			if(this.$template){
+				this.$view.__init(this.$template);
+			}
+			this.__init();
+		}
+	},
+	__init:function(){
 		Scanner.scan(this.$view,this);
 
 		this.onInit && this.onInit();
@@ -1469,6 +1519,7 @@ Util.ext(Component.prototype,{
 	 * 显示组件到视图上
 	 */
 	display:function(){
+		if(this.__state != Component.state.inited)return;
 		this.$view.__display();
 		
 		Renderer.render(this);
@@ -1524,6 +1575,16 @@ function View (element,name,target) {
 	this.__target = target;
 }
 View.prototype = {
+	__init:function(tmpl){
+		//解析属性
+		var propMap = this.__target.attributes;
+		var innerHTML = this.__target.innerHTML;
+
+		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
+		var el = DOMViewProvider.compile(compileStr);
+		this.name = el.tagName.toLowerCase();
+		this.element = el;
+	},
 	__display:function(){
 		if(!this.__target || this.element.parentNode)return;
 
@@ -1627,17 +1688,30 @@ View.prototype = {
 		return this;
 	}
 }
+
+function tmplExpFilter(tmpl,bodyHTML,propMap){
+	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
+		var attrName = attrName.replace(/\s/mg,'');
+		if(attrName == 'tagBody'){
+			return bodyHTML;
+		}
+
+		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
+		return attrVal;
+	});
+	return tmpl;
+}
 /**
- * @classdesc DOM视图构建器
- * @class
+ * DOM视图构建器
  */
 var DOMViewProvider = new function(){
+	var compiler = document.createElement('div');
+		
 	/**
 	 * 构造一个视图实例
 	 * @return this
 	 */
 	this.newInstance = function(template,target){
-		var compiler = document.createElement('div');
 		compiler.innerHTML = template;
 		if(!compiler.children[0])return null;
 		var tmp = compiler.removeChild(compiler.children[0]);
@@ -1645,6 +1719,20 @@ var DOMViewProvider = new function(){
 		var view = new View(tmp,tmp.tagName.toLowerCase(),target);
 
 		return view;
+	}
+
+	var headEl = ['meta','title','base'];
+	this.compile = function(template){
+		compiler.innerHTML = template;
+		if(!compiler.children[0])return null;
+		while(compiler.children.length>0){
+			var tmp = compiler.removeChild(compiler.children[0]);
+			var tn = tmp.tagName.toLowerCase();
+			if(headEl.indexOf(tn) > -1)continue;
+			
+			return tmp;
+		}
+		
 	}
 }
 /**
@@ -1825,7 +1913,7 @@ function Converter (component) {
 Converter.prototype = {
 	/**
 	 * 转变函数，该函数是实际进行转变的入口
-	 * @param  {Object...} args 可变参数，根据表达式中书写的参数决定
+	 * @param  {Object} args 可变参数，根据表达式中书写的参数决定
 	 * @return {string | null} 返回结果会呈现在表达式上，如果没有返回结果，表达式则变为空
 	 */
 	to:function(){
@@ -1942,40 +2030,26 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		Util.extProp(rs,this.types[type].props);
 
-		//解析属性
-		var propMap = target.attributes;
-		var innerHTML = target.innerHTML;
-
-		var view;
-		if(rs.$template){
-			var compileStr = tmplExpFilter(rs.$template,innerHTML,propMap);
-			view = this.viewProvider.newInstance(compileStr,target);
-		}else{
-			//ajax...
-		}
-		rs.$view = view;
+		rs.$view = new View(null,null,target);
 		
 		this.instances.push(rs);
 
 		//inject
-		rs.onCreate && rs.onCreate();
+		var services = null;
+		if(this.services){
+			services = [];
+			for(var i=0;i<this.services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+				services.push(serv);
+			}
+		}
+		rs.onCreate && rs.onCreate.apply(rs,services);
 
 		return rs;
 	}
 });
 
-function tmplExpFilter(tmpl,bodyHTML,propMap){
-	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
-		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'tagBody'){
-			return bodyHTML;
-		}
 
-		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal;
-	});
-	return tmpl;
-}
 
 var ComponentFactory = new _ComponentFactory(DOMViewProvider);
 /**
@@ -2234,7 +2308,8 @@ var ServiceFactory = new _ServiceFactory();
 				topComponentNodes.push(element);
 				comp = ComponentFactory.newInstance(element);
 			}
-			Util.ext(comp,model);
+			if(model)
+				Util.ext(comp,model);
 
 			comp.init();
 			comp.display();

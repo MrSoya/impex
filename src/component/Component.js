@@ -141,6 +141,21 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
+		if(this.$templateURL){
+			var that = this;
+			Util.loadTemplate(this.$templateURL,function(tmplStr){
+				that.$view.__init(tmplStr);
+				that.__init();
+				that.display();
+			});
+		}else{
+			if(this.$template){
+				this.$view.__init(this.$template);
+			}
+			this.__init();
+		}
+	},
+	__init:function(){
 		Scanner.scan(this.$view,this);
 
 		this.onInit && this.onInit();
@@ -151,6 +166,7 @@ Util.ext(Component.prototype,{
 	 * 显示组件到视图上
 	 */
 	display:function(){
+		if(this.__state != Component.state.inited)return;
 		this.$view.__display();
 		
 		Renderer.render(this);

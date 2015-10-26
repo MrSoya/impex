@@ -54,39 +54,25 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		Util.extProp(rs,this.types[type].props);
 
-		//解析属性
-		var propMap = target.attributes;
-		var innerHTML = target.innerHTML;
-
-		var view;
-		if(rs.$template){
-			var compileStr = tmplExpFilter(rs.$template,innerHTML,propMap);
-			view = this.viewProvider.newInstance(compileStr,target);
-		}else{
-			//ajax...
-		}
-		rs.$view = view;
+		rs.$view = new View(null,null,target);
 		
 		this.instances.push(rs);
 
 		//inject
-		rs.onCreate && rs.onCreate();
+		var services = null;
+		if(this.services){
+			services = [];
+			for(var i=0;i<this.services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+				services.push(serv);
+			}
+		}
+		rs.onCreate && rs.onCreate.apply(rs,services);
 
 		return rs;
 	}
 });
 
-function tmplExpFilter(tmpl,bodyHTML,propMap){
-	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
-		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'tagBody'){
-			return bodyHTML;
-		}
 
-		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal;
-	});
-	return tmpl;
-}
 
 var ComponentFactory = new _ComponentFactory(DOMViewProvider);

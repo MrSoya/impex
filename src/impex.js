@@ -141,7 +141,8 @@
 				topComponentNodes.push(element);
 				comp = ComponentFactory.newInstance(element);
 			}
-			Util.ext(comp,model);
+			if(model)
+				Util.ext(comp,model);
 
 			comp.init();
 			comp.display();

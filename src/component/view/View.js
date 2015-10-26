@@ -22,6 +22,16 @@ function View (element,name,target) {
 	this.__target = target;
 }
 View.prototype = {
+	__init:function(tmpl){
+		//解析属性
+		var propMap = this.__target.attributes;
+		var innerHTML = this.__target.innerHTML;
+
+		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
+		var el = DOMViewProvider.compile(compileStr);
+		this.name = el.tagName.toLowerCase();
+		this.element = el;
+	},
 	__display:function(){
 		if(!this.__target || this.element.parentNode)return;
 
@@ -124,4 +134,17 @@ View.prototype = {
 		this.element.removeAttribute(name);
 		return this;
 	}
+}
+
+function tmplExpFilter(tmpl,bodyHTML,propMap){
+	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
+		var attrName = attrName.replace(/\s/mg,'');
+		if(attrName == 'tagBody'){
+			return bodyHTML;
+		}
+
+		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
+		return attrVal;
+	});
+	return tmpl;
 }

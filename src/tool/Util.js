@@ -113,4 +113,38 @@ var Util = new function () {
             element.detachEvent(type,cbk);
         }
     }
+
+    function loadError(e){
+        impex.console.error('无法获取远程数据 : '+this.url);
+    }
+    function loadTimeout(){
+        impex.console.error('请求超时 : '+this.url);
+    }
+    function onload(){
+        if(this.status===0 || //native
+        ((this.status >= 200 && this.status <300) || this.status === 304) ){
+            this.cbk && this.cbk(this.responseText);
+        }
+    }
+
+    this.loadTemplate = function(url,cbk,timeout){
+        var xhr = new XMLHttpRequest();
+        xhr.open('get',url,true);
+        xhr.timeout = timeout || 5000;
+        xhr.ontimeout = loadTimeout;
+        xhr.onerror = loadError;
+        if(xhr.onload === null){
+            xhr.onload = onload;
+        }else{
+            xhr.onreadystatechange = onload;
+        }
+        xhr.cbk = cbk;
+        xhr.url = url;
+        try{
+            xhr.send(null);
+        }catch(e){
+            console.log(e)
+        }
+        
+    }
 }
