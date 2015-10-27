@@ -114,7 +114,7 @@ var Util = new function () {
         }
     }
 
-    function loadError(e){
+    function loadError(){
         impex.console.error('无法获取远程数据 : '+this.url);
     }
     function loadTimeout(){
@@ -140,11 +140,6 @@ var Util = new function () {
         }
         xhr.cbk = cbk;
         xhr.url = url;
-        try{
-            xhr.send(null);
-        }catch(e){
-            console.log(e)
-        }
-        
+        xhr.send(null);
     }
 }

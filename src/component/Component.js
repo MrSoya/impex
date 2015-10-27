@@ -144,13 +144,13 @@ Util.ext(Component.prototype,{
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
-				that.$view.__init(tmplStr);
+				that.$view.__init(tmplStr,this);
 				that.__init();
 				that.display();
 			});
 		}else{
 			if(this.$template){
-				this.$view.__init(this.$template);
+				this.$view.__init(this.$template,this);
 			}
 			this.__init();
 		}

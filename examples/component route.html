@@ -5,14 +5,23 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <x-button id="btn1" border="0">
+        <x-button id="xx">
+            <a href="#/x-radio"></a>
+            <x-route-view></x-route-view>
         </x-button>
-
-
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
             //自定义组件
             impex.component('x-button',{
+                onCreate:function(router){
+                    router.when({
+                        "/radio":'x-radio',
+                        "/date":'x-date'
+                    }).notify(this.onRoute);
+                },
+                onRoute:function(path){
+                    console.log(path);
+                },
                 onInit:function(){
                     this.on('click','tip()');
                     this.times = 0;
@@ -20,8 +29,10 @@
                 tip : function(n){
                     alert('clicked '+(this.times++)+' times');
                 },
-                $template:"<button style='border:{{border}}' id='{{id}}'>click here</button>"
-            });
+                $templateURL:"x-button.html"
+            },['Router']);
+
+            
 
             //渲染
             impex.render(document.body);

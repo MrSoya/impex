@@ -22,7 +22,7 @@ function View (element,name,target) {
 	this.__target = target;
 }
 View.prototype = {
-	__init:function(tmpl){
+	__init:function(tmpl,component){
 		//解析属性
 		var propMap = this.__target.attributes;
 		var innerHTML = this.__target.innerHTML;
@@ -31,6 +31,12 @@ View.prototype = {
 		var el = DOMViewProvider.compile(compileStr);
 		this.name = el.tagName.toLowerCase();
 		this.element = el;
+
+		for(var i=propMap.length;i--;){
+			var k = propMap[i].name;
+			var v = propMap[i].value;
+			component[k] = v;
+		}
 	},
 	__display:function(){
 		if(!this.__target || this.element.parentNode)return;
@@ -143,8 +149,6 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 			return bodyHTML;
 		}
 
-		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal;
 	});
 	return tmpl;
 }

@@ -126,7 +126,7 @@ var Util = new function () {
         }
     }
 
-    function loadError(e){
+    function loadError(){
         impex.console.error('无法获取远程数据 : '+this.url);
     }
     function loadTimeout(){
@@ -152,12 +152,7 @@ var Util = new function () {
         }
         xhr.cbk = cbk;
         xhr.url = url;
-        try{
-            xhr.send(null);
-        }catch(e){
-            console.log(e)
-        }
-        
+        xhr.send(null);
     }
 }
 	//timer for dirty check
@@ -1497,13 +1492,13 @@ Util.ext(Component.prototype,{
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
-				that.$view.__init(tmplStr);
+				that.$view.__init(tmplStr,this);
 				that.__init();
 				that.display();
 			});
 		}else{
 			if(this.$template){
-				this.$view.__init(this.$template);
+				this.$view.__init(this.$template,this);
 			}
 			this.__init();
 		}
@@ -1575,7 +1570,7 @@ function View (element,name,target) {
 	this.__target = target;
 }
 View.prototype = {
-	__init:function(tmpl){
+	__init:function(tmpl,component){
 		//解析属性
 		var propMap = this.__target.attributes;
 		var innerHTML = this.__target.innerHTML;
@@ -1584,6 +1579,12 @@ View.prototype = {
 		var el = DOMViewProvider.compile(compileStr);
 		this.name = el.tagName.toLowerCase();
 		this.element = el;
+
+		for(var i=propMap.length;i--;){
+			var k = propMap[i].name;
+			var v = propMap[i].value;
+			component[k] = v;
+		}
 	},
 	__display:function(){
 		if(!this.__target || this.element.parentNode)return;
@@ -1696,8 +1697,6 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 			return bodyHTML;
 		}
 
-		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal;
 	});
 	return tmpl;
 }
