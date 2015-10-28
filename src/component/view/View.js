@@ -29,9 +29,14 @@ View.prototype = {
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var el = DOMViewProvider.compile(compileStr);
-		this.name = el.tagName.toLowerCase();
+		if(!el){
+			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			return false;
+		}
+		this.name = el.nodeName.toLowerCase();
 		this.element = el;
 
+		if(propMap)
 		for(var i=propMap.length;i--;){
 			var k = propMap[i].name;
 			var v = propMap[i].value;

@@ -22,9 +22,7 @@ Factory.prototype = {
 
 		Util.extMethod(clazz.prototype,model);
 
-		this.types[type] = {clazz:clazz,props:props};
-
-		this.services = services;
+		this.types[type] = {clazz:clazz,props:props,services:services};
 	},
 	/**
 	 * 是否存在指定类型

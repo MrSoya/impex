@@ -32,16 +32,6 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.baseClass(view);
 		this.instances.push(rs);
 
-		//inject
-		var services = null;
-		if(this.services){
-			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
-				services.push(serv);
-			}
-		}
-		rs.onCreate && rs.onCreate.apply(rs,services);
 		
 		return rs;
 	},
@@ -55,15 +45,16 @@ Util.ext(_ComponentFactory.prototype,{
 		Util.extProp(rs,this.types[type].props);
 
 		rs.$view = new View(null,null,target);
+		rs.$name = type;
 		
 		this.instances.push(rs);
 
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}

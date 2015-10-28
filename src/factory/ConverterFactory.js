@@ -16,10 +16,10 @@ Util.ext(_ConverterFactory.prototype,{
 
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}

@@ -24,11 +24,10 @@ var DOMViewProvider = new function(){
 		if(!compiler.children[0])return null;
 		while(compiler.children.length>0){
 			var tmp = compiler.removeChild(compiler.children[0]);
-			var tn = tmp.tagName.toLowerCase();
+			var tn = tmp.nodeName.toLowerCase();
 			if(headEl.indexOf(tn) > -1)continue;
 			
 			return tmp;
 		}
-		
 	}
 }

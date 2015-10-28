@@ -1,5 +1,6 @@
 /**
- * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签<br/>
+ * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
+ * 组件也可以有属性，所有属性会被注入到组件模型中，并以“属性名：属性值”方式保存<br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
  * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控，也无法在
@@ -30,6 +31,10 @@ function Component (view) {
 	 * @type {View}
 	 */
 	this.$view = view;
+	/**
+	 * 组件名，在创建时由系统自动注入
+	 */
+	this.$name;
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
@@ -85,6 +90,30 @@ Util.ext(Component.prototype,{
 		this.$view.__on(this,type,exp,handler);
 	},
 	/**
+	 * 查找子组件，并返回符合条件的第一个实例
+	 * @param  {string} name       组件名
+	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @return {Array | null} 
+	 */
+	find:function(name,conditions){
+		for(var i=this.$__components.length;i--;){
+			var comp = this.$__components[i];
+			if(comp.$name == name){
+				var matchAll = true;
+				for(var k in conditions){
+					if(comp[k] != conditions[k]){
+						matchAll = false;
+						break;
+					}
+				}
+				if(matchAll){
+					return comp;
+				}
+			}
+		}
+		return null;
+	},
+	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
 	 * @param  {function} cbk      回调函数，[变动类型add/delete/update,新值，旧值]
@@ -118,7 +147,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target);
+		var instance = ComponentFactory.newInstanceOf(type,target.element?target.element:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -144,16 +173,19 @@ Util.ext(Component.prototype,{
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
-				that.$view.__init(tmplStr,this);
+				var rs = that.$view.__init(tmplStr,that);
+				if(rs === false)return;
 				that.__init();
 				that.display();
 			});
 		}else{
 			if(this.$template){
-				this.$view.__init(this.$template,this);
+				var rs = this.$view.__init(this.$template,this);
+				if(rs === false)return;
 			}
 			this.__init();
 		}
+		return this;
 	},
 	__init:function(){
 		Scanner.scan(this.$view,this);

@@ -61,6 +61,10 @@ var Util = new function () {
         return typeof(obj) === 'string';
     }
 
+    this.isFunction = function(obj){
+        return obj instanceof Function;
+    }
+
     this.isWindow = function(obj){
         return 'Array' in obj &&
                 'XMLHttpRequest' in obj &&

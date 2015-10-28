@@ -8,6 +8,7 @@ function Service () {
 	/**
 	 * 服务是否为单例模式，如果为true，该服务就不会在注入时被实例化，比如纯函数服务
 	 * @type {Boolean}
+	 * @default false
 	 */
 	this.$singleton;
 	/**

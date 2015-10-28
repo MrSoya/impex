@@ -73,6 +73,10 @@ var Util = new function () {
         return typeof(obj) === 'string';
     }
 
+    this.isFunction = function(obj){
+        return obj instanceof Function;
+    }
+
     this.isWindow = function(obj){
         return 'Array' in obj &&
                 'XMLHttpRequest' in obj &&
@@ -1347,7 +1351,8 @@ ViewModel.prototype = {
 	}
 }
 /**
- * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签<br/>
+ * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
+ * 组件也可以有属性，所有属性会被注入到组件模型中，并以“属性名：属性值”方式保存<br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
  * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控，也无法在
@@ -1378,6 +1383,10 @@ function Component (view) {
 	 * @type {View}
 	 */
 	this.$view = view;
+	/**
+	 * 组件名，在创建时由系统自动注入
+	 */
+	this.$name;
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
@@ -1433,6 +1442,30 @@ Util.ext(Component.prototype,{
 		this.$view.__on(this,type,exp,handler);
 	},
 	/**
+	 * 查找子组件，并返回符合条件的第一个实例
+	 * @param  {string} name       组件名
+	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @return {Array | null} 
+	 */
+	find:function(name,conditions){
+		for(var i=this.$__components.length;i--;){
+			var comp = this.$__components[i];
+			if(comp.$name == name){
+				var matchAll = true;
+				for(var k in conditions){
+					if(comp[k] != conditions[k]){
+						matchAll = false;
+						break;
+					}
+				}
+				if(matchAll){
+					return comp;
+				}
+			}
+		}
+		return null;
+	},
+	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
 	 * @param  {function} cbk      回调函数，[变动类型add/delete/update,新值，旧值]
@@ -1466,7 +1499,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target);
+		var instance = ComponentFactory.newInstanceOf(type,target.element?target.element:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1492,16 +1525,19 @@ Util.ext(Component.prototype,{
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
-				that.$view.__init(tmplStr,this);
+				var rs = that.$view.__init(tmplStr,that);
+				if(rs === false)return;
 				that.__init();
 				that.display();
 			});
 		}else{
 			if(this.$template){
-				this.$view.__init(this.$template,this);
+				var rs = this.$view.__init(this.$template,this);
+				if(rs === false)return;
 			}
 			this.__init();
 		}
+		return this;
 	},
 	__init:function(){
 		Scanner.scan(this.$view,this);
@@ -1577,9 +1613,14 @@ View.prototype = {
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var el = DOMViewProvider.compile(compileStr);
-		this.name = el.tagName.toLowerCase();
+		if(!el){
+			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			return false;
+		}
+		this.name = el.nodeName.toLowerCase();
 		this.element = el;
 
+		if(propMap)
 		for(var i=propMap.length;i--;){
 			var k = propMap[i].name;
 			var v = propMap[i].value;
@@ -1726,12 +1767,11 @@ var DOMViewProvider = new function(){
 		if(!compiler.children[0])return null;
 		while(compiler.children.length>0){
 			var tmp = compiler.removeChild(compiler.children[0]);
-			var tn = tmp.tagName.toLowerCase();
+			var tn = tmp.nodeName.toLowerCase();
 			if(headEl.indexOf(tn) > -1)continue;
 			
 			return tmp;
 		}
-		
 	}
 }
 /**
@@ -1929,6 +1969,7 @@ function Service () {
 	/**
 	 * 服务是否为单例模式，如果为true，该服务就不会在注入时被实例化，比如纯函数服务
 	 * @type {Boolean}
+	 * @default false
 	 */
 	this.$singleton;
 	/**
@@ -1961,9 +2002,7 @@ Factory.prototype = {
 
 		Util.extMethod(clazz.prototype,model);
 
-		this.types[type] = {clazz:clazz,props:props};
-
-		this.services = services;
+		this.types[type] = {clazz:clazz,props:props,services:services};
 	},
 	/**
 	 * 是否存在指定类型
@@ -2007,16 +2046,6 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.baseClass(view);
 		this.instances.push(rs);
 
-		//inject
-		var services = null;
-		if(this.services){
-			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
-				services.push(serv);
-			}
-		}
-		rs.onCreate && rs.onCreate.apply(rs,services);
 		
 		return rs;
 	},
@@ -2030,15 +2059,16 @@ Util.ext(_ComponentFactory.prototype,{
 		Util.extProp(rs,this.types[type].props);
 
 		rs.$view = new View(null,null,target);
+		rs.$name = type;
 		
 		this.instances.push(rs);
 
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}
@@ -2076,10 +2106,10 @@ Util.ext(_DirectiveFactory.prototype,{
 		rs.$view = new View(node,node.tagName.toLowerCase());
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}
@@ -2111,10 +2141,10 @@ Util.ext(_ConverterFactory.prototype,{
 
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}
@@ -2137,28 +2167,29 @@ Util.ext(_ServiceFactory.prototype,{
 		type = type.toLowerCase();
 		if(!this.types[type])return null;
 
+		var rs = null;
 		if(this.types[type].props.$singleton){
 			if(!this.types[type].singleton){
 				this.types[type].singleton = new this.types[type].clazz(this.baseClass);
 			}
-			return this.types[type].singleton;
+			rs = this.types[type].singleton;
+		}else{
+			rs = new this.types[type].clazz(this.baseClass);
+			this.instances.push(rs);
+			Util.extProp(rs,this.types[type].props);
 		}
-
-		var rs = new this.types[type].clazz(this.baseClass);
-		Util.extProp(rs,this.types[type].props);
 
 		//inject
 		var services = null;
-		if(this.services){
+		if(this.types[type].services){
 			services = [];
-			for(var i=0;i<this.services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.services[i]);
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
 				services.push(serv);
 			}
 		}
 		rs.onCreate && rs.onCreate.apply(rs,services);
 
-		this.instances.push(rs);
 		return rs;
 	}
 });
@@ -2363,20 +2394,41 @@ self.console = self.console||new function(){
  */
 impex.service('ViewManager',ViewManager);
 
+
 /**
  * 组件管理服务提供对组件的额外操作
  * 使用该服务，只需要注入即可
  */
-impex.service('ComponentManager',function(){
+impex.service('ComponentManager',new function(){
+	/**
+	 * 是否存在指定类型的组件
+	 * @return {Boolean} 
+	 */
+    this.hasTypeOf = function(type){
+    	return ComponentFactory.hasTypeOf(type);
+    }
     /**
-     * 替换视图，会把旧视图更新为新视图
-     * <br/>在DOM中表现为更新元素
-     * @param  {View} newView 新视图
-     * @param  {View} oldView 旧视图
+     * 查询当前运行时所有符合条件的组件
+     * @param  {Object} conditions 条件对象
+     * @return {Array}  结果数组
      */
-	this.newInstance = function(view,model){
-		
-	}
+    this.findAll = function(conditions){
+    	var ins = ComponentFactory.instances;
+    	var rs = [];
+    	for(var i=ins.length;i--;){
+    		var matchAll = true;
+			for(var k in conditions){
+				if(comp[k] != conditions[k]){
+					matchAll = false;
+					break;
+				}
+			}
+			if(matchAll){
+				rs.push(comp);
+			}
+    	}
+    	return rs;
+    }
 });
 /**
  * 内建指令

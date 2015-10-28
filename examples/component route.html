@@ -5,32 +5,37 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <x-button id="xx">
-            <a href="#/x-radio"></a>
-            <x-route-view></x-route-view>
-        </x-button>
+        <x-tab id="xx">
+            <a href="#!/radio">路由出一个radio</a>
+            <a href="#!/checkbox">路由出一个checkbox</a>
+            <x-router-view></x-router-view>
+        </x-tab>
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.router.js"></script>
         <script type="text/javascript">
             //自定义组件
-            impex.component('x-button',{
+            impex.component('x-radio',{
+                $template:"<i><input type='radio'>radio</i>"
+            });
+
+            impex.component('x-check',{
+                $template:"<i><input type='checkbox'>checkbox</i>"
+            });
+
+            impex.component('x-tab',{
                 onCreate:function(router){
-                    router.when({
+                    router.bind(this).when({
                         "/radio":'x-radio',
-                        "/date":'x-date'
-                    }).notify(this.onRoute);
+                        "/([a-z]+)":function(type){
+                            if(type == 'checkbox')return 'x-check';
+                        }
+                    }).onRoute(this.onRoute);
                 },
                 onRoute:function(path){
                     console.log(path);
                 },
-                onInit:function(){
-                    this.on('click','tip()');
-                    this.times = 0;
-                },
-                tip : function(n){
-                    alert('clicked '+(this.times++)+' times');
-                },
-                $templateURL:"x-button.html"
-            },['Router']);
+                $template:"<div>{{=tagBody}}</div>"
+            },['XRouter']);
 
             
 

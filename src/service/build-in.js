@@ -8,18 +8,39 @@
  */
 impex.service('ViewManager',ViewManager);
 
+
 /**
  * 组件管理服务提供对组件的额外操作
  * 使用该服务，只需要注入即可
  */
-impex.service('ComponentManager',function(){
+impex.service('ComponentManager',new function(){
+	/**
+	 * 是否存在指定类型的组件
+	 * @return {Boolean} 
+	 */
+    this.hasTypeOf = function(type){
+    	return ComponentFactory.hasTypeOf(type);
+    }
     /**
-     * 替换视图，会把旧视图更新为新视图
-     * <br/>在DOM中表现为更新元素
-     * @param  {View} newView 新视图
-     * @param  {View} oldView 旧视图
+     * 查询当前运行时所有符合条件的组件
+     * @param  {Object} conditions 条件对象
+     * @return {Array}  结果数组
      */
-	this.newInstance = function(view,model){
-		
-	}
+    this.findAll = function(conditions){
+    	var ins = ComponentFactory.instances;
+    	var rs = [];
+    	for(var i=ins.length;i--;){
+    		var matchAll = true;
+			for(var k in conditions){
+				if(comp[k] != conditions[k]){
+					matchAll = false;
+					break;
+				}
+			}
+			if(matchAll){
+				rs.push(comp);
+			}
+    	}
+    	return rs;
+    }
 });
