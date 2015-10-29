@@ -142,7 +142,7 @@ var Builder = new function() {
 			recurRender(ctrlScope,pc,change.type,newObj,change.oldValue);
 
 			//reobserve
-			observerProp(newObj,propChain,ctrlScope,depth);
+			observerProp(newObj,pc,ctrlScope,depth);
 		}
 	}
 
