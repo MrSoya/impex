@@ -111,6 +111,12 @@ var Renderer = new function() {
 		return evalExp;
 	}
 
+	function keyWordsMapping(str,component){
+        if(str == 'this'){
+            return component.__getPath();
+        }
+    }
+
 	//提供通用的变量遍历方法 
  	//用于获取一个变量表达式的全路径
  	function buildVarPath(component,varObj,varStr){
@@ -121,11 +127,19 @@ var Renderer = new function() {
  			subVarPath[subV] = subPath;
  		}
 
+ 		var isKeyword = false;
  		var fullPath = '';
  		for(var i=0;i<varObj.words.length;i++){
  			var w = varObj.words[i];
  			if(w instanceof Array){
- 				fullPath += subVarPath[w[0]] || w[0];	
+ 				var keywordPath = keyWordsMapping(varObj.segments[0],component);
+                if(keywordPath){
+                    isKeyword = true;
+                    var exp = new RegExp('^\\.'+varObj.segments[0]);
+                    fullPath += w[0].replace(exp,keywordPath);
+                }else{
+                    fullPath += subVarPath[w[0]] || w[0];
+                }
  			}else{
  				fullPath += w;
  			}
@@ -151,6 +165,7 @@ var Renderer = new function() {
  			component = varInCtrlScope(component,fullPath);
  		}
 
+ 		if(isKeyword)return fullPath;
  		return (component?component.__getPath():'self') + fullPath;
  	}
 

@@ -32,6 +32,21 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.baseClass(view);
 		this.instances.push(rs);
 
+		var props = arguments[2];
+		var svs = arguments[3];
+		if(props)
+			Util.ext(rs,props);
+
+		if(Util.isArray(svs)){
+			//inject
+			var services = [];
+			for(var i=0;i<svs.length;i++){
+				var serv = ServiceFactory.newInstanceOf(svs[i]);
+				services.push(serv);
+			}
+			
+			rs.onCreate && rs.onCreate.apply(rs,services);
+		}
 		
 		return rs;
 	},

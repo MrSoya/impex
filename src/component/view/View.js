@@ -154,6 +154,8 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 			return bodyHTML;
 		}
 
+		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
+		return attrVal;
 	});
 	return tmpl;
 }

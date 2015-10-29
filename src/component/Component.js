@@ -1,6 +1,12 @@
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
- * 组件也可以有属性，所有属性会被注入到组件模型中，并以“属性名：属性值”方式保存<br/>
+ * 组件也可以有属性。impex支持两种属性处理方式
+ * <p>
+ * <ol>
+ * 		<li></li>
+ * </ol>
+ * </p>
+ * <br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
  * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控，也无法在
@@ -93,19 +99,21 @@ Util.ext(Component.prototype,{
 	 * 查找子组件，并返回符合条件的第一个实例
 	 * @param  {string} name       组件名
 	 * @param  {Object} conditions 查询条件，JSON对象
-	 * @return {Array | null} 
+	 * @return {Component | null} 
 	 */
 	find:function(name,conditions){
+		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
 			if(comp.$name == name){
 				var matchAll = true;
-				for(var k in conditions){
-					if(comp[k] != conditions[k]){
-						matchAll = false;
-						break;
+				if(conditions)
+					for(var k in conditions){
+						if(comp[k] != conditions[k]){
+							matchAll = false;
+							break;
+						}
 					}
-				}
 				if(matchAll){
 					return comp;
 				}
@@ -170,6 +178,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
+		if(this.__state != Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){

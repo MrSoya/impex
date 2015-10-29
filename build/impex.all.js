@@ -1231,6 +1231,12 @@ var Renderer = new function() {
 		return evalExp;
 	}
 
+	function keyWordsMapping(str,component){
+        if(str == 'this'){
+            return component.__getPath();
+        }
+    }
+
 	//提供通用的变量遍历方法 
  	//用于获取一个变量表达式的全路径
  	function buildVarPath(component,varObj,varStr){
@@ -1241,11 +1247,19 @@ var Renderer = new function() {
  			subVarPath[subV] = subPath;
  		}
 
+ 		var isKeyword = false;
  		var fullPath = '';
  		for(var i=0;i<varObj.words.length;i++){
  			var w = varObj.words[i];
  			if(w instanceof Array){
- 				fullPath += subVarPath[w[0]] || w[0];	
+ 				var keywordPath = keyWordsMapping(varObj.segments[0],component);
+                if(keywordPath){
+                    isKeyword = true;
+                    var exp = new RegExp('^\\.'+varObj.segments[0]);
+                    fullPath += w[0].replace(exp,keywordPath);
+                }else{
+                    fullPath += subVarPath[w[0]] || w[0];
+                }
  			}else{
  				fullPath += w;
  			}
@@ -1271,6 +1285,7 @@ var Renderer = new function() {
  			component = varInCtrlScope(component,fullPath);
  		}
 
+ 		if(isKeyword)return fullPath;
  		return (component?component.__getPath():'self') + fullPath;
  	}
 
@@ -1445,19 +1460,21 @@ Util.ext(Component.prototype,{
 	 * 查找子组件，并返回符合条件的第一个实例
 	 * @param  {string} name       组件名
 	 * @param  {Object} conditions 查询条件，JSON对象
-	 * @return {Array | null} 
+	 * @return {Component | null} 
 	 */
 	find:function(name,conditions){
+		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
 			if(comp.$name == name){
 				var matchAll = true;
-				for(var k in conditions){
-					if(comp[k] != conditions[k]){
-						matchAll = false;
-						break;
+				if(conditions)
+					for(var k in conditions){
+						if(comp[k] != conditions[k]){
+							matchAll = false;
+							break;
+						}
 					}
-				}
 				if(matchAll){
 					return comp;
 				}
@@ -1522,6 +1539,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
+		if(this.__state != Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -1738,6 +1756,8 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 			return bodyHTML;
 		}
 
+		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
+		return attrVal;
 	});
 	return tmpl;
 }
@@ -2046,6 +2066,21 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.baseClass(view);
 		this.instances.push(rs);
 
+		var props = arguments[2];
+		var svs = arguments[3];
+		if(props)
+			Util.ext(rs,props);
+
+		if(Util.isArray(svs)){
+			//inject
+			var services = [];
+			for(var i=0;i<svs.length;i++){
+				var serv = ServiceFactory.newInstanceOf(svs[i]);
+				services.push(serv);
+			}
+			
+			rs.onCreate && rs.onCreate.apply(rs,services);
+		}
 		
 		return rs;
 	},
@@ -2228,7 +2263,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,1,0],
+	        v:[0,1,2],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2270,7 +2305,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * *模型属性是共享的，比如数组是所有实例公用。如果模型中的某些属性不想
 		 * 被表达式访问，只需要在名字前加上"$"符号<br/>
 		 * *模型方法会绑定到组件原型中，以节省内存
-		 * @param  {Array | null} services 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.component = function(name,model,services){
@@ -2282,7 +2317,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
 		 * @param  {Object} model 指令模型，用来定义新指令模版
-		 * @param  {Array | null} services 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.directive = function(name,model,services){
@@ -2294,7 +2329,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义服务
 		 * @param  {string} name  服务名，注入时必须和创建时名称相同
 		 * @param  {Object} model 服务模型，用来定义新指令模版
-		 * @param  {Array | null} services 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.service = function(name,model,services){
@@ -2306,7 +2341,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义转换器
 		 * @param  {string} name  转换器名
 		 * @param  {Object} model 转换器模型，用来定义新转换器模版
-		 * @param  {Array | null} services 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.converter = function(name,model,services){
@@ -2326,8 +2361,9 @@ var ServiceFactory = new _ServiceFactory();
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
 		 * @param  {Object} model 模型，用来给组件提供数据支持，如果节点本身已经是组件，
 		 * 该模型所包含参数会附加到模型中 
+		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
-		this.render = function(element,model){
+		this.render = function(element,model,services){
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				impex.console.warn('element ['+name+'] has been rendered');
@@ -2336,11 +2372,9 @@ var ServiceFactory = new _ServiceFactory();
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance(element);
+				comp = ComponentFactory.newInstance(element,null,model,services);
 			}
-			if(model)
-				Util.ext(comp,model);
-
+			
 			comp.init();
 			comp.display();
 
