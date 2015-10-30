@@ -176,6 +176,7 @@ var Util = new function () {
 	var fallback = Object.observe?false:true;
 
 	var observedObjects = [],
+		observedOldObjects = [],
 		observedArys = [],
 		observedOldArys = [];
 	/**
@@ -191,11 +192,21 @@ var Util = new function () {
 			copy[prop] = v;
 		}
 
+		observedOldObjects.push(obj);
+
 		observedObjects.push({
 			oldVer:copy,
 			newVer:obj,
 			handler:handler
 		});
+	}
+
+	var Object_unobserve = Object.unobserve || function(obj,handler){
+		var i = observedOldObjects.indexOf(obj);
+		if(i > -1){
+			observedObjects.splice(i,1);
+			observedOldObjects.splice(i,1);
+		}
 	}
 
 	var Array_observe = Array.observe || function(ary,handler){
@@ -217,7 +228,7 @@ var Util = new function () {
 		});
 	}
 
-	var Array_unobserve = Array.unobserve || function(ary){
+	var Array_unobserve = Array.unobserve || function(ary,handler){
 		var i = observedOldArys.indexOf(ary);
 		if(i > -1){
 			observedArys.splice(i,1);
@@ -287,11 +298,12 @@ var Util = new function () {
 
 				var changes = [];
 				if(oldVer.length == newVer.length){
-					for(var k in oldVer){
-						if(newVer[k] != oldVer[k]){
+					var len = oldVer.length;
+					while(len--){
+						if(newVer[len] != oldVer[len]){
 							var change = {};
-							change.name = k;
-							change.oldValue = oldVer[k];
+							change.name = len;
+							change.oldValue = oldVer[len];
 							change.object = newVer;
 							change.type = 'update';
 							
@@ -305,8 +317,8 @@ var Util = new function () {
 					change.object = newVer;
 					//record remove
 					var forwardAligned = [];
-					for(var i=oldVer.length;i--;){
-						forwardAligned.push(newVer[i]);
+					for(var j=oldVer.length;j--;){
+						forwardAligned.push(newVer[j]);
 					}
 					var removes = [];
 					for(var k in oldVer){
@@ -986,17 +998,19 @@ var Builder = new function() {
 		var recur = false;
 
 		if(Util.isArray(model)){
-			Array_observe(model,function(changes){
+			model.$__observer = function(changes){
 				changeHandler(changes,propChain,ctrlScope,depth);
-			});
+			}
+			Array_observe(model,model.$__observer);
 
 			recur = true;
 		}else if(Util.isObject(model)){
+			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
-
-			Object_observe(model,function(changes){
+			model.$__observer = function(changes){
 				changeHandler(changes,propChain,ctrlScope,depth);
-			});
+			}
+			Object_observe(model,model.$__observer);
 
 			recur = true;
 		}
@@ -1031,8 +1045,20 @@ var Builder = new function() {
 			//recursive
 			recurRender(ctrlScope,pc,change.type,newObj,change.oldValue);
 
+			//unobserve
+			if(Util.isArray(change.oldValue)){
+				Array_unobserve(change.oldValue,change.oldValue.$__observer);
+			}else if(Util.isArray(change.object) && !change.oldValue){
+				Array_unobserve(change.object,change.object.$__observer);
+				Array_observe(change.object,change.object.$__observer);
+			}else if(Util.isObject(change.oldValue)){
+				Object_unobserve(change.oldValue,change.oldValue.$__observer);
+				change.oldValue.$__observer = null;
+			}
+
 			//reobserve
 			observerProp(newObj,pc,ctrlScope,depth);
+			
 		}
 	}
 
@@ -1449,7 +1475,7 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
-	destroyed : 'destroyed',
+	destroyed : 'destroyed'
 }
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
@@ -1652,7 +1678,7 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || this.element.parentNode)return;
+		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
 
 		this.__target.parentNode.replaceChild(this.element,this.__target);
 	},
@@ -2156,7 +2182,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		}
 		component.add(rs);
 
-		rs.onCreate && rs.onCreate.apply(rs,services);
+		rs.onCreate && (services?rs.onCreate.apply(rs,services):rs.onCreate());
 
 		this.instances.push(rs);
 		return rs;
@@ -2557,11 +2583,12 @@ function updateCloakAttr(component,node,newOrigin){
 impex.directive('bind',{
     onCreate : function(){
         if(this.$view.name == 'input'){
-        	this.on('input','changeModel($event)');
+            var hack = document.body.onpropertychange===null?'propertychange':'input';
+        	this.on(hack,'changeModel($event)');
         }
     },
     changeModel : function(e){
-        this.$parent.data(this.$value,e.target.value);
+        this.$parent.data(this.$value,(e.target || e.srcElement).value);
     }
 });
 
@@ -2617,6 +2644,7 @@ impex.directive('each',new function(){
     	
         var isIntK = Util.isArray(ds)?true:false;
 		for(var k in ds){
+            if(!ds.hasOwnProperty(k))continue;
 			var target = this.viewManager.createPlaceholder('');
 			this.viewManager.insertBefore(target,this.placeholder);
 			//视图

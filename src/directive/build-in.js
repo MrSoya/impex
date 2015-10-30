@@ -85,11 +85,12 @@ function updateCloakAttr(component,node,newOrigin){
 impex.directive('bind',{
     onCreate : function(){
         if(this.$view.name == 'input'){
-        	this.on('input','changeModel($event)');
+            var hack = document.body.onpropertychange===null?'propertychange':'input';
+        	this.on(hack,'changeModel($event)');
         }
     },
     changeModel : function(e){
-        this.$parent.data(this.$value,e.target.value);
+        this.$parent.data(this.$value,(e.target || e.srcElement).value);
     }
 });
 
@@ -145,6 +146,7 @@ impex.directive('each',new function(){
     	
         var isIntK = Util.isArray(ds)?true:false;
 		for(var k in ds){
+            if(!ds.hasOwnProperty(k))continue;
 			var target = this.viewManager.createPlaceholder('');
 			this.viewManager.insertBefore(target,this.placeholder);
 			//视图

@@ -82,6 +82,7 @@ Impex使用 [gulp](http://gulpjs.com) 来构建源码，而在这之前你需要
 看吧，这有多简单
 
 ### 兼容性
+* IE8(with impex.ext.ie8)
 * IE9+
 * FF38+
 * chrome43+

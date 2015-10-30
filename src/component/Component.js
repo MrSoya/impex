@@ -82,7 +82,7 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
-	destroyed : 'destroyed',
+	destroyed : 'destroyed'
 }
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{

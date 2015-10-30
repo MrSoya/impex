@@ -96,17 +96,19 @@ var Builder = new function() {
 		var recur = false;
 
 		if(Util.isArray(model)){
-			Array_observe(model,function(changes){
+			model.$__observer = function(changes){
 				changeHandler(changes,propChain,ctrlScope,depth);
-			});
+			}
+			Array_observe(model,model.$__observer);
 
 			recur = true;
 		}else if(Util.isObject(model)){
+			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
-
-			Object_observe(model,function(changes){
+			model.$__observer = function(changes){
 				changeHandler(changes,propChain,ctrlScope,depth);
-			});
+			}
+			Object_observe(model,model.$__observer);
 
 			recur = true;
 		}
@@ -141,8 +143,20 @@ var Builder = new function() {
 			//recursive
 			recurRender(ctrlScope,pc,change.type,newObj,change.oldValue);
 
+			//unobserve
+			if(Util.isArray(change.oldValue)){
+				Array_unobserve(change.oldValue,change.oldValue.$__observer);
+			}else if(Util.isArray(change.object) && !change.oldValue){
+				Array_unobserve(change.object,change.object.$__observer);
+				Array_observe(change.object,change.object.$__observer);
+			}else if(Util.isObject(change.oldValue)){
+				Object_unobserve(change.oldValue,change.oldValue.$__observer);
+				change.oldValue.$__observer = null;
+			}
+
 			//reobserve
 			observerProp(newObj,pc,ctrlScope,depth);
+			
 		}
 	}
 

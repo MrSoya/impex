@@ -32,7 +32,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		}
 		component.add(rs);
 
-		rs.onCreate && rs.onCreate.apply(rs,services);
+		rs.onCreate && (services?rs.onCreate.apply(rs,services):rs.onCreate());
 
 		this.instances.push(rs);
 		return rs;

@@ -44,7 +44,7 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || this.element.parentNode)return;
+		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
 
 		this.__target.parentNode.replaceChild(this.element,this.__target);
 	},

@@ -15,6 +15,7 @@
 	var fallback = Object.observe?false:true;
 
 	var observedObjects = [],
+		observedOldObjects = [],
 		observedArys = [],
 		observedOldArys = [];
 	/**
@@ -30,11 +31,21 @@
 			copy[prop] = v;
 		}
 
+		observedOldObjects.push(obj);
+
 		observedObjects.push({
 			oldVer:copy,
 			newVer:obj,
 			handler:handler
 		});
+	}
+
+	var Object_unobserve = Object.unobserve || function(obj,handler){
+		var i = observedOldObjects.indexOf(obj);
+		if(i > -1){
+			observedObjects.splice(i,1);
+			observedOldObjects.splice(i,1);
+		}
 	}
 
 	var Array_observe = Array.observe || function(ary,handler){
@@ -56,7 +67,7 @@
 		});
 	}
 
-	var Array_unobserve = Array.unobserve || function(ary){
+	var Array_unobserve = Array.unobserve || function(ary,handler){
 		var i = observedOldArys.indexOf(ary);
 		if(i > -1){
 			observedArys.splice(i,1);
@@ -126,11 +137,12 @@
 
 				var changes = [];
 				if(oldVer.length == newVer.length){
-					for(var k in oldVer){
-						if(newVer[k] != oldVer[k]){
+					var len = oldVer.length;
+					while(len--){
+						if(newVer[len] != oldVer[len]){
 							var change = {};
-							change.name = k;
-							change.oldValue = oldVer[k];
+							change.name = len;
+							change.oldValue = oldVer[len];
 							change.object = newVer;
 							change.type = 'update';
 							
@@ -144,8 +156,8 @@
 					change.object = newVer;
 					//record remove
 					var forwardAligned = [];
-					for(var i=oldVer.length;i--;){
-						forwardAligned.push(newVer[i]);
+					for(var j=oldVer.length;j--;){
+						forwardAligned.push(newVer[j]);
 					}
 					var removes = [];
 					for(var k in oldVer){
