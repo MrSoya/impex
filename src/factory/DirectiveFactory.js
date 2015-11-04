@@ -14,13 +14,23 @@ Util.ext(_DirectiveFactory.prototype,{
 	isFinal : function(type){
 		return !!this.types[type].props.$final;
 	},
+	/**
+	 * 获取指定类型指令的范围结束标记
+	 * @param  {[type]}  type 指令名
+	 * @return {string} 
+	 */
+	hasEndTag : function(type){
+		return this.types[type].props.$endTag;
+	},
+
 	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
-		rs.$view = new View(node,node.tagName.toLowerCase());
+		rs.$view = new View(node);
+		
 		//inject
 		var services = null;
 		if(this.types[type].services){

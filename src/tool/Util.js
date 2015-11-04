@@ -61,6 +61,10 @@ var Util = new function () {
         return typeof(obj) === 'string';
     }
 
+    this.isUndefined = function(obj){
+        return obj === undefined;
+    }
+
     this.isFunction = function(obj){
         return obj instanceof Function;
     }

@@ -17,7 +17,7 @@ ViewModel.prototype = {
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
-			eval(evalStr + '= "'+ val +'"');
+			eval(evalStr + '= "'+ val.replace(/\n/mg,'\\n') +'"');
 			return this;
 		}else{
 			return eval(evalStr);

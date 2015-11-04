@@ -128,6 +128,8 @@ var Builder = new function() {
 	}
 
 	function changeHandler(changes,propChain,ctrlScope,depth){
+		if(Util.isString(changes))return;
+
 		for(var i=changes.length;i--;){
 			var change = changes[i];
 

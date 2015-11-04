@@ -7,7 +7,7 @@
     <body>
         impex props:
     	<ul>
-            <li x-each="impex as k => v">{{k + ':' + (v instanceof Function?'function':v) }}</li>
+            <li x-each="impex as k => v">{{$index+1}} : {{k + ':' + (v instanceof Function?'function':v) }}</li>
         </ul>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>

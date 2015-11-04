@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            p{
+                margin: 1em 0;
+            }
+            .bc{
+                color:blue;
+                transition:color .2s ease-out;
+            }
+            .rc{
+                color: red;
+                transition:color .2s ease-in;
+            }
+        </style>
+    </head>
+    <body >
+        <div id="entry">
+            <p>
+                <h3>
+                    {{name}} <sub>{{v}}</sub>
+                </h3>
+                <p>
+                    {{desc}}
+                </p>
+                <p>
+                    it's <i>{{features}}</i>
+                </p>
+                <p>
+                    made by <i class="{{author=='MrSoya'?'bc':'rc'}}">{{author}}</i>
+                    ,{{sex}}
+                </p>
+            </p>
+        	<p>
+                name:<input type="text" x-bind="name" value="{{name}}">
+            </p>
+            <p>
+                version:<input type="text" x-bind="v" value="{{v}}">  
+            </p>
+            <p>
+                features:
+                <label>
+                    easily<input type="checkbox" name="features" checked x-bind="features" value="easily">
+                </label>
+                <label>
+                    efficiently<input type="checkbox" name="features" checked x-bind="features" value="efficiently">
+                </label>
+                <label>
+                    powerful<input type="checkbox" name="features" checked x-bind="features" value="powerful">
+                </label>
+
+            </p>
+            <p>
+                author:
+                <label>
+                    MrSoya<input type="radio" checked name="author" x-bind="author" value="MrSoya">
+                </label>
+                <label>
+                    MrYosa<input type="radio" name="author" x-bind="author" value="MrYosa">
+                </label>
+                <label>
+                    MrSayo<input type="radio" name="author" x-bind="author" value="MrSayo">
+                </label>
+            </p>
+            <p>
+                sex:
+                <select x-bind="sex">
+                    <option value="man">man</option>
+                    <option value="woman">woman</option>
+                </select>
+            </p>
+            <p>
+                desc:
+                <textarea x-bind="desc" rows=5>
+                    {{desc}}
+                </textarea>
+            </p>
+        </div>
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.getElementById('entry'),new function(){
+                this.name = 'impex';
+                this.v = impex.version.toString();
+                this.desc = 'is a powerful web application engine';
+                this.features = 'easily,efficiently,powerful';
+                this.author = 'MrSoya';
+                this.sex = 'man';
+            });
+            
+        </script>
+    </body>
+</html>

@@ -1,13 +1,11 @@
 /**
- * xie是一个用于impex兼容低版本ie的扩展包
+ * ie8是一个用于impex兼容低版本ie的扩展包
  * 支持
  * <ul>
  * 		<li>所有内置标签</li>
  * 		<li>表达式语法</li>
  * 		<li>其他特性</li>
  * </ul>
- * @version 1.0
- * @author MrSoya
  */
 ;!function(){
 

@@ -11,12 +11,14 @@ function View (element,name,target) {
 	 * 在绝大多数情况下，都不应该直接使用该属性
 	 * 
 	 */
-	this.element = element;
+	this.element = element instanceof Array?element[0]:element;
+
+	this.elements = element instanceof Array?element:undefined;
 
 	/**
 	 * 视图名称，在DOM中是标签名
 	 */
-	this.name = name;
+	this.name = this.element && this.element.nodeName.toLowerCase();
 
 	this.__evMap = {};
 	this.__target = target;
@@ -28,13 +30,15 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-		var el = DOMViewProvider.compile(compileStr);
-		if(!el){
+		var els = DOMViewProvider.compile(compileStr);
+		if(!els || els.length < 1){
 			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.name = el.nodeName.toLowerCase();
-		this.element = el;
+		this.name = els[0].nodeName.toLowerCase();
+		this.element = els[0];
+		if(els.length > 1)
+			this.elements = els;
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -46,7 +50,17 @@ View.prototype = {
 	__display:function(){
 		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
 
-		this.__target.parentNode.replaceChild(this.element,this.__target);
+		var fragment = null;
+		if(this.elements && this.elements.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<this.elements.length;i++){
+				fragment.appendChild(this.elements[i]);
+			}
+		}else{
+			fragment = this.element;
+		}
+
+		this.__target.parentNode.replaceChild(fragment,this.__target);
 	},
 	__destroy:function(){
 		for(var k in this.__evMap){
@@ -56,7 +70,16 @@ View.prototype = {
 				Util.off(k,node,handler);
 			}
 		}
-		this.element.parentNode.removeChild(this.element);
+		if(this.elements){
+			var p = this.elements[0].parentNode;
+			if(p)
+			for(var i=this.elements.length;i--;){
+				p.removeChild(this.elements[i]);
+			}
+		}else{
+			this.element.parentNode.removeChild(this.element);
+		}
+		
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;
@@ -94,7 +117,18 @@ View.prototype = {
 	 * @return {View}
 	 */
 	clone:function(){
-		var copy = new View(this.element.cloneNode(true),this.name);
+		var tmp = null;
+		if(this.elements){
+			tmp = [];
+			for(var i=this.elements.length;i--;){
+				var c = this.elements[i].cloneNode(true);
+				tmp.unshift(c);
+			}
+		}else{
+			tmp = this.element.cloneNode(true);
+		}
+		
+		var copy = new View(tmp,this.name);
 		return copy;
 	},
 	/**
@@ -150,7 +184,7 @@ View.prototype = {
 function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'tagBody'){
+		if(attrName == 'tagBody' || attrName == 'content'){
 			return bodyHTML;
 		}
 

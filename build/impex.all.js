@@ -73,6 +73,10 @@ var Util = new function () {
         return typeof(obj) === 'string';
     }
 
+    this.isUndefined = function(obj){
+        return obj === undefined;
+    }
+
     this.isFunction = function(obj){
         return obj instanceof Function;
     }
@@ -755,9 +759,33 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(view,component){
-		var node = view.element;
-		prescan(node);
-		scan(node,component);
+		var scanNodes = view.elements?view.elements:[view.element];
+
+        var startTag = null,
+            nodes = [];
+        
+        for(var i=0,l=scanNodes.length;i<l;i++){
+        	prescan(scanNodes[i]);
+            if(startTag){
+                nodes.push(scanNodes[i]);
+                var endTag = DirectiveFactory.hasEndTag(startTag[0]);
+                var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
+                if(Util.isString(tmp)){
+                    var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+                    component.$__directives.push(instance);
+                    startTag = null;
+                }
+                continue;
+            }
+            
+            startTag = scan(scanNodes[i],component);
+            if(startTag){
+                nodes.push(scanNodes[i]);
+            }
+        }
+        if(startTag){
+            impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+        }
 	}
 
 	//扫描算法
@@ -781,10 +809,15 @@ var Scanner = new function() {
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
-					if(DirectiveFactory.hasTypeOf(c) && DirectiveFactory.isFinal(c)){
-						var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
-						component.$__directives.push(instance);
-						return;
+					if(DirectiveFactory.hasTypeOf(c)){
+						if(DirectiveFactory.isFinal(c)){
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							component.$__directives.push(instance);
+							return;
+						}
+						if(DirectiveFactory.hasEndTag(c)){
+							return [c,atts[i].value];
+						}
 					}
 				}
 				for(var i=atts.length;i--;){
@@ -805,8 +838,28 @@ var Scanner = new function() {
 			}
 
 	    	if(node.childNodes.length>0){
+	    		var startTag = null,
+	    			nodes = [];
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					scan(node.childNodes[i],component);
+					if(startTag){
+						nodes.push(node.childNodes[i]);
+						var endTag = DirectiveFactory.hasEndTag(startTag[0]);
+						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
+						if(Util.isString(tmp)){
+							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+							component.$__directives.push(instance);
+							startTag = null;
+						}
+						continue;
+					}
+					startTag = scan(node.childNodes[i],component);
+					if(startTag){
+						nodes.push(node.childNodes[i]);
+					}
+				}
+
+				if(startTag){
+					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
 		}else if(node.nodeType == 3){
@@ -1030,6 +1083,8 @@ var Builder = new function() {
 	}
 
 	function changeHandler(changes,propChain,ctrlScope,depth){
+		if(Util.isString(changes))return;
+
 		for(var i=changes.length;i--;){
 			var change = changes[i];
 
@@ -1384,7 +1439,7 @@ ViewModel.prototype = {
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
-			eval(evalStr + '= "'+ val +'"');
+			eval(evalStr + '= "'+ val.replace(/\n/mg,'\\n') +'"');
 			return this;
 		}else{
 			return eval(evalStr);
@@ -1402,8 +1457,7 @@ ViewModel.prototype = {
  * <br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
- * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控，也无法在
- * 表达式中访问到<br/>
+ * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控<br/>
  * 组件可以包含组件，所以子组件视图中的表达式可以访问到父组件模型中的值
  * <p>
  * 	组件生命周期
@@ -1645,12 +1699,14 @@ function View (element,name,target) {
 	 * 在绝大多数情况下，都不应该直接使用该属性
 	 * 
 	 */
-	this.element = element;
+	this.element = element instanceof Array?element[0]:element;
+
+	this.elements = element instanceof Array?element:undefined;
 
 	/**
 	 * 视图名称，在DOM中是标签名
 	 */
-	this.name = name;
+	this.name = this.element && this.element.nodeName.toLowerCase();
 
 	this.__evMap = {};
 	this.__target = target;
@@ -1662,13 +1718,15 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-		var el = DOMViewProvider.compile(compileStr);
-		if(!el){
+		var els = DOMViewProvider.compile(compileStr);
+		if(!els || els.length < 1){
 			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.name = el.nodeName.toLowerCase();
-		this.element = el;
+		this.name = els[0].nodeName.toLowerCase();
+		this.element = els[0];
+		if(els.length > 1)
+			this.elements = els;
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -1680,7 +1738,17 @@ View.prototype = {
 	__display:function(){
 		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
 
-		this.__target.parentNode.replaceChild(this.element,this.__target);
+		var fragment = null;
+		if(this.elements && this.elements.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<this.elements.length;i++){
+				fragment.appendChild(this.elements[i]);
+			}
+		}else{
+			fragment = this.element;
+		}
+
+		this.__target.parentNode.replaceChild(fragment,this.__target);
 	},
 	__destroy:function(){
 		for(var k in this.__evMap){
@@ -1690,7 +1758,16 @@ View.prototype = {
 				Util.off(k,node,handler);
 			}
 		}
-		this.element.parentNode.removeChild(this.element);
+		if(this.elements){
+			var p = this.elements[0].parentNode;
+			if(p)
+			for(var i=this.elements.length;i--;){
+				p.removeChild(this.elements[i]);
+			}
+		}else{
+			this.element.parentNode.removeChild(this.element);
+		}
+		
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;
@@ -1728,7 +1805,18 @@ View.prototype = {
 	 * @return {View}
 	 */
 	clone:function(){
-		var copy = new View(this.element.cloneNode(true),this.name);
+		var tmp = null;
+		if(this.elements){
+			tmp = [];
+			for(var i=this.elements.length;i--;){
+				var c = this.elements[i].cloneNode(true);
+				tmp.unshift(c);
+			}
+		}else{
+			tmp = this.element.cloneNode(true);
+		}
+		
+		var copy = new View(tmp,this.name);
 		return copy;
 	},
 	/**
@@ -1784,7 +1872,7 @@ View.prototype = {
 function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'tagBody'){
+		if(attrName == 'tagBody' || attrName == 'content'){
 			return bodyHTML;
 		}
 
@@ -1806,9 +1894,13 @@ var DOMViewProvider = new function(){
 	this.newInstance = function(template,target){
 		compiler.innerHTML = template;
 		if(!compiler.children[0])return null;
-		var tmp = compiler.removeChild(compiler.children[0]);
+		var nodes = [];
+		while(compiler.children.length>0){
+			var tmp = compiler.removeChild(compiler.children[0]);
+			nodes.push(tmp);
+		}
 
-		var view = new View(tmp,tmp.tagName.toLowerCase(),target);
+		var view = new View(nodes,null,target);
 
 		return view;
 	}
@@ -1817,13 +1909,17 @@ var DOMViewProvider = new function(){
 	this.compile = function(template){
 		compiler.innerHTML = template;
 		if(!compiler.children[0])return null;
+		var nodes = [];
 		while(compiler.children.length>0){
 			var tmp = compiler.removeChild(compiler.children[0]);
 			var tn = tmp.nodeName.toLowerCase();
 			if(headEl.indexOf(tn) > -1)continue;
+
+			nodes.push(tmp);
 			
-			return tmp;
+			// return tmp;
 		}
+		return nodes;
 	}
 }
 /**
@@ -1908,12 +2004,22 @@ function Directive (name,value) {
 	this.$name = name;
 
 	/**
-	 * 是否终结
-	 * 终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成
+	 * 是否终结<br/>
+	 * 终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成<br/>
+	 * *该属性与$endTag冲突，并会优先匹配
 	 * @type {Boolean}
 	 * @default false
 	 */
 	this.$final = false;
+	/**
+	 * 范围结束标记，用来标识一个范围指令的终结属性名<br/>
+	 * 如果设置了该标识，那么从当前指令开始到结束标识结束形成的范围，扫描器都不对内部进行扫描，包括表达式，指令，子组件都不会生成<br/>
+	 * *该标记必须加在与当前指令同级别的元素上<br/>
+	 * *该属性与$final冲突
+	 * @type {String}
+	 * @default null
+	 */
+	this.$endTag = null;
 	/**
 	 * 当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果
 	 */
@@ -2164,13 +2270,23 @@ Util.ext(_DirectiveFactory.prototype,{
 	isFinal : function(type){
 		return !!this.types[type].props.$final;
 	},
+	/**
+	 * 获取指定类型指令的范围结束标记
+	 * @param  {[type]}  type 指令名
+	 * @return {string} 
+	 */
+	hasEndTag : function(type){
+		return this.types[type].props.$endTag;
+	},
+
 	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
-		rs.$view = new View(node,node.tagName.toLowerCase());
+		rs.$view = new View(node);
+		
 		//inject
 		var services = null;
 		if(this.types[type].services){
@@ -2295,7 +2411,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,1,3],
+	        v:[0,1,4],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2499,200 +2615,200 @@ impex.service('ComponentManager',new function(){
 /**
  * 内建指令
  */
-
-///////////////////// 事件指令 /////////////////////
-/**
- * 视图点击指令
- * <br/>使用方式：<div x-click="fn() + fx()"></div>
- */
-impex.directive('click',{
-    onInit : function(){
-        this.on('click',this.$value);
-    }
-});
-
-///////////////////// 视图控制指令 /////////////////////
-/**
- * 控制视图显示指令，根据表达式计算结果控制
- * <br/>使用方式：<div x-show="exp"></div>
- */
-impex.directive('show',{
-    observe : function(rs){
-        if(rs){
-            //显示
-            this.$view.show();
-        }else{
-            // 隐藏
-            this.$view.hide();
+!function(impex){
+    ///////////////////// 事件指令 /////////////////////
+    /**
+     * 视图点击指令
+     * <br/>使用方式：<div x-click="fn() + fx()"></div>
+     */
+    impex.directive('click',{
+        onInit : function(){
+            this.on('click',this.$value);
         }
-    }
-});
+    });
 
-/**
- * 效果与show相同，但是会移除视图
- * <br/>使用方式：<div x-if="exp"></div>
- */
-impex.directive('if',new function(){
-    this.placeholder = null;
-    this.viewManager;
-    this.onCreate = function(viewManager){
-        this.viewManager = viewManager;
-        this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-    }
-    this.observe = function(rs){
-        if(rs){
-            //添加
-            this.viewManager.replace(this.$view,this.placeholder);
-        }else{
-            //删除
-            this.viewManager.replace(this.placeholder,this.$view);
+    ///////////////////// 视图控制指令 /////////////////////
+    /**
+     * 控制视图显示指令，根据表达式计算结果控制
+     * <br/>使用方式：<div x-show="exp"></div>
+     */
+    impex.directive('show',{
+        observe : function(rs){
+            if(rs){
+                //显示
+                this.$view.show();
+            }else{
+                // 隐藏
+                this.$view.hide();
+            }
         }
-    }
-    
-},['ViewManager']);
+    });
 
-impex.directive('cloak',{
-    onCreate:function(){
-        var className = this.$view.attr('class');
-        className = className.replace('x-cloak','');
-        this.$view.attr('class',className);
-        updateCloakAttr(this.$parent,this.$view.element,className);
-    }
-});
-
-function updateCloakAttr(component,node,newOrigin){
-    for(var i=component.$__expNodes.length;i--;){
-        var expNode = component.$__expNodes[i];
-        if(expNode.node == node && expNode.attrName == 'class'){
-            expNode.origin = newOrigin;
+    /**
+     * 效果与show相同，但是会移除视图
+     * <br/>使用方式：<div x-if="exp"></div>
+     */
+    impex.directive('if',new function(){
+        this.placeholder = null;
+        this.viewManager;
+        this.onCreate = function(viewManager){
+            this.viewManager = viewManager;
+            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
         }
-    }
-
-    for(var j=component.$__components.length;j--;){
-        updateCloakAttr(component.$__components[j],node,newOrigin);
-    }
-}
-
-
-///////////////////// 模型控制指令 /////////////////////
-
-/**
- * 绑定模型属性，当控件修改值后，模型值也会修改
- * <br/>使用方式：<input x-bind="model.prop">
- */
-impex.directive('bind',{
-    onCreate : function(){
-        if(this.$view.name == 'input'){
-            var hack = document.body.onpropertychange===null?'propertychange':'input';
-        	this.on(hack,'changeModel($event)');
+        this.observe = function(rs){
+            if(rs){
+                //添加
+                this.viewManager.replace(this.$view,this.placeholder);
+            }else{
+                //删除
+                this.viewManager.replace(this.placeholder,this.$view);
+            }
         }
-    },
-    changeModel : function(e){
-        this.$parent.data(this.$value,(e.target || e.srcElement).value);
-    }
-});
-
-/**
- * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
- * <br/>使用方式：
- * <br/> &lt;li x-each="datasource as k => v"&gt;{{k}} {{v}}&lt;/li&gt;
- * <br/> &lt;li x-each="datasource as v"&gt;{{v}}&lt;/li&gt;
- * 
- * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
- */
-impex.directive('each',new function(){
-	this.$final = true;
-	this.$eachExp = /(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*=>\s*[a-zA-Z0-9_$]+?)|(?:[a-zA-Z0-9_$]+?))$/;
-	this.viewManager;
-	this.placeholder = null;
-	this.parent = null;
-    this.onCreate = function(viewManager){
-        this.viewManager = viewManager;
-        this.parent = this.$parent;
-        this.expInfo = this.parseExp(this.$value);
-        //获取数据源
-        this.ds = this.parent.data(this.expInfo.ds);
         
-        this.subComponents = [];//子组件，用于快速更新each视图，提高性能
+    },['ViewManager']);
+
+    impex.directive('cloak',{
+        onCreate:function(){
+            var className = this.$view.attr('class');
+            className = className.replace('x-cloak','');
+            this.$view.attr('class',className);
+            updateCloakAttr(this.$parent,this.$view.element,className);
+        }
+    });
+
+    function updateCloakAttr(component,node,newOrigin){
+        for(var i=component.$__expNodes.length;i--;){
+            var expNode = component.$__expNodes[i];
+            if(expNode.node == node && expNode.attrName == 'class'){
+                expNode.origin = newOrigin;
+            }
+        }
+
+        for(var j=component.$__components.length;j--;){
+            updateCloakAttr(component.$__components[j],node,newOrigin);
+        }
     }
-    this.onInit = function(){
-        this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
-        this.viewManager.insertBefore(this.placeholder,this.$view);
 
-        this.build(this.ds,this.expInfo.k,this.expInfo.v);
-        //更新视图
-        this.destroy();
 
-        var that = this;
-        this.parent.watch(this.expInfo.ds,function(type,newVal,oldVal){
-            that.rebuild();
-        });
-    }
-    this.rebuild = function(){
-    	var ds = this.parent.data(this.expInfo.ds);
+    ///////////////////// 模型控制指令 /////////////////////
 
-    	//清除旧组件
-    	for(var i=this.subComponents.length;i--;){
-			this.subComponents[i].destroy();
-		}
-		this.subComponents = [];
+    function eachModel(){
+        this.onCreate = function(viewManager){
+            this.$eachExp = /(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*=>\s*[a-zA-Z0-9_$]+?)|(?:[a-zA-Z0-9_$]+?))$/;
+            this.viewManager = viewManager;
+            this.parent = this.$parent;
+            this.expInfo = this.parseExp(this.$value);
+            //获取数据源
+            this.ds = this.parent.data(this.expInfo.ds);
+            
+            this.subComponents = [];//子组件，用于快速更新each视图，提高性能
+        }
+        this.onInit = function(){
+            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
+            this.viewManager.insertBefore(this.placeholder,this.$view);
 
-		this.build(ds,this.expInfo.k,this.expInfo.v);
-    }
-    this.build = function(ds,ki,vi){
-    	var parent = this.parent;
-    	
-        var isIntK = Util.isArray(ds)?true:false;
-		for(var k in ds){
-            if(!ds.hasOwnProperty(k))continue;
-			var target = this.viewManager.createPlaceholder('');
-			this.viewManager.insertBefore(target,this.placeholder);
-			//视图
-    		var copy = this.$view.clone().removeAttr('x-each');
+            this.build(this.ds,this.expInfo.k,this.expInfo.v);
+            //更新视图
+            this.destroy();
 
-    		//创建子组件
-    		var subComp = parent.createSubComponent(copy,target);
-    		this.subComponents.push(subComp);
-    		
-    		//模型
-			subComp[vi] = ds[k];
-			if(ki)subComp[ki] = isIntK?k>>0:k;
-		}
+            var that = this;
+            this.parent.watch(this.expInfo.ds,function(type,newVal,oldVal){
+                that.rebuild();
+            });
+        }
+        this.rebuild = function(){
+            var ds = this.parent.data(this.expInfo.ds);
 
-		//初始化组件
-		for(var i=this.subComponents.length;i--;){
-			this.subComponents[i].init();
-			this.subComponents[i].display();
-		}
-    }
-    this.parseExp = function(exp){
-		var ds,k,v;
-		exp.replace(this.$eachExp,function(a,attrName,subAttr){
-			ds = attrName;
-			var tmp = subAttr.replace(/\s/mg,'');
-			var kv = tmp.split('=>');
-			if(kv.length>1){
-				k = kv[0];
-				v = kv[1];
-			}else{
-				v = kv[0];
-			}
-			
-		});
-		if(!ds){
-			//each语法错误
-			impex.console.error(exp+'解析错误，不是合法的each语法');
-			return;
-		}
+            //清除旧组件
+            for(var i=this.subComponents.length;i--;){
+                this.subComponents[i].destroy();
+            }
+            this.subComponents = [];
 
-		return {
-			ds:ds,
-			k:k,
-			v:v
-		};
-	}
+            this.build(ds,this.expInfo.k,this.expInfo.v);
+        }
+        this.build = function(ds,ki,vi){
+            var parent = this.parent;
+            
+            var isIntK = Util.isArray(ds)?true:false;
+            var index = 0;
+            for(var k in ds){
+                if(!ds.hasOwnProperty(k))continue;
+                if(isIntK && isNaN(k))continue;
 
-},['ViewManager']);
+                var target = this.viewManager.createPlaceholder('');
+                this.viewManager.insertBefore(target,this.placeholder);
+                //视图
+                var copy = this.$view.clone().removeAttr(this.$name);
+
+                //创建子组件
+                var subComp = parent.createSubComponent(copy,target);
+                this.subComponents.push(subComp);
+                
+                //模型
+                subComp[vi] = ds[k];
+                subComp['$index'] = index++;
+                if(ki)subComp[ki] = isIntK?k>>0:k;
+            }
+
+            //初始化组件
+            for(var i=this.subComponents.length;i--;){
+                this.subComponents[i].init();
+                this.subComponents[i].display();
+            }
+        }
+        this.parseExp = function(exp){
+            var ds,k,v;
+            exp.replace(this.$eachExp,function(a,attrName,subAttr){
+                ds = attrName;
+                var tmp = subAttr.replace(/\s/mg,'');
+                var kv = tmp.split('=>');
+                if(kv.length>1){
+                    k = kv[0];
+                    v = kv[1];
+                }else{
+                    v = kv[0];
+                }
+                
+            });
+            if(!ds){
+                //each语法错误
+                impex.console.error(exp+'解析错误，不是合法的each语法');
+                return;
+            }
+
+            return {
+                ds:ds,
+                k:k,
+                v:v
+            };
+        }
+    };
+    var each = new eachModel();
+    each.$final = true;
+    /**
+     * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
+     * <br/>使用方式：
+     * <br/> &lt;li x-each="datasource as k => v"&gt;{{k}} {{v}}&lt;/li&gt;
+     * <br/> &lt;li x-each="datasource as v"&gt;{{v}}&lt;/li&gt;
+     * 
+     * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
+     */
+    impex.directive('each',each,['ViewManager']);
+
+
+    var eachStart = new eachModel();
+    eachStart.$endTag = 'each-end';
+    /**
+     * each-start/end指令类似each，但是可以循环范围内的所有节点。数据源可以是数组或者对象
+     * <br/>使用方式：
+     * <br/> &lt;a x-each-start="datasource as k => v"&gt;{{k}} {{v}}&lt;/a&gt;
+     * <br/> &lt;b x-each-end&gt;{{v}}&lt;/b&gt;
+     * 
+     * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
+     */
+    impex.directive('each-start',eachStart,['ViewManager']);
+}(impex);
 /**
  * 内建过滤器，提供基础操作接口
  */

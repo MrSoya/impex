@@ -57,9 +57,33 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(view,component){
-		var node = view.element;
-		prescan(node);
-		scan(node,component);
+		var scanNodes = view.elements?view.elements:[view.element];
+
+        var startTag = null,
+            nodes = [];
+        
+        for(var i=0,l=scanNodes.length;i<l;i++){
+        	prescan(scanNodes[i]);
+            if(startTag){
+                nodes.push(scanNodes[i]);
+                var endTag = DirectiveFactory.hasEndTag(startTag[0]);
+                var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
+                if(Util.isString(tmp)){
+                    var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+                    component.$__directives.push(instance);
+                    startTag = null;
+                }
+                continue;
+            }
+            
+            startTag = scan(scanNodes[i],component);
+            if(startTag){
+                nodes.push(scanNodes[i]);
+            }
+        }
+        if(startTag){
+            impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+        }
 	}
 
 	//扫描算法
@@ -83,10 +107,15 @@ var Scanner = new function() {
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
-					if(DirectiveFactory.hasTypeOf(c) && DirectiveFactory.isFinal(c)){
-						var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
-						component.$__directives.push(instance);
-						return;
+					if(DirectiveFactory.hasTypeOf(c)){
+						if(DirectiveFactory.isFinal(c)){
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							component.$__directives.push(instance);
+							return;
+						}
+						if(DirectiveFactory.hasEndTag(c)){
+							return [c,atts[i].value];
+						}
 					}
 				}
 				for(var i=atts.length;i--;){
@@ -107,8 +136,28 @@ var Scanner = new function() {
 			}
 
 	    	if(node.childNodes.length>0){
+	    		var startTag = null,
+	    			nodes = [];
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					scan(node.childNodes[i],component);
+					if(startTag){
+						nodes.push(node.childNodes[i]);
+						var endTag = DirectiveFactory.hasEndTag(startTag[0]);
+						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
+						if(Util.isString(tmp)){
+							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+							component.$__directives.push(instance);
+							startTag = null;
+						}
+						continue;
+					}
+					startTag = scan(node.childNodes[i],component);
+					if(startTag){
+						nodes.push(node.childNodes[i]);
+					}
+				}
+
+				if(startTag){
+					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
 		}else if(node.nodeType == 3){
