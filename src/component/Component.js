@@ -25,11 +25,10 @@
  * @extends ViewModel
  */
 function Component (view) {
-	//每个组件都保存顶级路径
 	var id = 'C_' + Object.keys(impex.__components).length;
 	impex.__components[id] = this;
-	this.__id = id;
-	this.__state = Component.state.created;
+	this.$__id = id;
+	this.$__state = Component.state.created;
 	/**
 	 * 组件绑定的视图对象，在创建时由系统自动注入
 	 * 在DOM中，视图对象的所有操作都针对自定义标签的顶级元素，而不包括子元素
@@ -81,7 +80,8 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
-	destroyed : 'destroyed'
+	destroyed : 'destroyed',
+	suspend : 'suspend'
 }
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
@@ -96,7 +96,7 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 查找子组件，并返回符合条件的第一个实例
-	 * @param  {string} name       组件名
+	 * @param  {string} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @return {Component | null} 
 	 */
@@ -104,19 +104,47 @@ Util.ext(Component.prototype,{
 		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
-			if(comp.$name == name){
-				var matchAll = true;
-				if(conditions)
-					for(var k in conditions){
-						if(comp[k] != conditions[k]){
-							matchAll = false;
-							break;
-						}
+			if(name != '*' && comp.$name != name)continue;
+
+			var matchAll = true;
+			if(conditions)
+				for(var k in conditions){
+					if(comp[k] != conditions[k]){
+						matchAll = false;
+						break;
 					}
-				if(matchAll){
-					return comp;
 				}
+			if(matchAll){
+				return comp;
 			}
+			
+		}
+		return null;
+	},
+	/**
+	 * 查找组件内指令，并返回符合条件的第一个实例
+	 * @param  {string} name       指令名，可以使用通配符*
+	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @return {Directive | null} 
+	 */
+	findD:function(name,conditions){
+		name = name.toLowerCase();
+		for(var i=this.$__directives.length;i--;){
+			var d = this.$__directives[i];
+			if(name != '*' && d.$name != name)continue;
+
+			var matchAll = true;
+			if(conditions)
+				for(var k in conditions){
+					if(d[k] != conditions[k]){
+						matchAll = false;
+						break;
+					}
+				}
+			if(matchAll){
+				return d;
+			}
+			
 		}
 		return null;
 	},
@@ -138,6 +166,8 @@ Util.ext(Component.prototype,{
 		var watch = new Watch(cbk,this,varObj.segments);
 		//监控变量
 		Builder.buildExpModel(this,varObj,keys[0],watch);
+
+		return this;
 	},
 	/**
 	 * 添加子组件到父组件
@@ -177,7 +207,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
-		if(this.__state != Component.state.created)return;
+		if(this.$__state != Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -200,20 +230,29 @@ Util.ext(Component.prototype,{
 
 		this.onInit && this.onInit();
 
-		this.__state = Component.state.inited;
+		this.$__state = Component.state.inited;
 	},
 	/**
 	 * 显示组件到视图上
 	 */
 	display:function(){
-		if(this.__state != Component.state.inited)return;
+		if(
+			this.$__state != Component.state.inited && 
+			this.$__state != Component.state.suspend
+		)return;
+
 		this.$view.__display();
 		
 		Renderer.render(this);
 
+		if(this.$__suspendParent){
+			this.$parent = this.$__suspendParent;
+			this.$__suspendParent = null;
+		}
+
 		this.onDisplay && this.onDisplay();
 
-		this.__state = Component.state.displayed;
+		this.$__state = Component.state.displayed;
 
 		Builder.build(this);
 	},
@@ -221,7 +260,7 @@ Util.ext(Component.prototype,{
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.__state == Component.state.destroyed)return;
+		if(this.$__state == Component.state.destroyed)return;
 
 		var i = this.$parent.$__components.indexOf(this);
 		if(i > -1){
@@ -232,9 +271,31 @@ Util.ext(Component.prototype,{
 
 		this.onDestroy && this.onDestroy();
 
-		this.__state = Component.state.destroyed;
+		this.$__state = Component.state.destroyed;
+	},
+	/**
+	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
+	 * 但数据都不会销毁
+	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
+	 * 如果为false，则需要注入viewManager，手动插入视图
+	 * @see ViewManager
+	 */
+	suspend:function(hook){
+		if(this.$__state != Component.state.displayed)return;
+
+		var i = this.$parent.$__components.indexOf(this);
+		if(i > -1){
+			this.$parent.$__components.splice(i,1);
+		}
+		this.$__suspendParent = this.$parent;
+
+		this.$parent = null;
+
+		this.$view.__suspend(this,hook==false?false:true);
+
+		this.$__state = Component.state.suspend;
 	},
 	__getPath:function(){
-		return 'impex.__components["'+ this.__id +'"]';
+		return 'impex.__components["'+ this.$__id +'"]';
 	}
 });

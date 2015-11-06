@@ -43,8 +43,11 @@ var Renderer = new function() {
 		if(node.setAttribute){
 			node.setAttribute(attrName,val);
 		}else{
-			//文本节点
-			node.nodeValue = val;
+			//fix bug in ie8 when text node in textarea
+			try{
+				//文本节点
+				node.nodeValue = val;
+			}catch(e){}
 		}
 	}
 

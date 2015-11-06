@@ -1,4 +1,20 @@
 # Change Log
+## Version 0.2.0 - 2015/11/6
+### 新增
+* Component.findD查询指令接口
+* Component.suspend挂起接口
+* each performance demo，可以查看each的性能细节 
+
+### 更新
+* each指令算法，大幅提升each性能
+* Component.find查询组件接口，支持*通配符
+* 监控算法，优化模型响应流程
+
+### bug修复
+* 当watch一个数组时，数组内容变化后Component.watch回调参数错误
+* IE8兼容相关
+
+
 ## Version 0.1.5 - 2015/11/4
 ### 新增
 * 指令扩展

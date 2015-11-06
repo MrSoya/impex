@@ -91,14 +91,16 @@ var Builder = new function() {
 		observerProp(component,[],component,depth+1);
 	}
 
-	function observerProp(model,propChain,ctrlScope,depth){
+	function observerProp(model,propChain,component,depth){
 		if(depth > DEPTH)return;
 		var recur = false;
 
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
-				changeHandler(changes,propChain,ctrlScope,depth);
+				if(component.$__state == Component.state.suspend)return;
+				changeHandler(changes,propChain,component,depth);
 			}
+			model.$__oldVal = model.concat();
 			Array_observe(model,model.$__observer);
 
 			recur = true;
@@ -106,7 +108,8 @@ var Builder = new function() {
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
-				changeHandler(changes,propChain,ctrlScope,depth);
+				if(component.$__state == Component.state.suspend)return;
+				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);
 
@@ -122,48 +125,53 @@ var Builder = new function() {
 				if(k.indexOf('$')===0)continue;
 				var pc = propChain.concat();
 				pc.push(k);
-				observerProp(model[k],pc,ctrlScope,depth+1);
+				observerProp(model[k],pc,component,depth+1);
 			}
 		}
 	}
 
-	function changeHandler(changes,propChain,ctrlScope,depth){
+	function changeHandler(changes,propChain,component,depth){
 		if(Util.isString(changes))return;
 
 		for(var i=changes.length;i--;){
 			var change = changes[i];
 
-			var propName = change.name || change.index;
-			if(propName.indexOf && propName.indexOf('$')===0)
+			var propName = change.name;
+			if(propName && propName.indexOf('$')===0)
 				continue;
 
 			var newObj = change.object[propName];
 			//查询控制域
 			var pc = propChain.concat();
-			if(change.name)
+			if(propName && !Util.isArray(change.object))
 				pc.push(propName);
+
 			//recursive
-			recurRender(ctrlScope,pc,change.type,newObj,change.oldValue);
+			var oldVal = change.oldValue;
+			if(Util.isArray(change.object)){
+				newObj = change.object;
+				oldVal = change.object.$__oldVal;
+			}
+			recurRender(component,pc,change.type,newObj,oldVal);
 
 			//unobserve
-			if(Util.isArray(change.oldValue)){
+			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
 				Array_unobserve(change.oldValue,change.oldValue.$__observer);
-			}else if(Util.isArray(change.object) && !change.oldValue){
-				Array_unobserve(change.object,change.object.$__observer);
-				Array_observe(change.object,change.object.$__observer);
+			}else if(Util.isArray(change.object)){
+				change.object.$__oldVal = change.object.concat();
+				return;
 			}else if(Util.isObject(change.oldValue)){
 				Object_unobserve(change.oldValue,change.oldValue.$__observer);
 				change.oldValue.$__observer = null;
 			}
 
 			//reobserve
-			observerProp(newObj,pc,ctrlScope,depth);
-			
+			observerProp(newObj,pc,component,depth);
 		}
 	}
 
-	function rerender(ctrlScope,propChain,changeType,newVal,oldVal){
-		var props = ctrlScope.$__expPropRoot.subProps;
+	function rerender(component,propChain,changeType,newVal,oldVal){
+		var props = component.$__expPropRoot.subProps;
 		var prop;
 		for(var i=0;i<propChain.length;i++){
 			var p = propChain[i];
@@ -235,11 +243,11 @@ var Builder = new function() {
 			findMatchProps(prop.subProps[k],findLength-1,matchs);
 		}
 	}
-	function recurRender(ctrlScope,propChain,changeType,newVal,oldVal){
-		rerender(ctrlScope,propChain,changeType,newVal,oldVal);
+	function recurRender(component,propChain,changeType,newVal,oldVal){
+		rerender(component,propChain,changeType,newVal,oldVal);
 
-		for(var j=ctrlScope.$__components.length;j--;){
-			var subCtrlr = ctrlScope.$__components[j]
+		for(var j=component.$__components.length;j--;){
+			var subCtrlr = component.$__components[j]
  			recurRender(subCtrlr,propChain,changeType,newVal,oldVal);
  		}
 	}

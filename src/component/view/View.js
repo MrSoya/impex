@@ -61,6 +61,8 @@ View.prototype = {
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
+		fragment = null;
+		this.__target = null;
 	},
 	__destroy:function(){
 		for(var k in this.__evMap){
@@ -79,7 +81,28 @@ View.prototype = {
 		}else{
 			this.element.parentNode.removeChild(this.element);
 		}
+
+		if(this.__target){
+			this.__target.parentNode.removeChild(this.__target);
+			this.__target = null;
+		}
 		
+	},
+	__suspend:function(component,hook){
+		if(hook){
+			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
+			this.element.parentNode.insertBefore(this.__target,this.element);
+		}		
+
+		if(this.elements){
+			var p = this.elements[0].parentNode;
+			if(p)
+			for(var i=this.elements.length;i--;){
+				p.removeChild(this.elements[i]);
+			}
+		}else{
+			this.element.parentNode.removeChild(this.element);
+		}
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;

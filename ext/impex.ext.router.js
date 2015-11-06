@@ -53,7 +53,7 @@
 				for(var k in routerMap){
 					var router = routerMap[k].router;
 					var auto = true;
-					router.__cbk && (auto = router.__cbk(url));
+					url && router.__cbk && (auto = router.__cbk(url));
 					if(auto !== false){
 						var component = routerMap[k].comp;
 						var expMap = router.__expMap;

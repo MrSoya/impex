@@ -1046,14 +1046,16 @@ var Builder = new function() {
 		observerProp(component,[],component,depth+1);
 	}
 
-	function observerProp(model,propChain,ctrlScope,depth){
+	function observerProp(model,propChain,component,depth){
 		if(depth > DEPTH)return;
 		var recur = false;
 
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
-				changeHandler(changes,propChain,ctrlScope,depth);
+				if(component.$__state == Component.state.suspend)return;
+				changeHandler(changes,propChain,component,depth);
 			}
+			model.$__oldVal = model.concat();
 			Array_observe(model,model.$__observer);
 
 			recur = true;
@@ -1061,7 +1063,8 @@ var Builder = new function() {
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
-				changeHandler(changes,propChain,ctrlScope,depth);
+				if(component.$__state == Component.state.suspend)return;
+				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);
 
@@ -1077,48 +1080,53 @@ var Builder = new function() {
 				if(k.indexOf('$')===0)continue;
 				var pc = propChain.concat();
 				pc.push(k);
-				observerProp(model[k],pc,ctrlScope,depth+1);
+				observerProp(model[k],pc,component,depth+1);
 			}
 		}
 	}
 
-	function changeHandler(changes,propChain,ctrlScope,depth){
+	function changeHandler(changes,propChain,component,depth){
 		if(Util.isString(changes))return;
 
 		for(var i=changes.length;i--;){
 			var change = changes[i];
 
-			var propName = change.name || change.index;
-			if(propName.indexOf && propName.indexOf('$')===0)
+			var propName = change.name;
+			if(propName && propName.indexOf('$')===0)
 				continue;
 
 			var newObj = change.object[propName];
 			//查询控制域
 			var pc = propChain.concat();
-			if(change.name)
+			if(propName && !Util.isArray(change.object))
 				pc.push(propName);
+
 			//recursive
-			recurRender(ctrlScope,pc,change.type,newObj,change.oldValue);
+			var oldVal = change.oldValue;
+			if(Util.isArray(change.object)){
+				newObj = change.object;
+				oldVal = change.object.$__oldVal;
+			}
+			recurRender(component,pc,change.type,newObj,oldVal);
 
 			//unobserve
-			if(Util.isArray(change.oldValue)){
+			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
 				Array_unobserve(change.oldValue,change.oldValue.$__observer);
-			}else if(Util.isArray(change.object) && !change.oldValue){
-				Array_unobserve(change.object,change.object.$__observer);
-				Array_observe(change.object,change.object.$__observer);
+			}else if(Util.isArray(change.object)){
+				change.object.$__oldVal = change.object.concat();
+				return;
 			}else if(Util.isObject(change.oldValue)){
 				Object_unobserve(change.oldValue,change.oldValue.$__observer);
 				change.oldValue.$__observer = null;
 			}
 
 			//reobserve
-			observerProp(newObj,pc,ctrlScope,depth);
-			
+			observerProp(newObj,pc,component,depth);
 		}
 	}
 
-	function rerender(ctrlScope,propChain,changeType,newVal,oldVal){
-		var props = ctrlScope.$__expPropRoot.subProps;
+	function rerender(component,propChain,changeType,newVal,oldVal){
+		var props = component.$__expPropRoot.subProps;
 		var prop;
 		for(var i=0;i<propChain.length;i++){
 			var p = propChain[i];
@@ -1190,11 +1198,11 @@ var Builder = new function() {
 			findMatchProps(prop.subProps[k],findLength-1,matchs);
 		}
 	}
-	function recurRender(ctrlScope,propChain,changeType,newVal,oldVal){
-		rerender(ctrlScope,propChain,changeType,newVal,oldVal);
+	function recurRender(component,propChain,changeType,newVal,oldVal){
+		rerender(component,propChain,changeType,newVal,oldVal);
 
-		for(var j=ctrlScope.$__components.length;j--;){
-			var subCtrlr = ctrlScope.$__components[j]
+		for(var j=component.$__components.length;j--;){
+			var subCtrlr = component.$__components[j]
  			recurRender(subCtrlr,propChain,changeType,newVal,oldVal);
  		}
 	}
@@ -1244,8 +1252,11 @@ var Renderer = new function() {
 		if(node.setAttribute){
 			node.setAttribute(attrName,val);
 		}else{
-			//文本节点
-			node.nodeValue = val;
+			//fix bug in ie8 when text node in textarea
+			try{
+				//文本节点
+				node.nodeValue = val;
+			}catch(e){}
 		}
 	}
 
@@ -1439,7 +1450,8 @@ ViewModel.prototype = {
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
-			eval(evalStr + '= "'+ val.replace(/\n/mg,'\\n') +'"');
+			//fix \r\n on IE8
+			eval(evalStr + '= "'+ val.replace(/\r\n|\n/mg,'\\n') +'"');
 			return this;
 		}else{
 			return eval(evalStr);
@@ -1473,11 +1485,10 @@ ViewModel.prototype = {
  * @extends ViewModel
  */
 function Component (view) {
-	//每个组件都保存顶级路径
 	var id = 'C_' + Object.keys(impex.__components).length;
 	impex.__components[id] = this;
-	this.__id = id;
-	this.__state = Component.state.created;
+	this.$__id = id;
+	this.$__state = Component.state.created;
 	/**
 	 * 组件绑定的视图对象，在创建时由系统自动注入
 	 * 在DOM中，视图对象的所有操作都针对自定义标签的顶级元素，而不包括子元素
@@ -1529,7 +1540,8 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
-	destroyed : 'destroyed'
+	destroyed : 'destroyed',
+	suspend : 'suspend'
 }
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
@@ -1544,7 +1556,7 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 查找子组件，并返回符合条件的第一个实例
-	 * @param  {string} name       组件名
+	 * @param  {string} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @return {Component | null} 
 	 */
@@ -1552,19 +1564,47 @@ Util.ext(Component.prototype,{
 		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
-			if(comp.$name == name){
-				var matchAll = true;
-				if(conditions)
-					for(var k in conditions){
-						if(comp[k] != conditions[k]){
-							matchAll = false;
-							break;
-						}
+			if(name != '*' && comp.$name != name)continue;
+
+			var matchAll = true;
+			if(conditions)
+				for(var k in conditions){
+					if(comp[k] != conditions[k]){
+						matchAll = false;
+						break;
 					}
-				if(matchAll){
-					return comp;
 				}
+			if(matchAll){
+				return comp;
 			}
+			
+		}
+		return null;
+	},
+	/**
+	 * 查找组件内指令，并返回符合条件的第一个实例
+	 * @param  {string} name       指令名，可以使用通配符*
+	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @return {Directive | null} 
+	 */
+	findD:function(name,conditions){
+		name = name.toLowerCase();
+		for(var i=this.$__directives.length;i--;){
+			var d = this.$__directives[i];
+			if(name != '*' && d.$name != name)continue;
+
+			var matchAll = true;
+			if(conditions)
+				for(var k in conditions){
+					if(d[k] != conditions[k]){
+						matchAll = false;
+						break;
+					}
+				}
+			if(matchAll){
+				return d;
+			}
+			
 		}
 		return null;
 	},
@@ -1586,6 +1626,8 @@ Util.ext(Component.prototype,{
 		var watch = new Watch(cbk,this,varObj.segments);
 		//监控变量
 		Builder.buildExpModel(this,varObj,keys[0],watch);
+
+		return this;
 	},
 	/**
 	 * 添加子组件到父组件
@@ -1625,7 +1667,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
-		if(this.__state != Component.state.created)return;
+		if(this.$__state != Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -1648,20 +1690,29 @@ Util.ext(Component.prototype,{
 
 		this.onInit && this.onInit();
 
-		this.__state = Component.state.inited;
+		this.$__state = Component.state.inited;
 	},
 	/**
 	 * 显示组件到视图上
 	 */
 	display:function(){
-		if(this.__state != Component.state.inited)return;
+		if(
+			this.$__state != Component.state.inited && 
+			this.$__state != Component.state.suspend
+		)return;
+
 		this.$view.__display();
 		
 		Renderer.render(this);
 
+		if(this.$__suspendParent){
+			this.$parent = this.$__suspendParent;
+			this.$__suspendParent = null;
+		}
+
 		this.onDisplay && this.onDisplay();
 
-		this.__state = Component.state.displayed;
+		this.$__state = Component.state.displayed;
 
 		Builder.build(this);
 	},
@@ -1669,7 +1720,7 @@ Util.ext(Component.prototype,{
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.__state == Component.state.destroyed)return;
+		if(this.$__state == Component.state.destroyed)return;
 
 		var i = this.$parent.$__components.indexOf(this);
 		if(i > -1){
@@ -1680,10 +1731,32 @@ Util.ext(Component.prototype,{
 
 		this.onDestroy && this.onDestroy();
 
-		this.__state = Component.state.destroyed;
+		this.$__state = Component.state.destroyed;
+	},
+	/**
+	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
+	 * 但数据都不会销毁
+	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
+	 * 如果为false，则需要注入viewManager，手动插入视图
+	 * @see ViewManager
+	 */
+	suspend:function(hook){
+		if(this.$__state != Component.state.displayed)return;
+
+		var i = this.$parent.$__components.indexOf(this);
+		if(i > -1){
+			this.$parent.$__components.splice(i,1);
+		}
+		this.$__suspendParent = this.$parent;
+
+		this.$parent = null;
+
+		this.$view.__suspend(this,hook==false?false:true);
+
+		this.$__state = Component.state.suspend;
 	},
 	__getPath:function(){
-		return 'impex.__components["'+ this.__id +'"]';
+		return 'impex.__components["'+ this.$__id +'"]';
 	}
 });
 /**
@@ -1749,6 +1822,8 @@ View.prototype = {
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
+		fragment = null;
+		this.__target = null;
 	},
 	__destroy:function(){
 		for(var k in this.__evMap){
@@ -1767,7 +1842,28 @@ View.prototype = {
 		}else{
 			this.element.parentNode.removeChild(this.element);
 		}
+
+		if(this.__target){
+			this.__target.parentNode.removeChild(this.__target);
+			this.__target = null;
+		}
 		
+	},
+	__suspend:function(component,hook){
+		if(hook){
+			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
+			this.element.parentNode.insertBefore(this.__target,this.element);
+		}		
+
+		if(this.elements){
+			var p = this.elements[0].parentNode;
+			if(p)
+			for(var i=this.elements.length;i--;){
+				p.removeChild(this.elements[i]);
+			}
+		}else{
+			this.element.parentNode.removeChild(this.element);
+		}
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;
@@ -2411,8 +2507,8 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,1,4],
-	        state:'alpha',
+	        v:[0,2,0],
+	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -2695,55 +2791,102 @@ impex.service('ComponentManager',new function(){
     function eachModel(){
         this.onCreate = function(viewManager){
             this.$eachExp = /(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*=>\s*[a-zA-Z0-9_$]+?)|(?:[a-zA-Z0-9_$]+?))$/;
-            this.viewManager = viewManager;
-            this.parent = this.$parent;
-            this.expInfo = this.parseExp(this.$value);
+            this.$viewManager = viewManager;
+            this.$expInfo = this.parseExp(this.$value);
+            this.$parentComp = this.$parent;
+            this.$cache = [];
             //获取数据源
-            this.ds = this.parent.data(this.expInfo.ds);
+            this.$ds = this.$parent.data(this.$expInfo.ds);
             
-            this.subComponents = [];//子组件，用于快速更新each视图，提高性能
+            this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
+
+            this.$cacheSize = 20;
         }
         this.onInit = function(){
-            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
-            this.viewManager.insertBefore(this.placeholder,this.$view);
+            this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
+            this.$viewManager.insertBefore(this.$placeholder,this.$view);
 
-            this.build(this.ds,this.expInfo.k,this.expInfo.v);
+            this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
             //更新视图
             this.destroy();
 
             var that = this;
-            this.parent.watch(this.expInfo.ds,function(type,newVal,oldVal){
-                that.rebuild();
+            this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+                var newKeysSize = 0;
+                for(var k in newVal){
+                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    newKeysSize++;
+                }
+                var oldKeysSize = 0;
+                for(var k in oldVal){
+                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    oldKeysSize++;
+                }
+                that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
             });
         }
-        this.rebuild = function(){
-            var ds = this.parent.data(this.expInfo.ds);
-
-            //清除旧组件
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].destroy();
+        this.rebuild = function(ds,diffSize,ki,vi){
+            if(diffSize < 0){
+                var tmp = this.$subComponents.splice(0,diffSize*-1);
+                if(this.$cache.length < this.$cacheSize){
+                    for(var i=tmp.length;i--;){
+                        this.$cache.push(tmp[i]);
+                    }
+                    for(var i=this.$cache.length;i--;){
+                        this.$cache[i].suspend(false);
+                    }
+                }else{
+                    for(var i=tmp.length;i--;){
+                        tmp[i].destroy();
+                    }
+                }
+            }else if(diffSize > 0){
+                var tmp = this.$cache.splice(0,diffSize);
+                for(var i=0;i<tmp.length;i++){
+                    this.$subComponents.push(tmp[i]);
+                    this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                }
+                var restSize = diffSize - tmp.length;
+                while(restSize--){
+                    var subComp = this.createSubComp();
+                }
             }
-            this.subComponents = [];
 
-            this.build(ds,this.expInfo.k,this.expInfo.v);
-        }
-        this.build = function(ds,ki,vi){
-            var parent = this.parent;
-            
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
 
-                var target = this.viewManager.createPlaceholder('');
-                this.viewManager.insertBefore(target,this.placeholder);
-                //视图
-                var copy = this.$view.clone().removeAttr(this.$name);
+                var subComp = this.$subComponents[index];
+                //模型
+                subComp[vi] = ds[k];
+                subComp['$index'] = index++;
+                if(ki)subComp[ki] = isIntK?k>>0:k;
 
-                //创建子组件
-                var subComp = parent.createSubComponent(copy,target);
-                this.subComponents.push(subComp);
+                subComp.init();
+                subComp.display();
+            }
+        }
+        this.createSubComp = function(){
+            var parent = this.$parentComp;
+            var target = this.$viewManager.createPlaceholder('');
+            this.$viewManager.insertBefore(target,this.$placeholder);
+            //视图
+            var copy = this.$view.clone().removeAttr(this.$name);
+            //创建子组件
+            var subComp = parent.createSubComponent(copy,target);
+            this.$subComponents.push(subComp);
+            return subComp;
+        }
+        this.build = function(ds,ki,vi){            
+            var isIntK = Util.isArray(ds)?true:false;
+            var index = 0;
+            for(var k in ds){
+                if(!ds.hasOwnProperty(k))continue;
+                if(isIntK && isNaN(k))continue;
+
+                var subComp = this.createSubComp();
                 
                 //模型
                 subComp[vi] = ds[k];
@@ -2752,9 +2895,9 @@ impex.service('ComponentManager',new function(){
             }
 
             //初始化组件
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].init();
-                this.subComponents[i].display();
+            for(var i=this.$subComponents.length;i--;){
+                this.$subComponents[i].init();
+                this.$subComponents[i].display();
             }
         }
         this.parseExp = function(exp){

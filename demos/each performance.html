@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .onchange{
+                animation:highlight 1s;
+            }
+            @keyframes highlight{
+                0% {
+                    color: #fff;
+                    background-color: red;
+                }
+                100% {
+                    color: red;
+                    background-color: transparent;
+                }
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <!-- 运行该demo，必须支持MutationObserver API，比如IE11+ -->
+        <button x-click="addList()">增加2元素</button>
+        <button x-click="delList()">删除2元素</button>
+        <button x-click="changeList()">增加1元素删除1元素</button>
+        <button x-click="replaceList()">替换数组</button>
+        <button x-click="sortList()">数组排序</button>
+        <p class="stat">
+            DOM节点增加:<span class="{{addhl}}">{{addDOMCount}}</span>
+            DOM节点删除:<span class="{{delhl}}">{{delDOMCount}}</span>
+            DOM节点内容变更:<span class="{{muhl}}">{{mutateDOMCount}}</span>
+            组件数量:<span class="{{comhl}}">{{compCount}}</span>
+        </p>
+        
+    	<ul id="opt">
+            <li x-each="list as k => v">{{k + ':' +v}}</li>   
+        </ul>
+        
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            var debug = impex.render(document.body,new function(){
+                this.list = [1,2,3,4];
+                this.addList = function(){
+                    this.list.push(Date.now());
+                    this.list.push(Date.now());
+
+                    this.getCompCount();
+                }
+                this.delList = function(){
+                    this.list.pop();
+                    this.list.pop();
+
+                    this.getCompCount();
+                }
+                this.changeList = function(){
+                    this.list.push(Date.now());
+                    this.list.pop();
+
+                    this.getCompCount();
+                }
+                this.replaceList = function(){
+                    this.list = [1,2,3,4,5,6];
+
+                    this.getCompCount();
+                }
+                this.sortList = function(){
+                    if(this.b2s){
+                        this.list.sort(function(a,b){
+                            return a - b;
+                        });
+                        this.b2s = false;
+                    }else{
+                        this.list.sort(function(a,b){
+                            return b - a;
+                        });
+                        this.b2s = true;
+                    }
+                    
+                }
+                this.getCompCount = function(){
+                    var that = this;
+                    setTimeout(function(){
+                        var eachD = that.findD('x-each');
+                        var newCount = eachD.$subComponents.length + eachD.$cache.length;
+                        if(that.compCount != newCount){
+                            that.compCount = newCount
+                            that.comhl = 'onchange';
+                        }
+                        
+                    },0);
+                }
+                this.addDOMCount = 0;
+                this.delDOMCount = 0;
+                this.compCount = 0;
+                this.mutateDOMCount = 0;
+
+                this.resetStat = function(){
+                    this.addDOMCount = 0;
+                    this.delDOMCount = 0;
+                    this.mutateDOMCount = 0;
+                }
+
+                this.onInit = function(){
+                    var that = this;
+                    this.watch('addhl',function(){
+                        setTimeout(function(){
+                            that.addhl = '';
+                        },1000);
+                    })
+                    .watch('delhl',function(){
+                        setTimeout(function(){
+                            that.delhl = '';
+                        },1000);
+                    })
+                    .watch('muhl',function(){
+                        setTimeout(function(){
+                            that.muhl = '';
+                        },1000);
+                    })
+                    .watch('comhl',function(){
+                        setTimeout(function(){
+                            that.comhl = '';
+                        },1000);
+                    });
+                }
+
+                this.onDisplay = function(){
+                    this.getCompCount();
+                }
+            });
+
+
+            var target = document.querySelector('#opt');
+            var observer = new MutationObserver(function(mutations) {
+                debug.resetStat();
+                mutations.forEach(function(mutation) {
+                    if(mutation.type === 'characterData'){
+                        debug.mutateDOMCount++;
+                        debug.muhl = 'onchange';
+                        return;
+                    }
+                    for(var i=mutation.removedNodes.length;i--;){
+                        if(mutation.removedNodes[i].nodeType == 1){
+                            debug.delDOMCount ++;
+                            debug.delhl = 'onchange';
+                        }
+                    }
+                    for(var i=mutation.addedNodes.length;i--;){
+                        if(mutation.addedNodes[i].nodeType == 1){
+                            debug.addDOMCount ++;
+                            debug.addhl = 'onchange';
+                        }
+                    }
+                });    
+            });
+
+            var config = {childList: true, characterData: true ,subtree:true};
+            observer.observe(target, config);
+        </script>
+    </body>
+</html>

@@ -81,55 +81,102 @@
     function eachModel(){
         this.onCreate = function(viewManager){
             this.$eachExp = /(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*=>\s*[a-zA-Z0-9_$]+?)|(?:[a-zA-Z0-9_$]+?))$/;
-            this.viewManager = viewManager;
-            this.parent = this.$parent;
-            this.expInfo = this.parseExp(this.$value);
+            this.$viewManager = viewManager;
+            this.$expInfo = this.parseExp(this.$value);
+            this.$parentComp = this.$parent;
+            this.$cache = [];
             //获取数据源
-            this.ds = this.parent.data(this.expInfo.ds);
+            this.$ds = this.$parent.data(this.$expInfo.ds);
             
-            this.subComponents = [];//子组件，用于快速更新each视图，提高性能
+            this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
+
+            this.$cacheSize = 20;
         }
         this.onInit = function(){
-            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
-            this.viewManager.insertBefore(this.placeholder,this.$view);
+            this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
+            this.$viewManager.insertBefore(this.$placeholder,this.$view);
 
-            this.build(this.ds,this.expInfo.k,this.expInfo.v);
+            this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
             //更新视图
             this.destroy();
 
             var that = this;
-            this.parent.watch(this.expInfo.ds,function(type,newVal,oldVal){
-                that.rebuild();
+            this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+                var newKeysSize = 0;
+                for(var k in newVal){
+                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    newKeysSize++;
+                }
+                var oldKeysSize = 0;
+                for(var k in oldVal){
+                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    oldKeysSize++;
+                }
+                that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
             });
         }
-        this.rebuild = function(){
-            var ds = this.parent.data(this.expInfo.ds);
-
-            //清除旧组件
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].destroy();
+        this.rebuild = function(ds,diffSize,ki,vi){
+            if(diffSize < 0){
+                var tmp = this.$subComponents.splice(0,diffSize*-1);
+                if(this.$cache.length < this.$cacheSize){
+                    for(var i=tmp.length;i--;){
+                        this.$cache.push(tmp[i]);
+                    }
+                    for(var i=this.$cache.length;i--;){
+                        this.$cache[i].suspend(false);
+                    }
+                }else{
+                    for(var i=tmp.length;i--;){
+                        tmp[i].destroy();
+                    }
+                }
+            }else if(diffSize > 0){
+                var tmp = this.$cache.splice(0,diffSize);
+                for(var i=0;i<tmp.length;i++){
+                    this.$subComponents.push(tmp[i]);
+                    this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                }
+                var restSize = diffSize - tmp.length;
+                while(restSize--){
+                    var subComp = this.createSubComp();
+                }
             }
-            this.subComponents = [];
 
-            this.build(ds,this.expInfo.k,this.expInfo.v);
-        }
-        this.build = function(ds,ki,vi){
-            var parent = this.parent;
-            
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
 
-                var target = this.viewManager.createPlaceholder('');
-                this.viewManager.insertBefore(target,this.placeholder);
-                //视图
-                var copy = this.$view.clone().removeAttr(this.$name);
+                var subComp = this.$subComponents[index];
+                //模型
+                subComp[vi] = ds[k];
+                subComp['$index'] = index++;
+                if(ki)subComp[ki] = isIntK?k>>0:k;
 
-                //创建子组件
-                var subComp = parent.createSubComponent(copy,target);
-                this.subComponents.push(subComp);
+                subComp.init();
+                subComp.display();
+            }
+        }
+        this.createSubComp = function(){
+            var parent = this.$parentComp;
+            var target = this.$viewManager.createPlaceholder('');
+            this.$viewManager.insertBefore(target,this.$placeholder);
+            //视图
+            var copy = this.$view.clone().removeAttr(this.$name);
+            //创建子组件
+            var subComp = parent.createSubComponent(copy,target);
+            this.$subComponents.push(subComp);
+            return subComp;
+        }
+        this.build = function(ds,ki,vi){            
+            var isIntK = Util.isArray(ds)?true:false;
+            var index = 0;
+            for(var k in ds){
+                if(!ds.hasOwnProperty(k))continue;
+                if(isIntK && isNaN(k))continue;
+
+                var subComp = this.createSubComp();
                 
                 //模型
                 subComp[vi] = ds[k];
@@ -138,9 +185,9 @@
             }
 
             //初始化组件
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].init();
-                this.subComponents[i].display();
+            for(var i=this.$subComponents.length;i--;){
+                this.$subComponents[i].init();
+                this.$subComponents[i].display();
             }
         }
         this.parseExp = function(exp){
