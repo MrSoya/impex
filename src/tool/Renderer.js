@@ -39,9 +39,17 @@ var Renderer = new function() {
 	}
 	this.renderExpNode = renderExpNode;
 
+	var propMap = {
+		value:['INPUT']
+	};
+
 	function updateDOM(node,attrName,val){
 		if(node.setAttribute){
 			node.setAttribute(attrName,val);
+			var propOn = propMap[attrName];
+			if(propOn && propOn.indexOf(node.tagName)>-1){
+				node[attrName] = val;
+			}
 		}else{
 			//fix bug in ie8 when text node in textarea
 			try{

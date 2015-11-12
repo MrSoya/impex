@@ -10,10 +10,10 @@ var DOMViewProvider = new function(){
 	 */
 	this.newInstance = function(template,target){
 		compiler.innerHTML = template;
-		if(!compiler.children[0])return null;
+		if(!compiler.childNodes[0])return null;
 		var nodes = [];
-		while(compiler.children.length>0){
-			var tmp = compiler.removeChild(compiler.children[0]);
+		while(compiler.childNodes.length>0){
+			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			nodes.push(tmp);
 		}
 

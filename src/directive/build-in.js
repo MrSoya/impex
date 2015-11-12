@@ -2,17 +2,6 @@
  * 内建指令
  */
 !function(impex){
-    ///////////////////// 事件指令 /////////////////////
-    /**
-     * 视图点击指令
-     * <br/>使用方式：<div x-click="fn() + fx()"></div>
-     */
-    impex.directive('click',{
-        onInit : function(){
-            this.on('click',this.$value);
-        }
-    });
-
     ///////////////////// 视图控制指令 /////////////////////
     /**
      * 控制视图显示指令，根据表达式计算结果控制
@@ -56,6 +45,10 @@
     impex.directive('cloak',{
         onCreate:function(){
             var className = this.$view.attr('class');
+            if(!className){
+                impex.console.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
+                return;
+            }
             className = className.replace('x-cloak','');
             this.$view.attr('class',className);
             updateCloakAttr(this.$parent,this.$view.element,className);
@@ -85,14 +78,15 @@
             this.$expInfo = this.parseExp(this.$value);
             this.$parentComp = this.$parent;
             this.$cache = [];
-            //获取数据源
-            this.$ds = this.$parent.data(this.$expInfo.ds);
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.$cacheSize = 20;
         }
         this.onInit = function(){
+            //获取数据源
+            this.$ds = this.$parent.data(this.$expInfo.ds);
+            
             this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
             this.$viewManager.insertBefore(this.$placeholder,this.$view);
 
@@ -206,7 +200,7 @@
             });
             if(!ds){
                 //each语法错误
-                impex.console.error(exp+'解析错误，不是合法的each语法');
+                impex.console.error('invalid each expression : '+exp);
                 return;
             }
 

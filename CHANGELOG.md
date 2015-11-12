@@ -1,4 +1,28 @@
 # Change Log
+## Version 0.3.0 - 2015/11/12
+### 新增
+* {{=CONTENT}}模版指令，用于引用组件内部内容
+* {{=BINDPROPS}}模版指令，用于引用组件上所有属性
+* impex.ext.directives 新增事件指令
+
+### 更新
+* 组件onDisplay调用时机
+* 组件模版支持多个顶级节点作为视图
+* 延迟x-each/-start指令获取数据源的时间，这样可以让父组件在onInit中修改each的数据源
+* 现在所有指令共享一个View对象
+* 增加扫描器效率
+
+### bug修复
+* 组件事件handler调用时丢失context的问题
+* 部分组件创建时没有触发onCreate回调
+* 修正watch匹配算法以及回调参数错误
+* 无法修改input的value问题
+* 内部工具错误
+
+### 移除(重要!)
+* 不再支持{{=tagBody}}模版标签，但，请看新增部分
+* 核心包不再支持事件指令
+
 ## Version 0.2.0 - 2015/11/6
 ### 新增
 * Component.findD查询指令接口

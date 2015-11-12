@@ -46,6 +46,8 @@ Util.ext(_ComponentFactory.prototype,{
 			}
 			
 			rs.onCreate && rs.onCreate.apply(rs,services);
+		}else{
+			rs.onCreate && rs.onCreate();
 		}
 		
 		return rs;

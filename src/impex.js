@@ -31,7 +31,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,2,0],
+	        v:[0,3,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -160,4 +160,34 @@
 		}
 
 		this.__components = {};
+
+		/**
+		 * 查找组件实例，并返回符合条件的所有实例
+		 * @param  {string} name       组件名，可以使用通配符*
+		 * @param  {Object} conditions 查询条件，JSON对象
+		 * @return {Array}  
+		 */
+		this.findAll = function(name,conditions){
+			name = name.toLowerCase();
+			var rs = [];
+			var ks = Object.keys(this.__components);
+			for(var i=ks.length;i--;){
+				var comp = this.__components[ks[i]];
+				if(name != '*' && comp.$name != name)continue;
+
+				var matchAll = true;
+				if(conditions)
+					for(var k in conditions){
+						if(comp[k] != conditions[k]){
+							matchAll = false;
+							break;
+						}
+					}
+				if(matchAll){
+					rs.push(comp);
+				}
+				
+			}
+			return rs;
+		}
 	}

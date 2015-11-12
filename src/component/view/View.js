@@ -76,9 +76,13 @@ View.prototype = {
 			var p = this.elements[0].parentNode;
 			if(p)
 			for(var i=this.elements.length;i--;){
+				if(this.elements[i].__impex__view)
+					this.elements[i].__impex__view = null;
 				p.removeChild(this.elements[i]);
 			}
 		}else{
+			if(this.element.__impex__view)
+				this.element.__impex__view = null;
 			this.element.parentNode.removeChild(this.element);
 		}
 
@@ -114,7 +118,7 @@ View.prototype = {
 			var tmpExp = originExp;
 
 			if(handler instanceof Function){
-				tmpExp = handler(e,originExp);
+				tmpExp = handler.call(comp,e,originExp);
 			}
 			if(!tmpExp)return;
 			if(tmpExpOutside != tmpExp){
@@ -133,7 +137,17 @@ View.prototype = {
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
 		}
-		this.__evMap[type].push([this.element,evHandler]);
+		this.__evMap[type].push([exp,evHandler]);
+	},
+	__off:function(component,type,exp){
+		var events = this.__evMap[type];
+        for(var i=events.length;i--;){
+            var pair = events[i];
+            var evExp = pair[0];
+            var evHandler = pair[1];
+            if(evExp == exp)
+                Util.off(type,this.element,evHandler);
+        }
 	},
 	/**
 	 * 复制当前视图
@@ -207,12 +221,20 @@ View.prototype = {
 function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'tagBody' || attrName == 'content'){
-			return bodyHTML;
-		}
+		if(attrName == 'CONTENT'){
+            return bodyHTML;
+        }
+        if(attrName == 'BINDPROPS'){
+            var rs = '';
+            var ks = Object.keys(propMap);
+            for(var i=ks.length;i--;){
+                rs += propMap[ks[i]].nodeName + '="'+propMap[ks[i]].nodeValue+'" ';
+            }
+            return rs;
+        }
 
 		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal;
+		return attrVal || '';
 	});
 	return tmpl;
 }

@@ -25,6 +25,8 @@ var Scanner = new function() {
 
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
+				var tmp = segments[i].replace(/\s/g,'');
+				if(!tmp)continue;
 				var tn = document.createTextNode(segments[i]);
 				fragment.appendChild(tn);
 			}

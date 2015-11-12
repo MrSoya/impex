@@ -23,10 +23,11 @@
             impex.converter('currency',{
                 to:function(sym,decimal){
                     var pair = this.$value.split('.');
+                    var inte = pair[0].replace(/\s/g,'');
                     var integer = '';
-                    for(var i=0;i<pair[0].length;i++){
-                        integer += pair[0][i];
-                        if(i%3==0 && i+1<pair[0].length){
+                    for(var i=0;i<inte.length;i++){
+                        integer += inte[i];
+                        if(i%3==0 && i+1<inte.length){
                             integer += ',';
                         }
                     }

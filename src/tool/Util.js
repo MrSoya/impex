@@ -31,7 +31,7 @@ var Util = new function () {
         for (var i=keys.length;i--;) {
             var k = keys[i];
             if(from[k] instanceof Function)continue;
-            if(from[k])to[k] = from[k];
+            if(from[k] !== undefined)to[k] = from[k];
         }
     }
 
@@ -45,7 +45,7 @@ var Util = new function () {
     }
 
     this.isObject = function(obj){
-        return typeof(obj) === 'object';
+        return typeof(obj) === 'object' && obj !== null;
     }
 
     /**

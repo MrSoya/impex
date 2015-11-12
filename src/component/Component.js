@@ -64,7 +64,7 @@ function Component (view) {
 	 */
 	this.onCreate;
 	/**
-	 * 组件初始化时调用
+	 * 组件初始化时调用,如果返回false，该组件中断初始化，并销毁
 	 */
 	this.onInit;
 	/**
@@ -86,13 +86,21 @@ Component.state = {
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
 	/**
-	 * 绑定事件到组件上
+	 * 绑定事件到组件
 	 * @param  {string} type 事件名
      * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
      * @param  {function} handler   事件处理回调，回调参数e
 	 */
 	on:function(type,exp,handler){
 		this.$view.__on(this,type,exp,handler);
+	},
+	/**
+	 * 从组件解绑事件
+	 * @param  {string} type 事件名
+     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 */
+	off:function(type,exp){
+		this.$view.__off(this,type,exp);
 	},
 	/**
 	 * 查找子组件，并返回符合条件的第一个实例
@@ -213,7 +221,7 @@ Util.ext(Component.prototype,{
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
 				var rs = that.$view.__init(tmplStr,that);
 				if(rs === false)return;
-				that.__init();
+				that.__init(tmplStr);
 				that.display();
 			});
 		}else{
@@ -221,14 +229,19 @@ Util.ext(Component.prototype,{
 				var rs = this.$view.__init(this.$template,this);
 				if(rs === false)return;
 			}
-			this.__init();
+			this.__init(this.$template);
 		}
 		return this;
 	},
-	__init:function(){
+	__init:function(tmplStr){
 		Scanner.scan(this.$view,this);
-
-		this.onInit && this.onInit();
+		
+		var rs = null;
+		this.onInit && (rs = this.onInit(tmplStr));
+		if(rs === false){
+			this.destroy();
+			return;
+		}
 
 		this.$__state = Component.state.inited;
 	},
@@ -250,11 +263,11 @@ Util.ext(Component.prototype,{
 			this.$__suspendParent = null;
 		}
 
-		this.onDisplay && this.onDisplay();
-
 		this.$__state = Component.state.displayed;
 
 		Builder.build(this);
+
+		this.onDisplay && this.onDisplay();
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图

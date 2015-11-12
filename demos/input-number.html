@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	Number:<input type="text" 
+            x-focus="bindWheel(this)" 
+            x-blur="unbindWheel(this)" 
+            x-bind="value" 
+            value="{{value||0}}">响应鼠标滚动
+    
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
+        <script type="text/javascript">
+            //渲染
+            impex.render(document.body,new function(){
+                this.value = 0;
+                var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
+                this.bindWheel = function(comp){
+                    var that = this;
+                    comp.on(type,null,function(e){
+                        var wd = e.wheelDelta;
+                        var d = e.detail;
+                        var dir;
+                        if(wd !== undefined){
+                            dir = wd>0?-1:1;
+                        }else{
+                            dir = d>0?1:-1;
+                        }
+
+
+                        if(dir>0){
+                            that.value = parseFloat(that.value) + 1;
+                        }else{
+                            that.value = parseFloat(that.value) - 1;
+                        }
+
+                        return false;
+                    });
+                }
+                this.unbindWheel = function(comp){
+                    comp.off(type,null);
+                }
+                this.onInit = function(){
+                    this.watch('value',function(type,newVal,oldVal){
+                        var nv = /^-?[0-9]+$/.test(newVal);
+                        if(!nv){
+                            this.value = oldVal||0;
+                        }
+                    });
+                }
+            });
+            
+        </script>
+    </body>
+</html>

@@ -214,21 +214,40 @@ var Builder = new function() {
 			for(var j=matchs[i].watchs.length;j--;){
 				var watch = matchs[i].watchs[j];
 
-				if(watch.segments.length != propChain.length)continue;
+				if(watch.segments.length < propChain.length)continue;
+				if(invokedWatchs.indexOf(watch) > -1)continue;
 
-				//compare 2 segs
+				//compare segs
 				var canWatch = true;
 				for(var k=0;k<watch.segments.length;k++){
+					if(!propChain[k])break;
+
 					if(watch.segments[k][0] != '[' && 
 						propChain[k][0] != '[' && 
 						watch.segments[k] != propChain[k]){
 						canWatch = false;
 						break;
 					}
+						
 				}
 
-				if(canWatch && invokedWatchs.indexOf(watch) < 0){
-					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,newVal,oldVal);
+				if(canWatch){
+					var nv = newVal,
+					ov = oldVal;
+					if(watch.segments.length > propChain.length){
+						var findSegs = watch.segments.slice(k);
+						var findStr = '$var';
+						for(var k=0;k<findSegs.length;k++){
+							var seg = findSegs[k];
+							findStr += seg[0]=='['?seg:'.'+seg;
+						}
+						try{
+							nv = new Function("$var","return "+findStr)(newVal);
+						}catch(e){
+							nv = null;
+						}
+					}
+					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov);
 					invokedWatchs.push(watch);
 				}
 			}
