@@ -1879,9 +1879,13 @@ View.prototype = {
 			var p = this.elements[0].parentNode;
 			if(p)
 			for(var i=this.elements.length;i--;){
+				if(this.elements[i].__impex__view)
+					this.elements[i].__impex__view = null;
 				p.removeChild(this.elements[i]);
 			}
 		}else{
+			if(this.element.__impex__view)
+				this.element.__impex__view = null;
 			this.element.parentNode.removeChild(this.element);
 		}
 
@@ -2573,7 +2577,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,2,0],
+	        v:[0,3,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
