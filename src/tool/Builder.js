@@ -98,6 +98,7 @@ var Builder = new function() {
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
 				if(component.$__state == Component.state.suspend)return;
+				if(component.$__state == Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			model.$__oldVal = model.concat();
@@ -109,6 +110,7 @@ var Builder = new function() {
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
 				if(component.$__state == Component.state.suspend)return;
+				if(component.$__state == Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);

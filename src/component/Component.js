@@ -275,12 +275,25 @@ Util.ext(Component.prototype,{
 	destroy:function(){
 		if(this.$__state == Component.state.destroyed)return;
 
-		var i = this.$parent.$__components.indexOf(this);
-		if(i > -1){
-			this.$parent.$__components.splice(i,1);
+		if(this.$parent){
+			var i = this.$parent.$__components.indexOf(this);
+			if(i > -1){
+				this.$parent.$__components.splice(i,1);
+			}
+			this.$parent = null;
 		}
-		this.$parent = null;
-		this.$view.__destroy();
+		
+		this.$view.__destroy(this);
+
+		while(this.$__components.length > 0){
+			this.$__components[0].destroy();
+		}
+
+		this.$view = 
+		this.$__components = 
+		this.$__directives = 
+		this.$__expNodes = 
+		this.$__expPropRoot = null;
 
 		this.onDestroy && this.onDestroy();
 
@@ -296,14 +309,16 @@ Util.ext(Component.prototype,{
 	suspend:function(hook){
 		if(this.$__state != Component.state.displayed)return;
 
-		var i = this.$parent.$__components.indexOf(this);
-		if(i > -1){
-			this.$parent.$__components.splice(i,1);
+		if(this.$parent){
+			var i = this.$parent.$__components.indexOf(this);
+			if(i > -1){
+				this.$parent.$__components.splice(i,1);
+			}
+			this.$__suspendParent = this.$parent;
+
+			this.$parent = null;
 		}
-		this.$__suspendParent = this.$parent;
-
-		this.$parent = null;
-
+		
 		this.$view.__suspend(this,hook==false?false:true);
 
 		this.$__state = Component.state.suspend;

@@ -1055,6 +1055,7 @@ var Builder = new function() {
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
 				if(component.$__state == Component.state.suspend)return;
+				if(component.$__state == Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			model.$__oldVal = model.concat();
@@ -1066,6 +1067,7 @@ var Builder = new function() {
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
 				if(component.$__state == Component.state.suspend)return;
+				if(component.$__state == Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);
@@ -1764,12 +1766,25 @@ Util.ext(Component.prototype,{
 	destroy:function(){
 		if(this.$__state == Component.state.destroyed)return;
 
-		var i = this.$parent.$__components.indexOf(this);
-		if(i > -1){
-			this.$parent.$__components.splice(i,1);
+		if(this.$parent){
+			var i = this.$parent.$__components.indexOf(this);
+			if(i > -1){
+				this.$parent.$__components.splice(i,1);
+			}
+			this.$parent = null;
 		}
-		this.$parent = null;
-		this.$view.__destroy();
+		
+		this.$view.__destroy(this);
+
+		while(this.$__components.length > 0){
+			this.$__components[0].destroy();
+		}
+
+		this.$view = 
+		this.$__components = 
+		this.$__directives = 
+		this.$__expNodes = 
+		this.$__expPropRoot = null;
 
 		this.onDestroy && this.onDestroy();
 
@@ -1785,14 +1800,16 @@ Util.ext(Component.prototype,{
 	suspend:function(hook){
 		if(this.$__state != Component.state.displayed)return;
 
-		var i = this.$parent.$__components.indexOf(this);
-		if(i > -1){
-			this.$parent.$__components.splice(i,1);
+		if(this.$parent){
+			var i = this.$parent.$__components.indexOf(this);
+			if(i > -1){
+				this.$parent.$__components.splice(i,1);
+			}
+			this.$__suspendParent = this.$parent;
+
+			this.$parent = null;
 		}
-		this.$__suspendParent = this.$parent;
-
-		this.$parent = null;
-
+		
 		this.$view.__suspend(this,hook==false?false:true);
 
 		this.$__state = Component.state.suspend;
@@ -1867,14 +1884,16 @@ View.prototype = {
 		fragment = null;
 		this.__target = null;
 	},
-	__destroy:function(){
+	__destroy:function(component){
 		for(var k in this.__evMap){
-			for(var i=this.__evMap[k].length;i--;){
-				var node = this.__evMap[k][i][0];
-				var handler = this.__evMap[k][i][1];
-				Util.off(k,node,handler);
-			}
+			var events = this.__evMap[k];
+	        for(var i=events.length;i--;){
+	            var pair = events[i];
+	            var evHandler = pair[1];
+	            Util.off(k,this.element,evHandler);
+	        }
 		}
+
 		if(this.elements){
 			var p = this.elements[0].parentNode;
 			if(p)
@@ -2577,7 +2596,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,3,0],
+	        v:[0,3,1],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2887,6 +2906,7 @@ impex.service('ComponentManager',new function(){
             this.$viewManager = viewManager;
             this.$expInfo = this.parseExp(this.$value);
             this.$parentComp = this.$parent;
+            this.$__view = this.$view;
             this.$cache = [];
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
@@ -2967,7 +2987,7 @@ impex.service('ComponentManager',new function(){
             var target = this.$viewManager.createPlaceholder('');
             this.$viewManager.insertBefore(target,this.$placeholder);
             //视图
-            var copy = this.$view.clone().removeAttr(this.$name);
+            var copy = this.$__view.clone().removeAttr(this.$name);
             //创建子组件
             var subComp = parent.createSubComponent(copy,target);
             this.$subComponents.push(subComp);

@@ -77,6 +77,7 @@
             this.$viewManager = viewManager;
             this.$expInfo = this.parseExp(this.$value);
             this.$parentComp = this.$parent;
+            this.$__view = this.$view;
             this.$cache = [];
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
@@ -157,7 +158,7 @@
             var target = this.$viewManager.createPlaceholder('');
             this.$viewManager.insertBefore(target,this.$placeholder);
             //视图
-            var copy = this.$view.clone().removeAttr(this.$name);
+            var copy = this.$__view.clone().removeAttr(this.$name);
             //创建子组件
             var subComp = parent.createSubComponent(copy,target);
             this.$subComponents.push(subComp);

@@ -64,14 +64,16 @@ View.prototype = {
 		fragment = null;
 		this.__target = null;
 	},
-	__destroy:function(){
+	__destroy:function(component){
 		for(var k in this.__evMap){
-			for(var i=this.__evMap[k].length;i--;){
-				var node = this.__evMap[k][i][0];
-				var handler = this.__evMap[k][i][1];
-				Util.off(k,node,handler);
-			}
+			var events = this.__evMap[k];
+	        for(var i=events.length;i--;){
+	            var pair = events[i];
+	            var evHandler = pair[1];
+	            Util.off(k,this.element,evHandler);
+	        }
 		}
+
 		if(this.elements){
 			var p = this.elements[0].parentNode;
 			if(p)
