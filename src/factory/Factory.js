@@ -13,6 +13,15 @@ Factory.prototype = {
 	 */
 	register : function(type,model,services){
 		type = type.toLowerCase();
+
+		//keywords check
+		for(var i=BUILD_IN_PROPS.length;i--;){
+			if(BUILD_IN_PROPS[i] in model){
+				impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
+				return;
+			}
+		}
+
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 
 		var props = {};

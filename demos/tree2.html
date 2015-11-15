@@ -5,7 +5,6 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <!-- 该demo演示了自定义组件属性的模型绑定和模版替换功能 -->
         <div id="entry">
         	<x-tree dataSource="lists"></x-tree>
         </div>
@@ -18,19 +17,26 @@
         
         	impex.component('x-tree',{
         		$template:'<ul>'+
-                                '<li x-each="{{=dataSource}} as item">'+
+                                '<li x-each="items as item">'+
                                     '<a>{{item.name}}</a>'+
                                     '{{#html treeItems(this,item.children)}}'+
                                 '</li>'+
                             '</ul>',
         		treeItems:function(comp,items){
-        			comp[this.dataSource] = items;
+        			comp['items'] = items;
         			if(items){
-        				return "<ul><li x-each='"+this.dataSource+" as item'><a>{{item.name}}</a>"+
+        				return "<ul><li x-each='items as item'><a>{{item.name}}</a>"+
         				    "{{#html treeItems(this,item.children)}}"+
         				"</li></ul>"
         			}
-        		}
+        		},
+                // closest : null,
+                onInit:function(){
+                    var theComp = this.closest('a');
+                    console.log(theComp);
+                    var dataSource = this.$parent.data(this.datasource);
+                    this.items = dataSource;
+                }
         	});
             //渲染
             var debug = impex.render(document.getElementById('entry'),new function(){
@@ -38,6 +44,8 @@
 
                     this.lists[4].children[2].name = 'n11'
                 }
+                // this.data = null;
+                this.a = null;
                 this.lists = [
                     {name:'n1',pid:0,id:1},
                     {name:'n2',pid:0,id:2},

@@ -58,7 +58,7 @@
     function updateCloakAttr(component,node,newOrigin){
         for(var i=component.$__expNodes.length;i--;){
             var expNode = component.$__expNodes[i];
-            if(expNode.node == node && expNode.attrName == 'class'){
+            if(expNode.node == node && expNode.attrName === 'class'){
                 expNode.origin = newOrigin;
             }
         }
@@ -99,12 +99,12 @@
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 var newKeysSize = 0;
                 for(var k in newVal){
-                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     newKeysSize++;
                 }
                 var oldKeysSize = 0;
                 for(var k in oldVal){
-                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     oldKeysSize++;
                 }
                 that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);

@@ -13,6 +13,38 @@
 	var DEPTH = 9;
 	var DEBUG = false;
 
+	var BUILD_IN_PROPS = ['data','closest'];
+
+	var lastComp;
+	function compDebug(comp,state){
+		var indent = '';
+		var p = comp.$parent;
+		while(p){
+			indent += '=';
+			p = p.$parent;
+		}
+		var info = '';
+		if(comp == lastComp){
+			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
+		}else{
+			var props = [];
+			props.push('id:'+comp.$__id);
+			if(comp.$name)
+				props.push('name:'+comp.$name);
+			props.push('view:'+comp.$view.element.tagName);
+			if(comp.$parent){
+				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
+			}
+
+			var type = comp instanceof Directive?'Directive':'Component';
+
+			info = type+'{'+ props.join(',') +'} ';
+		}
+		lastComp = comp;
+		
+		impex.console.debug(indent + (indent?'> ':'') + info + state);
+	}
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -31,7 +63,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,3,1],
+	        v:[0,3,2],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

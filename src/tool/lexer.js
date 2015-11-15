@@ -34,12 +34,12 @@ var lexer = (function(){
         var literal = startTag;
         for(var i=1;i<sentence.length;i++){
             var l = sentence[i];
-            if(l == '\\'){
+            if(l === '\\'){
                 escape = true;
                 literal += l;
                 continue;
             }else
-            if(!escape && l == startTag){
+            if(!escape && l === startTag){
                 return literal+startTag;
             }else{
                 literal += l;
@@ -73,9 +73,9 @@ var lexer = (function(){
                     }
                     varObj.words.push(tmp);
                 }else 
-                if(l == ']'){
+                if(l === ']'){
                     stack.pop();
-                    if(stack.length == 0){
+                    if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
                         literal += part;
 
@@ -99,7 +99,7 @@ var lexer = (function(){
                 if(VAR_EXP_BODY.test(l)){
                     literal += l;
 
-                    if(l=='.'){
+                    if(l==='.'){
                         var tmp = literal.substr(lastSegPos+1);
                         tmp = tmp.replace(/\./,'');
                         if(tmp){
@@ -108,7 +108,7 @@ var lexer = (function(){
                         }
                     }
                 }else 
-                if(l == '['){
+                if(l === '['){
                     stack.push('[');
                     stackBeginPos = i;
 
@@ -125,7 +125,7 @@ var lexer = (function(){
                     varObj.words.push('[');
 
                     //segments
-                    if(literal[i-1] != ']'){
+                    if(literal[i-1] !== ']'){
                         var index = tmpStr.lastIndexOf('.');
                         if(index > -1){
                             tmpStr = tmpStr.substr(index);
@@ -139,13 +139,13 @@ var lexer = (function(){
 
                     lastWordPos = i;
                 }else
-                if(l == ']' && nested){
+                if(l === ']' && nested){
                     //push words
                     var tmp = literal;
                     //x.y ]
                     //x[...].y ]
                     //x[..] ]
-                    if(tmp[tmp.length-1] != ']'){
+                    if(tmp[tmp.length-1] !== ']'){
                         if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
                             tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
                             varObj.words.push(tmp);
@@ -168,7 +168,7 @@ var lexer = (function(){
                     //push words
                     var tmp = literal.substr(lastWordPos+1);
                     if(tmp){
-                        if(tmp[0] != '.' && keyWords.indexOf(tmp) < 0)
+                        if(tmp[0] !== '.' && keyWords.indexOf(tmp) < 0)
                             tmp = ['.'+tmp];
                         varObj.words.push(tmp);
                     }
@@ -192,7 +192,7 @@ var lexer = (function(){
             var segStr = literal.substr(lastSegPos+1);
             varObj.segments.push(segStr);
 
-            var tmp = str[0]=='['?str:str[0]=='.'?str:'.'+str;
+            var tmp = str[0]==='['?str:str[0]==='.'?str:'.'+str;
             if(varObj.words.length<1 && keyWords.indexOf(tmp) < 0){
                 tmp = [tmp]
             }
@@ -212,14 +212,14 @@ var lexer = (function(){
             var lastPart = null,
                 watchPath = null;
             var i = k.lastIndexOf('.');
-            if(k[k.length-1] == ']'){
+            if(k[k.length-1] === ']'){
                 i = brak(k,varObj.brakLength);
 
                 var brakLen = varObj.brakLength;
                 varObj.watchPathWords = [];
                 for(var j=0;j<varObj.words.length;j++){
                     var w = varObj.words[j];
-                    if(w == '['){
+                    if(w === '['){
                         if(--brakLen<1){
                             break;
                         }
@@ -251,7 +251,7 @@ var lexer = (function(){
         for(var i=0;i<k.length;i++){
             var l = k[i];
 
-            if(l == '['){
+            if(l === '['){
                 
                 if(--len < 1){
                     return i;

@@ -51,7 +51,7 @@ var Builder = new function() {
  		var prop = walkPropTree(ctrlScope.$__expPropRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
- 			var renderTag = i == varObj.segments.length?true:false;
+ 			var renderTag = i === varObj.segments.length?true:false;
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
  		}
  		
@@ -97,8 +97,8 @@ var Builder = new function() {
 
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
-				if(component.$__state == Component.state.suspend)return;
-				if(component.$__state == Component.state.destroyed)return;
+				if(component.$__state === Component.state.suspend)return;
+				if(component.$__state === Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			model.$__oldVal = model.concat();
@@ -109,8 +109,8 @@ var Builder = new function() {
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
-				if(component.$__state == Component.state.suspend)return;
-				if(component.$__state == Component.state.destroyed)return;
+				if(component.$__state === Component.state.suspend)return;
+				if(component.$__state === Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);
@@ -224,9 +224,9 @@ var Builder = new function() {
 				for(var k=0;k<watch.segments.length;k++){
 					if(!propChain[k])break;
 
-					if(watch.segments[k][0] != '[' && 
-						propChain[k][0] != '[' && 
-						watch.segments[k] != propChain[k]){
+					if(watch.segments[k][0] !== '[' && 
+						propChain[k][0] !== '[' && 
+						watch.segments[k] !== propChain[k]){
 						canWatch = false;
 						break;
 					}
@@ -241,7 +241,7 @@ var Builder = new function() {
 						var findStr = '$var';
 						for(var k=0;k<findSegs.length;k++){
 							var seg = findSegs[k];
-							findStr += seg[0]=='['?seg:'.'+seg;
+							findStr += seg[0]==='['?seg:'.'+seg;
 						}
 						try{
 							nv = new Function("$var","return "+findStr)(newVal);

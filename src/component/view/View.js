@@ -223,10 +223,10 @@ View.prototype = {
 function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'CONTENT'){
+		if(attrName === 'CONTENT'){
             return bodyHTML;
         }
-        if(attrName == 'BINDPROPS'){
+        if(attrName === 'BINDPROPS'){
             var rs = '';
             var ks = Object.keys(propMap);
             for(var i=ks.length;i--;){

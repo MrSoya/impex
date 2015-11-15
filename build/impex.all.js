@@ -397,12 +397,12 @@ var lexer = (function(){
         var literal = startTag;
         for(var i=1;i<sentence.length;i++){
             var l = sentence[i];
-            if(l == '\\'){
+            if(l === '\\'){
                 escape = true;
                 literal += l;
                 continue;
             }else
-            if(!escape && l == startTag){
+            if(!escape && l === startTag){
                 return literal+startTag;
             }else{
                 literal += l;
@@ -436,9 +436,9 @@ var lexer = (function(){
                     }
                     varObj.words.push(tmp);
                 }else 
-                if(l == ']'){
+                if(l === ']'){
                     stack.pop();
-                    if(stack.length == 0){
+                    if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
                         literal += part;
 
@@ -462,7 +462,7 @@ var lexer = (function(){
                 if(VAR_EXP_BODY.test(l)){
                     literal += l;
 
-                    if(l=='.'){
+                    if(l==='.'){
                         var tmp = literal.substr(lastSegPos+1);
                         tmp = tmp.replace(/\./,'');
                         if(tmp){
@@ -471,7 +471,7 @@ var lexer = (function(){
                         }
                     }
                 }else 
-                if(l == '['){
+                if(l === '['){
                     stack.push('[');
                     stackBeginPos = i;
 
@@ -488,7 +488,7 @@ var lexer = (function(){
                     varObj.words.push('[');
 
                     //segments
-                    if(literal[i-1] != ']'){
+                    if(literal[i-1] !== ']'){
                         var index = tmpStr.lastIndexOf('.');
                         if(index > -1){
                             tmpStr = tmpStr.substr(index);
@@ -502,13 +502,13 @@ var lexer = (function(){
 
                     lastWordPos = i;
                 }else
-                if(l == ']' && nested){
+                if(l === ']' && nested){
                     //push words
                     var tmp = literal;
                     //x.y ]
                     //x[...].y ]
                     //x[..] ]
-                    if(tmp[tmp.length-1] != ']'){
+                    if(tmp[tmp.length-1] !== ']'){
                         if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
                             tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
                             varObj.words.push(tmp);
@@ -531,7 +531,7 @@ var lexer = (function(){
                     //push words
                     var tmp = literal.substr(lastWordPos+1);
                     if(tmp){
-                        if(tmp[0] != '.' && keyWords.indexOf(tmp) < 0)
+                        if(tmp[0] !== '.' && keyWords.indexOf(tmp) < 0)
                             tmp = ['.'+tmp];
                         varObj.words.push(tmp);
                     }
@@ -555,7 +555,7 @@ var lexer = (function(){
             var segStr = literal.substr(lastSegPos+1);
             varObj.segments.push(segStr);
 
-            var tmp = str[0]=='['?str:str[0]=='.'?str:'.'+str;
+            var tmp = str[0]==='['?str:str[0]==='.'?str:'.'+str;
             if(varObj.words.length<1 && keyWords.indexOf(tmp) < 0){
                 tmp = [tmp]
             }
@@ -575,14 +575,14 @@ var lexer = (function(){
             var lastPart = null,
                 watchPath = null;
             var i = k.lastIndexOf('.');
-            if(k[k.length-1] == ']'){
+            if(k[k.length-1] === ']'){
                 i = brak(k,varObj.brakLength);
 
                 var brakLen = varObj.brakLength;
                 varObj.watchPathWords = [];
                 for(var j=0;j<varObj.words.length;j++){
                     var w = varObj.words[j];
-                    if(w == '['){
+                    if(w === '['){
                         if(--brakLen<1){
                             break;
                         }
@@ -614,7 +614,7 @@ var lexer = (function(){
         for(var i=0;i<k.length;i++){
             var l = k[i];
 
-            if(l == '['){
+            if(l === '['){
                 
                 if(--len < 1){
                     return i;
@@ -1008,7 +1008,7 @@ var Builder = new function() {
  		var prop = walkPropTree(ctrlScope.$__expPropRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
- 			var renderTag = i == varObj.segments.length?true:false;
+ 			var renderTag = i === varObj.segments.length?true:false;
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
  		}
  		
@@ -1054,8 +1054,8 @@ var Builder = new function() {
 
 		if(Util.isArray(model)){
 			model.$__observer = function(changes){
-				if(component.$__state == Component.state.suspend)return;
-				if(component.$__state == Component.state.destroyed)return;
+				if(component.$__state === Component.state.suspend)return;
+				if(component.$__state === Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			model.$__oldVal = model.concat();
@@ -1066,8 +1066,8 @@ var Builder = new function() {
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
 			model.$__observer = function(changes){
-				if(component.$__state == Component.state.suspend)return;
-				if(component.$__state == Component.state.destroyed)return;
+				if(component.$__state === Component.state.suspend)return;
+				if(component.$__state === Component.state.destroyed)return;
 				changeHandler(changes,propChain,component,depth);
 			}
 			Object_observe(model,model.$__observer);
@@ -1181,9 +1181,9 @@ var Builder = new function() {
 				for(var k=0;k<watch.segments.length;k++){
 					if(!propChain[k])break;
 
-					if(watch.segments[k][0] != '[' && 
-						propChain[k][0] != '[' && 
-						watch.segments[k] != propChain[k]){
+					if(watch.segments[k][0] !== '[' && 
+						propChain[k][0] !== '[' && 
+						watch.segments[k] !== propChain[k]){
 						canWatch = false;
 						break;
 					}
@@ -1198,7 +1198,7 @@ var Builder = new function() {
 						var findStr = '$var';
 						for(var k=0;k<findSegs.length;k++){
 							var seg = findSegs[k];
-							findStr += seg[0]=='['?seg:'.'+seg;
+							findStr += seg[0]==='['?seg:'.'+seg;
 						}
 						try{
 							nv = new Function("$var","return "+findStr)(newVal);
@@ -1265,7 +1265,7 @@ var Renderer = new function() {
 				}
 			}
 		}
-		if(val != null){
+		if(val !== null){
 			updateDOM(expNode.node,expNode.attrName,val);
 		}
 	}
@@ -1317,7 +1317,7 @@ var Renderer = new function() {
 		try{
 			rs = new Function('return '+evalExp)();
 		}catch(e){
-			impex.console.debug(e.message + ' ' + evalExp);
+			impex.console.debug(e.message + ' when eval "' + evalExp+'"');
 		}
 		
 		return rs;
@@ -1415,7 +1415,7 @@ var Renderer = new function() {
  	function varInCtrlScope(scope,v){
 		var findScope = scope;
 		while(findScope){
-			if(getVarByPath(v,findScope.__getPath()) != undefined){
+			if(getVarByPath(v,findScope.__getPath()) !== undefined){
 				return findScope;
 			}
 			findScope = findScope.$parent;
@@ -1487,6 +1487,17 @@ ViewModel.prototype = {
 		}else{
 			return eval(evalStr);
 		}
+	},
+	/**
+	 * 查找拥有指定属性的最近的祖先组件
+	 * @param  {string} path 表达式路径
+	 * @return {Component}
+	 */
+	closest:function(path){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
+		return impex.__components[RegExp.$1];
 	}
 }
 /**
@@ -1509,6 +1520,7 @@ ViewModel.prototype = {
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onDisplay：当组件被显示时，该事件被触发，此时组件以及完成数据构建和绑定</li>
  * 		<li>onDestroy：当组件被销毁时，该事件被触发</li>
+ * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
  * 	</ul>
  * </p>
  * 
@@ -1706,7 +1718,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
-		if(this.$__state != Component.state.created)return;
+		if(this.$__state !== Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -1726,6 +1738,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(tmplStr){
 		Scanner.scan(this.$view,this);
+
+		compDebug(this,'inited');
 		
 		var rs = null;
 		this.onInit && (rs = this.onInit(tmplStr));
@@ -1741,8 +1755,8 @@ Util.ext(Component.prototype,{
 	 */
 	display:function(){
 		if(
-			this.$__state != Component.state.inited && 
-			this.$__state != Component.state.suspend
+			this.$__state !== Component.state.inited && 
+			this.$__state !== Component.state.suspend
 		)return;
 
 		this.$view.__display();
@@ -1758,13 +1772,17 @@ Util.ext(Component.prototype,{
 
 		Builder.build(this);
 
+		compDebug(this,'displayed');
+
 		this.onDisplay && this.onDisplay();
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.$__state == Component.state.destroyed)return;
+		if(this.$__state === Component.state.destroyed)return;
+
+		compDebug(this,'destroy');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -1798,7 +1816,9 @@ Util.ext(Component.prototype,{
 	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(this.$__state != Component.state.displayed)return;
+		if(this.$__state !== Component.state.displayed)return;
+
+		compDebug(this,'suspend');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -1810,7 +1830,9 @@ Util.ext(Component.prototype,{
 			this.$parent = null;
 		}
 		
-		this.$view.__suspend(this,hook==false?false:true);
+		this.$view.__suspend(this,hook===false?false:true);
+
+		this.onSuspend && this.onSuspend();
 
 		this.$__state = Component.state.suspend;
 	},
@@ -2043,10 +2065,10 @@ View.prototype = {
 function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName == 'CONTENT'){
+		if(attrName === 'CONTENT'){
             return bodyHTML;
         }
-        if(attrName == 'BINDPROPS'){
+        if(attrName === 'BINDPROPS'){
             var rs = '';
             var ks = Object.keys(propMap);
             for(var i=ks.length;i--;){
@@ -2243,7 +2265,11 @@ Util.ext(Directive.prototype,{
 			this.observe(rs);
 		}
 
+		compDebug(this,'inited');
+
 		this.onInit && this.onInit();
+
+		this.$__state = Component.state.inited;
 	}
 });
 /**
@@ -2330,6 +2356,15 @@ Factory.prototype = {
 	 */
 	register : function(type,model,services){
 		type = type.toLowerCase();
+
+		//keywords check
+		for(var i=BUILD_IN_PROPS.length;i--;){
+			if(BUILD_IN_PROPS[i] in model){
+				impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
+				return;
+			}
+		}
+
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 
 		var props = {};
@@ -2364,7 +2399,7 @@ Util.ext(_ComponentFactory.prototype,{
 	 */
 	newInstance : function(element){
 		var view = null;
-		if(arguments.length == 2){
+		if(arguments.length === 2){
 			var tmpl = arguments[0];
 			var target = arguments[1];
 			view = tmpl;
@@ -2385,8 +2420,16 @@ Util.ext(_ComponentFactory.prototype,{
 
 		var props = arguments[2];
 		var svs = arguments[3];
-		if(props)
+		if(props){
+			//keywords check
+			for(var i=BUILD_IN_PROPS.length;i--;){
+				if(BUILD_IN_PROPS[i] in props){
+					impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
+					return;
+				}
+			}
 			Util.ext(rs,props);
+		}
 
 		if(Util.isArray(svs)){
 			//inject
@@ -2578,6 +2621,38 @@ var ServiceFactory = new _ServiceFactory();
 	var DEPTH = 9;
 	var DEBUG = false;
 
+	var BUILD_IN_PROPS = ['data','closest'];
+
+	var lastComp;
+	function compDebug(comp,state){
+		var indent = '';
+		var p = comp.$parent;
+		while(p){
+			indent += '=';
+			p = p.$parent;
+		}
+		var info = '';
+		if(comp == lastComp){
+			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
+		}else{
+			var props = [];
+			props.push('id:'+comp.$__id);
+			if(comp.$name)
+				props.push('name:'+comp.$name);
+			props.push('view:'+comp.$view.element.tagName);
+			if(comp.$parent){
+				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
+			}
+
+			var type = comp instanceof Directive?'Directive':'Component';
+
+			info = type+'{'+ props.join(',') +'} ';
+		}
+		lastComp = comp;
+		
+		impex.console.debug(indent + (indent?'> ':'') + info + state);
+	}
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -2596,7 +2671,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,3,1],
+	        v:[0,3,2],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2887,7 +2962,7 @@ impex.service('ComponentManager',new function(){
     function updateCloakAttr(component,node,newOrigin){
         for(var i=component.$__expNodes.length;i--;){
             var expNode = component.$__expNodes[i];
-            if(expNode.node == node && expNode.attrName == 'class'){
+            if(expNode.node == node && expNode.attrName === 'class'){
                 expNode.origin = newOrigin;
             }
         }
@@ -2928,12 +3003,12 @@ impex.service('ComponentManager',new function(){
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 var newKeysSize = 0;
                 for(var k in newVal){
-                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     newKeysSize++;
                 }
                 var oldKeysSize = 0;
                 for(var k in oldVal){
-                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')==0)continue;
+                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     oldKeysSize++;
                 }
                 that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);

@@ -13,7 +13,7 @@ Util.ext(_ComponentFactory.prototype,{
 	 */
 	newInstance : function(element){
 		var view = null;
-		if(arguments.length == 2){
+		if(arguments.length === 2){
 			var tmpl = arguments[0];
 			var target = arguments[1];
 			view = tmpl;
@@ -34,8 +34,16 @@ Util.ext(_ComponentFactory.prototype,{
 
 		var props = arguments[2];
 		var svs = arguments[3];
-		if(props)
+		if(props){
+			//keywords check
+			for(var i=BUILD_IN_PROPS.length;i--;){
+				if(BUILD_IN_PROPS[i] in props){
+					impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
+					return;
+				}
+			}
 			Util.ext(rs,props);
+		}
 
 		if(Util.isArray(svs)){
 			//inject

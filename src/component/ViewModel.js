@@ -23,5 +23,16 @@ ViewModel.prototype = {
 		}else{
 			return eval(evalStr);
 		}
+	},
+	/**
+	 * 查找拥有指定属性的最近的祖先组件
+	 * @param  {string} path 表达式路径
+	 * @return {Component}
+	 */
+	closest:function(path){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
+		return impex.__components[RegExp.$1];
 	}
 }

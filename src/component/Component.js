@@ -18,6 +18,7 @@
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onDisplay：当组件被显示时，该事件被触发，此时组件以及完成数据构建和绑定</li>
  * 		<li>onDestroy：当组件被销毁时，该事件被触发</li>
+ * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
  * 	</ul>
  * </p>
  * 
@@ -215,7 +216,7 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
-		if(this.$__state != Component.state.created)return;
+		if(this.$__state !== Component.state.created)return;
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -235,6 +236,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(tmplStr){
 		Scanner.scan(this.$view,this);
+
+		compDebug(this,'inited');
 		
 		var rs = null;
 		this.onInit && (rs = this.onInit(tmplStr));
@@ -250,8 +253,8 @@ Util.ext(Component.prototype,{
 	 */
 	display:function(){
 		if(
-			this.$__state != Component.state.inited && 
-			this.$__state != Component.state.suspend
+			this.$__state !== Component.state.inited && 
+			this.$__state !== Component.state.suspend
 		)return;
 
 		this.$view.__display();
@@ -267,13 +270,17 @@ Util.ext(Component.prototype,{
 
 		Builder.build(this);
 
+		compDebug(this,'displayed');
+
 		this.onDisplay && this.onDisplay();
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.$__state == Component.state.destroyed)return;
+		if(this.$__state === Component.state.destroyed)return;
+
+		compDebug(this,'destroy');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -307,7 +314,9 @@ Util.ext(Component.prototype,{
 	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(this.$__state != Component.state.displayed)return;
+		if(this.$__state !== Component.state.displayed)return;
+
+		compDebug(this,'suspend');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -319,7 +328,9 @@ Util.ext(Component.prototype,{
 			this.$parent = null;
 		}
 		
-		this.$view.__suspend(this,hook==false?false:true);
+		this.$view.__suspend(this,hook===false?false:true);
+
+		this.onSuspend && this.onSuspend();
 
 		this.$__state = Component.state.suspend;
 	},

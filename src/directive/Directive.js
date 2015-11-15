@@ -83,6 +83,10 @@ Util.ext(Directive.prototype,{
 			this.observe(rs);
 		}
 
+		compDebug(this,'inited');
+
 		this.onInit && this.onInit();
+
+		this.$__state = Component.state.inited;
 	}
 });

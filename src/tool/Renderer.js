@@ -33,7 +33,7 @@ var Renderer = new function() {
 				}
 			}
 		}
-		if(val != null){
+		if(val !== null){
 			updateDOM(expNode.node,expNode.attrName,val);
 		}
 	}
@@ -85,7 +85,7 @@ var Renderer = new function() {
 		try{
 			rs = new Function('return '+evalExp)();
 		}catch(e){
-			impex.console.debug(e.message + ' ' + evalExp);
+			impex.console.debug(e.message + ' when eval "' + evalExp+'"');
 		}
 		
 		return rs;
@@ -183,7 +183,7 @@ var Renderer = new function() {
  	function varInCtrlScope(scope,v){
 		var findScope = scope;
 		while(findScope){
-			if(getVarByPath(v,findScope.__getPath()) != undefined){
+			if(getVarByPath(v,findScope.__getPath()) !== undefined){
 				return findScope;
 			}
 			findScope = findScope.$parent;
