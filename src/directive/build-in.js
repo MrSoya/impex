@@ -18,6 +18,28 @@
             }
         }
     });
+    /**
+     * x-show的范围版本
+     */
+    impex.directive('show-start',{
+        $endTag : 'show-end',
+        onCreate : function(){
+            this.$view.removeAttr('x-show-start');
+
+            //更新视图
+            this.__init();
+            this.display();
+        },
+        observe : function(rs){
+            if(rs){
+                //显示
+                this.$view.show();
+            }else{
+                // 隐藏
+                this.$view.hide();
+            }
+        }
+    });
 
     /**
      * 效果与show相同，但是会移除视图
@@ -32,16 +54,48 @@
         }
         this.observe = function(rs){
             if(rs){
+                if(this.$view.elements[0].parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
+                if(!this.$view.elements[0].parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
         }
-        
     },['ViewManager']);
 
+    /**
+     * x-if的范围版本
+     * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
+     */
+    impex.directive('if-start',{
+        $endTag : 'if-end',
+        onCreate : function(viewManager){
+            this.viewManager = viewManager;
+            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+            this.$view.removeAttr('x-if-start');
+
+            //更新视图
+            this.__init();
+            this.display();
+        },
+        observe : function(rs){
+            if(rs){
+                if(this.$view.elements[0].parentNode)return;
+                //添加
+                this.viewManager.replace(this.$view,this.placeholder);
+            }else{
+                if(!this.$view.elements[0].parentNode)return;
+                //删除
+                this.viewManager.replace(this.placeholder,this.$view);
+            }
+        }
+    },['ViewManager']);
+
+    /**
+     * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
+     */
     impex.directive('cloak',{
         onCreate:function(){
             var className = this.$view.attr('class');
@@ -51,7 +105,7 @@
             }
             className = className.replace('x-cloak','');
             this.$view.attr('class',className);
-            updateCloakAttr(this.$parent,this.$view.element,className);
+            updateCloakAttr(this.$parent,this.$view.elements[0],className);
         }
     });
 
@@ -85,6 +139,7 @@
             this.$cacheSize = 20;
         }
         this.onInit = function(){
+            if(this.$__state === Component.state.inited)return;
             //获取数据源
             this.$ds = this.$parent.data(this.$expInfo.ds);
             
@@ -98,15 +153,21 @@
             var that = this;
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 var newKeysSize = 0;
+                var oldKeysSize = 0;
+
                 for(var k in newVal){
                     if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     newKeysSize++;
                 }
-                var oldKeysSize = 0;
-                for(var k in oldVal){
-                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                    oldKeysSize++;
+                if(newKeysSize === 0){
+                    oldKeysSize = that.$subComponents.length;
+                }else{
+                    for(var k in oldVal){
+                        if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
+                        oldKeysSize++;
+                    }
                 }
+                
                 that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
             });
         }
@@ -142,6 +203,7 @@
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
+                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.$subComponents[index];
                 //模型
@@ -170,6 +232,7 @@
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
+                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.createSubComp();
                 

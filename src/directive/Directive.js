@@ -64,7 +64,8 @@ Util.ext(Directive.prototype,{
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
-		this.$view.attr(this.$name,attrVal);
+		if(this.$view)
+		this.$view.elements[0].setAttribute(this.$name,attrVal);
 		this.$value = attrVal;
 
 		//do observe

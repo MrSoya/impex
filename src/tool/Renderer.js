@@ -192,7 +192,7 @@ var Renderer = new function() {
 
 	function getVarByPath(path,mPath){
 		var varExp = mPath + path;
-		var rs = null;
+		var rs = undefined;
 		try{
 			rs = eval(varExp.replace(/^\./,''));
 		}catch(e){}
@@ -202,23 +202,24 @@ var Renderer = new function() {
 	function renderHTML(converter,val,node,component){
 		if(converter.__lastVal == val)return;
 		if(!Util.isDOMStr(val))return;
+		if(node.nodeType != 3)return;
+		var nView = new View([node]);
 		if(!converter.__lastVal){
 			var ph = ViewManager.createPlaceholder('-- converter [html] placeholder --');
-			ViewManager.insertBefore(ph,node);
+			ViewManager.insertBefore(ph,nView);
 			converter.__lastVal = val;
 			converter.__placeholder = ph;
 		}
-		if(node.nodeType != 3)return;
 
 		if(converter.__lastComp){
 			//release
 			converter.__lastComp.destroy();
 
-			node = ViewManager.createPlaceholder('');
-			ViewManager.insertAfter(node,converter.__placeholder);
+			nView = ViewManager.createPlaceholder('');
+			ViewManager.insertAfter(nView,converter.__placeholder);
 		}
 
-		var subComp = component.createSubComponent(val,node);
+		var subComp = component.createSubComponent(val,nView);
 		subComp.init();
 		subComp.display();
 

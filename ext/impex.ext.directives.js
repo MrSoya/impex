@@ -8,7 +8,7 @@
 	 */
 	impex.directive('bind',{
 	    onCreate : function(){
-	    	switch(this.$view.name){
+	    	switch(this.$view.elements[0].nodeName.toLowerCase()){
 	    		case 'textarea':
 	    		case 'input':
 	    			var type = this.$view.attr('type');

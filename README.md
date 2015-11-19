@@ -1,7 +1,7 @@
 # Impex —— A powerful web application engine
 
 impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端让你的web程序更好维护，更好开发。
-impex的目标是让开发者基于web技术以最低的学习成本获得最大的收益，所以impex会尽量简单。
+impex的目标是让开发者基于web技术以最低的学习成本构建应用，所以impex会尽量简单。
 	
 ## 一切皆组件
 * **为什么**
@@ -31,7 +31,7 @@ impex提供让开发者定义web组件的能力，就像video标签样，看上�
 
 ## Demo
 
-一个复杂的demo
+一个“复杂”的demo
 
 ```html
 <div id="entry">
@@ -50,7 +50,7 @@ impex提供让开发者定义web组件的能力，就像video标签样，看上�
     });
     //组件
     impex.component('x-subtitle',{
-        $template:"<sub>{{=tagBody}}</sub>"
+        $template:"<sub>{{=CONTENT}}</sub>"
     });
 
     //渲染

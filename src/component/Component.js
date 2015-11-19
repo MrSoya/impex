@@ -189,11 +189,11 @@ Util.ext(Component.prototype,{
 	/**
 	 * 创建一个未初始化的子组件
 	 * @param  {string} type 组件名
-	 * @param  {HTMLElement} target DOM节点
+	 * @param  {View} target 视图
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target.element?target.element:target);
+		var instance = ComponentFactory.newInstanceOf(type,target.elements?target.elements[0]:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -206,7 +206,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target.element?target.element:target);
+		var instance = ComponentFactory.newInstance(tmpl,target.elements[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 

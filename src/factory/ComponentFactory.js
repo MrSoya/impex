@@ -25,7 +25,7 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			view = element;
 			if(Util.isDOM(element)){
-				view = new View(element,element.tagName.toLowerCase());
+				view = new View([element]);
 			}
 		}
 		
@@ -69,7 +69,7 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		Util.extProp(rs,this.types[type].props);
 
-		rs.$view = new View(null,null,target);
+		rs.$view = new View(null,target);
 		rs.$name = type;
 		
 		this.instances.push(rs);

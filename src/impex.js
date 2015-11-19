@@ -31,7 +31,8 @@
 			props.push('id:'+comp.$__id);
 			if(comp.$name)
 				props.push('name:'+comp.$name);
-			props.push('view:'+comp.$view.element.tagName);
+			var viewName = comp.$view?comp.$view.elements[0].tagName:'';
+			props.push('view:'+viewName);
 			if(comp.$parent){
 				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
 			}
@@ -63,7 +64,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,3,2],
+	        v:[0,4,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

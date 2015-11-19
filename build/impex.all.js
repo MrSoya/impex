@@ -1,11 +1,11 @@
 /*
- * impex is a powerful web application builder
+ * impex is a powerful web application engine
  *
  *
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * Date: 2015-10-16
+ * last build: 2015-11-19
  */
 
 !function (global) {
@@ -436,7 +436,7 @@ var lexer = (function(){
                     }
                     varObj.words.push(tmp);
                 }else 
-                if(l === ']'){
+                if(l === ']' || l === ')'){
                     stack.pop();
                     if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
@@ -446,7 +446,7 @@ var lexer = (function(){
                         lastSegPos = i;
                     }
                     //push words
-                    varObj.words.push(']');
+                    varObj.words.push(l);
                     lastWordPos = i;
 
                 }else{
@@ -471,8 +471,8 @@ var lexer = (function(){
                         }
                     }
                 }else 
-                if(l === '['){
-                    stack.push('[');
+                if(l === '[' || l === '('){
+                    stack.push(l);
                     stackBeginPos = i;
 
                     varObj.brakLength++;
@@ -485,10 +485,11 @@ var lexer = (function(){
                          tmp = ['.'+tmpStr];
                         varObj.words.push(tmp);
                     }
-                    varObj.words.push('[');
+                    varObj.words.push(l);
 
                     //segments
-                    if(literal[i-1] !== ']'){
+                    var closed = l==='['?']':')';
+                    if(literal[i-1] !== closed){
                         var index = tmpStr.lastIndexOf('.');
                         if(index > -1){
                             tmpStr = tmpStr.substr(index);
@@ -498,17 +499,16 @@ var lexer = (function(){
                         }
                         lastSegPos = i;
                     }
-                    
 
                     lastWordPos = i;
                 }else
-                if(l === ']' && nested){
+                if((l === ']' || l === ')') && nested){
                     //push words
                     var tmp = literal;
                     //x.y ]
                     //x[...].y ]
                     //x[..] ]
-                    if(tmp[tmp.length-1] !== ']'){
+                    if(tmp[tmp.length-1] !== l){
                         if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
                             tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
                             varObj.words.push(tmp);
@@ -519,7 +519,11 @@ var lexer = (function(){
                         }
 
                         //segments
-                        tmp = tmp.substr(tmp.lastIndexOf('.'));
+                        var point = tmp.lastIndexOf('.');
+                        if(point >0 ){
+                            tmp = tmp.substr(point);
+                        }
+                        
                         varObj.segments.push(tmp);
                         lastSegPos = i;
                     }
@@ -550,17 +554,18 @@ var lexer = (function(){
             }
         }
 
-        var str = literal.substr(literal.lastIndexOf(']')+1);
-        if(str){
+        var str1 = literal.substr(literal.lastIndexOf(']')+1);
+        var str2 = literal.substr(literal.lastIndexOf(')')+1);
+        if(str1 && str2){
+            var str = str1.length < str2.length?str1:str2;
             var segStr = literal.substr(lastSegPos+1);
             varObj.segments.push(segStr);
 
-            var tmp = str[0]==='['?str:str[0]==='.'?str:'.'+str;
+            var tmp = (str[0]==='[' || str[0]==='(')?str:str[0]==='.'?str:'.'+str;
             if(varObj.words.length<1 && keyWords.indexOf(tmp) < 0){
                 tmp = [tmp]
             }
             varObj.words.push(tmp);
-
         }
         
         if(!nested){
@@ -575,14 +580,16 @@ var lexer = (function(){
             var lastPart = null,
                 watchPath = null;
             var i = k.lastIndexOf('.');
-            if(k[k.length-1] === ']'){
+            if(k[k.length-1] === ']' || k[k.length-1] === ')'){
                 i = brak(k,varObj.brakLength);
+
+                var closed = k[k.length-1] === ']'?'[':'(';
 
                 var brakLen = varObj.brakLength;
                 varObj.watchPathWords = [];
                 for(var j=0;j<varObj.words.length;j++){
                     var w = varObj.words[j];
-                    if(w === '['){
+                    if(w === closed){
                         if(--brakLen<1){
                             break;
                         }
@@ -595,7 +602,11 @@ var lexer = (function(){
             }
 
             lastPart = k.substr(i);
-            varObj.lastVar = lastPart;
+            if(lastPart[0] === '('){
+                varObj.lastVar = k;
+            }else{
+                varObj.lastVar = lastPart;
+            }
 
             if(Object.keys(varObj.subVars).length<1){
                 watchPath = k.substring(0,i).replace(/\.$/,'');
@@ -614,7 +625,7 @@ var lexer = (function(){
         for(var i=0;i<k.length;i++){
             var l = k[i];
 
-            if(l === '['){
+            if(l === '[' || l === '('){
                 
                 if(--len < 1){
                     return i;
@@ -776,6 +787,7 @@ var Scanner = new function() {
                     var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
                     component.$__directives.push(instance);
                     startTag = null;
+                    nodes = [];
                 }
                 continue;
             }
@@ -813,7 +825,7 @@ var Scanner = new function() {
 					var c = atts[i].name.replace(CMD_PREFIX,'');
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
 							component.$__directives.push(instance);
 							return;
 						}
@@ -830,7 +842,7 @@ var Scanner = new function() {
 						var c = attName.replace(CMD_PREFIX,'');
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
+							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
 							component.$__directives.push(instance);
 						}
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
@@ -851,6 +863,7 @@ var Scanner = new function() {
 							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
 							component.$__directives.push(instance);
 							startTag = null;
+							nodes = [];
 						}
 						continue;
 					}
@@ -1033,7 +1046,6 @@ var Builder = new function() {
  			if(prop.watchs.indexOf(expNode) < 0)
  				prop.watchs.push(expNode);
  		}
- 		
 
  		return parentProp[propName];
  	}
@@ -1052,25 +1064,26 @@ var Builder = new function() {
 		if(depth > DEPTH)return;
 		var recur = false;
 
+		function __observer(changes){
+			if(component.$__state === Component.state.suspend)return;
+			if(component.$__state === Component.state.destroyed)return;
+			changeHandler(changes,propChain,component,depth);
+		}
 		if(Util.isArray(model)){
-			model.$__observer = function(changes){
-				if(component.$__state === Component.state.suspend)return;
-				if(component.$__state === Component.state.destroyed)return;
-				changeHandler(changes,propChain,component,depth);
-			}
-			model.$__oldVal = model.concat();
-			Array_observe(model,model.$__observer);
+			if(model.$__impex__observer)return;
+			model.$__impex__observer = __observer;
+			model.$__impex__oldVal = model.concat();
+
+			Array_observe(model,__observer);
 
 			recur = true;
 		}else if(Util.isObject(model)){
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
-			model.$__observer = function(changes){
-				if(component.$__state === Component.state.suspend)return;
-				if(component.$__state === Component.state.destroyed)return;
-				changeHandler(changes,propChain,component,depth);
-			}
-			Object_observe(model,model.$__observer);
+			if(model.$__impex__observer)return;
+			model.$__impex__observer = __observer;
+
+			Object_observe(model,__observer);
 
 			recur = true;
 		}
@@ -1109,19 +1122,22 @@ var Builder = new function() {
 			var oldVal = change.oldValue;
 			if(Util.isArray(change.object)){
 				newObj = change.object;
-				oldVal = change.object.$__oldVal;
+				oldVal = change.object.$__impex__oldVal;
 			}
 			recurRender(component,pc,change.type,newObj,oldVal);
 
 			//unobserve
 			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
-				Array_unobserve(change.oldValue,change.oldValue.$__observer);
+				Array_unobserve(change.oldValue,change.oldValue.$__impex__observer);
 			}else if(Util.isArray(change.object)){
-				change.object.$__oldVal = change.object.concat();
+				change.object.$__impex__oldVal = change.object.concat();
 				return;
 			}else if(Util.isObject(change.oldValue)){
-				Object_unobserve(change.oldValue,change.oldValue.$__observer);
-				change.oldValue.$__observer = null;
+				var observer = change.oldValue.$__impex__observer;
+				if(observer){
+					Object_unobserve(change.oldValue,observer);
+					change.oldValue.$__impex__observer = null;
+				}
 			}
 
 			//reobserve
@@ -1202,7 +1218,9 @@ var Builder = new function() {
 						}
 						try{
 							nv = new Function("$var","return "+findStr)(newVal);
+							ov = new Function("$var","return "+findStr)(oldVal);
 						}catch(e){
+							impex.console.debug('error on parse watch params');
 							nv = null;
 						}
 					}
@@ -1424,7 +1442,7 @@ var Renderer = new function() {
 
 	function getVarByPath(path,mPath){
 		var varExp = mPath + path;
-		var rs = null;
+		var rs = undefined;
 		try{
 			rs = eval(varExp.replace(/^\./,''));
 		}catch(e){}
@@ -1434,23 +1452,24 @@ var Renderer = new function() {
 	function renderHTML(converter,val,node,component){
 		if(converter.__lastVal == val)return;
 		if(!Util.isDOMStr(val))return;
+		if(node.nodeType != 3)return;
+		var nView = new View([node]);
 		if(!converter.__lastVal){
 			var ph = ViewManager.createPlaceholder('-- converter [html] placeholder --');
-			ViewManager.insertBefore(ph,node);
+			ViewManager.insertBefore(ph,nView);
 			converter.__lastVal = val;
 			converter.__placeholder = ph;
 		}
-		if(node.nodeType != 3)return;
 
 		if(converter.__lastComp){
 			//release
 			converter.__lastComp.destroy();
 
-			node = ViewManager.createPlaceholder('');
-			ViewManager.insertAfter(node,converter.__placeholder);
+			nView = ViewManager.createPlaceholder('');
+			ViewManager.insertAfter(nView,converter.__placeholder);
 		}
 
-		var subComp = component.createSubComponent(val,node);
+		var subComp = component.createSubComponent(val,nView);
 		subComp.init();
 		subComp.display();
 
@@ -1482,7 +1501,7 @@ ViewModel.prototype = {
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
 			//fix \r\n on IE8
-			eval(evalStr + '= "'+ val.replace(/\r\n|\n/mg,'\\n') +'"');
+			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n'):val) +'"');
 			return this;
 		}else{
 			return eval(evalStr);
@@ -1691,11 +1710,11 @@ Util.ext(Component.prototype,{
 	/**
 	 * 创建一个未初始化的子组件
 	 * @param  {string} type 组件名
-	 * @param  {HTMLElement} target DOM节点
+	 * @param  {View} target 视图
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target.element?target.element:target);
+		var instance = ComponentFactory.newInstanceOf(type,target.elements?target.elements[0]:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1708,7 +1727,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target.element?target.element:target);
+		var instance = ComponentFactory.newInstance(tmpl,target.elements[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1847,20 +1866,13 @@ Util.ext(Component.prototype,{
  * 一个组件或者指令只会拥有一个视图
  * @class
  */
-function View (element,name,target) {
+function View (elements,target) {
 	/**
 	 * 对可视元素的引用，在DOM中就是HTMLElement，
 	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * 
+	 * @type {Array}
 	 */
-	this.element = element instanceof Array?element[0]:element;
-
-	this.elements = element instanceof Array?element:undefined;
-
-	/**
-	 * 视图名称，在DOM中是标签名
-	 */
-	this.name = this.element && this.element.nodeName.toLowerCase();
+	this.elements = elements;
 
 	this.__evMap = {};
 	this.__target = target;
@@ -1877,10 +1889,7 @@ View.prototype = {
 			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.name = els[0].nodeName.toLowerCase();
-		this.element = els[0];
-		if(els.length > 1)
-			this.elements = els;
+		this.elements = els;
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -1890,16 +1899,16 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
+		if(!this.__target || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
 
 		var fragment = null;
-		if(this.elements && this.elements.length > 1){
+		if(this.elements.length > 1){
 			fragment = document.createDocumentFragment();
 			for(var i=0;i<this.elements.length;i++){
 				fragment.appendChild(this.elements[i]);
 			}
 		}else{
-			fragment = this.element;
+			fragment = this.elements[0];
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
@@ -1912,53 +1921,46 @@ View.prototype = {
 	        for(var i=events.length;i--;){
 	            var pair = events[i];
 	            var evHandler = pair[1];
-	            Util.off(k,this.element,evHandler);
+
+	            for(var j=this.elements.length;j--;){
+	            	if(this.elements[j].nodeType !== 1)continue;
+	            	Util.off(k,this.elements[j],evHandler);
+	            }
 	        }
 		}
 
-		if(this.elements){
-			var p = this.elements[0].parentNode;
-			if(p)
+		var p = this.elements[0].parentNode;
+		if(p){
+			if(this.elements[0].__impex__view)
+				this.elements[0].__impex__view = null;
 			for(var i=this.elements.length;i--;){
-				if(this.elements[i].__impex__view)
-					this.elements[i].__impex__view = null;
 				p.removeChild(this.elements[i]);
 			}
-		}else{
-			if(this.element.__impex__view)
-				this.element.__impex__view = null;
-			this.element.parentNode.removeChild(this.element);
 		}
 
 		if(this.__target){
 			this.__target.parentNode.removeChild(this.__target);
 			this.__target = null;
 		}
-		
 	},
 	__suspend:function(component,hook){
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
-			this.element.parentNode.insertBefore(this.__target,this.element);
-		}		
+			this.elements[0].parentNode.insertBefore(this.__target,this.element);
+		}
 
-		if(this.elements){
-			var p = this.elements[0].parentNode;
-			if(p)
-			for(var i=this.elements.length;i--;){
-				p.removeChild(this.elements[i]);
-			}
-		}else{
-			this.element.parentNode.removeChild(this.element);
+		var p = this.elements[0].parentNode;
+		if(p)
+		for(var i=this.elements.length;i--;){
+			p.removeChild(this.elements[i]);
 		}
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;
 		var comp = component;
-		var evHandler = null;
 		var tmpExpOutside = '';
 		var fnOutside = null;
-		Util.on(type,this.element,evHandler = function(e){
+		var evHandler = function(e){
 			var tmpExp = originExp;
 
 			if(handler instanceof Function){
@@ -1977,7 +1979,13 @@ View.prototype = {
 			}
 			
 			fnOutside(e);
-		});
+		};
+		for(var j=this.elements.length;j--;){
+			var el = this.elements[j];
+        	if(el.nodeType !== 1)continue;
+        	Util.on(type,el,evHandler);
+        }
+		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
 		}
@@ -1989,8 +1997,12 @@ View.prototype = {
             var pair = events[i];
             var evExp = pair[0];
             var evHandler = pair[1];
-            if(evExp == exp)
-                Util.off(type,this.element,evHandler);
+            if(evExp == exp){
+            	for(var j=this.elements.length;j--;){
+	            	if(this.elements[j].nodeType !== 1)continue;
+	            	Util.off(type,this.elements[j],evHandler);
+	            }
+            }
         }
 	},
 	/**
@@ -1998,32 +2010,33 @@ View.prototype = {
 	 * @return {View}
 	 */
 	clone:function(){
-		var tmp = null;
-		if(this.elements){
-			tmp = [];
-			for(var i=this.elements.length;i--;){
-				var c = this.elements[i].cloneNode(true);
-				tmp.unshift(c);
-			}
-		}else{
-			tmp = this.element.cloneNode(true);
+		var tmp = [];
+		for(var i=this.elements.length;i--;){
+			var c = this.elements[i].cloneNode(true);
+			tmp.unshift(c);
 		}
 		
-		var copy = new View(tmp,this.name);
+		var copy = new View(tmp);
 		return copy;
 	},
 	/**
 	 * 显示视图
 	 */
 	show:function(){
-		this.element.style.display = '';
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].style.display = '';
+		}
 		return this;
 	},
 	/**
 	 * 隐藏视图
 	 */
 	hide:function(){
-		this.element.style.display = 'none';
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].style.display = 'none';
+		}
 		return this;
 	},
 	/**
@@ -2033,10 +2046,16 @@ View.prototype = {
 	 */
 	style:function(name,value){
 		if(arguments.length > 1){
-			this.element.style[name] = value;
+			for(var i=this.elements.length;i--;){
+				if(this.elements[i].nodeType !== 1)continue;
+				this.elements[i].style[name] = value;
+			}
 			return this;
 		}else{
-			return this.element.style[name];
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType === 1)break;
+			}
+			return this.elements[i].style[name];
 		}
 	},
 	/**
@@ -2046,10 +2065,16 @@ View.prototype = {
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
-			this.element.setAttribute(name,value);
+			for(var i=this.elements.length;i--;){
+				if(this.elements[i].nodeType !== 1)continue;
+				this.elements[i].setAttribute(name,value);
+			}
 			return this;
 		}else{
-			return this.element.getAttribute(name);
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType === 1)break;
+			}
+			return this.elements[i].getAttribute(name);
 		}
 	},
 	/**
@@ -2057,7 +2082,10 @@ View.prototype = {
 	 * @param  {string} name  属性名
 	 */
 	removeAttr:function(name){
-		this.element.removeAttribute(name);
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].removeAttribute(name);
+		}
 		return this;
 	}
 }
@@ -2101,7 +2129,7 @@ var DOMViewProvider = new function(){
 			nodes.push(tmp);
 		}
 
-		var view = new View(nodes,null,target);
+		var view = new View(nodes,target);
 
 		return view;
 	}
@@ -2117,8 +2145,6 @@ var DOMViewProvider = new function(){
 			if(headEl.indexOf(tn) > -1)continue;
 
 			nodes.push(tmp);
-			
-			// return tmp;
 		}
 		return nodes;
 	}
@@ -2129,44 +2155,75 @@ var DOMViewProvider = new function(){
 var ViewManager = new function (){
 	this.$singleton = true;
     /**
-     * 替换视图，会把旧视图更新为新视图
+     * 替换视图，会把目标视图更新为新视图
      * <br/>在DOM中表现为更新元素
      * @param  {View} newView 新视图
-     * @param  {View} oldView 旧视图
+     * @param  {View} targetView 目标视图
      */
-	this.replace = function(newView,oldView){
-		var oldNode = oldView instanceof View?oldView.element:oldView;
-		var newNode = newView instanceof View?newView.element:newView;
-		var pNode = oldNode.parentNode;
-		if(pNode)
-			pNode.replaceChild(newNode,oldNode);
+	this.replace = function(newView,targetView){
+		var targetV = targetView.elements[0],
+			newV = newView.elements[0],
+			p = targetView.elements[0].parentNode;
+		var fragment = newV;
+		if(newView.elements.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<newView.elements.length;i++){
+				fragment.appendChild(newView.elements[i]);
+			}
+		}
+		if(targetView.elements.length > 1){
+			p.insertBefore(fragment,targetV);
+			
+			for(var i=targetView.elements.length;i--;){
+				p.removeChild(targetView.elements[i]);
+			}
+		}else{
+			p.replaceChild(fragment,targetV);
+		}
+		
 	}
 	/**
-	 * 在指定视图前插入一个或一组视图
-	 * @param  {View | Array} newView 新视图
+	 * 在指定视图前插入视图
+	 * @param  {View} newView 新视图
 	 * @param  {View} targetView 目标视图
 	 */
 	this.insertBefore = function(newView,targetView){
-		var targetNode = targetView instanceof View?targetView.element:targetView;
-		var newNode = newView instanceof View?newView.element:newView;
-		targetNode.parentNode.insertBefore(newNode,targetNode);
+		var targetV = targetView.elements[0],
+			newV = newView.elements[0],
+			p = targetView.elements[0].parentNode;
+		var fragment = newV;
+		if(newView.elements.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<newView.elements.length;i++){
+				fragment.appendChild(newView.elements[i]);
+			}
+		}
+		p.insertBefore(fragment,targetV);
 	}
 
 	/**
-	 * 在指定视图后插入一个或一组视图
-	 * @param  {View | Array} newView 新视图
+	 * 在指定视图后插入视图
+	 * @param  {View} newView 新视图
 	 * @param  {View} targetView 目标视图
 	 */
 	this.insertAfter = function(newView,targetView){
-		var targetNode = targetView instanceof View?targetView.element:targetView;
-		var newNode = newView instanceof View?newView.element:newView;
-
-		var p = targetNode.parentNode;
+		var targetV = targetView.elements[0],
+			newV = newView.elements[0],
+			p = targetView.elements[0].parentNode;
 		var last = p.lastChild;
-		if(last == targetNode){
-			p.appendChild(newNode);
+		var fragment = newV;
+		if(newView.elements.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<newView.elements.length;i++){
+				fragment.appendChild(newView.elements[i]);
+			}
+		}
+
+		if(last == targetV){
+			p.appendChild(fragment);
 		}else{
-			p.insertBefore(newNode,targetNode.nextSibling);
+			var next = targetView.elements[targetView.elements.length-1].nextSibling;
+			p.insertBefore(fragment,next);
 		}
 	}
 
@@ -2177,7 +2234,7 @@ var ViewManager = new function (){
 	 * @return {View} 新视图
 	 */
 	this.createPlaceholder = function(content){
-		return new View(document.createComment(content));
+		return new View([document.createComment(content)]);
 	}
 }
 /**
@@ -2246,7 +2303,8 @@ Util.ext(Directive.prototype,{
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
-		this.$view.attr(this.$name,attrVal);
+		if(this.$view)
+		this.$view.elements[0].setAttribute(this.$name,attrVal);
 		this.$value = attrVal;
 
 		//do observe
@@ -2411,7 +2469,7 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			view = element;
 			if(Util.isDOM(element)){
-				view = new View(element,element.tagName.toLowerCase());
+				view = new View([element]);
 			}
 		}
 		
@@ -2455,7 +2513,7 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		Util.extProp(rs,this.types[type].props);
 
-		rs.$view = new View(null,null,target);
+		rs.$view = new View(null,target);
 		rs.$name = type;
 		
 		this.instances.push(rs);
@@ -2502,17 +2560,17 @@ Util.ext(_DirectiveFactory.prototype,{
 	hasEndTag : function(type){
 		return this.types[type].props.$endTag;
 	},
-	newInstanceOf : function(type,node,component,attrName,attrValue){
+	newInstanceOf : function(type,nodes,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
-		if(node.__impex__view){
-			rs.$view = node.__impex__view;
+		if(nodes[0].__impex__view){
+			rs.$view = nodes[0].__impex__view;
 		}else{
-			rs.$view = new View(node);
-			node.__impex__view = rs.$view;
+			rs.$view = new View(nodes);
+			nodes[0].__impex__view = rs.$view;
 		}
 		
 		//inject
@@ -2639,7 +2697,8 @@ var ServiceFactory = new _ServiceFactory();
 			props.push('id:'+comp.$__id);
 			if(comp.$name)
 				props.push('name:'+comp.$name);
-			props.push('view:'+comp.$view.element.tagName);
+			var viewName = comp.$view?comp.$view.elements[0].tagName:'';
+			props.push('view:'+viewName);
 			if(comp.$parent){
 				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
 			}
@@ -2671,7 +2730,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,3,2],
+	        v:[0,4,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2922,6 +2981,28 @@ impex.service('ComponentManager',new function(){
             }
         }
     });
+    /**
+     * x-show的范围版本
+     */
+    impex.directive('show-start',{
+        $endTag : 'show-end',
+        onCreate : function(){
+            this.$view.removeAttr('x-show-start');
+
+            //更新视图
+            this.__init();
+            this.display();
+        },
+        observe : function(rs){
+            if(rs){
+                //显示
+                this.$view.show();
+            }else{
+                // 隐藏
+                this.$view.hide();
+            }
+        }
+    });
 
     /**
      * 效果与show相同，但是会移除视图
@@ -2936,16 +3017,48 @@ impex.service('ComponentManager',new function(){
         }
         this.observe = function(rs){
             if(rs){
+                if(this.$view.elements[0].parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
+                if(!this.$view.elements[0].parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
         }
-        
     },['ViewManager']);
 
+    /**
+     * x-if的范围版本
+     * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
+     */
+    impex.directive('if-start',{
+        $endTag : 'if-end',
+        onCreate : function(viewManager){
+            this.viewManager = viewManager;
+            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+            this.$view.removeAttr('x-if-start');
+
+            //更新视图
+            this.__init();
+            this.display();
+        },
+        observe : function(rs){
+            if(rs){
+                if(this.$view.elements[0].parentNode)return;
+                //添加
+                this.viewManager.replace(this.$view,this.placeholder);
+            }else{
+                if(!this.$view.elements[0].parentNode)return;
+                //删除
+                this.viewManager.replace(this.placeholder,this.$view);
+            }
+        }
+    },['ViewManager']);
+
+    /**
+     * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
+     */
     impex.directive('cloak',{
         onCreate:function(){
             var className = this.$view.attr('class');
@@ -2955,7 +3068,7 @@ impex.service('ComponentManager',new function(){
             }
             className = className.replace('x-cloak','');
             this.$view.attr('class',className);
-            updateCloakAttr(this.$parent,this.$view.element,className);
+            updateCloakAttr(this.$parent,this.$view.elements[0],className);
         }
     });
 
@@ -2989,6 +3102,7 @@ impex.service('ComponentManager',new function(){
             this.$cacheSize = 20;
         }
         this.onInit = function(){
+            if(this.$__state === Component.state.inited)return;
             //获取数据源
             this.$ds = this.$parent.data(this.$expInfo.ds);
             
@@ -3002,15 +3116,21 @@ impex.service('ComponentManager',new function(){
             var that = this;
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 var newKeysSize = 0;
+                var oldKeysSize = 0;
+
                 for(var k in newVal){
                     if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
                     newKeysSize++;
                 }
-                var oldKeysSize = 0;
-                for(var k in oldVal){
-                    if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                    oldKeysSize++;
+                if(newKeysSize === 0){
+                    oldKeysSize = that.$subComponents.length;
+                }else{
+                    for(var k in oldVal){
+                        if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
+                        oldKeysSize++;
+                    }
                 }
+                
                 that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
             });
         }
@@ -3046,6 +3166,7 @@ impex.service('ComponentManager',new function(){
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
+                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.$subComponents[index];
                 //模型
@@ -3074,6 +3195,7 @@ impex.service('ComponentManager',new function(){
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
+                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.createSubComp();
                 

@@ -74,6 +74,7 @@ var Scanner = new function() {
                     var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
                     component.$__directives.push(instance);
                     startTag = null;
+                    nodes = [];
                 }
                 continue;
             }
@@ -111,7 +112,7 @@ var Scanner = new function() {
 					var c = atts[i].name.replace(CMD_PREFIX,'');
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
 							component.$__directives.push(instance);
 							return;
 						}
@@ -128,7 +129,7 @@ var Scanner = new function() {
 						var c = attName.replace(CMD_PREFIX,'');
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
+							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
 							component.$__directives.push(instance);
 						}
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
@@ -149,6 +150,7 @@ var Scanner = new function() {
 							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
 							component.$__directives.push(instance);
 							startTag = null;
+							nodes = [];
 						}
 						continue;
 					}

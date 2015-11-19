@@ -5,20 +5,13 @@
  * 一个组件或者指令只会拥有一个视图
  * @class
  */
-function View (element,name,target) {
+function View (elements,target) {
 	/**
 	 * 对可视元素的引用，在DOM中就是HTMLElement，
 	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * 
+	 * @type {Array}
 	 */
-	this.element = element instanceof Array?element[0]:element;
-
-	this.elements = element instanceof Array?element:undefined;
-
-	/**
-	 * 视图名称，在DOM中是标签名
-	 */
-	this.name = this.element && this.element.nodeName.toLowerCase();
+	this.elements = elements;
 
 	this.__evMap = {};
 	this.__target = target;
@@ -35,10 +28,7 @@ View.prototype = {
 			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.name = els[0].nodeName.toLowerCase();
-		this.element = els[0];
-		if(els.length > 1)
-			this.elements = els;
+		this.elements = els;
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -48,16 +38,16 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || (this.element.parentNode && this.element.parentNode.nodeType===1))return;
+		if(!this.__target || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
 
 		var fragment = null;
-		if(this.elements && this.elements.length > 1){
+		if(this.elements.length > 1){
 			fragment = document.createDocumentFragment();
 			for(var i=0;i<this.elements.length;i++){
 				fragment.appendChild(this.elements[i]);
 			}
 		}else{
-			fragment = this.element;
+			fragment = this.elements[0];
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
@@ -70,53 +60,46 @@ View.prototype = {
 	        for(var i=events.length;i--;){
 	            var pair = events[i];
 	            var evHandler = pair[1];
-	            Util.off(k,this.element,evHandler);
+
+	            for(var j=this.elements.length;j--;){
+	            	if(this.elements[j].nodeType !== 1)continue;
+	            	Util.off(k,this.elements[j],evHandler);
+	            }
 	        }
 		}
 
-		if(this.elements){
-			var p = this.elements[0].parentNode;
-			if(p)
+		var p = this.elements[0].parentNode;
+		if(p){
+			if(this.elements[0].__impex__view)
+				this.elements[0].__impex__view = null;
 			for(var i=this.elements.length;i--;){
-				if(this.elements[i].__impex__view)
-					this.elements[i].__impex__view = null;
 				p.removeChild(this.elements[i]);
 			}
-		}else{
-			if(this.element.__impex__view)
-				this.element.__impex__view = null;
-			this.element.parentNode.removeChild(this.element);
 		}
 
 		if(this.__target){
 			this.__target.parentNode.removeChild(this.__target);
 			this.__target = null;
 		}
-		
 	},
 	__suspend:function(component,hook){
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
-			this.element.parentNode.insertBefore(this.__target,this.element);
-		}		
+			this.elements[0].parentNode.insertBefore(this.__target,this.element);
+		}
 
-		if(this.elements){
-			var p = this.elements[0].parentNode;
-			if(p)
-			for(var i=this.elements.length;i--;){
-				p.removeChild(this.elements[i]);
-			}
-		}else{
-			this.element.parentNode.removeChild(this.element);
+		var p = this.elements[0].parentNode;
+		if(p)
+		for(var i=this.elements.length;i--;){
+			p.removeChild(this.elements[i]);
 		}
 	},
 	__on:function(component,type,exp,handler){
 		var originExp = exp;
 		var comp = component;
-		var evHandler = null;
 		var tmpExpOutside = '';
 		var fnOutside = null;
-		Util.on(type,this.element,evHandler = function(e){
+		var evHandler = function(e){
 			var tmpExp = originExp;
 
 			if(handler instanceof Function){
@@ -135,7 +118,13 @@ View.prototype = {
 			}
 			
 			fnOutside(e);
-		});
+		};
+		for(var j=this.elements.length;j--;){
+			var el = this.elements[j];
+        	if(el.nodeType !== 1)continue;
+        	Util.on(type,el,evHandler);
+        }
+		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
 		}
@@ -147,8 +136,12 @@ View.prototype = {
             var pair = events[i];
             var evExp = pair[0];
             var evHandler = pair[1];
-            if(evExp == exp)
-                Util.off(type,this.element,evHandler);
+            if(evExp == exp){
+            	for(var j=this.elements.length;j--;){
+	            	if(this.elements[j].nodeType !== 1)continue;
+	            	Util.off(type,this.elements[j],evHandler);
+	            }
+            }
         }
 	},
 	/**
@@ -156,32 +149,33 @@ View.prototype = {
 	 * @return {View}
 	 */
 	clone:function(){
-		var tmp = null;
-		if(this.elements){
-			tmp = [];
-			for(var i=this.elements.length;i--;){
-				var c = this.elements[i].cloneNode(true);
-				tmp.unshift(c);
-			}
-		}else{
-			tmp = this.element.cloneNode(true);
+		var tmp = [];
+		for(var i=this.elements.length;i--;){
+			var c = this.elements[i].cloneNode(true);
+			tmp.unshift(c);
 		}
 		
-		var copy = new View(tmp,this.name);
+		var copy = new View(tmp);
 		return copy;
 	},
 	/**
 	 * 显示视图
 	 */
 	show:function(){
-		this.element.style.display = '';
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].style.display = '';
+		}
 		return this;
 	},
 	/**
 	 * 隐藏视图
 	 */
 	hide:function(){
-		this.element.style.display = 'none';
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].style.display = 'none';
+		}
 		return this;
 	},
 	/**
@@ -191,10 +185,16 @@ View.prototype = {
 	 */
 	style:function(name,value){
 		if(arguments.length > 1){
-			this.element.style[name] = value;
+			for(var i=this.elements.length;i--;){
+				if(this.elements[i].nodeType !== 1)continue;
+				this.elements[i].style[name] = value;
+			}
 			return this;
 		}else{
-			return this.element.style[name];
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType === 1)break;
+			}
+			return this.elements[i].style[name];
 		}
 	},
 	/**
@@ -204,10 +204,16 @@ View.prototype = {
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
-			this.element.setAttribute(name,value);
+			for(var i=this.elements.length;i--;){
+				if(this.elements[i].nodeType !== 1)continue;
+				this.elements[i].setAttribute(name,value);
+			}
 			return this;
 		}else{
-			return this.element.getAttribute(name);
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType === 1)break;
+			}
+			return this.elements[i].getAttribute(name);
 		}
 	},
 	/**
@@ -215,7 +221,10 @@ View.prototype = {
 	 * @param  {string} name  属性名
 	 */
 	removeAttr:function(name){
-		this.element.removeAttribute(name);
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].removeAttribute(name);
+		}
 		return this;
 	}
 }

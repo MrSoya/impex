@@ -73,7 +73,7 @@ var lexer = (function(){
                     }
                     varObj.words.push(tmp);
                 }else 
-                if(l === ']'){
+                if(l === ']' || l === ')'){
                     stack.pop();
                     if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
@@ -83,7 +83,7 @@ var lexer = (function(){
                         lastSegPos = i;
                     }
                     //push words
-                    varObj.words.push(']');
+                    varObj.words.push(l);
                     lastWordPos = i;
 
                 }else{
@@ -108,8 +108,8 @@ var lexer = (function(){
                         }
                     }
                 }else 
-                if(l === '['){
-                    stack.push('[');
+                if(l === '[' || l === '('){
+                    stack.push(l);
                     stackBeginPos = i;
 
                     varObj.brakLength++;
@@ -122,10 +122,11 @@ var lexer = (function(){
                          tmp = ['.'+tmpStr];
                         varObj.words.push(tmp);
                     }
-                    varObj.words.push('[');
+                    varObj.words.push(l);
 
                     //segments
-                    if(literal[i-1] !== ']'){
+                    var closed = l==='['?']':')';
+                    if(literal[i-1] !== closed){
                         var index = tmpStr.lastIndexOf('.');
                         if(index > -1){
                             tmpStr = tmpStr.substr(index);
@@ -135,17 +136,16 @@ var lexer = (function(){
                         }
                         lastSegPos = i;
                     }
-                    
 
                     lastWordPos = i;
                 }else
-                if(l === ']' && nested){
+                if((l === ']' || l === ')') && nested){
                     //push words
                     var tmp = literal;
                     //x.y ]
                     //x[...].y ]
                     //x[..] ]
-                    if(tmp[tmp.length-1] !== ']'){
+                    if(tmp[tmp.length-1] !== l){
                         if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
                             tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
                             varObj.words.push(tmp);
@@ -156,7 +156,11 @@ var lexer = (function(){
                         }
 
                         //segments
-                        tmp = tmp.substr(tmp.lastIndexOf('.'));
+                        var point = tmp.lastIndexOf('.');
+                        if(point >0 ){
+                            tmp = tmp.substr(point);
+                        }
+                        
                         varObj.segments.push(tmp);
                         lastSegPos = i;
                     }
@@ -187,17 +191,18 @@ var lexer = (function(){
             }
         }
 
-        var str = literal.substr(literal.lastIndexOf(']')+1);
-        if(str){
+        var str1 = literal.substr(literal.lastIndexOf(']')+1);
+        var str2 = literal.substr(literal.lastIndexOf(')')+1);
+        if(str1 && str2){
+            var str = str1.length < str2.length?str1:str2;
             var segStr = literal.substr(lastSegPos+1);
             varObj.segments.push(segStr);
 
-            var tmp = str[0]==='['?str:str[0]==='.'?str:'.'+str;
+            var tmp = (str[0]==='[' || str[0]==='(')?str:str[0]==='.'?str:'.'+str;
             if(varObj.words.length<1 && keyWords.indexOf(tmp) < 0){
                 tmp = [tmp]
             }
             varObj.words.push(tmp);
-
         }
         
         if(!nested){
@@ -212,14 +217,16 @@ var lexer = (function(){
             var lastPart = null,
                 watchPath = null;
             var i = k.lastIndexOf('.');
-            if(k[k.length-1] === ']'){
+            if(k[k.length-1] === ']' || k[k.length-1] === ')'){
                 i = brak(k,varObj.brakLength);
+
+                var closed = k[k.length-1] === ']'?'[':'(';
 
                 var brakLen = varObj.brakLength;
                 varObj.watchPathWords = [];
                 for(var j=0;j<varObj.words.length;j++){
                     var w = varObj.words[j];
-                    if(w === '['){
+                    if(w === closed){
                         if(--brakLen<1){
                             break;
                         }
@@ -232,7 +239,11 @@ var lexer = (function(){
             }
 
             lastPart = k.substr(i);
-            varObj.lastVar = lastPart;
+            if(lastPart[0] === '('){
+                varObj.lastVar = k;
+            }else{
+                varObj.lastVar = lastPart;
+            }
 
             if(Object.keys(varObj.subVars).length<1){
                 watchPath = k.substring(0,i).replace(/\.$/,'');
@@ -251,7 +262,7 @@ var lexer = (function(){
         for(var i=0;i<k.length;i++){
             var l = k[i];
 
-            if(l === '['){
+            if(l === '[' || l === '('){
                 
                 if(--len < 1){
                     return i;

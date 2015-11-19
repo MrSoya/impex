@@ -76,7 +76,6 @@ var Builder = new function() {
  			if(prop.watchs.indexOf(expNode) < 0)
  				prop.watchs.push(expNode);
  		}
- 		
 
  		return parentProp[propName];
  	}
@@ -95,25 +94,26 @@ var Builder = new function() {
 		if(depth > DEPTH)return;
 		var recur = false;
 
+		function __observer(changes){
+			if(component.$__state === Component.state.suspend)return;
+			if(component.$__state === Component.state.destroyed)return;
+			changeHandler(changes,propChain,component,depth);
+		}
 		if(Util.isArray(model)){
-			model.$__observer = function(changes){
-				if(component.$__state === Component.state.suspend)return;
-				if(component.$__state === Component.state.destroyed)return;
-				changeHandler(changes,propChain,component,depth);
-			}
-			model.$__oldVal = model.concat();
-			Array_observe(model,model.$__observer);
+			if(model.$__impex__observer)return;
+			model.$__impex__observer = __observer;
+			model.$__impex__oldVal = model.concat();
+
+			Array_observe(model,__observer);
 
 			recur = true;
 		}else if(Util.isObject(model)){
 			if(Util.isDOM(model))return;
 			if(Util.isWindow(model))return;
-			model.$__observer = function(changes){
-				if(component.$__state === Component.state.suspend)return;
-				if(component.$__state === Component.state.destroyed)return;
-				changeHandler(changes,propChain,component,depth);
-			}
-			Object_observe(model,model.$__observer);
+			if(model.$__impex__observer)return;
+			model.$__impex__observer = __observer;
+
+			Object_observe(model,__observer);
 
 			recur = true;
 		}
@@ -152,19 +152,22 @@ var Builder = new function() {
 			var oldVal = change.oldValue;
 			if(Util.isArray(change.object)){
 				newObj = change.object;
-				oldVal = change.object.$__oldVal;
+				oldVal = change.object.$__impex__oldVal;
 			}
 			recurRender(component,pc,change.type,newObj,oldVal);
 
 			//unobserve
 			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
-				Array_unobserve(change.oldValue,change.oldValue.$__observer);
+				Array_unobserve(change.oldValue,change.oldValue.$__impex__observer);
 			}else if(Util.isArray(change.object)){
-				change.object.$__oldVal = change.object.concat();
+				change.object.$__impex__oldVal = change.object.concat();
 				return;
 			}else if(Util.isObject(change.oldValue)){
-				Object_unobserve(change.oldValue,change.oldValue.$__observer);
-				change.oldValue.$__observer = null;
+				var observer = change.oldValue.$__impex__observer;
+				if(observer){
+					Object_unobserve(change.oldValue,observer);
+					change.oldValue.$__impex__observer = null;
+				}
 			}
 
 			//reobserve
@@ -245,7 +248,9 @@ var Builder = new function() {
 						}
 						try{
 							nv = new Function("$var","return "+findStr)(newVal);
+							ov = new Function("$var","return "+findStr)(oldVal);
 						}catch(e){
+							impex.console.debug('error on parse watch params');
 							nv = null;
 						}
 					}

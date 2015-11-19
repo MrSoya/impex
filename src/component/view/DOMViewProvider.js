@@ -17,7 +17,7 @@ var DOMViewProvider = new function(){
 			nodes.push(tmp);
 		}
 
-		var view = new View(nodes,null,target);
+		var view = new View(nodes,target);
 
 		return view;
 	}
@@ -33,8 +33,6 @@ var DOMViewProvider = new function(){
 			if(headEl.indexOf(tn) > -1)continue;
 
 			nodes.push(tmp);
-			
-			// return tmp;
 		}
 		return nodes;
 	}

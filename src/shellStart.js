@@ -1,11 +1,11 @@
 /*
- * impex is a powerful web application builder
+ * impex is a powerful web application engine
  *
  *
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * Date: 2015-10-16
+ * last build: 2015-11-19
  */
 
 !function (global) {
