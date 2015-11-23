@@ -12,11 +12,6 @@
 ### 移除
 * XRouter.bind，不再需要首先bind组件了，见route demo
 
-### bug修复
-* 扫描器的bug
-* 某些条件下会导致watch无法获取正确值
-* x-each某些条件下无效
-
 
 ## Version 0.4.0 - 2015/11/19
 ### 新增
