@@ -6,7 +6,7 @@ function _ServiceFactory(){
 }
 Util.inherits(_ServiceFactory,Factory);
 Util.ext(_ServiceFactory.prototype,{
-	newInstanceOf : function(type){
+	newInstanceOf : function(type,host){
 		type = type.toLowerCase();
 		if(!this.types[type])return null;
 
@@ -27,10 +27,11 @@ Util.ext(_ServiceFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}
+		rs.$host = host;
 		rs.onCreate && rs.onCreate.apply(rs,services);
 
 		return rs;

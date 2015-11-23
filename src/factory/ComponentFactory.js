@@ -49,7 +49,7 @@ Util.ext(_ComponentFactory.prototype,{
 			//inject
 			var services = [];
 			for(var i=0;i<svs.length;i++){
-				var serv = ServiceFactory.newInstanceOf(svs[i]);
+				var serv = ServiceFactory.newInstanceOf(svs[i],rs);
 				services.push(serv);
 			}
 			
@@ -79,7 +79,7 @@ Util.ext(_ComponentFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}

@@ -1,4 +1,3 @@
-//todo...cache exp
 var lexer = (function(){
 
     var STR_EXP_START = /(['"])/,
@@ -272,7 +271,12 @@ var lexer = (function(){
     }
 
     var lastType = '';
+
+    var cache = {};
     return function(sentence){
+        if(cache[sentence])return cache[sentence];
+
+
         var words = [],
             varMap = {};
 
@@ -303,9 +307,10 @@ var lexer = (function(){
         // //b.x[c] ---> c
         // console.log('变量tree',varMap);
         
-        return {
+        cache[sentence] = {
             words:words,
             varTree:varMap
         };
+        return cache[sentence];
     }
 })();

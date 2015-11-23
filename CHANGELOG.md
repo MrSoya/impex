@@ -1,5 +1,23 @@
 # Change Log
 
+## Version 0.4.1 - 2015/11/23
+### 新增
+* Service.$host属性，用来访问服务宿主
+* 新demos
+
+### 更新
+* 渲染器，提升性能
+* 词法分析器，提升性能
+
+### 移除
+* XRouter.bind，不再需要首先bind组件了，见route demo
+
+### bug修复
+* 扫描器的bug
+* 某些条件下会导致watch无法获取正确值
+* x-each某些条件下无效
+
+
 ## Version 0.4.0 - 2015/11/19
 ### 新增
 * x-if-start/end 指令，可以控制一组视图

@@ -40,7 +40,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}

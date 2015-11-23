@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript">
+
+            var html = '<div x-if-start="show">{{title}}</div>';
+            for(var i=10000;i--;){
+                html += '<div >{{title}}</div>';
+            }
+            html += '<div x-if-end>{{title}}</div>';
+            document.body.innerHTML = html;
+
+            var s = Date.now();
+            //渲染
+            var debug = impex.render(document.body,new function(){
+                this.title = 12;
+                this.show = true;
+            });
+
+            console.log(Date.now() - s);
+            
+        </script>
+    </body>
+</html>

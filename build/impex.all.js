@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-11-19
+ * last build: 2015-11-23
  */
 
 !function (global) {
@@ -361,7 +361,6 @@ var Util = new function () {
 			dirtyCheck();
 		});
 	}();
-//todo...cache exp
 var lexer = (function(){
 
     var STR_EXP_START = /(['"])/,
@@ -635,7 +634,12 @@ var lexer = (function(){
     }
 
     var lastType = '';
+
+    var cache = {};
     return function(sentence){
+        if(cache[sentence])return cache[sentence];
+
+
         var words = [],
             varMap = {};
 
@@ -666,10 +670,11 @@ var lexer = (function(){
         // //b.x[c] ---> c
         // console.log('变量tree',varMap);
         
-        return {
+        cache[sentence] = {
             words:words,
             varTree:varMap
         };
+        return cache[sentence];
     }
 })();
 /**
@@ -1174,10 +1179,7 @@ var Builder = new function() {
 		var invokedWatchs = [];
 		for(var i=matchs.length;i--;){
 			//rerender matchs
-			for(var j=matchs[i].expNodes.length;j--;){
-				var expNode = matchs[i].expNodes[j];
-				Renderer.renderExpNode(expNode);
-			}
+			Renderer.renderExpNode(matchs[i].expNodes);
 			//callback observe attrs
 			for(var j=matchs[i].attrObserveNodes.length;j--;){
 				var aon = matchs[i].attrObserveNodes[j];
@@ -1258,9 +1260,8 @@ var Renderer = new function() {
 	 * 渲染组件
 	 */
 	this.render = function(component){
-		for(var i=component.$__expNodes.length;i--;){
- 			renderExpNode(component.$__expNodes[i]);
- 		}
+		
+ 		renderExpNode(component.$__expNodes);
 
  		for(var j=component.$__components.length;j--;){
  			Renderer.render(component.$__components[j]);
@@ -1268,24 +1269,40 @@ var Renderer = new function() {
 	}
 
 	//表达式节点渲染
-	function renderExpNode(expNode){
-		var val = calcExp(expNode.component,expNode.origin,expNode.expMap);
-		var converters = expNode.converters;
-		if(Object.keys(converters).length > 0){
-			for(var k in converters){
-				var c = converters[k][0];
-				var params = converters[k][1];
-				c.$value = val;
-				val = c.to.apply(c,params);
-				if(c.$html){
-					var rs = renderHTML(c,val,expNode.node,expNode.component);
-					if(rs)return;
+	function renderExpNode(expNodes){
+		var cache = {};
+		for(var i=expNodes.length;i--;){
+			var expNode = expNodes[i];
+
+			var val;
+			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
+				val = cache[expNode.origin].val;
+			}else{
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
+				cache[expNode.origin] = {
+					comp:expNode.component,
+					val:val
 				}
 			}
+			
+			var converters = expNode.converters;
+			if(Object.keys(converters).length > 0){
+				for(var k in converters){
+					var c = converters[k][0];
+					var params = converters[k][1];
+					c.$value = val;
+					val = c.to.apply(c,params);
+					if(c.$html){
+						var rs = renderHTML(c,val,expNode.node,expNode.component);
+						if(rs)return;
+					}
+				}
+			}
+			if(val !== null){
+				updateDOM(expNode.node,expNode.attrName,val);
+			}
 		}
-		if(val !== null){
-			updateDOM(expNode.node,expNode.attrName,val);
-		}
+		
 	}
 	this.renderExpNode = renderExpNode;
 
@@ -1688,7 +1705,7 @@ Util.ext(Component.prototype,{
 		var keys = Object.keys(expObj.varTree);
 		if(keys.length < 1)return;
 		if(keys.length > 1){
-			impex.console.warn('变量表达式'+expPath+'错误，只能同时watch一个变量');
+			impex.console.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
 			return;
 		}
 		
@@ -2394,6 +2411,10 @@ function Service () {
 	 */
 	this.$singleton;
 	/**
+	 * 服务被注入到的宿主，可能是组件，指令或者另一个服务
+	 */
+	this.$host;
+	/**
 	 * 构造函数，在服务被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
 	 */
@@ -2493,7 +2514,7 @@ Util.ext(_ComponentFactory.prototype,{
 			//inject
 			var services = [];
 			for(var i=0;i<svs.length;i++){
-				var serv = ServiceFactory.newInstanceOf(svs[i]);
+				var serv = ServiceFactory.newInstanceOf(svs[i],rs);
 				services.push(serv);
 			}
 			
@@ -2523,7 +2544,7 @@ Util.ext(_ComponentFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}
@@ -2578,7 +2599,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}
@@ -2613,7 +2634,7 @@ Util.ext(_ConverterFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}
@@ -2632,7 +2653,7 @@ function _ServiceFactory(){
 }
 Util.inherits(_ServiceFactory,Factory);
 Util.ext(_ServiceFactory.prototype,{
-	newInstanceOf : function(type){
+	newInstanceOf : function(type,host){
 		type = type.toLowerCase();
 		if(!this.types[type])return null;
 
@@ -2653,10 +2674,11 @@ Util.ext(_ServiceFactory.prototype,{
 		if(this.types[type].services){
 			services = [];
 			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i]);
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
 				services.push(serv);
 			}
 		}
+		rs.$host = host;
 		rs.onCreate && rs.onCreate.apply(rs,services);
 
 		return rs;
@@ -2730,7 +2752,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,4,0],
+	        v:[0,4,1],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

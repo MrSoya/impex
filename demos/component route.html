@@ -24,7 +24,7 @@
 
             impex.component('x-tab',{
                 onCreate:function(router){
-                    router.bind(this).when({
+                    router.when({
                         "/radio":'x-radio',
                         "/([a-z]+)":function(type){
                             if(type == 'checkbox')return 'x-check';

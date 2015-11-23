@@ -8,9 +8,8 @@ var Renderer = new function() {
 	 * 渲染组件
 	 */
 	this.render = function(component){
-		for(var i=component.$__expNodes.length;i--;){
- 			renderExpNode(component.$__expNodes[i]);
- 		}
+		
+ 		renderExpNode(component.$__expNodes);
 
  		for(var j=component.$__components.length;j--;){
  			Renderer.render(component.$__components[j]);
@@ -18,24 +17,40 @@ var Renderer = new function() {
 	}
 
 	//表达式节点渲染
-	function renderExpNode(expNode){
-		var val = calcExp(expNode.component,expNode.origin,expNode.expMap);
-		var converters = expNode.converters;
-		if(Object.keys(converters).length > 0){
-			for(var k in converters){
-				var c = converters[k][0];
-				var params = converters[k][1];
-				c.$value = val;
-				val = c.to.apply(c,params);
-				if(c.$html){
-					var rs = renderHTML(c,val,expNode.node,expNode.component);
-					if(rs)return;
+	function renderExpNode(expNodes){
+		var cache = {};
+		for(var i=expNodes.length;i--;){
+			var expNode = expNodes[i];
+
+			var val;
+			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
+				val = cache[expNode.origin].val;
+			}else{
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
+				cache[expNode.origin] = {
+					comp:expNode.component,
+					val:val
 				}
 			}
+			
+			var converters = expNode.converters;
+			if(Object.keys(converters).length > 0){
+				for(var k in converters){
+					var c = converters[k][0];
+					var params = converters[k][1];
+					c.$value = val;
+					val = c.to.apply(c,params);
+					if(c.$html){
+						var rs = renderHTML(c,val,expNode.node,expNode.component);
+						if(rs)return;
+					}
+				}
+			}
+			if(val !== null){
+				updateDOM(expNode.node,expNode.attrName,val);
+			}
 		}
-		if(val !== null){
-			updateDOM(expNode.node,expNode.attrName,val);
-		}
+		
 	}
 	this.renderExpNode = renderExpNode;
 

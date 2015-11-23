@@ -204,10 +204,7 @@ var Builder = new function() {
 		var invokedWatchs = [];
 		for(var i=matchs.length;i--;){
 			//rerender matchs
-			for(var j=matchs[i].expNodes.length;j--;){
-				var expNode = matchs[i].expNodes[j];
-				Renderer.renderExpNode(expNode);
-			}
+			Renderer.renderExpNode(matchs[i].expNodes);
 			//callback observe attrs
 			for(var j=matchs[i].attrObserveNodes.length;j--;){
 				var aon = matchs[i].attrObserveNodes[j];

@@ -5,10 +5,35 @@
  */
 !function(impex){
 
+	/**
+	 * XRouter自动路由点，当路由组件中出现该子组件时，系统会自动把路由内容展示在该路由点位置
+	 * @type {String}
+	 */
 	impex.component('x-router-view',{
 		$template:'<span name="x-router-view"></span>'
 	});
 
+	var routerMap = {};
+	function changeComponent(url,component,compNameOrCbk,params,router){
+		var routerView = component.find('x-router-view') || router.lastComp;
+
+		var compName = compNameOrCbk instanceof Function?compNameOrCbk.apply(router,params):compNameOrCbk;
+		
+		if(!router.componentManager.hasTypeOf(compName)){
+			impex.console.warn('invaild route component['+compName+'] of path "'+url+'"');
+			return;
+		}
+		var placeholder = router.viewManager.createPlaceholder('-- placeholder --');
+        router.viewManager.insertBefore(placeholder,routerView.$view);
+
+        routerView.destroy();
+
+        //create new
+        var subComp = component.createSubComponentOf(compName,placeholder);
+        subComp.init().display();
+
+        router.lastComp = subComp;
+	}
 
 	/**
 	 * 
@@ -34,88 +59,7 @@
 	 * @namespace service
 	 * @version 1.0
 	 */
-	var _XRouter = new function (){
-		this.$singleton = true;
-
-		var routerMap = {};
-
-		this.onCreate = function(viewManager,componentManager){
-	    	this.viewManager = viewManager;
-	    	this.componentManager = componentManager;
-
-	    	var that = this;
-	    	window.onload = function(e){
-	    		window.onhashchange(e);
-	    	}
-	    	window.onhashchange = function (e) {
-				var url = location.hash.replace(/#!?/,'');
-				
-				for(var k in routerMap){
-					var router = routerMap[k].router;
-					var auto = true;
-					url && router.__cbk && (auto = router.__cbk(url));
-					if(auto !== false){
-						var component = routerMap[k].comp;
-						var expMap = router.__expMap;
-						for(var k in expMap){
-							var exp = expMap[k].exp;
-							if(exp.test(url)){
-								var params = [];
-								url.replace(exp,function () {
-									for(var i=1;i<arguments.length-2;i++){
-										params.push(arguments[i]);
-									}
-								});
-								that.changeComponent(url,component,expMap[k].comp,params,router);
-								break;
-							}
-						}
-					}
-				}
-			}
-	    }
-
-		
-
-		this.changeComponent = function (url,component,compNameOrCbk,params,router){
-			var routerView = component.find('x-router-view') || this.lastComp;
-
-			var compName = compNameOrCbk instanceof Function?compNameOrCbk.apply(router,params):compNameOrCbk;
-			
-			if(!this.componentManager.hasTypeOf(compName)){
-				impex.console.warn('invaild route component['+compName+'] of path "'+url+'"');
-				return;
-			}
-			var placeholder = this.viewManager.createPlaceholder('-- placeholder --');
-	        this.viewManager.insertBefore(placeholder,routerView.$view);
-
-	        routerView.destroy();
-
-	        //create new
-	        var subComp = component.createSubComponentOf(compName,placeholder);
-	        subComp.init().display();
-
-	        this.lastComp = subComp;
-		}
-
-		/**
-		 * 和组件绑定，用于自动路由
-		 * @param  {Component} component 需要执行路由的组件
-		 * @return {XRouter} 返回XRouter实例
-		 */
-		this.bind = function(component){
-			if(routerMap[component.__id])return routerMap[component.__id];
-
-			var router = new XRouter();
-			routerMap[component.__id] = {router:router,comp:component};
-
-			return router;
-		}
-	}
-
-	function XRouter(){
-	}
-	XRouter.prototype = {
+	var XRouter = {
 		/**
 		 * 配置路由信息
 		 * @param  {Object} routInfo 标准json格式，key可以是正则串，value可以是字符串或者回调函数
@@ -138,10 +82,55 @@
 		onRoute:function(cbk){
 			this.__cbk = cbk;
 			return this;
-		}
+		},
+		onCreate:function(viewManager,componentManager){
+	    	this.viewManager = viewManager;
+	    	this.componentManager = componentManager;
+
+	    	if(!this.$host.$__id){
+	    		impex.console.warn('service[XRouter] can only be injected into Component or Directive');
+	    		return;
+	    	}
+	    	if(!routerMap[this.$host.$__id]){
+	    		routerMap[this.$host.$__id] = {router:this,comp:this.$host};
+	    	}
+	    }
 	}
 
-	impex.service('XRouter',_XRouter,['ViewManager','ComponentManager']);
+	window.addEventListener('load',function(e){
+		onhashchange(e);
+	},false);
+	function onhashchange(e) {
+		var url = location.hash.replace(/#!?/,'');
+		
+		for(var k in routerMap){
+			var router = routerMap[k].router;
+			var auto = true;
+			url && router.__cbk && (auto = router.__cbk(url));
+			if(auto !== false){
+				var component = routerMap[k].comp;
+				var expMap = router.__expMap;
+				for(var k in expMap){
+					var exp = expMap[k].exp;
+					if(exp.test(url)){
+						var params = [];
+						url.replace(exp,function () {
+							for(var i=1;i<arguments.length-2;i++){
+								params.push(arguments[i]);
+							}
+						});
+						changeComponent(url,component,expMap[k].comp,params,router);
+						break;
+					}
+				}
+			}
+		}
+	}
+	window.addEventListener('hashchange',function(e){
+		onhashchange(e);
+	},false);
+
+	impex.service('XRouter',XRouter,['ViewManager','ComponentManager']);
 
 
 }(impex);

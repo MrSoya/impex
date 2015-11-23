@@ -167,7 +167,7 @@ Util.ext(Component.prototype,{
 		var keys = Object.keys(expObj.varTree);
 		if(keys.length < 1)return;
 		if(keys.length > 1){
-			impex.console.warn('变量表达式'+expPath+'错误，只能同时watch一个变量');
+			impex.console.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
 			return;
 		}
 		
