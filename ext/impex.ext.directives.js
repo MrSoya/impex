@@ -102,7 +102,7 @@
      */
     impex.directive('mouseleave',{
         onInit : function(){
-        	var currentTarget = this.$view.element;
+        	var currentTarget = this.$view.elements[0];
             this.on('mouseout',this.$value,function(e,origin){
             	var target = e.target || e.srcElement;
 

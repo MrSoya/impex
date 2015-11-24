@@ -35,6 +35,7 @@ var Renderer = new function() {
 			
 			var converters = expNode.converters;
 			if(Object.keys(converters).length > 0){
+				var needUpdateDOM = true;
 				for(var k in converters){
 					var c = converters[k][0];
 					var params = converters[k][1];
@@ -42,9 +43,13 @@ var Renderer = new function() {
 					val = c.to.apply(c,params);
 					if(c.$html){
 						var rs = renderHTML(c,val,expNode.node,expNode.component);
-						if(rs)return;
+						if(rs){
+							needUpdateDOM = false;
+							break;
+						}
 					}
 				}
+				if(!needUpdateDOM)continue;
 			}
 			if(val !== null){
 				updateDOM(expNode.node,expNode.attrName,val);
