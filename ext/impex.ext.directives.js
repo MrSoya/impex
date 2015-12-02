@@ -148,8 +148,8 @@
     });
 
     /**
-     * 失去焦点视图指令，不包含子视图
-     * <br/>使用方式：<div x-focus="fn() + fx()"></div>
+     * 鼠标滚动视图指令，不包含子视图
+     * <br/>使用方式：<div x-mousewheel="fn() + fx()"></div>
      */
     impex.directive('mousewheel',{
         onInit : function(){

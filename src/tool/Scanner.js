@@ -89,6 +89,16 @@ var Scanner = new function() {
         }
 	}
 
+	function getRestrictParent(selfComp){
+		if(selfComp.$restrict)return selfComp;
+		var p = selfComp.$parent;
+		while(p){
+			if(p.$name && p.$restrict)return p;
+			p = p.$parent;
+		};
+		return null;
+	}
+
 	//扫描算法
 	//1. 如果发现是组件,记录，中断
 	//2. 如果发现是指令，记录，查看是否final，如果是，中断
@@ -101,6 +111,16 @@ var Scanner = new function() {
 				var tagName = node.tagName.toLowerCase();
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){
+					var pr = getRestrictParent(component);
+					if(pr && pr.$restrict.children){
+						var children = pr.$restrict.children.split(',');
+						if(children.indexOf(tagName) < 0)return;
+					}
+					var cr = ComponentFactory.getRestrictOf(tagName);
+					if(cr && cr.parents){
+						var parents = cr.parents.split(',');
+						if(parents.indexOf(pr.$name) < 0)return;
+					}
 					component.createSubComponentOf(tagName,node);
 					return;
 				}

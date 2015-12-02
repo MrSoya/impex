@@ -270,7 +270,7 @@ var Builder = new function() {
 		rerender(component,propChain,changeType,newVal,oldVal);
 
 		for(var j=component.$__components.length;j--;){
-			var subCtrlr = component.$__components[j]
+			var subCtrlr = component.$__components[j];
  			recurRender(subCtrlr,propChain,changeType,newVal,oldVal);
  		}
 	}

@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-11-23
+ * last build: 2015-12-02
  */
 
 !function (global) {
@@ -135,19 +135,25 @@ var Util = new function () {
     }
 
     function loadError(){
-        impex.console.error('无法获取远程数据 : '+this.url);
+        impex.console.error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        impex.console.error('请求超时 : '+this.url);
+        impex.console.error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
+            if(!cache[this.url])cache[this.url] = this.responseText;
             this.cbk && this.cbk(this.responseText);
         }
     }
 
+    var cache = {};
     this.loadTemplate = function(url,cbk,timeout){
+        if(cache[url]){
+            cbk && cbk(cache[url]);
+            return;
+        }
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
         xhr.timeout = timeout || 5000;
@@ -807,6 +813,16 @@ var Scanner = new function() {
         }
 	}
 
+	function getRestrictParent(selfComp){
+		if(selfComp.$restrict)return selfComp;
+		var p = selfComp.$parent;
+		while(p){
+			if(p.$name && p.$restrict)return p;
+			p = p.$parent;
+		};
+		return null;
+	}
+
 	//扫描算法
 	//1. 如果发现是组件,记录，中断
 	//2. 如果发现是指令，记录，查看是否final，如果是，中断
@@ -819,6 +835,16 @@ var Scanner = new function() {
 				var tagName = node.tagName.toLowerCase();
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){
+					var pr = getRestrictParent(component);
+					if(pr && pr.$restrict.children){
+						var children = pr.$restrict.children.split(',');
+						if(children.indexOf(tagName) < 0)return;
+					}
+					var cr = ComponentFactory.getRestrictOf(tagName);
+					if(cr && cr.parents){
+						var parents = cr.parents.split(',');
+						if(parents.indexOf(pr.$name) < 0)return;
+					}
 					component.createSubComponentOf(tagName,node);
 					return;
 				}
@@ -1245,7 +1271,7 @@ var Builder = new function() {
 		rerender(component,propChain,changeType,newVal,oldVal);
 
 		for(var j=component.$__components.length;j--;){
-			var subCtrlr = component.$__components[j]
+			var subCtrlr = component.$__components[j];
  			recurRender(subCtrlr,propChain,changeType,newVal,oldVal);
  		}
 	}
@@ -1586,7 +1612,6 @@ function Component (view) {
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
-	 * @default null
 	 */
 	this.$parent;
 	this.$__components = [];
@@ -1602,6 +1627,18 @@ function Component (view) {
 	 * 组件模板url，动态加载组件模板
 	 */
 	this.$templateURL;
+	/**
+	 * 组件约束，用于定义组件的使用范围包括上级组件限制
+	 * <p>
+	 * {
+	 * 	parents:'comp name' | 'comp name1,comp name2,comp name3...',
+	 * 	children:'comp name' | 'comp name1,comp name2,comp name3...'
+	 * }
+	 * </p>
+	 * 这些限制可以单个或者同时出现
+	 * @type {Object}
+	 */
+	this.$restrict;
 	/**
 	 * 构造函数，在组件被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
@@ -1647,29 +1684,34 @@ Util.ext(Component.prototype,{
 		this.$view.__off(this,type,exp);
 	},
 	/**
-	 * 查找子组件，并返回符合条件的第一个实例
+	 * 查找子组件，并返回符合条件的第一个实例。如果不开启递归查找，
+	 * 该方法只会查询直接子节点集合
 	 * @param  {string} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @param {Boolean} recur 是否开启递归查找，默认false
 	 * @return {Component | null} 
 	 */
-	find:function(name,conditions){
+	find:function(name,conditions,recur){
 		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
-			if(name != '*' && comp.$name != name)continue;
-
-			var matchAll = true;
-			if(conditions)
-				for(var k in conditions){
-					if(comp[k] != conditions[k]){
-						matchAll = false;
-						break;
+			if(name === '*' || comp.$name === name){
+				var matchAll = true;
+				if(conditions)
+					for(var k in conditions){
+						if(comp[k] != conditions[k]){
+							matchAll = false;
+							break;
+						}
 					}
+				if(matchAll){
+					return comp;
 				}
-			if(matchAll){
-				return comp;
 			}
-			
+			if(recur && comp.$__components.length>0){
+				var rs = comp.find(name,conditions,true);
+				if(rs)return rs;
+			}
 		}
 		return null;
 	},
@@ -2478,6 +2520,9 @@ function _ComponentFactory(viewProvider){
 }
 Util.inherits(_ComponentFactory,Factory);
 Util.ext(_ComponentFactory.prototype,{
+	getRestrictOf : function(type){
+		return this.types[type].props['$restrict'];
+	},
 	/**
 	 * 创建指定基类实例
 	 */
@@ -2757,7 +2802,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,4,1],
+	        v:[0,5,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

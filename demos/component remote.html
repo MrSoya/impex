@@ -8,6 +8,12 @@
         <x-button id="xbtn">
         </x-button>
 
+        <div id="xx">
+            <x-button id="xbtn2">
+            </x-button>
+        </div>
+        
+
         <!-- 需要服务器环境 -->
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
@@ -25,11 +31,12 @@
                 tip : function(n){
                     alert('clicked '+(this.times++)+' times');
                 },
+                $$date:{},
                 $templateURL:"x-button.html"
             });
 
             //渲染
-            impex.render(document.body);
+            impex.render(document.getElementById('xbtn'));
             
         </script>
     </body>

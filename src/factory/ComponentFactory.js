@@ -8,6 +8,9 @@ function _ComponentFactory(viewProvider){
 }
 Util.inherits(_ComponentFactory,Factory);
 Util.ext(_ComponentFactory.prototype,{
+	getRestrictOf : function(type){
+		return this.types[type].props['$restrict'];
+	},
 	/**
 	 * 创建指定基类实例
 	 */

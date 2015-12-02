@@ -123,19 +123,25 @@ var Util = new function () {
     }
 
     function loadError(){
-        impex.console.error('无法获取远程数据 : '+this.url);
+        impex.console.error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        impex.console.error('请求超时 : '+this.url);
+        impex.console.error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
+            if(!cache[this.url])cache[this.url] = this.responseText;
             this.cbk && this.cbk(this.responseText);
         }
     }
 
+    var cache = {};
     this.loadTemplate = function(url,cbk,timeout){
+        if(cache[url]){
+            cbk && cbk(cache[url]);
+            return;
+        }
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
         xhr.timeout = timeout || 5000;

@@ -43,7 +43,6 @@ function Component (view) {
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
-	 * @default null
 	 */
 	this.$parent;
 	this.$__components = [];
@@ -59,6 +58,18 @@ function Component (view) {
 	 * 组件模板url，动态加载组件模板
 	 */
 	this.$templateURL;
+	/**
+	 * 组件约束，用于定义组件的使用范围包括上级组件限制
+	 * <p>
+	 * {
+	 * 	parents:'comp name' | 'comp name1,comp name2,comp name3...',
+	 * 	children:'comp name' | 'comp name1,comp name2,comp name3...'
+	 * }
+	 * </p>
+	 * 这些限制可以单个或者同时出现
+	 * @type {Object}
+	 */
+	this.$restrict;
 	/**
 	 * 构造函数，在组件被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
@@ -104,29 +115,34 @@ Util.ext(Component.prototype,{
 		this.$view.__off(this,type,exp);
 	},
 	/**
-	 * 查找子组件，并返回符合条件的第一个实例
+	 * 查找子组件，并返回符合条件的第一个实例。如果不开启递归查找，
+	 * 该方法只会查询直接子节点集合
 	 * @param  {string} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
+	 * @param {Boolean} recur 是否开启递归查找，默认false
 	 * @return {Component | null} 
 	 */
-	find:function(name,conditions){
+	find:function(name,conditions,recur){
 		name = name.toLowerCase();
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
-			if(name != '*' && comp.$name != name)continue;
-
-			var matchAll = true;
-			if(conditions)
-				for(var k in conditions){
-					if(comp[k] != conditions[k]){
-						matchAll = false;
-						break;
+			if(name === '*' || comp.$name === name){
+				var matchAll = true;
+				if(conditions)
+					for(var k in conditions){
+						if(comp[k] != conditions[k]){
+							matchAll = false;
+							break;
+						}
 					}
+				if(matchAll){
+					return comp;
 				}
-			if(matchAll){
-				return comp;
 			}
-			
+			if(recur && comp.$__components.length>0){
+				var rs = comp.find(name,conditions,true);
+				if(rs)return rs;
+			}
 		}
 		return null;
 	},
