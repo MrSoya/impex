@@ -152,6 +152,7 @@
 
             var that = this;
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+
                 var newKeysSize = 0;
                 var oldKeysSize = 0;
 
@@ -194,7 +195,7 @@
                 }
                 var restSize = diffSize - tmp.length;
                 while(restSize--){
-                    var subComp = this.createSubComp();
+                    this.createSubComp();
                 }
             }
 

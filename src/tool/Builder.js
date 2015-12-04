@@ -86,53 +86,59 @@ var Builder = new function() {
 	this.build = function(component){
 		prelink(component);
 		
-		var depth = 0;
-		observerProp(component,[],component,depth+1);
+		observerProp(component,[],component);
 	}
 
-	function observerProp(model,propChain,component,depth){
-		if(depth > DEPTH)return;
-		var recur = false;
+	function observerProp(model,propChain,component){
+		var isArray = Util.isArray(model),
+			isObject = Util.isObject(model);
+		if(!model || !(isArray || isObject)){
+            return;
+        }
 
-		function __observer(changes){
+        if(model.$__impex__observer){
+            var k = propChain.join('.');
+            if(model.$__impex__propChains[k]){
+                model.$__impex__propChains[k].push([propChain,component]);
+                return;
+            }
+            model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
+            return;
+        }
+
+    	function __observer(changes){
 			if(component.$__state === Component.state.suspend)return;
 			if(component.$__state === Component.state.destroyed)return;
-			changeHandler(changes,propChain,component,depth);
+			changeHandler(changes);
 		}
-		if(Util.isArray(model)){
-			if(model.$__impex__observer)return;
-			model.$__impex__observer = __observer;
+
+		model.$__impex__observer = __observer;
+		model.$__impex__propChains = {};
+        model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
+
+		if(isArray){
 			model.$__impex__oldVal = model.concat();
 
 			Array_observe(model,__observer);
-
-			recur = true;
-		}else if(Util.isObject(model)){
+		}else if(isObject){
 			if(Util.isDOM(model))return;
-			if(Util.isWindow(model))return;
-			if(model.$__impex__observer)return;
-			model.$__impex__observer = __observer;
 
 			Object_observe(model,__observer);
-
-			recur = true;
 		}
 
-		if(recur){
-			//recursive
-			var ks = Object.keys(model);
-
-			for(var i=ks.length;i--;){
-				var k = ks[i];
-				if(k.indexOf('$')===0)continue;
-				var pc = propChain.concat();
-				pc.push(k);
-				observerProp(model[k],pc,component,depth+1);
-			}
+		//recursive
+		var ks = Object.keys(model);
+		for(var i=ks.length;i--;){
+			var k = ks[i];
+			if(k.indexOf('$')===0)continue;
+			var pc = propChain.concat();
+			pc.push(k);
+			observerProp(model[k],pc,component);
 		}
+        
 	}
 
-	function changeHandler(changes,propChain,component,depth){
+	function changeHandler(changes){
 		if(Util.isString(changes))return;
 
 		for(var i=changes.length;i--;){
@@ -143,18 +149,31 @@ var Builder = new function() {
 				continue;
 
 			var newObj = change.object[propName];
-			//查询控制域
-			var pc = propChain.concat();
-			if(propName && !Util.isArray(change.object))
-				pc.push(propName);
-
 			//recursive
 			var oldVal = change.oldValue;
 			if(Util.isArray(change.object)){
 				newObj = change.object;
 				oldVal = change.object.$__impex__oldVal;
 			}
-			recurRender(component,pc,change.type,newObj,oldVal);
+			
+			var pcs = change.object.$__impex__propChains;
+            var pks = Object.keys(pcs);
+            for(var pl=pks.length;pl--;){
+                var k = pks[pl];
+                var watchers = pcs[k];
+                for(var wl=watchers.length;wl--;){
+                    var propChain = watchers[wl][0];
+                    var component = watchers[wl][1];
+                    //查询控制域
+                    var pc = propChain.concat();
+                    if(propName && !Util.isArray(change.object))
+                        pc.push(propName);
+
+                    recurRender(component,pc,change.type,newObj,oldVal);
+                    //reobserve
+                    observerProp(newObj,pc,component);
+                }
+            }
 
 			//unobserve
 			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
@@ -167,11 +186,9 @@ var Builder = new function() {
 				if(observer){
 					Object_unobserve(change.oldValue,observer);
 					change.oldValue.$__impex__observer = null;
+					change.oldValue.$__impex__propChains = null;
 				}
 			}
-
-			//reobserve
-			observerProp(newObj,pc,component,depth);
 		}
 	}
 

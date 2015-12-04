@@ -88,10 +88,17 @@ View.prototype = {
 			this.elements[0].parentNode.insertBefore(this.__target,this.element);
 		}
 
-		var p = this.elements[0].parentNode;
+		var p = null;
+		for(var i=this.elements.length;i--;){
+			if(this.elements[i].parentNode){
+				p = this.elements[i].parentNode;
+				break;
+			}
+		}
 		if(p)
 		for(var i=this.elements.length;i--;){
-			p.removeChild(this.elements[i]);
+			if(this.elements[i].parentNode)
+				p.removeChild(this.elements[i]);
 		}
 	},
 	__on:function(component,type,exp,handler){

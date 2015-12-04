@@ -69,13 +69,6 @@ var Util = new function () {
         return obj instanceof Function;
     }
 
-    this.isWindow = function(obj){
-        return 'Array' in obj &&
-                'XMLHttpRequest' in obj &&
-                'XMLDocument' in obj &&
-                'JSON' in obj;
-    }
-
     var compiler = document.createElement('div');
 
     this.isDOMStr = function(template){

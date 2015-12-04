@@ -25,18 +25,15 @@ var Scanner = new function() {
 
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
-				var tmp = segments[i].replace(/\s/g,'');
-				if(!tmp)continue;
 				var tn = document.createTextNode(segments[i]);
 				fragment.appendChild(tn);
 			}
 			replacements.unshift(fragment);
 		}
 		
-
 		for(var i=textNodeAry.length;i--;){
 			var n = textNodeAry[i];
-			if(replacements[i].childNodes.length>1)
+			if(replacements[i].childNodes.length>1 && n.parentNode)
 				n.parentNode.replaceChild(replacements[i],n);
 		}
 	}

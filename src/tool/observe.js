@@ -119,12 +119,13 @@
 				}
 				if(changes.length>0){
 					handler(changes);
-				}
-				//refresh oldVer
-				obj.oldVer = {};
-				for(var prop in newVer){
-					var v = newVer[prop];
-					obj.oldVer[prop] = v;
+
+					//refresh oldVer
+					obj.oldVer = {};
+					for(var prop in newVer){
+						var v = newVer[prop];
+						obj.oldVer[prop] = v;
+					}
 				}
 			}
 

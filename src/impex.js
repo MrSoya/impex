@@ -10,7 +10,6 @@
 
 	var CONVERTER_EXP = /^\s*#/;
 	var EXP_CONVERTER_SYM = '#';
-	var DEPTH = 9;
 	var DEBUG = false;
 
 	var BUILD_IN_PROPS = ['data','closest'];
@@ -82,14 +81,11 @@
 		 * @param  {Object} opt 参数选项
 		 * @param  {String} opt.expStartTag 标签开始符号，默认{{
 		 * @param  {String} opt.expEndTag 标签结束符号，默认}}
-		 * @param  {int} opt.recurDepth 模型递归深度，默认9
 		 * @param  {boolean} debug 是否开启debug，默认false
 		 */
 		this.option = function(opt){
 			EXP_START_TAG = opt.expStartTag || '{{';
 			EXP_END_TAG = opt.expEndTag || '}}';
-
-			DEPTH = parseInt(opt.recurDepth) || 9;
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
