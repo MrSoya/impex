@@ -4,6 +4,7 @@
  */
 impex.console = new function(){
 	this.warn = function(txt){
+        if(!DEBUG)return;
         console.warn('impex warn :: ' + txt);
     }
     this.error = function(txt){

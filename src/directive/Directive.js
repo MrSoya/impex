@@ -21,6 +21,16 @@ function Directive (name,value) {
 	 * 指令名称
 	 */
 	this.$name = name;
+	/**
+	 * 参数列表
+	 * @type {Array}
+	 */
+	this.$params;
+	/**
+	 * 过滤函数
+	 * @type {Function}
+	 */
+	this.$filter;
 
 	/**
 	 * 是否终结<br/>

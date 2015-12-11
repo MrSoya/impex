@@ -8,13 +8,13 @@
     	Number:<input type="text" 
             x-focus="bindWheel(this)" 
             x-blur="unbindWheel(this)" 
-            x-bind="value" 
+            x-model="value" 
             value="{{value||0}}">响应鼠标滚动
     
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
-            impex.option({
+            impex.config({
                 debug:true
             });
             

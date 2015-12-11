@@ -25,6 +25,20 @@ Util.ext(_DirectiveFactory.prototype,{
 	newInstanceOf : function(type,nodes,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
+		var params = null;
+		var filter = null;
+		var i = attrName.indexOf(CMD_PARAM_DELIMITER);
+		if(i > -1){
+			params = attrName.substr(i+1);
+			var fi = params.indexOf(CMD_FILTER_DELIMITER);
+			if(fi > -1){
+				filter = params.substr(fi+1);
+				params = params.substring(0,fi);
+			}
+
+			params = params.split(CMD_PARAM_DELIMITER);
+		}
+
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
@@ -33,6 +47,13 @@ Util.ext(_DirectiveFactory.prototype,{
 		}else{
 			rs.$view = new View(nodes);
 			nodes[0].__impex__view = rs.$view;
+		}
+
+		if(params){
+			rs.$params = params;
+		}
+		if(filter){
+			rs.$filter = filter;
 		}
 		
 		//inject

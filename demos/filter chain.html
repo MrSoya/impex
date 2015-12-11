@@ -6,23 +6,23 @@
     </head>
     <body>
         <div id="entry">
-            edge here::{{#trim:side|lower|cap ' HELLO IMPEX ' + version}}::here edge
+            edge here::{{ ' HELLO IMPEX ' + version => trim:side.lower.cap}}::here edge
         </div>
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            //转换器
-            impex.converter('trim',{
+            //过滤器
+            impex.filter('trim',{
                 to:function(type){
                     if(type === 'side'){
                         return this.$value.replace(/^\s*|\s*$/,'');
                     }
                     return this.$value.replace(/\s/mg,'');
                 }
-            }).converter('lower',{
+            }).filter('lower',{
                 to:function(){
                     return this.$value.toLowerCase();
                 }
-            }).converter('cap',{
+            }).filter('cap',{
                 $html:true,
                 to:function(){
                     var cap = this.$value[0].toUpperCase();

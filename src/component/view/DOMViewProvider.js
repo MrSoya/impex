@@ -9,6 +9,9 @@ var DOMViewProvider = new function(){
 	 * @return this
 	 */
 	this.newInstance = function(template,target){
+		if(template === ''){
+			return new View([document.createTextNode('')],target);
+		}
 		compiler.innerHTML = template;
 		if(!compiler.childNodes[0])return null;
 		var nodes = [];

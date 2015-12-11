@@ -22,39 +22,27 @@ var Renderer = new function() {
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
 
-			var val;
+			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
 				val = cache[expNode.origin].val;
 			}else{
-				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap,expNode.toHTML);
 				cache[expNode.origin] = {
 					comp:expNode.component,
 					val:val
 				}
 			}
 			
-			var converters = expNode.converters;
-			if(Object.keys(converters).length > 0){
-				var needUpdateDOM = true;
-				for(var k in converters){
-					var c = converters[k][0];
-					var params = converters[k][1];
-					c.$value = val;
-					val = c.to.apply(c,params);
-					if(c.$html){
-						var rs = renderHTML(c,val,expNode.node,expNode.component);
-						if(rs){
-							needUpdateDOM = false;
-							break;
-						}
-					}
+			if(expNode.toHTML){
+				var rs = renderHTML(expNode,val,expNode.node,expNode.component);
+				if(rs){
+					continue;
 				}
-				if(!needUpdateDOM)continue;
 			}
 			if(val !== null){
 				updateDOM(expNode.node,expNode.attrName,val);
 			}
-		}
+		}//over for
 		
 	}
 	this.renderExpNode = renderExpNode;
@@ -80,13 +68,24 @@ var Renderer = new function() {
 	}
 
 	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExp(component,origin,expMap){
+	function calcExp(component,origin,expMap,toHTML){
 		//循环获取每个表达式的值
 		var map = {};
 		for(var exp in expMap){
 			//表达式对象
 			var expObj = expMap[exp];
 			var rs = evalExp(component,expObj);
+
+			var filters = expObj.filters;
+			if(Object.keys(filters).length > 0){
+				for(var k in filters){
+					var c = filters[k][0];
+					var params = filters[k][1];
+					c.$value = rs;
+					rs = c.to.apply(c,params);
+				}
+			}
+
 			map[exp] = rs==undefined?'':rs;
 		}
 
@@ -219,32 +218,36 @@ var Renderer = new function() {
 		return rs;
 	}
 
-	function renderHTML(converter,val,node,component){
-		if(converter.__lastVal == val)return;
-		if(!Util.isDOMStr(val))return;
+	function renderHTML(expNode,val,node,component){
+		if(expNode.__lastVal == val)return;
 		if(node.nodeType != 3)return;
 		var nView = new View([node]);
-		if(!converter.__lastVal){
-			var ph = ViewManager.createPlaceholder('-- converter [html] placeholder --');
+		if(Util.isUndefined(expNode.__lastVal)){
+
+			var ph = ViewManager.createPlaceholder('-- [html] placeholder --');
 			ViewManager.insertBefore(ph,nView);
-			converter.__lastVal = val;
-			converter.__placeholder = ph;
+			expNode.__lastVal = val;
+			expNode.__placeholder = ph;
 		}
 
-		if(converter.__lastComp){
+		if(expNode.__lastComp){
 			//release
-			converter.__lastComp.destroy();
+			expNode.__lastComp.destroy();
 
 			nView = ViewManager.createPlaceholder('');
-			ViewManager.insertAfter(nView,converter.__placeholder);
+			ViewManager.insertAfter(nView,expNode.__placeholder);
+		}
+
+		if(!Util.isDOMStr(val)){
+			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
 		}
 
 		var subComp = component.createSubComponent(val,nView);
 		subComp.init();
 		subComp.display();
 
-		converter.__lastComp = subComp;
-		converter.__lastVal = val;
+		expNode.__lastComp = subComp;
+		expNode.__lastVal = val;
 
 		return true;
 	}

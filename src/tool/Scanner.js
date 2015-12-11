@@ -127,6 +127,9 @@ var Scanner = new function() {
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
 							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
@@ -144,6 +147,8 @@ var Scanner = new function() {
 					var attVal = att.value;
 					if(REG_CMD.test(attName)){
 						var c = attName.replace(CMD_PREFIX,'');
+						var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
 							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
@@ -192,37 +197,45 @@ var Scanner = new function() {
 	function recordExpNode(origin,node,component,attrName){
 		//origin可能包括非表达式，所以需要记录原始value
 		var exps = {};
-		var converters = {};
+		var toHTML = !attrName && origin.replace(/\s*/mg,'').indexOf(EXP_START_TAG + EXP2HTML_EXP_TAG)===0;
+		if(toHTML){
+			origin = origin.replace(EXP2HTML_EXP_TAG,'');
+		}
 		origin.replace(REG_EXP,function(a,modelExp){
+
+			var filters = {};
 			var i = 1;
-			if(CONVERTER_EXP.test(modelExp)){
-				i = parseConverters(modelExp,converters,component);
+			if(FILTER_EXP.test(modelExp)){
+				parseFilters(RegExp.$1,filters,component);
+				i = modelExp.indexOf(FILTER_EXP_START_TAG);
 			}
+
 			var expStr = modelExp;
 			if(i > 1)
-				expStr = modelExp.substr(i);
+				expStr = modelExp.substring(0,i);
     		var tmp = lexer(expStr);
     		
     		//保存表达式
     		exps[modelExp] = {
     			words:tmp.words,
-    			varTree:tmp.varTree
+    			varTree:tmp.varTree,
+    			filters:filters
     		};
     	});
 		if(Object.keys(exps).length<1)return;
 
-		var expNode = new ExpNode(node,attrName,origin,exps,component,converters);
+		var expNode = new ExpNode(node,attrName,origin,exps,component,toHTML);
 		component.$__expNodes.push(expNode);
 	}
 
-	function parseConverters(expStr,converters,component){
+	function parseFilters(expStr,filters,component){
 		var inName = true,
 			inParam,
 			unknown;
 		var currName = '',
 			currParam = '',
 			currParams = [];
-		for(var i=expStr.indexOf(EXP_CONVERTER_SYM)+1;i<expStr.length;i++){
+		for(var i=0;i<expStr.length;i++){
 			var l = expStr[i];
 			switch(l){
 				case ' ':case '\t':
@@ -237,16 +250,16 @@ var Scanner = new function() {
 						currParam = '';
 					}
 					continue;
-				case '|':
+				case '.':
 					inParam = false;
 					inName = true;
 					unknown = false;
-					if(currName && ConverterFactory.hasTypeOf(currName)){
-						converters[currName] = [ConverterFactory.newInstanceOf(currName,component),currParams];
+					if(currName && FilterFactory.hasTypeOf(currName)){
+						filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 					}
 					if(currParam){
-							currParams.push(currParam);
-						}
+						currParams.push(currParam);
+					}
 					currName = '';
 					currParam = '';
 					currParams = [];
@@ -254,7 +267,7 @@ var Scanner = new function() {
 				default:
 					if(unknown){
 						if(currName){
-							converters[currName] = [ConverterFactory.newInstanceOf(currName,component),currParams];
+							filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 						}
 						if(currParam){
 							currParams.push(currParam);
@@ -267,8 +280,13 @@ var Scanner = new function() {
 			else if(inParam){
 				currParam += l;
 			}
-		}
+		}//over for
 
-		return i;
+		if(currName && FilterFactory.hasTypeOf(currName)){
+			filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
+		}
+		if(currParam){
+			currParams.push(currParam);
+		}
 	}
 }

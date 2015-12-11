@@ -18,7 +18,7 @@ ViewModel.prototype = {
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
 			//fix \r\n on IE8
-			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n'):val) +'"');
+			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"'):val) +'"');
 			return this;
 		}else{
 			return eval(evalStr);

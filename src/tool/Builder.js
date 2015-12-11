@@ -99,7 +99,11 @@ var Builder = new function() {
         if(model.$__impex__observer){
             var k = propChain.join('.');
             if(model.$__impex__propChains[k]){
-                model.$__impex__propChains[k].push([propChain,component]);
+            	var pck = model.$__impex__propChains[k];
+            	for(var i=pck.length;i--;){
+            		if(pck[i][1] === component)return;
+            	}
+                pck.push([propChain,component]);
                 return;
             }
             model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];

@@ -12,13 +12,13 @@ function ExpProp (propName) {
 /**
  * 表达式节点
  */
-function ExpNode (node,attrName,origin,expMap,component,converters) {
+function ExpNode (node,attrName,origin,expMap,component,toHTML) {
 	this.node = node;
 	this.attrName = attrName;
 	this.origin = origin;
 	this.expMap = expMap;
 	this.component = component;	
-	this.converters = converters;
+	this.toHTML = toHTML;
 }
 
 /**

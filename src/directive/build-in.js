@@ -4,6 +4,41 @@
 !function(impex){
     ///////////////////// 视图控制指令 /////////////////////
     /**
+     * 绑定视图属性，并用表达式的值设置属性
+     * <br/>使用方式：<img x-bind:src="exp">
+     */
+    impex.directive('bind',{
+        onInit:function(){
+            if(!this.$params || this.$params.length < 1){
+                impex.console.warn('at least one attribute be binded');
+            }
+        },
+        observe : function(rs){
+            if(!this.$params || this.$params.length < 1)return;
+
+            var filter = null;
+            if(this.$filter){
+                var owner = this.closest(this.$filter);
+                if(owner){
+                    filter = owner[this.$filter];
+                }
+            }
+
+            if(filter){
+                var allowed = filter(rs);
+                if(!Util.isUndefined(allowed) && !allowed){
+                    return;
+                }
+            }
+
+            for(var i=this.$params.length;i--;){
+                var p = this.$params[i];
+                this.$view.attr(p,rs);
+            }
+            
+        }
+    });
+    /**
      * 控制视图显示指令，根据表达式计算结果控制
      * <br/>使用方式：<div x-show="exp"></div>
      */
@@ -124,6 +159,53 @@
 
 
     ///////////////////// 模型控制指令 /////////////////////
+    /**
+     * 绑定模型属性，当控件修改值后，模型值也会修改
+     * <br/>使用方式：<input x-model="model.prop">
+     */
+    impex.directive('model',{
+        onCreate : function(){
+            switch(this.$view.elements[0].nodeName.toLowerCase()){
+                case 'textarea':
+                case 'input':
+                    var type = this.$view.attr('type');
+                    switch(type){
+                        case 'radio':
+                            this.on('click','changeModel($event)');
+                            break;
+                        case 'checkbox':
+                            this.on('click','changeModelCheck($event)');
+                            break;
+                        default:
+                            var hack = document.body.onpropertychange===null?'propertychange':'input';
+                            this.on(hack,'changeModel($event)');
+                    }
+                    
+                    break;
+                case 'select':
+                    this.on('change','changeModel($event)');
+                    break;
+            }
+        },
+        changeModelCheck : function(e){
+            var t = e.target || e.srcElement;
+            var val = t.value;
+            var mVal = this.$parent.data(this.$value);
+            var parts = mVal.split(',');
+            if(t.checked){
+                parts.push(val);
+            }else{
+                var i = parts.indexOf(val);
+                if(i > -1){
+                    parts.splice(i,1);
+                }
+            }
+            this.$parent.data(this.$value,parts.join(',').replace(/^,/,''));
+        },
+        changeModel : function(e){
+            this.$parent.data(this.$value,(e.target || e.srcElement).value);
+        }
+    });
 
     function eachModel(){
         this.onCreate = function(viewManager){

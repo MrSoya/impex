@@ -7,20 +7,20 @@
     <body>
         <div id="entry">
             <p>
-                {{#currency:¥:2 number }}
+                {{ number => currency:¥:2}}
             </p>
             <p>
-                {{#currency:$:3 number }}
+                {{ number => currency:$:3}}
             </p>
             <p>
-                {{#currency:€:4 number }}
+                {{ number => currency:€:4}}
             </p>
             
         </div>
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            //转换器
-            impex.converter('currency',{
+            //过滤器
+            impex.filter('currency',{
                 to:function(sym,decimal){
                     var pair = this.$value.split('.');
                     var inte = pair[0].replace(/\s/g,'');

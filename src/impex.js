@@ -1,6 +1,8 @@
 
  	
 	var CMD_PREFIX = 'x-';//指令前缀
+	var CMD_PARAM_DELIMITER = ':';
+	var CMD_FILTER_DELIMITER = '.';
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
@@ -8,8 +10,10 @@
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 
-	var CONVERTER_EXP = /^\s*#/;
-	var EXP_CONVERTER_SYM = '#';
+	var EXP2HTML_EXP_TAG = '#';
+	var EXP2HTML_START_EXP = /^\s*#/;
+	var FILTER_EXP = /=>\s*(.+?)$/;
+	var FILTER_EXP_START_TAG = '=>';
 	var DEBUG = false;
 
 	var BUILD_IN_PROPS = ['data','closest'];
@@ -63,7 +67,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,5,0],
+	        v:[0,6,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -78,19 +82,19 @@
 
 		/**
 		 * 设置impex参数
-		 * @param  {Object} opt 参数选项
-		 * @param  {String} opt.expStartTag 标签开始符号，默认{{
-		 * @param  {String} opt.expEndTag 标签结束符号，默认}}
-		 * @param  {boolean} debug 是否开启debug，默认false
+		 * @param  {Object} cfg 参数选项
+		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
+		 * @param  {boolean} cfg.debug 是否开启debug，默认false
 		 */
-		this.option = function(opt){
-			EXP_START_TAG = opt.expStartTag || '{{';
-			EXP_END_TAG = opt.expEndTag || '}}';
+		this.config = function(cfg){
+			var delimiters = cfg.delimiters || [];
+			EXP_START_TAG = delimiters[0] || '{{';
+			EXP_END_TAG = delimiters[1] || '}}';
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
-			DEBUG = opt.debug;
+			DEBUG = cfg.debug;
 		};
 
 		/**
@@ -135,14 +139,14 @@
 		}
 
 		/**
-		 * 定义转换器
-		 * @param  {string} name  转换器名
-		 * @param  {Object} model 转换器模型，用来定义新转换器模版
+		 * 定义过滤器
+		 * @param  {string} name  过滤器名
+		 * @param  {Object} model 过滤器模型，用来定义新过滤器模版
 		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.converter = function(name,model,services){
-			ConverterFactory.register(name,model,services);
+		this.filter = function(name,model,services){
+			FilterFactory.register(name,model,services);
 			return this;
 		}
 

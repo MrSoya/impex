@@ -1,4 +1,30 @@
 # Change Log
+## Version 0.6.0 - 2015/12/11
+### 新增
+* impex.filter 过滤器定义
+* impex.config 全局配置定义
+* View.hasClass/addClass/removeClass/toggleClass
+* 内置指令x-model，用于视图->模型的绑定
+* 新的过滤器使用"goes to"语法 {{ ' Hello impex' => trim:side.cap}}
+* 新的指令语法，可以让指令接收参数和过滤函数 directive[:param1:param2:...][.filter]
+* 新的HTML表达式 {{# html}}
+* 新demos
+
+### 更新
+* 内置指令x-bind，不再用于视图->模型的绑定，变为视图属性绑定 <a x-bind:href="address"></a>
+* 警告信息需要开启debug
+
+### bug修复
+* 监控系统会导致x-each在某些情况下卡死
+* 表达式中无法使用true/false等关键字
+* HTML转换器无法切换到文本再切换到HTML标签
+
+### 移除(重要！)
+* impex.option
+* impex.converter
+* Converter
+
+
 ## Version 0.5.0 - 2015/12/04
 ### 新增
 * Component.$restrict属性，用来定义组件的使用范围

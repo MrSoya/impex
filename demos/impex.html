@@ -6,15 +6,15 @@
     </head>
     <body>
         <div id="entry">
-            {{#cap 'hello ' + title }}
+            {{ 'hello ' + title => cap}}
             <x-subtitle>
                 {{version}}
             </x-subtitle>
         </div>
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            //转换器
-            impex.converter('cap',{
+            //过滤器
+            impex.filter('cap',{
                 to:function(){
                     var cap = this.$value[0].toUpperCase();
                     return cap + this.$value.substr(1);

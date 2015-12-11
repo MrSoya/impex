@@ -9,7 +9,7 @@
         <br>
         <code>x &lt; 4 <i x-if="a.x < 4">true</i></code>
         <br>
-        x:<input x-bind="a.x" >
+        x:<input x-model="a.x" >
 
         <div x-each="list as i" x-if="i > a.x && i < b.y && i > fn()">{{i + a.x}}</div>
     

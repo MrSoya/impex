@@ -1,11 +1,11 @@
 /**
- * 转换器工厂
+ * 过滤器工厂
  */
-function _ConverterFactory(){
-	Factory.call(this,Converter);
+function _FilterFactory(){
+	Factory.call(this,Filter);
 }
-Util.inherits(_ConverterFactory,Factory);
-Util.ext(_ConverterFactory.prototype,{
+Util.inherits(_FilterFactory,Factory);
+Util.ext(_FilterFactory.prototype,{
 	newInstanceOf : function(type,component){
 		if(!this.types[type])return null;
 
@@ -29,4 +29,4 @@ Util.ext(_ConverterFactory.prototype,{
 	}
 });
 
-var ConverterFactory = new _ConverterFactory();
+var FilterFactory = new _FilterFactory();

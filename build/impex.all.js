@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-12-02
+ * last build: 2015-12-11
  */
 
 !function (global) {
@@ -367,7 +367,7 @@ var lexer = (function(){
         VAR_EXP_START = /[a-zA-Z$_]/,
         VAR_EXP_BODY = /[a-zA-Z$_0-9.]/;
 
-    var keyWords = ['as','instanceof'];
+    var keyWords = ['as','instanceof','typeof','in','true','false'];
     
     function Var(){
         return {
@@ -691,13 +691,13 @@ function ExpProp (propName) {
 /**
  * 表达式节点
  */
-function ExpNode (node,attrName,origin,expMap,component,converters) {
+function ExpNode (node,attrName,origin,expMap,component,toHTML) {
 	this.node = node;
 	this.attrName = attrName;
 	this.origin = origin;
 	this.expMap = expMap;
 	this.component = component;	
-	this.converters = converters;
+	this.toHTML = toHTML;
 }
 
 /**
@@ -845,6 +845,9 @@ var Scanner = new function() {
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
 							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
@@ -862,6 +865,8 @@ var Scanner = new function() {
 					var attVal = att.value;
 					if(REG_CMD.test(attName)){
 						var c = attName.replace(CMD_PREFIX,'');
+						var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
 							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
@@ -910,37 +915,45 @@ var Scanner = new function() {
 	function recordExpNode(origin,node,component,attrName){
 		//origin可能包括非表达式，所以需要记录原始value
 		var exps = {};
-		var converters = {};
+		var toHTML = !attrName && origin.replace(/\s*/mg,'').indexOf(EXP_START_TAG + EXP2HTML_EXP_TAG)===0;
+		if(toHTML){
+			origin = origin.replace(EXP2HTML_EXP_TAG,'');
+		}
 		origin.replace(REG_EXP,function(a,modelExp){
+
+			var filters = {};
 			var i = 1;
-			if(CONVERTER_EXP.test(modelExp)){
-				i = parseConverters(modelExp,converters,component);
+			if(FILTER_EXP.test(modelExp)){
+				parseFilters(RegExp.$1,filters,component);
+				i = modelExp.indexOf(FILTER_EXP_START_TAG);
 			}
+
 			var expStr = modelExp;
 			if(i > 1)
-				expStr = modelExp.substr(i);
+				expStr = modelExp.substring(0,i);
     		var tmp = lexer(expStr);
     		
     		//保存表达式
     		exps[modelExp] = {
     			words:tmp.words,
-    			varTree:tmp.varTree
+    			varTree:tmp.varTree,
+    			filters:filters
     		};
     	});
 		if(Object.keys(exps).length<1)return;
 
-		var expNode = new ExpNode(node,attrName,origin,exps,component,converters);
+		var expNode = new ExpNode(node,attrName,origin,exps,component,toHTML);
 		component.$__expNodes.push(expNode);
 	}
 
-	function parseConverters(expStr,converters,component){
+	function parseFilters(expStr,filters,component){
 		var inName = true,
 			inParam,
 			unknown;
 		var currName = '',
 			currParam = '',
 			currParams = [];
-		for(var i=expStr.indexOf(EXP_CONVERTER_SYM)+1;i<expStr.length;i++){
+		for(var i=0;i<expStr.length;i++){
 			var l = expStr[i];
 			switch(l){
 				case ' ':case '\t':
@@ -955,16 +968,16 @@ var Scanner = new function() {
 						currParam = '';
 					}
 					continue;
-				case '|':
+				case '.':
 					inParam = false;
 					inName = true;
 					unknown = false;
-					if(currName && ConverterFactory.hasTypeOf(currName)){
-						converters[currName] = [ConverterFactory.newInstanceOf(currName,component),currParams];
+					if(currName && FilterFactory.hasTypeOf(currName)){
+						filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 					}
 					if(currParam){
-							currParams.push(currParam);
-						}
+						currParams.push(currParam);
+					}
 					currName = '';
 					currParam = '';
 					currParams = [];
@@ -972,7 +985,7 @@ var Scanner = new function() {
 				default:
 					if(unknown){
 						if(currName){
-							converters[currName] = [ConverterFactory.newInstanceOf(currName,component),currParams];
+							filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 						}
 						if(currParam){
 							currParams.push(currParam);
@@ -985,9 +998,14 @@ var Scanner = new function() {
 			else if(inParam){
 				currParam += l;
 			}
-		}
+		}//over for
 
-		return i;
+		if(currName && FilterFactory.hasTypeOf(currName)){
+			filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
+		}
+		if(currParam){
+			currParams.push(currParam);
+		}
 	}
 }
 /**
@@ -1091,7 +1109,11 @@ var Builder = new function() {
         if(model.$__impex__observer){
             var k = propChain.join('.');
             if(model.$__impex__propChains[k]){
-                model.$__impex__propChains[k].push([propChain,component]);
+            	var pck = model.$__impex__propChains[k];
+            	for(var i=pck.length;i--;){
+            		if(pck[i][1] === component)return;
+            	}
+                pck.push([propChain,component]);
                 return;
             }
             model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
@@ -1308,39 +1330,27 @@ var Renderer = new function() {
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
 
-			var val;
+			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
 				val = cache[expNode.origin].val;
 			}else{
-				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap,expNode.toHTML);
 				cache[expNode.origin] = {
 					comp:expNode.component,
 					val:val
 				}
 			}
 			
-			var converters = expNode.converters;
-			if(Object.keys(converters).length > 0){
-				var needUpdateDOM = true;
-				for(var k in converters){
-					var c = converters[k][0];
-					var params = converters[k][1];
-					c.$value = val;
-					val = c.to.apply(c,params);
-					if(c.$html){
-						var rs = renderHTML(c,val,expNode.node,expNode.component);
-						if(rs){
-							needUpdateDOM = false;
-							break;
-						}
-					}
+			if(expNode.toHTML){
+				var rs = renderHTML(expNode,val,expNode.node,expNode.component);
+				if(rs){
+					continue;
 				}
-				if(!needUpdateDOM)continue;
 			}
 			if(val !== null){
 				updateDOM(expNode.node,expNode.attrName,val);
 			}
-		}
+		}//over for
 		
 	}
 	this.renderExpNode = renderExpNode;
@@ -1366,13 +1376,24 @@ var Renderer = new function() {
 	}
 
 	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExp(component,origin,expMap){
+	function calcExp(component,origin,expMap,toHTML){
 		//循环获取每个表达式的值
 		var map = {};
 		for(var exp in expMap){
 			//表达式对象
 			var expObj = expMap[exp];
 			var rs = evalExp(component,expObj);
+
+			var filters = expObj.filters;
+			if(Object.keys(filters).length > 0){
+				for(var k in filters){
+					var c = filters[k][0];
+					var params = filters[k][1];
+					c.$value = rs;
+					rs = c.to.apply(c,params);
+				}
+			}
+
 			map[exp] = rs==undefined?'':rs;
 		}
 
@@ -1505,32 +1526,36 @@ var Renderer = new function() {
 		return rs;
 	}
 
-	function renderHTML(converter,val,node,component){
-		if(converter.__lastVal == val)return;
-		if(!Util.isDOMStr(val))return;
+	function renderHTML(expNode,val,node,component){
+		if(expNode.__lastVal == val)return;
 		if(node.nodeType != 3)return;
 		var nView = new View([node]);
-		if(!converter.__lastVal){
-			var ph = ViewManager.createPlaceholder('-- converter [html] placeholder --');
+		if(Util.isUndefined(expNode.__lastVal)){
+
+			var ph = ViewManager.createPlaceholder('-- [html] placeholder --');
 			ViewManager.insertBefore(ph,nView);
-			converter.__lastVal = val;
-			converter.__placeholder = ph;
+			expNode.__lastVal = val;
+			expNode.__placeholder = ph;
 		}
 
-		if(converter.__lastComp){
+		if(expNode.__lastComp){
 			//release
-			converter.__lastComp.destroy();
+			expNode.__lastComp.destroy();
 
 			nView = ViewManager.createPlaceholder('');
-			ViewManager.insertAfter(nView,converter.__placeholder);
+			ViewManager.insertAfter(nView,expNode.__placeholder);
+		}
+
+		if(!Util.isDOMStr(val)){
+			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
 		}
 
 		var subComp = component.createSubComponent(val,nView);
 		subComp.init();
 		subComp.display();
 
-		converter.__lastComp = subComp;
-		converter.__lastVal = val;
+		expNode.__lastComp = subComp;
+		expNode.__lastVal = val;
 
 		return true;
 	}
@@ -1557,7 +1582,7 @@ ViewModel.prototype = {
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
 			//fix \r\n on IE8
-			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n'):val) +'"');
+			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"'):val) +'"');
 			return this;
 		}else{
 			return eval(evalStr);
@@ -1694,7 +1719,7 @@ Util.ext(Component.prototype,{
 	/**
 	 * 查找子组件，并返回符合条件的第一个实例。如果不开启递归查找，
 	 * 该方法只会查询直接子节点集合
-	 * @param  {string} name       组件名，可以使用通配符*
+	 * @param  {String} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @param {Boolean} recur 是否开启递归查找，默认false
 	 * @return {Component | null} 
@@ -2120,7 +2145,7 @@ View.prototype = {
 	},
 	/**
 	 * 获取或设置视图的样式
-	 * @param  {string} name  样式名，如width/height
+	 * @param  {String} name  样式名，如width/height
 	 * @param  {var} value 样式值
 	 */
 	style:function(name,value){
@@ -2139,8 +2164,8 @@ View.prototype = {
 	},
 	/**
 	 * 获取或设置视图的属性值
-	 * @param  {string} name  属性名
-	 * @param  {string} value 属性值
+	 * @param  {String} name  属性名
+	 * @param  {String} value 属性值
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
@@ -2158,7 +2183,7 @@ View.prototype = {
 	},
 	/**
 	 * 删除视图属性
-	 * @param  {string} name  属性名
+	 * @param  {String} name  属性名
 	 */
 	removeAttr:function(name){
 		for(var i=this.elements.length;i--;){
@@ -2166,7 +2191,80 @@ View.prototype = {
 			this.elements[i].removeAttribute(name);
 		}
 		return this;
-	}
+	},
+	/**
+	 * 视图是否包含指定样式
+	 * @param  {String} name  样式名
+	 */
+	hasClass:function(name){
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType === 1)break;
+		}
+		return this.elements[i].className.indexOf(name) > -1;
+	},
+	/**
+	 * 添加样式到视图
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	addClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].className += ' '+names;
+		}
+	},
+	/**
+	 * 从视图删除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	removeClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		var clss = names.split(' ');
+		for(var ci=clss.length;ci--;){
+			var cname = clss[ci];
+
+			var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
+
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType !== 1)continue;
+
+				this.elements[i].className.replace(exp,'');
+			}
+		}
+	},
+	/**
+	 * 从视图添加或移除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	toggleClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		var clss = names.split(' ');
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType === 1)break;
+		}
+		var add = false;
+		for(var ci=clss.length;ci--;){
+			var cname = clss[ci];
+
+			if(this.elements[i].className.indexOf(cname) < 0){
+				add = true;
+				break;
+			}
+		}
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType !== 1)continue;
+			if(add){
+				this.elements[i].className += ' '+names;
+			}else{
+				for(var ci=clss.length;ci--;){
+					var cname = clss[ci];
+					var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
+
+					this.elements[i].className.replace(exp,'');
+				}
+			}
+		}
+	}//fn over
 }
 
 function tmplExpFilter(tmpl,bodyHTML,propMap){
@@ -2200,6 +2298,9 @@ var DOMViewProvider = new function(){
 	 * @return this
 	 */
 	this.newInstance = function(template,target){
+		if(template === ''){
+			return new View([document.createTextNode('')],target);
+		}
 		compiler.innerHTML = template;
 		if(!compiler.childNodes[0])return null;
 		var nodes = [];
@@ -2339,6 +2440,16 @@ function Directive (name,value) {
 	 * 指令名称
 	 */
 	this.$name = name;
+	/**
+	 * 参数列表
+	 * @type {Array}
+	 */
+	this.$params;
+	/**
+	 * 过滤函数
+	 * @type {Function}
+	 */
+	this.$filter;
 
 	/**
 	 * 是否终结<br/>
@@ -2410,23 +2521,23 @@ Util.ext(Directive.prototype,{
 	}
 });
 /**
- * @classdesc 转换器类，提供对表达式结果的转换处理
- * 转换器只能以字面量形式使用在表达式中，比如
+ * @classdesc 过滤器类，提供对表达式结果的转换处理
+ * 过滤器只能以字面量形式使用在表达式中，比如
  * <p>
  * 	{{#html exp...}}
  * </p>
- * html是一个内置的转换器，用于输出表达式内容为视图对象<br/>
- * 转换器可以连接使用，并以声明的顺序依次执行，比如
+ * html是一个内置的过滤器，用于输出表达式内容为视图对象<br/>
+ * 过滤器可以连接使用，并以声明的顺序依次执行，比如
  * <p>
  * 	{{#lower|cap exp...}}
  * </p>
- * 转换器支持参数，比如
+ * 过滤器支持参数，比如
  * <p>
  * 	{{#currency:€:4 exp...}}
  * </p>
  * @class 
  */
-function Converter (component) {
+function Filter (component) {
 	/**
 	 * 所在组件
 	 */
@@ -2436,20 +2547,12 @@ function Converter (component) {
 	 */
 	this.$value;
 	/**
-	 * 是否把内容转换为HTML代码，如果该属性为true，那么表达式内容将会
-	 * 转换成DOM节点，并且该转换器的后续转换器不再执行。当然，前提是内容可以
-	 * 被转换成DOM，如果内容无法转换成DOM，后续转换器依然会执行<br/>
-	 * 该属性是针对文本节点中的表达式有效，属性中的表达式无效
-	 * @type {Boolean}
-	 */
-	this.$html = false;
-	/**
 	 * 构造函数，在服务被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
 	 */
 	this.onCreate;
 }
-Converter.prototype = {
+Filter.prototype = {
 	/**
 	 * 转变函数，该函数是实际进行转变的入口
 	 * @param  {Object} args 可变参数，根据表达式中书写的参数决定
@@ -2649,6 +2752,20 @@ Util.ext(_DirectiveFactory.prototype,{
 	newInstanceOf : function(type,nodes,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
+		var params = null;
+		var filter = null;
+		var i = attrName.indexOf(CMD_PARAM_DELIMITER);
+		if(i > -1){
+			params = attrName.substr(i+1);
+			var fi = params.indexOf(CMD_FILTER_DELIMITER);
+			if(fi > -1){
+				filter = params.substr(fi+1);
+				params = params.substring(0,fi);
+			}
+
+			params = params.split(CMD_PARAM_DELIMITER);
+		}
+
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
@@ -2657,6 +2774,13 @@ Util.ext(_DirectiveFactory.prototype,{
 		}else{
 			rs.$view = new View(nodes);
 			nodes[0].__impex__view = rs.$view;
+		}
+
+		if(params){
+			rs.$params = params;
+		}
+		if(filter){
+			rs.$filter = filter;
 		}
 		
 		//inject
@@ -2679,13 +2803,13 @@ Util.ext(_DirectiveFactory.prototype,{
 
 var DirectiveFactory = new _DirectiveFactory();
 /**
- * 转换器工厂
+ * 过滤器工厂
  */
-function _ConverterFactory(){
-	Factory.call(this,Converter);
+function _FilterFactory(){
+	Factory.call(this,Filter);
 }
-Util.inherits(_ConverterFactory,Factory);
-Util.ext(_ConverterFactory.prototype,{
+Util.inherits(_FilterFactory,Factory);
+Util.ext(_FilterFactory.prototype,{
 	newInstanceOf : function(type,component){
 		if(!this.types[type])return null;
 
@@ -2709,7 +2833,7 @@ Util.ext(_ConverterFactory.prototype,{
 	}
 });
 
-var ConverterFactory = new _ConverterFactory();
+var FilterFactory = new _FilterFactory();
 /**
  * 服务工厂
  */
@@ -2754,6 +2878,8 @@ var ServiceFactory = new _ServiceFactory();
 
  	
 	var CMD_PREFIX = 'x-';//指令前缀
+	var CMD_PARAM_DELIMITER = ':';
+	var CMD_FILTER_DELIMITER = '.';
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
@@ -2761,8 +2887,10 @@ var ServiceFactory = new _ServiceFactory();
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 
-	var CONVERTER_EXP = /^\s*#/;
-	var EXP_CONVERTER_SYM = '#';
+	var EXP2HTML_EXP_TAG = '#';
+	var EXP2HTML_START_EXP = /^\s*#/;
+	var FILTER_EXP = /=>\s*(.+?)$/;
+	var FILTER_EXP_START_TAG = '=>';
 	var DEBUG = false;
 
 	var BUILD_IN_PROPS = ['data','closest'];
@@ -2816,7 +2944,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,5,0],
+	        v:[0,6,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2831,19 +2959,19 @@ var ServiceFactory = new _ServiceFactory();
 
 		/**
 		 * 设置impex参数
-		 * @param  {Object} opt 参数选项
-		 * @param  {String} opt.expStartTag 标签开始符号，默认{{
-		 * @param  {String} opt.expEndTag 标签结束符号，默认}}
-		 * @param  {boolean} debug 是否开启debug，默认false
+		 * @param  {Object} cfg 参数选项
+		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
+		 * @param  {boolean} cfg.debug 是否开启debug，默认false
 		 */
-		this.option = function(opt){
-			EXP_START_TAG = opt.expStartTag || '{{';
-			EXP_END_TAG = opt.expEndTag || '}}';
+		this.config = function(cfg){
+			var delimiters = cfg.delimiters || [];
+			EXP_START_TAG = delimiters[0] || '{{';
+			EXP_END_TAG = delimiters[1] || '}}';
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
-			DEBUG = opt.debug;
+			DEBUG = cfg.debug;
 		};
 
 		/**
@@ -2888,14 +3016,14 @@ var ServiceFactory = new _ServiceFactory();
 		}
 
 		/**
-		 * 定义转换器
-		 * @param  {string} name  转换器名
-		 * @param  {Object} model 转换器模型，用来定义新转换器模版
+		 * 定义过滤器
+		 * @param  {string} name  过滤器名
+		 * @param  {Object} model 过滤器模型，用来定义新过滤器模版
 		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.converter = function(name,model,services){
-			ConverterFactory.register(name,model,services);
+		this.filter = function(name,model,services){
+			FilterFactory.register(name,model,services);
 			return this;
 		}
 
@@ -2979,6 +3107,7 @@ var ServiceFactory = new _ServiceFactory();
  */
 impex.console = new function(){
 	this.warn = function(txt){
+        if(!DEBUG)return;
         console.warn('impex warn :: ' + txt);
     }
     this.error = function(txt){
@@ -3049,6 +3178,41 @@ impex.service('ComponentManager',new function(){
  */
 !function(impex){
     ///////////////////// 视图控制指令 /////////////////////
+    /**
+     * 绑定视图属性，并用表达式的值设置属性
+     * <br/>使用方式：<img x-bind:src="exp">
+     */
+    impex.directive('bind',{
+        onInit:function(){
+            if(!this.$params || this.$params.length < 1){
+                impex.console.warn('at least one attribute be binded');
+            }
+        },
+        observe : function(rs){
+            if(!this.$params || this.$params.length < 1)return;
+
+            var filter = null;
+            if(this.$filter){
+                var owner = this.closest(this.$filter);
+                if(owner){
+                    filter = owner[this.$filter];
+                }
+            }
+
+            if(filter){
+                var allowed = filter(rs);
+                if(!Util.isUndefined(allowed) && !allowed){
+                    return;
+                }
+            }
+
+            for(var i=this.$params.length;i--;){
+                var p = this.$params[i];
+                this.$view.attr(p,rs);
+            }
+            
+        }
+    });
     /**
      * 控制视图显示指令，根据表达式计算结果控制
      * <br/>使用方式：<div x-show="exp"></div>
@@ -3170,6 +3334,53 @@ impex.service('ComponentManager',new function(){
 
 
     ///////////////////// 模型控制指令 /////////////////////
+    /**
+     * 绑定模型属性，当控件修改值后，模型值也会修改
+     * <br/>使用方式：<input x-model="model.prop">
+     */
+    impex.directive('model',{
+        onCreate : function(){
+            switch(this.$view.elements[0].nodeName.toLowerCase()){
+                case 'textarea':
+                case 'input':
+                    var type = this.$view.attr('type');
+                    switch(type){
+                        case 'radio':
+                            this.on('click','changeModel($event)');
+                            break;
+                        case 'checkbox':
+                            this.on('click','changeModelCheck($event)');
+                            break;
+                        default:
+                            var hack = document.body.onpropertychange===null?'propertychange':'input';
+                            this.on(hack,'changeModel($event)');
+                    }
+                    
+                    break;
+                case 'select':
+                    this.on('change','changeModel($event)');
+                    break;
+            }
+        },
+        changeModelCheck : function(e){
+            var t = e.target || e.srcElement;
+            var val = t.value;
+            var mVal = this.$parent.data(this.$value);
+            var parts = mVal.split(',');
+            if(t.checked){
+                parts.push(val);
+            }else{
+                var i = parts.indexOf(val);
+                if(i > -1){
+                    parts.splice(i,1);
+                }
+            }
+            this.$parent.data(this.$value,parts.join(',').replace(/^,/,''));
+        },
+        changeModel : function(e){
+            this.$parent.data(this.$value,(e.target || e.srcElement).value);
+        }
+    });
 
     function eachModel(){
         this.onCreate = function(viewManager){
@@ -3347,15 +3558,6 @@ impex.service('ComponentManager',new function(){
      */
     impex.directive('each-start',eachStart,['ViewManager']);
 }(impex);
-/**
- * 内建过滤器，提供基础操作接口
- */
-impex.converter('html',{
-    $html:true,
-    to:function(){
-        return this.$value;
-    }
-});
 
  	if ( typeof module === "object" && typeof module.exports === "object" ) {
  		module.exports = impex;

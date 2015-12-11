@@ -5,24 +5,30 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	这是一个 {{#html html1}} HTML表达式 {{#html html2}} 啊啊啊啊啊
-        <p>
-            title1:<input type="text" x-bind="title1">
+    	这是一个 {{# html1 }} HTML表达式 {{# html2}} 啊啊啊啊啊{{# html3}}
+        <p title="{{ 1+2 =>append }} 2323 {{2+1}}">
+            title1:<input type="text" x-model="title1">
         </p>
         <p>
-            title2:<input type="text" x-bind="title2">
+            title2:<input type="text" x-model="title2">
+        </p>
+        <p>
+            html3:<input type="text" x-model="html3">
         </p>
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
-            impex.option({
-                debug:true
+            impex.filter('append',{
+                to:function(){
+                    return this.$value + 'xxx';
+                }
             });
 
             //渲染
-            var comp = impex.render(document.body,new function(){
+            var debug = impex.render(document.body,new function(){
                 this.html1 = "<a href='http://soya2d.com'>{{title1}}</a>1212";
                 this.html2 = "<a href='https://github.com/MrSoya/impex'>{{title2}}</a>";
+                this.html3 = "";
 
                 this.title1 = 'soya2d';
                 this.title2 = 'impex';

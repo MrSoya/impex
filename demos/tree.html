@@ -12,7 +12,7 @@
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            impex.option({
+            impex.config({
                 debug:true
             });
         
@@ -20,14 +20,14 @@
         		$template:'<ul>'+
                                 '<li x-each="{{=dataSource}} as item">'+
                                     '<a>{{item.name}}</a>'+
-                                    '{{#html treeItems(this,item.children)}}'+
+                                    '{{# treeItems(this,item.children)}}'+
                                 '</li>'+
                             '</ul>',
         		treeItems:function(comp,items){
         			comp[this.dataSource] = items;
         			if(items){
         				return "<ul><li x-each='"+this.dataSource+" as item'><a>{{item.name}}</a>"+
-        				    "{{#html treeItems(this,item.children)}}"+
+        				    "{{# treeItems(this,item.children)}}"+
         				"</li></ul>"
         			}
         		}

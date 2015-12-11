@@ -187,7 +187,7 @@ View.prototype = {
 	},
 	/**
 	 * 获取或设置视图的样式
-	 * @param  {string} name  样式名，如width/height
+	 * @param  {String} name  样式名，如width/height
 	 * @param  {var} value 样式值
 	 */
 	style:function(name,value){
@@ -206,8 +206,8 @@ View.prototype = {
 	},
 	/**
 	 * 获取或设置视图的属性值
-	 * @param  {string} name  属性名
-	 * @param  {string} value 属性值
+	 * @param  {String} name  属性名
+	 * @param  {String} value 属性值
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
@@ -225,7 +225,7 @@ View.prototype = {
 	},
 	/**
 	 * 删除视图属性
-	 * @param  {string} name  属性名
+	 * @param  {String} name  属性名
 	 */
 	removeAttr:function(name){
 		for(var i=this.elements.length;i--;){
@@ -233,7 +233,80 @@ View.prototype = {
 			this.elements[i].removeAttribute(name);
 		}
 		return this;
-	}
+	},
+	/**
+	 * 视图是否包含指定样式
+	 * @param  {String} name  样式名
+	 */
+	hasClass:function(name){
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType === 1)break;
+		}
+		return this.elements[i].className.indexOf(name) > -1;
+	},
+	/**
+	 * 添加样式到视图
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	addClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType !== 1)continue;
+			this.elements[i].className += ' '+names;
+		}
+	},
+	/**
+	 * 从视图删除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	removeClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		var clss = names.split(' ');
+		for(var ci=clss.length;ci--;){
+			var cname = clss[ci];
+
+			var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
+
+			for(var i=0;i<this.elements.length;i++){
+				if(this.elements[i].nodeType !== 1)continue;
+
+				this.elements[i].className.replace(exp,'');
+			}
+		}
+	},
+	/**
+	 * 从视图添加或移除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	toggleClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		var clss = names.split(' ');
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType === 1)break;
+		}
+		var add = false;
+		for(var ci=clss.length;ci--;){
+			var cname = clss[ci];
+
+			if(this.elements[i].className.indexOf(cname) < 0){
+				add = true;
+				break;
+			}
+		}
+		for(var i=0;i<this.elements.length;i++){
+			if(this.elements[i].nodeType !== 1)continue;
+			if(add){
+				this.elements[i].className += ' '+names;
+			}else{
+				for(var ci=clss.length;ci--;){
+					var cname = clss[ci];
+					var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
+
+					this.elements[i].className.replace(exp,'');
+				}
+			}
+		}
+	}//fn over
 }
 
 function tmplExpFilter(tmpl,bodyHTML,propMap){

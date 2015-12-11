@@ -23,26 +23,26 @@ impex提供让开发者定义web组件的能力，就像video标签样，看上�
 * **指令**
     * 表现为自定义属性，增强组件功能
     * 继承自组件，主要操作视图来实现功能，比如x-each/x-show
-* **转换器**
-    * 使用在表达式中，对输出结果进行转换，比如金额、大小写等
-    * 如果不喜欢，也可以不用转换器，别忘了，impex支持调用域外函数
+* **过滤器**
+    * 使用在表达式中，对输出结果进行过滤，比如金额、大小写等
+    * 如果不喜欢，也可以不用过滤器，别忘了，impex支持调用域外函数
 * **服务**
-    * 如果需要自定义复杂的组件/指令/转换器，可以注入服务来辅助你。impex内置了一些不错的工具
+    * 如果需要自定义复杂的组件/指令/过滤器，可以注入服务来辅助你。impex内置了一些不错的工具
 
 ## Demo
 
-一个“复杂”的demo
+一个“很复杂”的demo
 
 ```html
 <div id="entry">
-    {{#cap 'hello ' + title }}
+    {{ 'hello ' + title => cap}}
     <x-subtitle>
         {{version}}
     </x-subtitle>
 </div>
 <script>
-	//转换器
-    impex.converter('cap',{
+	//过滤器
+    impex.filter('cap',{
         to:function(){
             var cap = this.$value[0].toUpperCase();
             return cap + this.$value.substr(1);

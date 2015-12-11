@@ -117,7 +117,7 @@ Util.ext(Component.prototype,{
 	/**
 	 * 查找子组件，并返回符合条件的第一个实例。如果不开启递归查找，
 	 * 该方法只会查询直接子节点集合
-	 * @param  {string} name       组件名，可以使用通配符*
+	 * @param  {String} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @param {Boolean} recur 是否开启递归查找，默认false
 	 * @return {Component | null} 

@@ -5,7 +5,7 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	<button x-dblclick="showMe('wow');root.tip='!!';root.showMe(root.tip);">点我两下试试！！</button>
+    	<button x-dblclick="showMe('wow',true);root.tip='!!';root.showMe(root.tip);">点我两下试试！！</button>
     
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -20,8 +20,8 @@
             
             //渲染
             impex.render(document.body,new function(){
-                this.showMe = function(wow){
-                    alert('show me the impetus! '+wow);
+                this.showMe = function(wow,x){
+                    alert('show me the impetus! '+wow+x);
                 }
                 this.root = {
                     tip:'',
