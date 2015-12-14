@@ -63,7 +63,7 @@
 			</li>
 			<li>
 				<nav class="doc-nav ">
-	<ul class="" id="affix">
+	<ul class="sideNav ">
 				<li>
 			<a class="link " 
 				href="overview.html">
@@ -530,7 +530,7 @@ impex.component('x-div',{
 </p>				</div>
 				<div class="col-md-3 col-xs-4 hidden-720" >
 					<nav class="doc-nav ">
-	<ul class="" id="affix">
+	<ul class="sideNav ">
 				<li>
 			<a class="link " 
 				href="overview.html">
@@ -818,7 +818,7 @@ impex.component('x-div',{
 			
 
 			window.onload = function(){
-				var affix = $('#affix');
+				var affix = $('section .doc-nav .sideNav');
 				affix.bind('mousewheel', function(event) {
 					event.preventDefault();
 					var scrollTop = this.scrollTop;
