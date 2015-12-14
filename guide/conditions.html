@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="../css/bootstrap.min.css" rel="stylesheet">
+		<link href="../css/impex.css" rel="stylesheet">
+		<link href="../css/doc.css" rel="stylesheet">
+		<link href="../css/prism.css" rel="stylesheet">
+		<!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body data-spy="scroll" data-target=".doc-nav">			<nav class="default" onmouseout="moveIndicator()">
+		<div class="container">
+			<div class="row menu" >
+				<div class="logo ">
+					<div>
+						<a href="../" onmouseover="moveIndicator(this)">
+							<!--
+							<img src="images/logo.png">--> impex.js
+						</a>
+					</div>
+				</div>
+				<div class="hidden-720 " style="float: right;">
+					<ul class="items" id="nav-items">
+						<li onmouseover="moveIndicator(this)" class="actived">
+							<a href="../guide/">教程</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../api/">API</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../demos/">Demos</a>
+						</li>
+						<li onmouseover="moveIndicator(this)">
+							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						</li>
+					</ul>
+				</div>
+				<div class="indicator" id="indicator"></div>
+				<button class="navbar-toggle show-720" ontouchstart="toggleMenu(arguments[0])" type="toggler">
+					<i class="glyphicon glyphicon-menu-hamburger" type="toggler"></i>
+				</button>
+			</div>
+		</div>
+	</nav>
+
+	<div class="show-720 side-nav" id="sideNav">
+		<ul class="items">
+			<li onmouseover="moveIndicator(this)" class="actived">
+				<a href="../guide/">教程</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../api/">API</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../demos/">Demos</a>
+			</li>
+			<li onmouseover="moveIndicator(this)">
+				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			</li>
+			<li>
+				<nav class="doc-nav ">
+	<ul class="" id="affix">
+				<li>
+			<a class="link " 
+				href="overview.html">
+				概述			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#components">组件系统</a>
+									</li>
+								<li>
+					<a href="#databinding">数据绑定</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="prepare.html">
+				准备			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-syntax">格式约定</a>
+									</li>
+								<li>
+					<a href="#prepare-debug">调试</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="gettingstarted.html">
+				开始			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#helloImpex">Hello Impex</a>
+									</li>
+								<li>
+					<a href="#binding">双向绑定</a>
+									</li>
+								<li>
+					<a href="#interactive">交互</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="syntax.html">
+				语法			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#syntax-exp">表达式</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-exp-text">文本</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-html">HTML</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-tmpl">模版</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-d">指令</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-d-each">each</a>
+						</li>
+												<li>
+							<a href="#syntax-d-event">事件</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-c">过滤器</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-c-chain">链式过滤</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link actived" 
+				href="conditions.html">
+				条件渲染			</a>
+			<ul class="nav indent actived">
+								<li>
+					<a href="#conditions-if">x-if</a>
+									</li>
+								<li>
+					<a href="#conditions-show">x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-iforshow">x-if 还是 x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-group">条件组</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#conditions-group-each">x-if-start</a>
+						</li>
+												<li>
+							<a href="#conditions-group-show">x-show-start</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="each.html">
+				列表渲染			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#each-each">x-each</a>
+									</li>
+								<li>
+					<a href="#each-each-start">x-each-start</a>
+									</li>
+								<li>
+					<a href="#each-object">对象</a>
+									</li>
+								<li>
+					<a href="#each-const">常量</a>
+									</li>
+								<li>
+					<a href="#each-perform">性能</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="form.html">
+				表单			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#form-text">text</a>
+									</li>
+								<li>
+					<a href="#form-checkbox">checkbox</a>
+									</li>
+								<li>
+					<a href="#form-radio">radio</a>
+									</li>
+								<li>
+					<a href="#form-select">select</a>
+									</li>
+								<li>
+					<a href="#form-textarea">textarea</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="component.html">
+				组件			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-use">使用</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#component-use-restrict">约束</a>
+						</li>
+												<li>
+							<a href="#component-use-exp">模板表达式</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-props">属性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-props-auto">自动绑定</a>
+						</li>
+												<li>
+							<a href="#component-props-bindprops">BINDPROPS</a>
+						</li>
+												<li>
+							<a href="#component-props-model">模型属性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-scope">作用域</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-scope-tree">组件树</a>
+						</li>
+												<li>
+							<a href="#component-scope-comm">组件通信</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="directive.html">
+				指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive-use">基础</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#directive-use-features">特性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#directive-adv">进阶</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-adv-params">参数</a>
+						</li>
+												<li>
+							<a href="#directive-adv-observe">监控回调</a>
+						</li>
+												<li>
+							<a href="#directive-adv-inlineExp">内嵌表达式</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="filter.html">
+				过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-register">注册</a>
+									</li>
+								<li>
+					<a href="#filter-params">参数和过滤链</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="service.html">
+				服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-register">注册</a>
+									</li>
+								<li>
+					<a href="#service-inject">注入</a>
+									</li>
+								<li>
+					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+			</ul>
+</nav>			</li>
+		</ul>
+	</div>
+
+	<section class="container">
+			<div class="row doc-panel">
+				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
+				<div class="col-md-8 col-xs-8 content"> 		
+					<h1 id="conditions">条件渲染</h1>
+					<p>
+						视图显示控制是web动态交互很常见的功能，impex.js 内置了很多指令来实现条件控制
+					</p>
+					
+					<h2 id="conditions-if">
+						x-if
+					</h2>
+					<pre><code class="language-markup">
+&lt;div x-if="show"&gt;
+	hi`
+&lt;/div&gt;</code></pre>
+					<p>
+						x-if指令根据表达式结果来控制单一元素的隐藏/显示，表达式可以是任何合法的javascript语句
+					</p>
+					<blockquote class='tip'>
+						x-if指令会直接删除DOM，所以并不适合频繁切换。但如果你确实需要卸载DOM，x-if可以实现这个目的
+					</blockquote>
+
+					
+					<h2 id="conditions-show">
+						x-show
+					</h2>
+					<pre><code class="language-markup">
+&lt;div x-show="show"&gt;
+	hi`
+&lt;/div&gt;</code></pre>
+					<p>
+						x-show的用法和效果完全和x-if相同，唯一不同的是，x-show不会卸载DOM，只会隐藏
+					</p>
+
+					<h2 id="conditions-iforshow">
+						x-if 还是 x-show
+					</h2>
+					
+					<p>
+						这取决于你对目标视图的定位，通常在切换频率低并且DOM结构庞大时使用x-if可以减轻页面渲染压力，
+						否则就应该使用x-show
+					</p>
+
+					<h2 id="conditions-group">
+						条件组
+					</h2>
+					<p>
+						无论是x-if还是x-show，他们只能应用于单一的DOM元素上，如果需要批量控制你一定不想写上几十次重复的指令定义，
+						impex.js 提供了条件组指令
+					</p>
+
+					<h3 id="conditions-group-each">
+						x-if-start
+					</h3>
+					<pre><code class="language-markup">
+&lt;div x-if-start="show"&gt;
+	hi`
+&lt;/div&gt;
+...
+&lt;div x-if-end &gt;&lt;/div&gt;
+</code></pre>
+					<p>
+						条件组通过设置x-if-end标识来构建一个条件范围，范围内的所有视图元素都会被条件控制
+					</p>
+
+					<h3 id="conditions-group-show">
+						x-show-start
+					</h3>
+					<pre><code class="language-markup">
+&lt;div x-show-start="show"&gt;
+	hi`
+&lt;/div&gt;
+...
+&lt;div x-show-end &gt;&lt;/div&gt;
+</code></pre>
+					<p>
+						同x-if-start指令
+					</p>
+
+
+					
+							<footer>
+		<a class="prev" href="syntax.html">
+		<i class="glyphicon glyphicon-menu-left"></i>语法	</a>
+		<a class="next" href="each.html">
+		列表渲染<i class="glyphicon glyphicon-menu-right"></i>
+	</a>
+	</footer>
+<p>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+</p>				</div>
+				<div class="col-md-3 col-xs-4 hidden-720" >
+					<nav class="doc-nav ">
+	<ul class="" id="affix">
+				<li>
+			<a class="link " 
+				href="overview.html">
+				概述			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#components">组件系统</a>
+									</li>
+								<li>
+					<a href="#databinding">数据绑定</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="prepare.html">
+				准备			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-syntax">格式约定</a>
+									</li>
+								<li>
+					<a href="#prepare-debug">调试</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="gettingstarted.html">
+				开始			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#helloImpex">Hello Impex</a>
+									</li>
+								<li>
+					<a href="#binding">双向绑定</a>
+									</li>
+								<li>
+					<a href="#interactive">交互</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="syntax.html">
+				语法			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#syntax-exp">表达式</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-exp-text">文本</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-html">HTML</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-tmpl">模版</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-d">指令</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-d-each">each</a>
+						</li>
+												<li>
+							<a href="#syntax-d-event">事件</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-c">过滤器</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-c-chain">链式过滤</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link actived" 
+				href="conditions.html">
+				条件渲染			</a>
+			<ul class="nav indent actived">
+								<li>
+					<a href="#conditions-if">x-if</a>
+									</li>
+								<li>
+					<a href="#conditions-show">x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-iforshow">x-if 还是 x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-group">条件组</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#conditions-group-each">x-if-start</a>
+						</li>
+												<li>
+							<a href="#conditions-group-show">x-show-start</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="each.html">
+				列表渲染			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#each-each">x-each</a>
+									</li>
+								<li>
+					<a href="#each-each-start">x-each-start</a>
+									</li>
+								<li>
+					<a href="#each-object">对象</a>
+									</li>
+								<li>
+					<a href="#each-const">常量</a>
+									</li>
+								<li>
+					<a href="#each-perform">性能</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="form.html">
+				表单			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#form-text">text</a>
+									</li>
+								<li>
+					<a href="#form-checkbox">checkbox</a>
+									</li>
+								<li>
+					<a href="#form-radio">radio</a>
+									</li>
+								<li>
+					<a href="#form-select">select</a>
+									</li>
+								<li>
+					<a href="#form-textarea">textarea</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="component.html">
+				组件			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-use">使用</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#component-use-restrict">约束</a>
+						</li>
+												<li>
+							<a href="#component-use-exp">模板表达式</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-props">属性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-props-auto">自动绑定</a>
+						</li>
+												<li>
+							<a href="#component-props-bindprops">BINDPROPS</a>
+						</li>
+												<li>
+							<a href="#component-props-model">模型属性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-scope">作用域</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-scope-tree">组件树</a>
+						</li>
+												<li>
+							<a href="#component-scope-comm">组件通信</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="directive.html">
+				指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive-use">基础</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#directive-use-features">特性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#directive-adv">进阶</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-adv-params">参数</a>
+						</li>
+												<li>
+							<a href="#directive-adv-observe">监控回调</a>
+						</li>
+												<li>
+							<a href="#directive-adv-inlineExp">内嵌表达式</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="filter.html">
+				过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-register">注册</a>
+									</li>
+								<li>
+					<a href="#filter-params">参数和过滤链</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="service.html">
+				服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-register">注册</a>
+									</li>
+								<li>
+					<a href="#service-inject">注入</a>
+									</li>
+								<li>
+					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+			</ul>
+</nav>				</div>
+			</div>
+		</section>
+		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+		<script src="../js/jquery-1.11.3.min.js"></script>
+		<script src="../js/jquery.mousewheel.min.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="../js/bootstrap.min.js"></script>
+		<script src="../js/prism.js"></script>
+		<script src="../js/impex.all.js"></script>
+		<script src="../js/impex.ext.directives.js"></script>
+		<script src="../js/impex.js"></script>
+		<script src="../js/guide.js"></script>
+		<script type="text/javascript">
+			if(document.getElementById('entry'))
+			var debug = impex.render(document.getElementById('entry'),{
+				name:'impex'
+			});
+			if(document.getElementById('version'))
+			document.getElementById('version').innerHTML = impex.version.toString();
+			
+
+			window.onload = function(){
+				var affix = $('#affix');
+				affix.bind('mousewheel', function(event) {
+					event.preventDefault();
+					var scrollTop = this.scrollTop;
+					this.scrollTop = (scrollTop + ((event.deltaY * event.deltaFactor) * -1));
+				});
+
+				//doc-panel
+				$('.doc-panel .doc-nav>ul').affix({
+					offset: {
+						top: 0
+					}
+				});
+			}
+			
+		</script>
+	</body>
+</html>
+

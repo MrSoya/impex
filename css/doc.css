@@ -1,0 +1,175 @@
+.affix-bottom{
+	position: absolute;
+}
+.affix.expall:before{
+	content: '< scroll here >';
+	font-size: 1.2rem;
+	position: fixed;
+	top: 3rem;
+	padding-top: 1rem;
+	font-weight: bold;
+}
+
+.content p{
+	font-size: 1.15rem;
+	color: #34495E;
+	line-height: 1.8;
+	letter-spacing: 1;
+}
+.content ul,.content  li{
+	font-size: 1rem;
+	line-height: 1.5;
+	list-style: initial !important;
+}
+.content h1{
+	font-size: 2.2rem;
+	margin: 1rem 0 2rem;
+	font-weight: bold;
+}
+.content h2{
+	font-size: 1.8rem;
+	padding-bottom: 1.8rem;
+	border-bottom: 1px solid #dadada;
+	margin:2.5em 0 1.8em;
+	font-weight: bold;
+}
+.content h3{
+	font-size: 1.3rem;
+	margin:3rem 0 1rem;
+	font-weight: bold;
+}
+.content ul.prop li{
+	font-size: 1.1rem;
+	line-height: 2;
+}
+.content i.tag{
+	color: #337ab7;
+	font-style: normal;
+}
+.content blockquote.warning{
+	border-left-color: red;
+	font-size: 1.1rem;
+}
+.content blockquote.tip{
+	border-left-color: green;
+	font-size: 1.1rem;
+}
+
+.content pre{
+	border-radius: 0;
+	border: none;
+}
+.content pre.language-markup:before,
+.content pre.language-javascript:before,
+.content pre.language-css:before
+{
+	float: right;
+	color: #a0a0a0;
+	position: relative;
+	top:-.8rem;
+}
+.content pre.language-markup:before{
+	content: 'HTML';
+}
+.content pre.language-javascript:before{
+	content: 'JS';
+}
+.content pre.language-css:before{
+	content: 'CSS';
+}
+
+.content .output{
+	border: 1px solid #ddd;
+	padding: 2rem;
+	margin: 2rem 0 3rem;
+	font-size: 1.2rem;
+}
+.content .output:before{
+	content: 'Output';
+	color: #a0a0a0;
+	position: relative;
+	top:-1rem;
+	left: -1rem;
+}
+@media (max-width: 720px){
+	.content footer{
+		margin: 2rem 0 1rem !important;
+	}
+	.content img{
+		width: 100%;
+	}
+}
+.content footer{
+	border-top: 1px solid #ddd;
+	padding: 1rem 0;
+	margin: 2rem 0 4rem;
+
+	font-size: 1.1rem;
+}
+.content footer a{
+	text-decoration: none;
+}
+
+.content footer .next{
+	float: right;
+}
+
+.show-720 .doc-nav > ul{
+	padding-left: 0;
+}
+.doc-panel .doc-nav li{
+	margin: .1rem 0;
+}
+.doc-panel .doc-nav >ul{
+	margin: .5rem 0;
+}
+.doc-panel .doc-nav ul ul{
+	height: 0;
+	overflow: hidden;
+}
+.doc-panel .doc-nav .expall{
+	height: 80%;
+    overflow: hidden;
+}
+.doc-panel .doc-nav .expall ul{
+	height: auto;
+	overflow: auto;
+}
+.doc-panel .doc-nav ul ul.actived,
+.doc-panel .doc-nav ul ul.actived ul{
+	height: auto;
+	overflow: auto;
+}
+.doc-panel .doc-nav ul a {
+    cursor: pointer;
+    display: block;
+    line-height: 1;
+    padding: .3em 0;
+    color: #666;
+    text-decoration: none;
+    transition: color .2s;
+}
+.doc-panel .doc-nav >ul a.link {
+    font-size: 1.15rem;
+}
+.doc-panel .doc-nav >ul a.link.actived {
+    color: #3998D6;
+    font-weight: bold;
+}
+
+.indent{
+	padding-left: 1rem;
+}
+
+
+.doc-panel .doc-nav a.active,
+.doc-panel .doc-nav li.active>a {
+	font-weight: bold;
+    color: #3998D6;
+    background-color: inherit;
+}
+
+.doc-panel .doc-nav ul a:hover{
+    color: #3998D6;
+    background-color: inherit;
+}

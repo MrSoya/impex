@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="../css/bootstrap.min.css" rel="stylesheet">
+		<link href="../css/impex.css" rel="stylesheet">
+		<link href="../css/doc.css" rel="stylesheet">
+		<link href="../css/prism.css" rel="stylesheet">
+		<!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body data-spy="scroll" data-target=".doc-nav">			<nav class="default" onmouseout="moveIndicator()">
+		<div class="container">
+			<div class="row menu" >
+				<div class="logo ">
+					<div>
+						<a href="../" onmouseover="moveIndicator(this)">
+							<!--
+							<img src="images/logo.png">--> impex.js
+						</a>
+					</div>
+				</div>
+				<div class="hidden-720 " style="float: right;">
+					<ul class="items" id="nav-items">
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../guide/">教程</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="actived">
+							<a href="../api/">API</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../demos/">Demos</a>
+						</li>
+						<li onmouseover="moveIndicator(this)">
+							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						</li>
+					</ul>
+				</div>
+				<div class="indicator" id="indicator"></div>
+				<button class="navbar-toggle show-720" ontouchstart="toggleMenu(arguments[0])" type="toggler">
+					<i class="glyphicon glyphicon-menu-hamburger" type="toggler"></i>
+				</button>
+			</div>
+		</div>
+	</nav>
+
+	<div class="show-720 side-nav" id="sideNav">
+		<ul class="items">
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../guide/">教程</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="actived">
+				<a href="../api/">API</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../demos/">Demos</a>
+			</li>
+			<li onmouseover="moveIndicator(this)">
+				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			</li>
+			<li>
+				<nav class="doc-nav ">
+	<ul class="expall" id="affix">
+				<li>
+			<a class="link " 
+				href="#global-cfg">
+				全局配置			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#global-cfg-delimiters">delimiters</a>
+									</li>
+								<li>
+					<a href="#global-cfg-debug">debug</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#global-api">
+				全局API			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#global-api-component">component</a>
+									</li>
+								<li>
+					<a href="#global-api-directive">directive</a>
+									</li>
+								<li>
+					<a href="#global-api-service">service</a>
+									</li>
+								<li>
+					<a href="#global-api-filter">filter</a>
+									</li>
+								<li>
+					<a href="#global-api-render">render</a>
+									</li>
+								<li>
+					<a href="#global-api-findAll">findAll</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component">
+				组件			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component--view">$view</a>
+									</li>
+								<li>
+					<a href="#component--name">$name</a>
+									</li>
+								<li>
+					<a href="#component--template">$template</a>
+									</li>
+								<li>
+					<a href="#component--templateURL">$templateURL</a>
+									</li>
+								<li>
+					<a href="#component--restrict">$restrict</a>
+									</li>
+								<li>
+					<a href="#component-on">on</a>
+									</li>
+								<li>
+					<a href="#component-off">off</a>
+									</li>
+								<li>
+					<a href="#component-find">find</a>
+									</li>
+								<li>
+					<a href="#component-findD">findD</a>
+									</li>
+								<li>
+					<a href="#component-watch">watch</a>
+									</li>
+								<li>
+					<a href="#component-add">add</a>
+									</li>
+								<li>
+					<a href="#component-createSubComponentOf">createSubComponentOf</a>
+									</li>
+								<li>
+					<a href="#component-createSubComponent">createSubComponent</a>
+									</li>
+								<li>
+					<a href="#component-init">init</a>
+									</li>
+								<li>
+					<a href="#component-display">display</a>
+									</li>
+								<li>
+					<a href="#component-suspend">suspend</a>
+									</li>
+								<li>
+					<a href="#component-destroy">destroy</a>
+									</li>
+								<li>
+					<a href="#component-data">data</a>
+									</li>
+								<li>
+					<a href="#component-closest">closest</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component-lifecycle">
+				组件 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-lifecycle-onCreate">onCreate</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onInit">onInit</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onDisplay">onDisplay</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onDestroy">onDestroy</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onSuspend">onSuspend</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component-view">
+				组件 - 视图			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-view-elements">elements</a>
+									</li>
+								<li>
+					<a href="#component-view-clone">clone</a>
+									</li>
+								<li>
+					<a href="#component-view-show">show</a>
+									</li>
+								<li>
+					<a href="#component-view-hide">hide</a>
+									</li>
+								<li>
+					<a href="#component-view-style">style</a>
+									</li>
+								<li>
+					<a href="#component-view-attr">attr</a>
+									</li>
+								<li>
+					<a href="#component-view-removeAttr">removeAttr</a>
+									</li>
+								<li>
+					<a href="#component-view-hasClass">hasClass</a>
+									</li>
+								<li>
+					<a href="#component-view-addClass">addClass</a>
+									</li>
+								<li>
+					<a href="#component-view-removeClass">removeClass</a>
+									</li>
+								<li>
+					<a href="#component-view-toggleClass">toggleClass</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive">
+				指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive--value">$value</a>
+									</li>
+								<li>
+					<a href="#directive--name">$name</a>
+									</li>
+								<li>
+					<a href="#directive--params">$params</a>
+									</li>
+								<li>
+					<a href="#directive--filter">$filter</a>
+									</li>
+								<li>
+					<a href="#directive--final">$final</a>
+									</li>
+								<li>
+					<a href="#directive--endTag">$endTag</a>
+									</li>
+								<li>
+					<a href="#directive-observe">observe</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive-lifecycle">
+				指令 - 生命周期			</a>
+			<ul class="nav indent ">
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive-buildin">
+				指令 - 内建指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive-buildin-model">x-model</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-bind">x-bind</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-show">x-show</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-show-start">x-show-start</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-if">x-if</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-if-start">x-if-start</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-cloak">x-cloak</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-each">x-each</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-each-start">x-each-start</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#filter">
+				过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter--component">$component</a>
+									</li>
+								<li>
+					<a href="#filter--value">$value</a>
+									</li>
+								<li>
+					<a href="#filter-to">to</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#filter-lifecycle">
+				过滤器 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service">
+				服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service--singleton">$singleton</a>
+									</li>
+								<li>
+					<a href="#service--host">$host</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service-lifecycle">
+				服务 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+			</ul>
+</nav>			</li>
+		</ul>
+	</div>
+
+	<section class="container">
+			<div class="row doc-panel">
+				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
+				<div class="col-md-8 col-xs-8 content"> 		<b>Version</b> <code id="version"></code>
+					<h2 id="global-cfg">
+				全局配置			</h2>
+			<p>
+				<code>impex.config(cfg)</code>用于在impex渲染之前进行全局配置			</p>
+			
+						<h3 id="global-cfg-delimiters">
+				<i class="tag">#</i> delimiters							</h3>
+			<ul class="prop">
+								<li>Type: <code>Array<String></code></li>
+										<li>Default: <code>["{{", "}}"]</code></li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.config({delimiters:['{#','#}']})</code></pre>
+											<pre><code class="language-markup">&lt;div&gt;
+  Hello {# name #} !
+&lt;/div&gt;</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-cfg-debug">
+				<i class="tag">#</i> debug							</h3>
+			<ul class="prop">
+								<li>Type: <code>Boolean</code></li>
+										<li>Default: <code>false</code></li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.config({debug:true})</code></pre>
+											<p>开启debug模式后，impex会输出警告和调试信息</p>
+											<p>
+							<blockquote class='warning'>这可能会导致性能降低 ！</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="global-api">
+				全局API			</h2>
+			<p>
+				impex.js 提供了很少的全局API只用于必要的操作，以此简化开发			</p>
+			
+						<h3 id="global-api-component">
+				<i class="tag">#</i> component				( name , model , services )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} model</code>
+
+																	</li>
+															<li>
+									<code>
+										{Array | null} services</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.component('x-panel',{
+	$template : &quot;&lt;div style='color:red'&gt;{{=CONTENT}}&lt;/div&gt;&quot;,
+	name : 'impex'
+})</code></pre>
+											<pre><code class="language-markup">&lt;x-panel&gt;
+  Hello {{ name }} !
+&lt;/x-panel&gt;</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-directive">
+				<i class="tag">#</i> directive				( name , model , services )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} model</code>
+
+																	</li>
+															<li>
+									<code>
+										{Array | null} services</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.directive('mousedown',{
+    onInit : function(){
+        this.on('mousedown',this.$value);
+    }
+})</code></pre>
+											<pre><code class="language-markup">&lt;x-panel x-mousedown=&quot;alert($event)&quot; &gt;
+  Hello {{ name }} !
+&lt;/x-panel&gt;</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-service">
+				<i class="tag">#</i> service				( name , model , services )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} model</code>
+
+																	</li>
+															<li>
+									<code>
+										{Array | null} services</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.service('ViewHelper',{
+	//any functions here...
+});
+impex.component('x-panel',{
+	onCreate:function(viewHelper){
+		this.viewHelper = viewHelper;
+	}
+},['ViewHelper']);</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-filter">
+				<i class="tag">#</i> filter				( name , model , services )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} model</code>
+
+																	</li>
+															<li>
+									<code>
+										{Array | null} services</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.filter('lower',{
+    to:function(){
+        return this.$value.toLowerCase();
+    }
+});
+impex.component('x-panel',{
+	$template : &quot;&lt;div style='color:red'&gt;{{=CONTENT}}&lt;/div&gt;&quot;,
+	name : '&lt;i&gt;impex&lt;/i&gt;'
+})</code></pre>
+											<pre><code class="language-markup">&lt;x-panel&gt;
+  Hello {{ name =&gt; lower}} !
+&lt;/x-panel&gt;</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-render">
+				<i class="tag">#</i> render				( element , model , services )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{HTMLElement} element</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} model</code>
+
+																	</li>
+															<li>
+									<code>
+										{Array | null} services</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.render(document.body,{
+	//any props here...
+});</code></pre>
+											<p><code>render</code>方法是impex的入口，一旦该方法被执行，任何后续的全局配置都将无效</p>
+											<p>大部分情况下，直接设置<code>document.body</code>为入口是一个不错的选择，但如果你需要只渲染某个组件
+							就最好指定到它<code>impex.render(document.getElementById(),...)</code></p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-findAll">
+				<i class="tag">#</i> findAll				( name , conditions )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} conditions</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.findAll('x-panel',{name:'exp'})</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="component">
+				组件			</h2>
+			<p>
+				见 <a href="../guide/#components"> components </a>			</p>
+			
+						<h3 id="component--view">
+				<i class="tag">#</i> $view							</h3>
+			<ul class="prop">
+								<li>Type: <code>View</code></li>
+									<li>Usage: 
+					<p>
+											<p>视图对象表示组件对应的可视模型，这是一个抽象层，所以应该避免调用该对象的任何属性，而用函数取代</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component--name">
+				<i class="tag">#</i> $name							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>如果是注册组件，该属性就是组件的注册名。如果是匿名组件，该属性为空</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component--template">
+				<i class="tag">#</i> $template							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>模版字符串，用于定义组件的视图。使用标准HTML语法</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component--templateURL">
+				<i class="tag">#</i> $templateURL							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>模版URL，用于加载远程视图模版。首次加载是异步</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component--restrict">
+				<i class="tag">#</i> $restrict							</h3>
+			<ul class="prop">
+								<li>Type: <code>Object</code></li>
+									<li>Usage: 
+					<p>
+											<p>组件约束，用于定义组件的使用范围包括上级组件限制等</p>
+											<pre><code class="language-javascript">impex.component('x-panel',{
+	parents:'x-window',
+	children:'x-block,x-cell'
+})</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-on">
+				<i class="tag">#</i> on				( type , exp , handler )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} type</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} exp</code>
+
+																	</li>
+															<li>
+									<code>
+										{Function} handler</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>绑定事件到组件</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-off">
+				<i class="tag">#</i> off				( type , exp )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} type</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} exp</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>从组件解绑事件</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-find">
+				<i class="tag">#</i> find				( name , conditions , recur )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} conditions</code>
+
+																	</li>
+															<li>
+									<code>
+										{Boolean} recur</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>查找子组件，并返回符合条件的第一个实例</p>
+											<p>
+							<blockquote class='warning'>如果不开启递归查找，该方法只会查询直接子节点集合！</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-findD">
+				<i class="tag">#</i> findD				( name , conditions )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} conditions</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>查找组件内指令，并返回符合条件的第一个实例</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-watch">
+				<i class="tag">#</i> watch				( expPath , cbk )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} expPath</code>
+
+																	</li>
+															<li>
+									<code>
+										{Function} cbk</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>监控当前组件中的模型属性变化，如果发生变化，会触发回调</p>
+											<pre><code class="language-javascript">impex.component('x-panel',{
+	onCreate:function(){
+		this.watch('a.b.c',function(type,newVal,oldVal){
+			//type could be add/delete/update
+		})
+	}
+})</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-add">
+				<i class="tag">#</i> add				( child )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{Component} child</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>添加子组件到父组件</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-createSubComponentOf">
+				<i class="tag">#</i> createSubComponentOf				( type , target )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} type</code>
+
+																	</li>
+															<li>
+									<code>
+										{View} target</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>创建一个未初始化的子组件</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-createSubComponent">
+				<i class="tag">#</i> createSubComponent				( tmpl , target )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String | View} tmpl</code>
+
+																	</li>
+															<li>
+									<code>
+										{View} target</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>创建一个匿名子组件</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-init">
+				<i class="tag">#</i> init				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备</p>
+											<p>
+							<blockquote class='warning'>多次初始化会导致组件错误</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-display">
+				<i class="tag">#</i> display				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>显示组件到视图上，组件必须已经初始化完成</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-suspend">
+				<i class="tag">#</i> suspend				( hook )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{Boolean} hook</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，但数据都不会销毁</p>
+											<p><code>hook</code> 标识是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
+	 * 如果为false，则需要注入viewManager，手动插入视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-destroy">
+				<i class="tag">#</i> destroy				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-data">
+				<i class="tag">#</i> data				( path , [val] )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} path</code>
+
+																	</li>
+															<li>
+									<code>
+										{*} [val]</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>设置或者获取模型值，如果第二个参数为空就是获取模型值。设置模型值时，context为当前域的模型，如果当前模型不匹配表达式，则赋值无效。获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-closest">
+				<i class="tag">#</i> closest				( path )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} path</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>查找拥有指定属性的最近的祖先组件</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="component-lifecycle">
+				组件 - 生命周期			</h2>
+			<p>
+							</p>
+			
+						<h3 id="component-lifecycle-onCreate">
+				<i class="tag">#</i> onCreate				( [...args] )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{...Service} [...args]</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>当组件被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-lifecycle-onInit">
+				<i class="tag">#</i> onInit				( tmplStr )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} tmplStr</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>当组件初始化时，该回调被触发，系统会扫描组件中的所有表达式并建立数据模型</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-lifecycle-onDisplay">
+				<i class="tag">#</i> onDisplay				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>当组件被显示时，该回调被触发，此时组件以及完成数据构建和绑定</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-lifecycle-onDestroy">
+				<i class="tag">#</i> onDestroy				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>当组件被销毁时，该回调被触发</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-lifecycle-onSuspend">
+				<i class="tag">#</i> onSuspend				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>当组件被挂起时，该回调被触发</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="component-view">
+				组件 - 视图			</h2>
+			<p>
+							</p>
+			
+						<h3 id="component-view-elements">
+				<i class="tag">#</i> elements							</h3>
+			<ul class="prop">
+								<li>Type: <code>Array</code></li>
+									<li>Usage: 
+					<p>
+											<p>当组件被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-clone">
+				<i class="tag">#</i> clone				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>复制当前视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-show">
+				<i class="tag">#</i> show				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>显示视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-hide">
+				<i class="tag">#</i> hide				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>隐藏视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-style">
+				<i class="tag">#</i> style				( name , value )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{*} value</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>获取或设置视图的样式</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-attr">
+				<i class="tag">#</i> attr				( name , value )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{*} value</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>获取或设置视图的属性值</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-removeAttr">
+				<i class="tag">#</i> removeAttr				( name )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>删除视图属性</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-hasClass">
+				<i class="tag">#</i> hasClass				( name )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>视图是否包含指定样式</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-addClass">
+				<i class="tag">#</i> addClass				( names )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} names</code>
+
+									空格分隔多个样式名								</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>添加样式到视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-removeClass">
+				<i class="tag">#</i> removeClass				( name )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>从视图删除指定样式</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-toggleClass">
+				<i class="tag">#</i> toggleClass				( name )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>从视图添加或移除指定样式</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="directive">
+				指令			</h2>
+			<p>
+							</p>
+			
+						<h3 id="directive--value">
+				<i class="tag">#</i> $value							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>指令的字面值</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive--name">
+				<i class="tag">#</i> $name							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>指令名称</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive--params">
+				<i class="tag">#</i> $params							</h3>
+			<ul class="prop">
+								<li>Type: <code>Array</code></li>
+									<li>Usage: 
+					<p>
+											<p>参数列表</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive--filter">
+				<i class="tag">#</i> $filter							</h3>
+			<ul class="prop">
+								<li>Type: <code>Function</code></li>
+									<li>Usage: 
+					<p>
+											<p>过滤函数</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive--final">
+				<i class="tag">#</i> $final							</h3>
+			<ul class="prop">
+								<li>Type: <code>Boolean</code></li>
+										<li>Default: <code>false</code></li>
+								<li>Usage: 
+					<p>
+											<p>是否终结。终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成</p>
+											<p>
+							<blockquote class='warning'>该属性与$endTag冲突，并会优先匹配</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive--endTag">
+				<i class="tag">#</i> $endTag							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>范围结束标记，用来标识一个范围指令的终结属性名。如果设置了该标识，那么从当前指令开始到结束标识结束形成的范围，扫描器都不对内部进行扫描，包括表达式，指令，子组件都不会生成</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-observe">
+				<i class="tag">#</i> observe							</h3>
+			<ul class="prop">
+								<li>Type: <code>Function</code></li>
+									<li>Usage: 
+					<p>
+											<p>当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="directive-lifecycle">
+				指令 - 生命周期			</h2>
+			<p>
+				指令继承自组件，所以指令也具有组件的生命周期。唯一例外的是，指令没有<code>onDisplay</code>			</p>
+			
+								<h2 id="directive-buildin">
+				指令 - 内建指令			</h2>
+			<p>
+				为了保持灵活性，impex.js 只是内置了有限的常用指令			</p>
+			
+						<h3 id="directive-buildin-model">
+				<i class="tag">#</i> x-model							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">&lt;input x-model=&quot;exp&quot;&gt;</code></pre>
+											<p>视图到模型的绑定，当控件修改值后，模型值也会修改</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-bind">
+				<i class="tag">#</i> x-bind							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">&lt;a x-bind:href:title.validate=&quot;address&quot;&gt;Hello impex !&lt;/a&gt;</code></pre>
+											<p>绑定视图属性，并用表达式的值设置属性。可以同时绑定多个属性</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-show">
+				<i class="tag">#</i> x-show							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">&lt;div x-show=&quot;exp&quot;&gt;&lt;/div&gt;</code></pre>
+											<p>控制视图显示指令，根据表达式计算结果控制。基于CSS</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-show-start">
+				<i class="tag">#</i> x-show-start							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">
+&lt;div x-show-start=&quot;exp&quot;&gt;start&lt;/div&gt;
+&lt;div x-show-end&gt;end&lt;/div&gt;</code></pre>
+											<p>x-show的范围版本</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-if">
+				<i class="tag">#</i> x-if							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">&lt;div x-if=&quot;exp&quot;&gt;&lt;/div&gt;</code></pre>
+											<p>效果与show相同，但是会移除视图</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-if-start">
+				<i class="tag">#</i> x-if-start							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">
+&lt;div x-if-start=&quot;exp&quot;&gt;start&lt;/div&gt;
+&lt;div x-if-end&gt;end&lt;/div&gt;</code></pre>
+											<p>x-if的范围版本</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-cloak">
+				<i class="tag">#</i> x-cloak							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-css">.x-cloak{display: none;}</code></pre>
+											<pre><code class="language-markup">&lt;div x-cloak class=&quot;x-cloak&quot;&gt;你看不见我...&lt;/div&gt;</code></pre>
+											<p>用于屏蔽视图初始时的表达式原始样式，需要配合class使用</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-each">
+				<i class="tag">#</i> x-each							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">&lt;div x-each=&quot;collection as k =&gt; v&quot;&gt;&lt;/div&gt;</code></pre>
+											<p>each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象/常量或者变量</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="directive-buildin-each-start">
+				<i class="tag">#</i> x-each-start							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-markup">
+&lt;div x-each-start=&quot;collection as k =&gt; v&quot;&gt;start&lt;/div&gt;
+&lt;div x-each-end&gt;end&lt;/div&gt;</code></pre>
+											<p>x-each的范围版本</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="filter">
+				过滤器			</h2>
+			<p>
+				指令继承自组件，所以指令也具有组件的生命周期。唯一例外的是，指令没有<code>onDisplay</code>			</p>
+			
+						<h3 id="filter--component">
+				<i class="tag">#</i> $component							</h3>
+			<ul class="prop">
+								<li>Type: <code>Component</code></li>
+									<li>Usage: 
+					<p>
+											<p>所在组件/常量或者变量</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="filter--value">
+				<i class="tag">#</i> $value							</h3>
+			<ul class="prop">
+								<li>Type: <code>String</code></li>
+									<li>Usage: 
+					<p>
+											<p>系统自动计算的表达式结果</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="filter-to">
+				<i class="tag">#</i> to				( ...args )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{...String} ...args</code>
+
+									可变参数，根据表达式中书写的参数决定								</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>转变函数，该函数是实际进行转变的入口</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="filter-lifecycle">
+				过滤器 - 生命周期			</h2>
+			<p>
+							</p>
+			
+						<h3 id="filter-lifecycle-onCreate">
+				<i class="tag">#</i> onCreate				( [...args] )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{...Service} [...args]</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>当转换器被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="service">
+				服务			</h2>
+			<p>
+							</p>
+			
+						<h3 id="service--singleton">
+				<i class="tag">#</i> $singleton							</h3>
+			<ul class="prop">
+								<li>Type: <code>Boolean</code></li>
+									<li>Usage: 
+					<p>
+											<p>服务是否为单例模式，如果为true，该服务就不会在注入时被实例化，比如纯函数服务</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="service--host">
+				<i class="tag">#</i> $host							</h3>
+			<ul class="prop">
+								<li>Type: <code>Component | Directive | Converter | Service</code></li>
+									<li>Usage: 
+					<p>
+											<p>服务被注入到的宿主，可能是组件，指令或者另一个服务</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="service-lifecycle">
+				服务 - 生命周期			</h2>
+			<p>
+							</p>
+			
+						<h3 id="service-lifecycle-onCreate">
+				<i class="tag">#</i> onCreate				( [...args] )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{...Service} [...args]</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+								<li>Usage: 
+					<p>
+											<p>当服务被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+							
+							<footer>
+	<p>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+</p>				</div>
+				<div class="col-md-3 col-xs-4 hidden-720" >
+					<nav class="doc-nav ">
+	<ul class="expall" id="affix">
+				<li>
+			<a class="link " 
+				href="#global-cfg">
+				全局配置			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#global-cfg-delimiters">delimiters</a>
+									</li>
+								<li>
+					<a href="#global-cfg-debug">debug</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#global-api">
+				全局API			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#global-api-component">component</a>
+									</li>
+								<li>
+					<a href="#global-api-directive">directive</a>
+									</li>
+								<li>
+					<a href="#global-api-service">service</a>
+									</li>
+								<li>
+					<a href="#global-api-filter">filter</a>
+									</li>
+								<li>
+					<a href="#global-api-render">render</a>
+									</li>
+								<li>
+					<a href="#global-api-findAll">findAll</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component">
+				组件			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component--view">$view</a>
+									</li>
+								<li>
+					<a href="#component--name">$name</a>
+									</li>
+								<li>
+					<a href="#component--template">$template</a>
+									</li>
+								<li>
+					<a href="#component--templateURL">$templateURL</a>
+									</li>
+								<li>
+					<a href="#component--restrict">$restrict</a>
+									</li>
+								<li>
+					<a href="#component-on">on</a>
+									</li>
+								<li>
+					<a href="#component-off">off</a>
+									</li>
+								<li>
+					<a href="#component-find">find</a>
+									</li>
+								<li>
+					<a href="#component-findD">findD</a>
+									</li>
+								<li>
+					<a href="#component-watch">watch</a>
+									</li>
+								<li>
+					<a href="#component-add">add</a>
+									</li>
+								<li>
+					<a href="#component-createSubComponentOf">createSubComponentOf</a>
+									</li>
+								<li>
+					<a href="#component-createSubComponent">createSubComponent</a>
+									</li>
+								<li>
+					<a href="#component-init">init</a>
+									</li>
+								<li>
+					<a href="#component-display">display</a>
+									</li>
+								<li>
+					<a href="#component-suspend">suspend</a>
+									</li>
+								<li>
+					<a href="#component-destroy">destroy</a>
+									</li>
+								<li>
+					<a href="#component-data">data</a>
+									</li>
+								<li>
+					<a href="#component-closest">closest</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component-lifecycle">
+				组件 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-lifecycle-onCreate">onCreate</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onInit">onInit</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onDisplay">onDisplay</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onDestroy">onDestroy</a>
+									</li>
+								<li>
+					<a href="#component-lifecycle-onSuspend">onSuspend</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#component-view">
+				组件 - 视图			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-view-elements">elements</a>
+									</li>
+								<li>
+					<a href="#component-view-clone">clone</a>
+									</li>
+								<li>
+					<a href="#component-view-show">show</a>
+									</li>
+								<li>
+					<a href="#component-view-hide">hide</a>
+									</li>
+								<li>
+					<a href="#component-view-style">style</a>
+									</li>
+								<li>
+					<a href="#component-view-attr">attr</a>
+									</li>
+								<li>
+					<a href="#component-view-removeAttr">removeAttr</a>
+									</li>
+								<li>
+					<a href="#component-view-hasClass">hasClass</a>
+									</li>
+								<li>
+					<a href="#component-view-addClass">addClass</a>
+									</li>
+								<li>
+					<a href="#component-view-removeClass">removeClass</a>
+									</li>
+								<li>
+					<a href="#component-view-toggleClass">toggleClass</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive">
+				指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive--value">$value</a>
+									</li>
+								<li>
+					<a href="#directive--name">$name</a>
+									</li>
+								<li>
+					<a href="#directive--params">$params</a>
+									</li>
+								<li>
+					<a href="#directive--filter">$filter</a>
+									</li>
+								<li>
+					<a href="#directive--final">$final</a>
+									</li>
+								<li>
+					<a href="#directive--endTag">$endTag</a>
+									</li>
+								<li>
+					<a href="#directive-observe">observe</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive-lifecycle">
+				指令 - 生命周期			</a>
+			<ul class="nav indent ">
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#directive-buildin">
+				指令 - 内建指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive-buildin-model">x-model</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-bind">x-bind</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-show">x-show</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-show-start">x-show-start</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-if">x-if</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-if-start">x-if-start</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-cloak">x-cloak</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-each">x-each</a>
+									</li>
+								<li>
+					<a href="#directive-buildin-each-start">x-each-start</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#filter">
+				过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter--component">$component</a>
+									</li>
+								<li>
+					<a href="#filter--value">$value</a>
+									</li>
+								<li>
+					<a href="#filter-to">to</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#filter-lifecycle">
+				过滤器 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service">
+				服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service--singleton">$singleton</a>
+									</li>
+								<li>
+					<a href="#service--host">$host</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service-lifecycle">
+				服务 - 生命周期			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+			</ul>
+</nav>				</div>
+			</div>
+		</section>
+		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+		<script src="../js/jquery-1.11.3.min.js"></script>
+		<script src="../js/jquery.mousewheel.min.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="../js/bootstrap.min.js"></script>
+		<script src="../js/prism.js"></script>
+		<script src="../js/impex.all.js"></script>
+		<script src="../js/impex.ext.directives.js"></script>
+		<script src="../js/impex.js"></script>
+		<script src="../js/guide.js"></script>
+		<script type="text/javascript">
+			if(document.getElementById('entry'))
+			var debug = impex.render(document.getElementById('entry'),{
+				name:'impex'
+			});
+			if(document.getElementById('version'))
+			document.getElementById('version').innerHTML = impex.version.toString();
+			
+
+			window.onload = function(){
+				var affix = $('#affix');
+				affix.bind('mousewheel', function(event) {
+					event.preventDefault();
+					var scrollTop = this.scrollTop;
+					this.scrollTop = (scrollTop + ((event.deltaY * event.deltaFactor) * -1));
+				});
+
+				//doc-panel
+				$('.doc-panel .doc-nav>ul').affix({
+					offset: {
+						top: 0
+					}
+				});
+			}
+			
+		</script>
+	</body>
+</html>
+
