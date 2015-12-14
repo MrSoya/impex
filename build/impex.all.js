@@ -1581,8 +1581,14 @@ ViewModel.prototype = {
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
+			if(Util.isObject(val) || Util.isArray(val)){
+				val = JSON.stringify(val);
+			}else 
+			if(Util.isString(val)){
+				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+			}
 			//fix \r\n on IE8
-			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"'):val) +'"');
+			eval(evalStr + '= '+ val +'');
 			return this;
 		}else{
 			return eval(evalStr);
@@ -2521,19 +2527,17 @@ Util.ext(Directive.prototype,{
 	}
 });
 /**
- * @classdesc 过滤器类，提供对表达式结果的转换处理
- * 过滤器只能以字面量形式使用在表达式中，比如
+ * @classdesc 过滤器类，提供对表达式结果的转换处理，比如
  * <p>
- * 	{{#html exp...}}
+ * 	{{ exp... => cap}}
  * </p>
- * html是一个内置的过滤器，用于输出表达式内容为视图对象<br/>
  * 过滤器可以连接使用，并以声明的顺序依次执行，比如
  * <p>
- * 	{{#lower|cap exp...}}
+ * 	{{ exp... => lower|cap}}
  * </p>
  * 过滤器支持参数，比如
  * <p>
- * 	{{#currency:€:4 exp...}}
+ * 	{{ exp... => currency:€:4}}
  * </p>
  * @class 
  */
@@ -2893,7 +2897,7 @@ var ServiceFactory = new _ServiceFactory();
 	var FILTER_EXP_START_TAG = '=>';
 	var DEBUG = false;
 
-	var BUILD_IN_PROPS = ['data','closest'];
+	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
 	var lastComp;
 	function compDebug(comp,state){
@@ -2930,7 +2934,7 @@ var ServiceFactory = new _ServiceFactory();
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
 	 * impex的目标是让开发者基于web技术以最低的学习成本获得最大的收益，所以impex会尽量简单。
-	 * impex由组件、指令、转换器和服务这几个概念构成
+	 * impex由组件、指令、过滤器和服务这几个概念构成
 	 * @namespace 
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */
@@ -3365,8 +3369,10 @@ impex.service('ComponentManager',new function(){
         changeModelCheck : function(e){
             var t = e.target || e.srcElement;
             var val = t.value;
-            var mVal = this.$parent.data(this.$value);
-            var parts = mVal.split(',');
+            var parts = this.$parent.data(this.$value);
+            if(!(parts instanceof Array)){
+                parts = [parts];
+            }
             if(t.checked){
                 parts.push(val);
             }else{
@@ -3375,7 +3381,7 @@ impex.service('ComponentManager',new function(){
                     parts.splice(i,1);
                 }
             }
-            this.$parent.data(this.$value,parts.join(',').replace(/^,/,''));
+            this.$parent.data(this.$value,parts);
         },
         changeModel : function(e){
             this.$parent.data(this.$value,(e.target || e.srcElement).value);

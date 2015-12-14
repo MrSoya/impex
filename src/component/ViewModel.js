@@ -17,8 +17,14 @@ ViewModel.prototype = {
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
+			if(Util.isObject(val) || Util.isArray(val)){
+				val = JSON.stringify(val);
+			}else 
+			if(Util.isString(val)){
+				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+			}
 			//fix \r\n on IE8
-			eval(evalStr + '= "'+ (val && val.replace?val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"'):val) +'"');
+			eval(evalStr + '= '+ val +'');
 			return this;
 		}else{
 			return eval(evalStr);

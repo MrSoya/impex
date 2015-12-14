@@ -16,7 +16,7 @@
 	var FILTER_EXP_START_TAG = '=>';
 	var DEBUG = false;
 
-	var BUILD_IN_PROPS = ['data','closest'];
+	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
 	var lastComp;
 	function compDebug(comp,state){
@@ -53,7 +53,7 @@
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
 	 * impex的目标是让开发者基于web技术以最低的学习成本获得最大的收益，所以impex会尽量简单。
-	 * impex由组件、指令、转换器和服务这几个概念构成
+	 * impex由组件、指令、过滤器和服务这几个概念构成
 	 * @namespace 
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */

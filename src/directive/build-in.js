@@ -190,8 +190,10 @@
         changeModelCheck : function(e){
             var t = e.target || e.srcElement;
             var val = t.value;
-            var mVal = this.$parent.data(this.$value);
-            var parts = mVal.split(',');
+            var parts = this.$parent.data(this.$value);
+            if(!(parts instanceof Array)){
+                parts = [parts];
+            }
             if(t.checked){
                 parts.push(val);
             }else{
@@ -200,7 +202,7 @@
                     parts.splice(i,1);
                 }
             }
-            this.$parent.data(this.$value,parts.join(',').replace(/^,/,''));
+            this.$parent.data(this.$value,parts);
         },
         changeModel : function(e){
             this.$parent.data(this.$value,(e.target || e.srcElement).value);
