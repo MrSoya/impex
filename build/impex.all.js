@@ -299,62 +299,38 @@ var Util = new function () {
 				var oldVer = obj.oldVer,
 					newVer = obj.newVer,
 					handler = obj.handler;
+				var longer = oldVer.length > newVer.length?oldVer:newVer;
 
-				var changes = [];
-				if(oldVer.length == newVer.length){
+				var change = null;
+
+				if(oldVer.length === newVer.length){
 					var len = oldVer.length;
 					while(len--){
-						if(newVer[len] != oldVer[len]){
-							var change = {};
-							change.name = len;
-							change.oldValue = oldVer[len];
-							change.object = newVer;
+						if(newVer[len] !== oldVer[len]){
+							change = {};
 							change.type = 'update';
-							
-							changes.push(change);
+							break;
 						}
 					}
+				}else if(oldVer.length > newVer.length){
+					change = {};
+					change.type = 'delete';
 				}else{
 					var change = {};
-					change.type = 'splice';
-					change.index = -1;
-					change.object = newVer;
-					//record remove
-					var forwardAligned = [];
-					for(var j=oldVer.length;j--;){
-						forwardAligned.push(newVer[j]);
-					}
-					var removes = [];
-					for(var k in oldVer){
-						if(forwardAligned[k] != oldVer[k]){
-							if(change.index == -1){
-								change.index = k;
-							}			
-							removes.push(oldVer[k]);
-						}
-					}
-
-					//record add
-					var backwardAligned = [];
-					for(var j=0;j<newVer.length;j++){
-						backwardAligned.push(oldVer[j]);
-					}
-					var adds = [];
-					for(var k in oldVer){
-						if(newVer[k] != backwardAligned[k]){
-							if(change.index == -1){
-								change.index = k;
-							}
-							adds.push(newVer[k]);
-						}
-					}
-
-					changes.push(change);
+					change.type = 'add';
 				}
-
 				
-				if(changes.length > 0){
-					handler(changes);
+				if(change){
+					change.object = newVer;
+					change.oldValue = oldVer;
+
+					handler([change]);
+
+					//refresh oldVer
+					obj.oldVer = [];
+					for(var j=0;j<newVer.length;j++){
+						obj.oldVer.push(newVer[j]);
+					}
 				}
 			}
 
@@ -1123,6 +1099,7 @@ var Builder = new function() {
     	function __observer(changes){
 			if(component.$__state === Component.state.suspend)return;
 			if(component.$__state === Component.state.destroyed)return;
+
 			changeHandler(changes);
 		}
 

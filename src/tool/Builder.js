@@ -113,6 +113,7 @@ var Builder = new function() {
     	function __observer(changes){
 			if(component.$__state === Component.state.suspend)return;
 			if(component.$__state === Component.state.destroyed)return;
+
 			changeHandler(changes);
 		}
 
