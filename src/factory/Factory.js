@@ -15,8 +15,9 @@ Factory.prototype = {
 		type = type.toLowerCase();
 
 		//keywords check
+		var ks = Object.keys(model);
 		for(var i=BUILD_IN_PROPS.length;i--;){
-			if(BUILD_IN_PROPS[i] in model){
+			if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
 				impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
 				return;
 			}

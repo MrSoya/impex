@@ -2606,8 +2606,9 @@ Factory.prototype = {
 		type = type.toLowerCase();
 
 		//keywords check
+		var ks = Object.keys(model);
 		for(var i=BUILD_IN_PROPS.length;i--;){
-			if(BUILD_IN_PROPS[i] in model){
+			if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
 				impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
 				return;
 			}
@@ -2673,8 +2674,9 @@ Util.ext(_ComponentFactory.prototype,{
 		var svs = arguments[3];
 		if(props){
 			//keywords check
+			var ks = Object.keys(props);
 			for(var i=BUILD_IN_PROPS.length;i--;){
-				if(BUILD_IN_PROPS[i] in props){
+				if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
 					impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
 					return;
 				}
@@ -3182,6 +3184,13 @@ impex.service('ComponentManager',new function(){
  */
 !function(impex){
     ///////////////////// 视图控制指令 /////////////////////
+    /**
+     * impex会忽略指令所在的视图，视图不会被impex解析
+     * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
+     */
+    impex.directive('ignore',{
+        $final:true
+    });
     /**
      * 绑定视图属性，并用表达式的值设置属性
      * <br/>使用方式：<img x-bind:src="exp">
