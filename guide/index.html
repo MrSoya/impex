@@ -361,6 +361,28 @@
 						impex.js 为开发者提供了<b>DOM free</b>的能力。只要掌握js基本语法，就可以构建UI，无需再关心各种DOM问题，更加专注业务本身。
 					</p>
 
+
+					<h2 id="components">
+						组件系统
+					</h2>
+					<p>
+						组件系统是 impex.js 的核心，有了组件系统才有构建web(大型)应用的基础。
+					</p>
+					<p>
+						几乎所有的web开发都大量使用了各种不同的组件，包括浏览器内置的(video/audio/colorpicker...)或者第三方开发的(日历/Dialog...)，组件具有独立的作用域和控制方法，以及视图。可以在适合的场景重复使用，
+						让开发变的简单、高效。
+					</p>
+					<p>
+						那么，还需要什么？
+						当你使用了类似bootstrap之类的库时，一个modal组件就会导致你的页面上产生几十行的HTML代码，而仅仅是描述了一个弹窗，如果是10个或者100个又会如何，impex.js 为你提供了另一个选择。
+					</p>
+					<pre><code class="language-markup">&lt;x-nav type="guide"&gt;
+	&lt;x-side-nav cate="guide"&gt;&lt;/x-side-nav&gt;
+&lt;/x-nav&gt;</code></pre>
+					<p>
+						impex.js 提供让开发者定义web组件的能力，就像video标签样，看上去只有一行代码，而在运行时自动解析标签实现组件功能。组件可以嵌套组件，组合出强大的功能。一个典型的impex.js 应用就是一个组件树，所有UI都是组件，面板、列表、表单等等。
+					</p>
+
 					<h2 id="atemplatelib">
 						一个模版库？
 					</h2>
@@ -393,27 +415,6 @@
 					</p>
 					<p>
 						现在，你可以做出选择了
-					</p>
-
-					<h2 id="components">
-						组件系统
-					</h2>
-					<p>
-						组件系统是 impex.js 的核心，有了组件系统才有构建web(大型)应用的基础。
-					</p>
-					<p>
-						几乎所有的web开发都大量使用了各种不同的组件，包括浏览器内置的(video/audio/colorpicker...)或者第三方开发的(日历/Dialog...)，组件具有独立的作用域和控制方法，以及视图。可以在适合的场景重复使用，
-						让开发变的简单、高效。
-					</p>
-					<p>
-						那么，还需要什么？
-						当你使用了类似bootstrap之类的库时，一个modal组件就会导致你的页面上产生几十行的HTML代码，而仅仅是描述了一个弹窗，如果是10个或者100个又会如何，impex.js 为你提供了另一个选择。
-					</p>
-					<pre><code class="language-markup">&lt;x-nav type="guide"&gt;
-	&lt;x-side-nav cate="guide"&gt;&lt;/x-side-nav&gt;
-&lt;/x-nav&gt;</code></pre>
-					<p>
-						impex.js 提供让开发者定义web组件的能力，就像video标签样，看上去只有一行代码，而在运行时自动解析标签实现组件功能。组件可以嵌套组件，组合出强大的功能。一个典型的impex.js 应用就是一个组件树，所有UI都是组件，面板、列表、表单等等。
 					</p>
 
 					<h2 id="databinding">
