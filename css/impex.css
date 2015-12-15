@@ -24,6 +24,10 @@ code{
 	border-radius:0;
 	margin: 0 .5rem;
 }
+input,textarea{
+	border:1px solid #aaa;
+	padding: 0 3px;
+}
 
 
 section.container{
