@@ -1615,7 +1615,7 @@ impex.component('x-panel',{
 							
 							<footer>
 	<p>
-	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
 </p>				</div>
 				<div class="col-md-3 col-xs-4 hidden-720" >
 					<nav class="doc-nav ">
@@ -1916,6 +1916,7 @@ impex.component('x-panel',{
 		<script src="../js/impex.ext.directives.js"></script>
 		<script src="../js/impex.js"></script>
 		<script src="../js/guide.js"></script>
+		<script src="../js/demos.js"></script>
 		<script type="text/javascript">
 			if(document.getElementById('entry'))
 			var debug = impex.render(document.getElementById('entry'),{
@@ -1923,6 +1924,16 @@ impex.component('x-panel',{
 			});
 			if(document.getElementById('version'))
 			document.getElementById('version').innerHTML = impex.version.toString();
+
+			if($('.bucket')[0]){
+				window.demos = impex.render($('.bucket')[0],{
+					actived:'out',
+					output:'',
+					active:function(type){
+						this.actived = type;
+					}
+				});
+			}
 			
 
 			window.onload = function(){

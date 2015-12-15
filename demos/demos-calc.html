@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="../css/bootstrap.min.css" rel="stylesheet">
+		<link href="../css/impex.css" rel="stylesheet">
+		<link href="../css/doc.css" rel="stylesheet">
+		<link href="../css/prism.css" rel="stylesheet">
+		<!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body data-spy="scroll" data-target=".doc-nav">			<nav class="default" onmouseout="moveIndicator()">
+		<div class="container">
+			<div class="row menu" >
+				<div class="logo ">
+					<div>
+						<a href="../" onmouseover="moveIndicator(this)">
+							<!--
+							<img src="images/logo.png">--> impex.js
+						</a>
+					</div>
+				</div>
+				<div class="hidden-720 " style="float: right;">
+					<ul class="items" id="nav-items">
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../guide/">教程</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="">
+							<a href="../api/">API</a>
+						</li>
+						<li onmouseover="moveIndicator(this)" class="actived">
+							<a href="../demos/">Demos</a>
+						</li>
+						<li onmouseover="moveIndicator(this)">
+							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						</li>
+					</ul>
+				</div>
+				<div class="indicator" id="indicator"></div>
+				<button class="navbar-toggle show-720" ontouchstart="toggleMenu(arguments[0])" type="toggler">
+					<i class="glyphicon glyphicon-menu-hamburger" type="toggler"></i>
+				</button>
+			</div>
+		</div>
+	</nav>
+
+	<div class="show-720 side-nav" id="sideNav">
+		<ul class="items">
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../guide/">教程</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="">
+				<a href="../api/">API</a>
+			</li>
+			<li onmouseover="moveIndicator(this)" class="actived">
+				<a href="../demos/">Demos</a>
+			</li>
+			<li onmouseover="moveIndicator(this)">
+				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			</li>
+			<li>
+				<nav class="doc-nav ">
+	<ul class="sideNav ">
+				<li>
+			<a class="link " 
+				href="demos-calc.html">
+				计算器			</a>
+			<ul class="nav indent ">
+				<br />
+<b>Notice</b>:  Undefined variable: navs in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
+<br />
+<b>Warning</b>:  Invalid argument supplied for foreach() in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
+			</ul>
+		</li>
+			</ul>
+</nav>			</li>
+		</ul>
+	</div>
+
+	<section class="container">
+			<div class="row doc-panel">
+				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
+				<div class="col-md-8 col-xs-8 content"> 		
+					<h1 id="demos-calc">计算器</h1>
+					<p>
+						<blockquote class='tip'>
+							这个demo用到的特性包括列表渲染、事件指令、表达式处理等
+						</blockquote>
+					</p>
+					
+					<section class="bucket">
+						<ul>
+							<li class="{{actived=='HTML'?'actived':''}}" ><a href="javascript:;" x-click="active('HTML')">HTML</a></li>
+							<li class="{{actived=='CSS'?'actived':''}}" ><a href="javascript:;" x-click="active('CSS')">CSS</a></li>
+							<li class="{{actived=='JS'?'actived':''}}" ><a href="javascript:;" x-click="active('JS')">Javascript</a></li>
+							<li class="{{actived=='out'?'actived':''}}" ><a href="javascript:;" x-click="active('out')">Output</a></li>
+						</ul>
+						<div style="clear: both;"></div>
+						<pre class="content" x-show="actived=='HTML'">
+							<code class="language-markup" x-ignore>
+&lt;div class="calc"&gt;
+    &lt;div class="block-display {{exp.length &gt;9?exp.length &gt;20?'small-font':'normal-font':''}}"&gt;
+        {{exp =&gt; format}}
+    &lt;/div&gt;
+    &lt;div class="block-buttons"&gt;
+        &lt;div x-each="buttons as btn"&gt;
+            &lt;button x-click="addExp(btn)"&gt;{{btn}}&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div style="clear: both;"&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+							</code>
+						</pre>
+						<pre class="content" x-show="actived=='CSS'">
+							<code class="language-css">
+.calc{
+    border:1px solid #aaa;
+    width: 340px;
+}
+.block-display{
+    background-color: #f6f6f6;
+    width: 100%;
+    font-size: 3rem;
+    font-family: Arial;
+    direction: rtl;
+    padding: 1rem 0;
+    overflow: hidden;
+
+    transition:font-size .2s;
+}
+.block-buttons{
+    background-color: #eee;
+}
+.block-buttons button{
+    background: #eee;
+    border: none;
+    width: 25%;
+    float: left;
+    font-size: 1.5rem;
+    padding: 1rem 0;
+    outline: none;
+}
+.block-buttons button:hover{
+    background-color: #ddd;
+}
+.normal-font{
+    font-size: 2rem;
+}
+.small-font{
+    font-size: 1rem;
+}
+							</code>
+						</pre>
+						<pre class="content" x-show="actived=='JS'">
+							<code class="language-javascript">//过滤器
+impex.filter('format',{
+    to:function(){
+        var tmp = this.$value;
+        if(!/^0\./.test(this.$value)){
+            tmp = tmp.replace(/^0\./,'');
+
+            if(this.$value.length>1){
+                tmp = tmp.replace(/^0/,'');
+            }
+        }
+
+
+
+        return tmp;
+    }
+});
+
+//渲染
+impex.render(document.body,{
+    buttons:[
+        '1','2','3','+',
+        '4','5','6','-',
+        '7','8','9','*',
+        '0','(',')','/',
+        '.','←','C','=',
+    ],
+    exp:'0',
+    clear:function () {
+        this.exp = '0';
+    },
+    addExp:function(v){
+        switch(v){
+            case 'C':
+                this.clear();
+                return;
+            case '←':
+                if(this.exp.length>1)
+                    this.exp = this.exp.substring(0,this.exp.length-1);
+                return;
+            case '=':
+                var v = eval(this.exp.replace(/^0/,''));
+                this.exp = v+'';
+                return;
+            default:
+                this.exp += v;
+        }
+    }
+});
+							</code>
+						</pre>
+						<div name="calc" class=" content" x-show="actived=='out'">
+							<style type="text/css">
+								.calc{
+    border:1px solid #aaa;
+    width: 340px;
+}
+.block-display{
+    background-color: #f6f6f6;
+    width: 100%;
+    font-size: 3rem;
+    font-family: Arial;
+    direction: rtl;
+    padding: 1rem 0;
+    overflow: hidden;
+
+    transition:font-size .2s;
+}
+.block-buttons{
+    background-color: #eee;
+}
+.block-buttons button{
+    background: #eee;
+    border: none;
+    width: 25%;
+    float: left;
+    font-size: 1.5rem;
+    padding: 1rem 0;
+    outline: none;
+}
+.block-buttons button:hover{
+    background-color: #ddd;
+}
+.normal-font{
+    font-size: 2rem;
+}
+.small-font{
+    font-size: 1rem;
+}
+							</style>
+							{{# output}}
+						</div>
+					</section>
+					
+
+				
+							<footer>
+	</footer>
+<p>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
+</p>				</div>
+				<div class="col-md-3 col-xs-4 hidden-720" >
+					<nav class="doc-nav ">
+	<ul class="sideNav ">
+				<li>
+			<a class="link " 
+				href="demos-calc.html">
+				计算器			</a>
+			<ul class="nav indent ">
+				<br />
+<b>Notice</b>:  Undefined variable: navs in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
+<br />
+<b>Warning</b>:  Invalid argument supplied for foreach() in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
+			</ul>
+		</li>
+			</ul>
+</nav>				</div>
+			</div>
+		</section>
+		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+		<script src="../js/jquery-1.11.3.min.js"></script>
+		<script src="../js/jquery.mousewheel.min.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="../js/bootstrap.min.js"></script>
+		<script src="../js/prism.js"></script>
+		<script src="../js/impex.all.js"></script>
+		<script src="../js/impex.ext.directives.js"></script>
+		<script src="../js/impex.js"></script>
+		<script src="../js/guide.js"></script>
+		<script src="../js/demos.js"></script>
+		<script type="text/javascript">
+			if(document.getElementById('entry'))
+			var debug = impex.render(document.getElementById('entry'),{
+				name:'impex'
+			});
+			if(document.getElementById('version'))
+			document.getElementById('version').innerHTML = impex.version.toString();
+
+			if($('.bucket')[0]){
+				window.demos = impex.render($('.bucket')[0],{
+					actived:'out',
+					output:'',
+					active:function(type){
+						this.actived = type;
+					}
+				});
+			}
+			
+
+			window.onload = function(){
+				var affix = $('section .doc-nav .sideNav');
+				affix.bind('mousewheel', function(event) {
+					event.preventDefault();
+					var scrollTop = this.scrollTop;
+					this.scrollTop = (scrollTop + ((event.deltaY * event.deltaFactor) * -1));
+				});
+
+				//doc-panel
+				$('.doc-panel .doc-nav>ul').affix({
+					offset: {
+						top: 0
+					}
+				});
+			}
+			
+		</script>
+	</body>
+</html>
+

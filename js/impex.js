@@ -1,4 +1,6 @@
-
+impex.directive('ignore',{
+    $final:true
+});
 
 var activedNode;
 window.addEventListener('load',function(){

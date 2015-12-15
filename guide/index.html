@@ -73,6 +73,9 @@
 					<a href="#components">组件系统</a>
 									</li>
 								<li>
+					<a href="#atemplatelib">一个模版库？</a>
+									</li>
+								<li>
 					<a href="#databinding">数据绑定</a>
 									</li>
 							</ul>
@@ -84,6 +87,9 @@
 			<ul class="nav indent ">
 								<li>
 					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
 									</li>
 								<li>
 					<a href="#prepare-syntax">格式约定</a>
@@ -354,6 +360,41 @@
 					<p>
 						impex.js 为开发者提供了<b>DOM free</b>的能力。只要掌握js基本语法，就可以构建UI，无需再关心各种DOM问题，更加专注业务本身。
 					</p>
+
+					<h2 id="atemplatelib">
+						一个模版库？
+					</h2>
+					<p>
+						不！impex.js 绝不是一个模板库，传统模板库可能类似这样
+					</p>
+					
+						<pre><code class="language-markup">
+&lt;ul&gt;						
+	&lt;% for(item in lists){ %&gt;
+		&lt;% if(item.state){ %&gt;
+		&lt;li&gt; &lt;%= item.content %&gt; &lt;/li&gt;
+	&lt;% }} %&gt;
+&lt;/ul&gt;	
+</code></pre>
+					<p>
+						这个模版看起来就像是在写PHP或者JSP，虽然比拼字符串好多了，但是模版的代码逻辑和视图展示深度耦合，
+					当你检视视图逻辑时，会被代码打断，反之亦然。这会导致代码整体维护度降低，
+					甚至无法维护。那么来看看 impex.js 是如何处理相同逻辑的
+					</p>
+
+					<pre><code class="language-markup">
+&lt;ul&gt;						
+	&lt;li x-each="lists as item" x-if="item.state" &gt; {{ item.content }} &lt;/li&gt;
+&lt;/ul&gt;	
+</code></pre>
+					
+					<p>
+						impex 不仅会生成列表，还会对each表达式进行监控，一旦lists发生了改变，impex 会自动重构列表，并且是优化过的。
+					</p>
+					<p>
+						现在，你可以做出选择了
+					</p>
+
 					<h2 id="components">
 						组件系统
 					</h2>
@@ -422,7 +463,7 @@ var debug = impex.render(document.getElementById('entry'),{
 	</a>
 	</footer>
 <p>
-	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
 </p>				</div>
 				<div class="col-md-3 col-xs-4 hidden-720" >
 					<nav class="doc-nav ">
@@ -436,6 +477,9 @@ var debug = impex.render(document.getElementById('entry'),{
 					<a href="#components">组件系统</a>
 									</li>
 								<li>
+					<a href="#atemplatelib">一个模版库？</a>
+									</li>
+								<li>
 					<a href="#databinding">数据绑定</a>
 									</li>
 							</ul>
@@ -447,6 +491,9 @@ var debug = impex.render(document.getElementById('entry'),{
 			<ul class="nav indent ">
 								<li>
 					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
 									</li>
 								<li>
 					<a href="#prepare-syntax">格式约定</a>
@@ -704,6 +751,7 @@ var debug = impex.render(document.getElementById('entry'),{
 		<script src="../js/impex.ext.directives.js"></script>
 		<script src="../js/impex.js"></script>
 		<script src="../js/guide.js"></script>
+		<script src="../js/demos.js"></script>
 		<script type="text/javascript">
 			if(document.getElementById('entry'))
 			var debug = impex.render(document.getElementById('entry'),{
@@ -711,6 +759,16 @@ var debug = impex.render(document.getElementById('entry'),{
 			});
 			if(document.getElementById('version'))
 			document.getElementById('version').innerHTML = impex.version.toString();
+
+			if($('.bucket')[0]){
+				window.demos = impex.render($('.bucket')[0],{
+					actived:'out',
+					output:'',
+					active:function(type){
+						this.actived = type;
+					}
+				});
+			}
 			
 
 			window.onload = function(){

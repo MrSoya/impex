@@ -73,6 +73,9 @@
 					<a href="#components">组件系统</a>
 									</li>
 								<li>
+					<a href="#atemplatelib">一个模版库？</a>
+									</li>
+								<li>
 					<a href="#databinding">数据绑定</a>
 									</li>
 							</ul>
@@ -84,6 +87,9 @@
 			<ul class="nav indent actived">
 								<li>
 					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
 									</li>
 								<li>
 					<a href="#prepare-syntax">格式约定</a>
@@ -383,6 +389,24 @@ impex
 						如果还有额外功能需求，可以引入<code>ext</code>包中的其他扩展。
 					</p>
 
+					<h2 id="prepare-rebuild">
+						重构
+					</h2>
+					<p>
+						impex.js 内置了一些常用指令，如果你对容量大小十分在意，不需要或者还需要内置其他东西，可以重新构建 impex.js。
+						impex.js 使用 [gulp](http://gulpjs.com) 来构建源码，而在这之前你需要安装了nodejs，然后只需要在 impex 工程目录执行如下命令
+							
+					</p>
+					<p>
+						安装依赖模块
+						<code>npm install</code>
+					</p>
+					<p>
+						执行gulp
+						<code>gulp</code>
+					</p>
+					看吧，这有多简单
+
 					<h2 id="prepare-syntax">
 						格式约定
 					</h2>
@@ -415,7 +439,7 @@ impex
 	</a>
 	</footer>
 <p>
-	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
 </p>				</div>
 				<div class="col-md-3 col-xs-4 hidden-720" >
 					<nav class="doc-nav ">
@@ -429,6 +453,9 @@ impex
 					<a href="#components">组件系统</a>
 									</li>
 								<li>
+					<a href="#atemplatelib">一个模版库？</a>
+									</li>
+								<li>
 					<a href="#databinding">数据绑定</a>
 									</li>
 							</ul>
@@ -440,6 +467,9 @@ impex
 			<ul class="nav indent actived">
 								<li>
 					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
 									</li>
 								<li>
 					<a href="#prepare-syntax">格式约定</a>
@@ -697,6 +727,7 @@ impex
 		<script src="../js/impex.ext.directives.js"></script>
 		<script src="../js/impex.js"></script>
 		<script src="../js/guide.js"></script>
+		<script src="../js/demos.js"></script>
 		<script type="text/javascript">
 			if(document.getElementById('entry'))
 			var debug = impex.render(document.getElementById('entry'),{
@@ -704,6 +735,16 @@ impex
 			});
 			if(document.getElementById('version'))
 			document.getElementById('version').innerHTML = impex.version.toString();
+
+			if($('.bucket')[0]){
+				window.demos = impex.render($('.bucket')[0],{
+					actived:'out',
+					output:'',
+					active:function(type){
+						this.actived = type;
+					}
+				});
+			}
 			
 
 			window.onload = function(){

@@ -17,7 +17,7 @@
 			<div class="row menu" >
 				<div class="logo ">
 					<div>
-						<a href="" onmouseover="moveIndicator(this)">
+						<a href="../" onmouseover="moveIndicator(this)">
 							<!--
 							<img src="images/logo.png">--> impex.js
 						</a>
@@ -40,36 +40,307 @@
 					</ul>
 				</div>
 				<div class="indicator" id="indicator"></div>
-				<button class="navbar-toggle show-720" x-mousedown="toggleMenu()" type="toggler">
+				<button class="navbar-toggle show-720" ontouchstart="toggleMenu(arguments[0])" type="toggler">
 					<i class="glyphicon glyphicon-menu-hamburger" type="toggler"></i>
 				</button>
 			</div>
 		</div>
 	</nav>
 
-	<div class="show-720 side-nav {{showSideNav?'show':''}}">
+	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
 			<li onmouseover="moveIndicator(this)" class="actived">
-				<a href="">教程</a>
+				<a href="../guide/">教程</a>
 			</li>
 			<li onmouseover="moveIndicator(this)" class="">
-				<a href="">API</a>
+				<a href="../api/">API</a>
 			</li>
 			<li onmouseover="moveIndicator(this)" class="">
-				<a href="">Demos</a>
+				<a href="../demos/">Demos</a>
 			</li>
 			<li onmouseover="moveIndicator(this)">
 				<a href="http://www.h5stars.com/t_impex.html">社区</a>
 			</li>
 			<li>
-				{{=CONTENT}}
-			</li>
+				<nav class="doc-nav ">
+	<ul class="sideNav ">
+				<li>
+			<a class="link actived" 
+				href="overview.html">
+				概述			</a>
+			<ul class="nav indent actived">
+								<li>
+					<a href="#components">组件系统</a>
+									</li>
+								<li>
+					<a href="#atemplatelib">一个模版库？</a>
+									</li>
+								<li>
+					<a href="#databinding">数据绑定</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="prepare.html">
+				准备			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
+									</li>
+								<li>
+					<a href="#prepare-syntax">格式约定</a>
+									</li>
+								<li>
+					<a href="#prepare-debug">调试</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="gettingstarted.html">
+				开始			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#helloImpex">Hello Impex</a>
+									</li>
+								<li>
+					<a href="#binding">双向绑定</a>
+									</li>
+								<li>
+					<a href="#interactive">交互</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="syntax.html">
+				语法			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#syntax-exp">表达式</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-exp-text">文本</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-html">HTML</a>
+						</li>
+												<li>
+							<a href="#syntax-exp-tmpl">模版</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-d">指令</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-d-each">each</a>
+						</li>
+												<li>
+							<a href="#syntax-d-event">事件</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#syntax-c">过滤器</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#syntax-c-chain">链式过滤</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="conditions.html">
+				条件渲染			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#conditions-if">x-if</a>
+									</li>
+								<li>
+					<a href="#conditions-show">x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-iforshow">x-if 还是 x-show</a>
+									</li>
+								<li>
+					<a href="#conditions-group">条件组</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#conditions-group-each">x-if-start</a>
+						</li>
+												<li>
+							<a href="#conditions-group-show">x-show-start</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="each.html">
+				列表渲染			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#each-each">x-each</a>
+									</li>
+								<li>
+					<a href="#each-each-start">x-each-start</a>
+									</li>
+								<li>
+					<a href="#each-object">对象</a>
+									</li>
+								<li>
+					<a href="#each-const">常量</a>
+									</li>
+								<li>
+					<a href="#each-perform">性能</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="form.html">
+				表单			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#form-text">text</a>
+									</li>
+								<li>
+					<a href="#form-checkbox">checkbox</a>
+									</li>
+								<li>
+					<a href="#form-radio">radio</a>
+									</li>
+								<li>
+					<a href="#form-select">select</a>
+									</li>
+								<li>
+					<a href="#form-textarea">textarea</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="component.html">
+				组件			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#component-use">使用</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#component-use-restrict">约束</a>
+						</li>
+												<li>
+							<a href="#component-use-exp">模板表达式</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-props">属性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-props-auto">自动绑定</a>
+						</li>
+												<li>
+							<a href="#component-props-bindprops">BINDPROPS</a>
+						</li>
+												<li>
+							<a href="#component-props-model">模型属性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#component-scope">作用域</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#component-scope-tree">组件树</a>
+						</li>
+												<li>
+							<a href="#component-scope-comm">组件通信</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="directive.html">
+				指令			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#directive-use">基础</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-use-register">注册</a>
+						</li>
+												<li>
+							<a href="#directive-use-features">特性</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#directive-adv">进阶</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#directive-adv-params">参数</a>
+						</li>
+												<li>
+							<a href="#directive-adv-observe">监控回调</a>
+						</li>
+												<li>
+							<a href="#directive-adv-inlineExp">内嵌表达式</a>
+						</li>
+											</ul>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="filter.html">
+				过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-register">注册</a>
+									</li>
+								<li>
+					<a href="#filter-params">参数和过滤链</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="service.html">
+				服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-register">注册</a>
+									</li>
+								<li>
+					<a href="#service-inject">注入</a>
+									</li>
+								<li>
+					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+			</ul>
+</nav>			</li>
 		</ul>
 	</div>
 
 	<section class="container">
 			<div class="row doc-panel">
-				<div class="col-md-1" ><!-- holder --></div>
+				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
 				<div class="col-md-8 col-xs-8 content"> 		
 					<h1 id="overview">概述</h1>
 					<p>
@@ -89,6 +360,41 @@
 					<p>
 						impex.js 为开发者提供了<b>DOM free</b>的能力。只要掌握js基本语法，就可以构建UI，无需再关心各种DOM问题，更加专注业务本身。
 					</p>
+
+					<h2 id="atemplatelib">
+						一个模版库？
+					</h2>
+					<p>
+						不！impex.js 绝不是一个模板库，传统模板库可能类似这样
+					</p>
+					
+						<pre><code class="language-markup">
+&lt;ul&gt;						
+	&lt;% for(item in lists){ %&gt;
+		&lt;% if(item.state){ %&gt;
+		&lt;li&gt; &lt;%= item.content %&gt; &lt;/li&gt;
+	&lt;% }} %&gt;
+&lt;/ul&gt;	
+</code></pre>
+					<p>
+						这个模版看起来就像是在写PHP或者JSP，虽然比拼字符串好多了，但是模版的代码逻辑和视图展示深度耦合，
+					当你检视视图逻辑时，会被代码打断，反之亦然。这会导致代码整体维护度降低，
+					甚至无法维护。那么来看看 impex.js 是如何处理相同逻辑的
+					</p>
+
+					<pre><code class="language-markup">
+&lt;ul&gt;						
+	&lt;li x-each="lists as item" x-if="item.state" &gt; {{ item.content }} &lt;/li&gt;
+&lt;/ul&gt;	
+</code></pre>
+					
+					<p>
+						impex 不仅会生成列表，还会对each表达式进行监控，一旦lists发生了改变，impex 会自动重构列表，并且是优化过的。
+					</p>
+					<p>
+						现在，你可以做出选择了
+					</p>
+
 					<h2 id="components">
 						组件系统
 					</h2>
@@ -155,13 +461,13 @@ var debug = impex.render(document.getElementById('entry'),{
 		<a class="next" href="prepare.html">
 		准备<i class="glyphicon glyphicon-menu-right"></i>
 	</a>
-</footer>
+	</footer>
 <p>
-	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a>Github 上 fork 此站点</a>
+	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
 </p>				</div>
-				<div class="col-md-3 col-xs-4" >
-					<nav class="doc-nav hidden-720">
-	<ul class="" id="affix">
+				<div class="col-md-3 col-xs-4 hidden-720" >
+					<nav class="doc-nav ">
+	<ul class="sideNav ">
 				<li>
 			<a class="link actived" 
 				href="overview.html">
@@ -169,6 +475,9 @@ var debug = impex.render(document.getElementById('entry'),{
 			<ul class="nav indent actived">
 								<li>
 					<a href="#components">组件系统</a>
+									</li>
+								<li>
+					<a href="#atemplatelib">一个模版库？</a>
 									</li>
 								<li>
 					<a href="#databinding">数据绑定</a>
@@ -182,6 +491,9 @@ var debug = impex.render(document.getElementById('entry'),{
 			<ul class="nav indent ">
 								<li>
 					<a href="#prepare-install">安装</a>
+									</li>
+								<li>
+					<a href="#prepare-rebuild">重构</a>
 									</li>
 								<li>
 					<a href="#prepare-syntax">格式约定</a>
@@ -439,6 +751,7 @@ var debug = impex.render(document.getElementById('entry'),{
 		<script src="../js/impex.ext.directives.js"></script>
 		<script src="../js/impex.js"></script>
 		<script src="../js/guide.js"></script>
+		<script src="../js/demos.js"></script>
 		<script type="text/javascript">
 			if(document.getElementById('entry'))
 			var debug = impex.render(document.getElementById('entry'),{
@@ -446,10 +759,20 @@ var debug = impex.render(document.getElementById('entry'),{
 			});
 			if(document.getElementById('version'))
 			document.getElementById('version').innerHTML = impex.version.toString();
+
+			if($('.bucket')[0]){
+				window.demos = impex.render($('.bucket')[0],{
+					actived:'out',
+					output:'',
+					active:function(type){
+						this.actived = type;
+					}
+				});
+			}
 			
 
 			window.onload = function(){
-				var affix = $('#affix');
+				var affix = $('section .doc-nav .sideNav');
 				affix.bind('mousewheel', function(event) {
 					event.preventDefault();
 					var scrollTop = this.scrollTop;
@@ -468,5 +791,3 @@ var debug = impex.render(document.getElementById('entry'),{
 	</body>
 </html>
 
-<br />
-<b>Warning</b>:  mkdir(): File exists in <b>D:\xampp\htdocs\impex\head-doc.html</b> on line <b>6</b><br />
