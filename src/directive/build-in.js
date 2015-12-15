@@ -4,6 +4,13 @@
 !function(impex){
     ///////////////////// 视图控制指令 /////////////////////
     /**
+     * impex会忽略指令所在的视图，视图不会被impex解析
+     * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
+     */
+    impex.directive('ignore',{
+        $final:true
+    });
+    /**
      * 绑定视图属性，并用表达式的值设置属性
      * <br/>使用方式：<img x-bind:src="exp">
      */
