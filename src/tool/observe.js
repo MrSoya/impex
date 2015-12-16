@@ -96,7 +96,7 @@
 						
 						changes.push(change);
 					}
-					if(newVer[prop] != oldVer[prop]){
+					if(newVer[prop] !== oldVer[prop]){
 						var change = {};
 						change.name = prop;
 						change.oldValue = oldVer[prop];
@@ -135,7 +135,6 @@
 				var oldVer = obj.oldVer,
 					newVer = obj.newVer,
 					handler = obj.handler;
-				var longer = oldVer.length > newVer.length?oldVer:newVer;
 
 				var change = null;
 

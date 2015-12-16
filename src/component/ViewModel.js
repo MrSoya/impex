@@ -3,7 +3,7 @@
  * @class 
  */
 function ViewModel () {
-}
+};
 ViewModel.prototype = {
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>

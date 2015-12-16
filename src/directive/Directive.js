@@ -87,7 +87,7 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
-				Builder.buildExpModel(this.$parent,varObj,varStr,aon);
+				Builder.buildExpModel(this.$parent,varObj,aon);
 			}
 			
 			var rs = Renderer.evalExp(this.$parent,expObj);

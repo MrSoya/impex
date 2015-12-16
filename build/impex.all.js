@@ -260,7 +260,7 @@ var Util = new function () {
 						
 						changes.push(change);
 					}
-					if(newVer[prop] != oldVer[prop]){
+					if(newVer[prop] !== oldVer[prop]){
 						var change = {};
 						change.name = prop;
 						change.oldValue = oldVer[prop];
@@ -299,7 +299,6 @@ var Util = new function () {
 				var oldVer = obj.oldVer,
 					newVer = obj.newVer,
 					handler = obj.handler;
-				var longer = oldVer.length > newVer.length?oldVer:newVer;
 
 				var change = null;
 
@@ -732,8 +731,8 @@ var Scanner = new function() {
 		}
 	}
 	function queryAllTextNode(node,textAry){
-		if(node.tagName == 'SCRIPT')return;
-		if(node.attributes || node.nodeType == 11){
+		if(node.tagName === 'SCRIPT')return;
+		if(node.attributes || node.nodeType === 11){
 			if(node.childNodes.length>0){
 				for(var i=0,l=node.childNodes.length;i<l;i++){
 					queryAllTextNode(node.childNodes[i],textAry);
@@ -795,9 +794,9 @@ var Scanner = new function() {
 	//2. 如果发现是指令，记录，查看是否final，如果是，中断
 	//3. 如果发现是表达式，记录
 	function scan(node,component){
-		if(node.tagName == 'SCRIPT')return;
+		if(node.tagName === 'SCRIPT')return;
 
-		if(node.attributes || node.nodeType == 11){
+		if(node.attributes || node.nodeType === 11){
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
 				//组件
@@ -817,7 +816,6 @@ var Scanner = new function() {
 				}
 
 				var atts = node.attributes;
-				var subScope;
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
@@ -880,7 +878,7 @@ var Scanner = new function() {
 					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
-		}else if(node.nodeType == 3){
+		}else if(node.nodeType === 3){
 			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
 			//文本节点处理
 			recordExpNode(node.nodeValue,node,component);
@@ -1003,7 +1001,7 @@ var Builder = new function() {
 					var varObj = varTree[varStr];
 
 					//监控变量
-					buildExpModel(comp,varObj,varStr,expNode);
+					buildExpModel(comp,varObj,expNode);
 				}
 			}
 		}
@@ -1026,18 +1024,15 @@ var Builder = new function() {
 		}
 	}
 
-	
-
- 	function buildExpModel(ctrlScope,varObj,varStr,expNode){
+ 	function buildExpModel(ctrlScope,varObj,expNode){
  		for(var subV in varObj.subVars){
  			var subVar = varObj.subVars[subV];
- 			buildExpModel(ctrlScope,subVar,subV,expNode);
+ 			buildExpModel(ctrlScope,subVar,expNode);
  		}
 
  		var prop = walkPropTree(ctrlScope.$__expPropRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
- 			var renderTag = i === varObj.segments.length?true:false;
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
  		}
  		
@@ -1126,7 +1121,6 @@ var Builder = new function() {
 			pc.push(k);
 			observerProp(model[k],pc,component);
 		}
-        
 	}
 
 	function changeHandler(changes){
@@ -1311,7 +1305,7 @@ var Renderer = new function() {
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
 				val = cache[expNode.origin].val;
 			}else{
-				val = calcExp(expNode.component,expNode.origin,expNode.expMap,expNode.toHTML);
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
 				cache[expNode.origin] = {
 					comp:expNode.component,
 					val:val
@@ -1353,7 +1347,7 @@ var Renderer = new function() {
 	}
 
 	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExp(component,origin,expMap,toHTML){
+	function calcExp(component,origin,expMap){
 		//循环获取每个表达式的值
 		var map = {};
 		for(var exp in expMap){
@@ -1371,7 +1365,7 @@ var Renderer = new function() {
 				}
 			}
 
-			map[exp] = rs==undefined?'':rs;
+			map[exp] = rs===undefined?'':rs;
 		}
 
 		//替换原始串中的表达式
@@ -1427,7 +1421,7 @@ var Renderer = new function() {
 	}
 
 	function keyWordsMapping(str,component){
-        if(str == 'this'){
+        if(str === 'this'){
             return component.__getPath();
         }
     }
@@ -1504,7 +1498,7 @@ var Renderer = new function() {
 	}
 
 	function renderHTML(expNode,val,node,component){
-		if(expNode.__lastVal == val)return;
+		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
 		var nView = new View([node]);
 		if(Util.isUndefined(expNode.__lastVal)){
@@ -1544,7 +1538,7 @@ var Renderer = new function() {
  * @class 
  */
 function ViewModel () {
-}
+};
 ViewModel.prototype = {
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
@@ -1672,14 +1666,14 @@ function Component (view) {
 	 * 组件被销毁时调用
 	 */
 	this.onDestroy;
-}
+};
 Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
 	destroyed : 'destroyed',
 	suspend : 'suspend'
-}
+};
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
 	/**
@@ -1715,7 +1709,7 @@ Util.ext(Component.prototype,{
 				var matchAll = true;
 				if(conditions)
 					for(var k in conditions){
-						if(comp[k] != conditions[k]){
+						if(comp[k] !== conditions[k]){
 							matchAll = false;
 							break;
 						}
@@ -1741,12 +1735,12 @@ Util.ext(Component.prototype,{
 		name = name.toLowerCase();
 		for(var i=this.$__directives.length;i--;){
 			var d = this.$__directives[i];
-			if(name != '*' && d.$name != name)continue;
+			if(name !== '*' && d.$name !== name)continue;
 
 			var matchAll = true;
 			if(conditions)
 				for(var k in conditions){
-					if(d[k] != conditions[k]){
+					if(d[k] !== conditions[k]){
 						matchAll = false;
 						break;
 					}
@@ -1775,7 +1769,7 @@ Util.ext(Component.prototype,{
 		var varObj = expObj.varTree[keys[0]];
 		var watch = new Watch(cbk,this,varObj.segments);
 		//监控变量
-		Builder.buildExpModel(this,varObj,keys[0],watch);
+		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
 	},
@@ -2489,7 +2483,7 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
-				Builder.buildExpModel(this.$parent,varObj,varStr,aon);
+				Builder.buildExpModel(this.$parent,varObj,aon);
 			}
 			
 			var rs = Renderer.evalExp(this.$parent,expObj);
@@ -2532,7 +2526,7 @@ function Filter (component) {
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
 	 */
 	this.onCreate;
-}
+};
 Filter.prototype = {
 	/**
 	 * 转变函数，该函数是实际进行转变的入口
@@ -2574,7 +2568,7 @@ function Factory(clazz) {
 	this.instances = [];
 
 	this.baseClass = clazz;//基类
-}
+};
 Factory.prototype = {
 	/**
 	 * 注册子类
@@ -2887,7 +2881,7 @@ var ServiceFactory = new _ServiceFactory();
 			p = p.$parent;
 		}
 		var info = '';
-		if(comp == lastComp){
+		if(comp === lastComp){
 			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
 		}else{
 			var props = [];
@@ -3066,12 +3060,12 @@ var ServiceFactory = new _ServiceFactory();
 			var ks = Object.keys(this.__components);
 			for(var i=ks.length;i--;){
 				var comp = this.__components[ks[i]];
-				if(name != '*' && comp.$name != name)continue;
+				if(name !== '*' && comp.$name !== name)continue;
 
 				var matchAll = true;
 				if(conditions)
 					for(var k in conditions){
-						if(comp[k] != conditions[k]){
+						if(comp[k] !== conditions[k]){
 							matchAll = false;
 							break;
 						}

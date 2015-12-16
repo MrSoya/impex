@@ -27,7 +27,7 @@
 			p = p.$parent;
 		}
 		var info = '';
-		if(comp == lastComp){
+		if(comp === lastComp){
 			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
 		}else{
 			var props = [];
@@ -206,12 +206,12 @@
 			var ks = Object.keys(this.__components);
 			for(var i=ks.length;i--;){
 				var comp = this.__components[ks[i]];
-				if(name != '*' && comp.$name != name)continue;
+				if(name !== '*' && comp.$name !== name)continue;
 
 				var matchAll = true;
 				if(conditions)
 					for(var k in conditions){
-						if(comp[k] != conditions[k]){
+						if(comp[k] !== conditions[k]){
 							matchAll = false;
 							break;
 						}

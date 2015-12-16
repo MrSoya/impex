@@ -17,7 +17,7 @@ var Builder = new function() {
 					var varObj = varTree[varStr];
 
 					//监控变量
-					buildExpModel(comp,varObj,varStr,expNode);
+					buildExpModel(comp,varObj,expNode);
 				}
 			}
 		}
@@ -40,18 +40,15 @@ var Builder = new function() {
 		}
 	}
 
-	
-
- 	function buildExpModel(ctrlScope,varObj,varStr,expNode){
+ 	function buildExpModel(ctrlScope,varObj,expNode){
  		for(var subV in varObj.subVars){
  			var subVar = varObj.subVars[subV];
- 			buildExpModel(ctrlScope,subVar,subV,expNode);
+ 			buildExpModel(ctrlScope,subVar,expNode);
  		}
 
  		var prop = walkPropTree(ctrlScope.$__expPropRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
- 			var renderTag = i === varObj.segments.length?true:false;
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
  		}
  		
@@ -140,7 +137,6 @@ var Builder = new function() {
 			pc.push(k);
 			observerProp(model[k],pc,component);
 		}
-        
 	}
 
 	function changeHandler(changes){

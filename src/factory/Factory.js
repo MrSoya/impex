@@ -6,7 +6,7 @@ function Factory(clazz) {
 	this.instances = [];
 
 	this.baseClass = clazz;//基类
-}
+};
 Factory.prototype = {
 	/**
 	 * 注册子类

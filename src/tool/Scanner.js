@@ -38,8 +38,8 @@ var Scanner = new function() {
 		}
 	}
 	function queryAllTextNode(node,textAry){
-		if(node.tagName == 'SCRIPT')return;
-		if(node.attributes || node.nodeType == 11){
+		if(node.tagName === 'SCRIPT')return;
+		if(node.attributes || node.nodeType === 11){
 			if(node.childNodes.length>0){
 				for(var i=0,l=node.childNodes.length;i<l;i++){
 					queryAllTextNode(node.childNodes[i],textAry);
@@ -101,9 +101,9 @@ var Scanner = new function() {
 	//2. 如果发现是指令，记录，查看是否final，如果是，中断
 	//3. 如果发现是表达式，记录
 	function scan(node,component){
-		if(node.tagName == 'SCRIPT')return;
+		if(node.tagName === 'SCRIPT')return;
 
-		if(node.attributes || node.nodeType == 11){
+		if(node.attributes || node.nodeType === 11){
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
 				//组件
@@ -123,7 +123,6 @@ var Scanner = new function() {
 				}
 
 				var atts = node.attributes;
-				var subScope;
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var c = atts[i].name.replace(CMD_PREFIX,'');
@@ -186,7 +185,7 @@ var Scanner = new function() {
 					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
-		}else if(node.nodeType == 3){
+		}else if(node.nodeType === 3){
 			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
 			//文本节点处理
 			recordExpNode(node.nodeValue,node,component);

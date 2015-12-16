@@ -26,7 +26,7 @@ var Renderer = new function() {
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
 				val = cache[expNode.origin].val;
 			}else{
-				val = calcExp(expNode.component,expNode.origin,expNode.expMap,expNode.toHTML);
+				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
 				cache[expNode.origin] = {
 					comp:expNode.component,
 					val:val
@@ -68,7 +68,7 @@ var Renderer = new function() {
 	}
 
 	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExp(component,origin,expMap,toHTML){
+	function calcExp(component,origin,expMap){
 		//循环获取每个表达式的值
 		var map = {};
 		for(var exp in expMap){
@@ -86,7 +86,7 @@ var Renderer = new function() {
 				}
 			}
 
-			map[exp] = rs==undefined?'':rs;
+			map[exp] = rs===undefined?'':rs;
 		}
 
 		//替换原始串中的表达式
@@ -142,7 +142,7 @@ var Renderer = new function() {
 	}
 
 	function keyWordsMapping(str,component){
-        if(str == 'this'){
+        if(str === 'this'){
             return component.__getPath();
         }
     }
@@ -219,7 +219,7 @@ var Renderer = new function() {
 	}
 
 	function renderHTML(expNode,val,node,component){
-		if(expNode.__lastVal == val)return;
+		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
 		var nView = new View([node]);
 		if(Util.isUndefined(expNode.__lastVal)){

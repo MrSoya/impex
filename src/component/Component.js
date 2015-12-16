@@ -87,14 +87,14 @@ function Component (view) {
 	 * 组件被销毁时调用
 	 */
 	this.onDestroy;
-}
+};
 Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
 	destroyed : 'destroyed',
 	suspend : 'suspend'
-}
+};
 Util.inherits(Component,ViewModel);
 Util.ext(Component.prototype,{
 	/**
@@ -130,7 +130,7 @@ Util.ext(Component.prototype,{
 				var matchAll = true;
 				if(conditions)
 					for(var k in conditions){
-						if(comp[k] != conditions[k]){
+						if(comp[k] !== conditions[k]){
 							matchAll = false;
 							break;
 						}
@@ -156,12 +156,12 @@ Util.ext(Component.prototype,{
 		name = name.toLowerCase();
 		for(var i=this.$__directives.length;i--;){
 			var d = this.$__directives[i];
-			if(name != '*' && d.$name != name)continue;
+			if(name !== '*' && d.$name !== name)continue;
 
 			var matchAll = true;
 			if(conditions)
 				for(var k in conditions){
-					if(d[k] != conditions[k]){
+					if(d[k] !== conditions[k]){
 						matchAll = false;
 						break;
 					}
@@ -190,7 +190,7 @@ Util.ext(Component.prototype,{
 		var varObj = expObj.varTree[keys[0]];
 		var watch = new Watch(cbk,this,varObj.segments);
 		//监控变量
-		Builder.buildExpModel(this,varObj,keys[0],watch);
+		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
 	},

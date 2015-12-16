@@ -27,7 +27,7 @@ function Filter (component) {
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
 	 */
 	this.onCreate;
-}
+};
 Filter.prototype = {
 	/**
 	 * 转变函数，该函数是实际进行转变的入口
