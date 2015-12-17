@@ -382,8 +382,11 @@
 										<li>Default: <code>false</code></li>
 								<li>Usage: 
 					<p>
-											<pre><code class="language-javascript">impex.config({debug:true})</code></pre>
-											<p>开启debug模式后，impex会输出警告和调试信息</p>
+											<pre><code class="language-javascript">impex.config({logger:imLog})</code></pre>
+											<p>新的调试使用日志系统，可以设置更精确的日志级别，并且可以自定义日志器</p>
+											<p>
+							<blockquote class='tip'>0.7.0开始的日志系统必须依赖外部日志器，因为impex核心包不再包含日志代码。在impex的扩展包中有一个默认的日志器</blockquote>
+						</p>
 											<p>
 							<blockquote class='warning'>这可能会导致性能降低 ！</blockquote>
 						</p>

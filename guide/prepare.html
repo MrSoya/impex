@@ -424,8 +424,16 @@ impex
 						调试
 					</h2>
 					<p>
-						impex.js 的调试非常简单，只要打开浏览器控制台就行，impex.js 的调试就开始于此。为了调试 impex.js 需要开启<code>debug</code>选项
-						<pre><code class="language-javascript">impex.config({debug:true})</code></pre>
+						impex.js 的调试非常简单但十分强大，只要打开浏览器控制台就行，impex.js 的调试就开始于此。
+						为了调试 impex.js 需要设置一个日志器<code>logger</code>选项
+						<pre><code class="language-javascript">//设置日志器
+imLog.level = 4;//默认1
+impex.config({logger:imLog})</code></pre>
+					</p>
+					<p>
+						<blockquote class='tip'>
+						为了减小核心包容量，日志器是作为扩展存在。impex提供了默认的日志器<code>impex.ext.console.js</code>。
+						</blockquote>
 					</p>
 					<p>
 						当你再次运行 impex.js 时，控制台会输出警告、以及调试信息，这些信息会帮助你更好的编写 impex.js 应用程序
