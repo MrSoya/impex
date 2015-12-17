@@ -82,7 +82,7 @@ var Scanner = new function() {
             }
         }
         if(startTag){
-            impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+            LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
         }
 	}
 
@@ -182,7 +182,7 @@ var Scanner = new function() {
 				}
 
 				if(startTag){
-					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+					LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
 		}else if(node.nodeType === 3){

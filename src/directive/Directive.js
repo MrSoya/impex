@@ -78,6 +78,12 @@ Util.ext(Directive.prototype,{
 		this.$view.elements[0].setAttribute(this.$name,attrVal);
 		this.$value = attrVal;
 
+		LOGGER.log(this,'inited');
+
+		this.onInit && this.onInit();
+
+		this.$__state = Component.state.inited;
+
 		//do observe
 		if(this.observe){
 			var expObj = lexer(attrVal);
@@ -87,17 +93,12 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
+				if(this.$parent)
 				Builder.buildExpModel(this.$parent,varObj,aon);
 			}
 			
 			var rs = Renderer.evalExp(this.$parent,expObj);
 			this.observe(rs);
 		}
-
-		compDebug(this,'inited');
-
-		this.onInit && this.onInit();
-
-		this.$__state = Component.state.inited;
 	}
 });

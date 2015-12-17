@@ -1,4 +1,24 @@
 # Change Log
+## Version 0.7.0 - 2015/12/17
+### 新增
+* impex.config 支持logger属性
+* 扩展日志器 impex.ext.console ，并可用0-4来精确控制日志级别
+* 新增调试点，排错更方便
+
+### 更新
+* x-if指令隐藏的视图不会再响应数据绑定，直到恢复显示
+* 全新日志系统，核心包不再包含日志器，减小核心包容量
+* 使用日志必须依赖扩展日志器，具体方法见demo
+
+### bug修复
+* Component.suspend恢复时没有设置parent属性
+* 创建组件时判断内置函数覆盖的错误
+
+### 移除(重要！)
+* impex.config 不在支持debug属性
+* 核心包内的console
+
+
 ## Version 0.6.0 - 2015/12/11
 ### 新增
 * impex.filter 过滤器定义

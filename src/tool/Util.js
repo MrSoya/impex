@@ -116,10 +116,10 @@ var Util = new function () {
     }
 
     function loadError(){
-        impex.console.error('can not fetch remote data of : '+this.url);
+        LOGGER.error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        impex.console.error('load timeout : '+this.url);
+        LOGGER.error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native

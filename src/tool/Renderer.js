@@ -16,11 +16,15 @@ var Renderer = new function() {
  		}
 	}
 
+	var body = document.body;
 	//表达式节点渲染
 	function renderExpNode(expNodes){
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
+			if(!body.contains(expNode.node) && !expNode.toHTML){
+				continue;
+			}
 
 			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
@@ -104,7 +108,7 @@ var Renderer = new function() {
 		try{
 			rs = new Function('return '+evalExp)();
 		}catch(e){
-			impex.console.debug(e.message + ' when eval "' + evalExp+'"');
+			LOGGER.debug(e.message + ' when eval "' + evalExp+'"');
 		}
 		
 		return rs;

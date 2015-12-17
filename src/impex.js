@@ -14,40 +14,14 @@
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
-	var DEBUG = false;
+	var LOGGER = new function(){
+	    this.log = function(){}
+	    this.debug = function(){}
+	    this.error = function(){}
+	    this.warn = function(){}
+	};
 
 	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
-
-	var lastComp;
-	function compDebug(comp,state){
-		var indent = '';
-		var p = comp.$parent;
-		while(p){
-			indent += '=';
-			p = p.$parent;
-		}
-		var info = '';
-		if(comp === lastComp){
-			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
-		}else{
-			var props = [];
-			props.push('id:'+comp.$__id);
-			if(comp.$name)
-				props.push('name:'+comp.$name);
-			var viewName = comp.$view?comp.$view.elements[0].tagName:'';
-			props.push('view:'+viewName);
-			if(comp.$parent){
-				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
-			}
-
-			var type = comp instanceof Directive?'Directive':'Component';
-
-			info = type+'{'+ props.join(',') +'} ';
-		}
-		lastComp = comp;
-		
-		impex.console.debug(indent + (indent?'> ':'') + info + state);
-	}
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -67,7 +41,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,6,0],
+	        v:[0,7,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -84,7 +58,8 @@
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param  {boolean} cfg.debug 是否开启debug，默认false
+		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口，
+		 * 并至少实现 0 none 1 error 2 warn 3 debug 4 log 5个级别控制
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
@@ -94,7 +69,12 @@
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
-			DEBUG = cfg.debug;
+			LOGGER = cfg.logger || new function(){
+			    this.log = function(){}
+			    this.debug = function(){}
+			    this.error = function(){}
+			    this.warn = function(){}
+			};
 		};
 
 		/**
@@ -167,7 +147,7 @@
 		this.render = function(element,model,services){
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
-				impex.console.warn('element ['+name+'] has been rendered');
+				LOGGER.warn('element ['+name+'] has been rendered');
 				return;
 			}
 			var comp = ComponentFactory.newInstanceOf(name,element);

@@ -183,7 +183,7 @@ Util.ext(Component.prototype,{
 		var keys = Object.keys(expObj.varTree);
 		if(keys.length < 1)return;
 		if(keys.length > 1){
-			impex.console.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
+			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
 			return;
 		}
 		
@@ -222,7 +222,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target.elements[0]);
+		var instance = ComponentFactory.newInstance(tmpl,target && target.elements[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -253,7 +253,7 @@ Util.ext(Component.prototype,{
 	__init:function(tmplStr){
 		Scanner.scan(this.$view,this);
 
-		compDebug(this,'inited');
+		LOGGER.log(this,'inited');
 		
 		var rs = null;
 		this.onInit && (rs = this.onInit(tmplStr));
@@ -275,18 +275,18 @@ Util.ext(Component.prototype,{
 
 		this.$view.__display();
 		
-		Renderer.render(this);
-
 		if(this.$__suspendParent){
-			this.$parent = this.$__suspendParent;
+			this.$__suspendParent.add(this);
 			this.$__suspendParent = null;
 		}
+
+		Renderer.render(this);
 
 		this.$__state = Component.state.displayed;
 
 		Builder.build(this);
 
-		compDebug(this,'displayed');
+		LOGGER.log(this,'displayed');
 
 		this.onDisplay && this.onDisplay();
 	},
@@ -296,7 +296,7 @@ Util.ext(Component.prototype,{
 	destroy:function(){
 		if(this.$__state === Component.state.destroyed)return;
 
-		compDebug(this,'destroy');
+		LOGGER.log(this,'destroy');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -330,9 +330,9 @@ Util.ext(Component.prototype,{
 	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(this.$__state !== Component.state.displayed)return;
+		if(!(this instanceof Directive) && this.$__state !== Component.state.displayed)return;
 
-		compDebug(this,'suspend');
+		LOGGER.log(this,'suspend');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);

@@ -25,7 +25,7 @@ View.prototype = {
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var els = DOMViewProvider.compile(compileStr);
 		if(!els || els.length < 1){
-			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.elements = els;
@@ -38,7 +38,7 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
+		if(!this.__target ||!this.__target.parentNode || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
 
 		var fragment = null;
 		if(this.elements.length > 1){
@@ -83,6 +83,7 @@ View.prototype = {
 		}
 	},
 	__suspend:function(component,hook){
+		if(!this.elements[0].parentNode)return;
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
 			this.elements[0].parentNode.insertBefore(this.__target,this.element);
@@ -124,7 +125,12 @@ View.prototype = {
 				tmpExpOutside = tmpExp;
 			}
 			
-			fnOutside(e);
+			try{
+				fnOutside(e);
+			}catch(error){
+				LOGGER.debug(error.message + 'eval error on event '+type+'('+tmp +')');
+			}
+			
 		};
 		for(var j=this.elements.length;j--;){
 			var el = this.elements[j];

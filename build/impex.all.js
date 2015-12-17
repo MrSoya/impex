@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-12-11
+ * last build: 2015-12-17
  */
 
 !function (global) {
@@ -128,10 +128,10 @@ var Util = new function () {
     }
 
     function loadError(){
-        impex.console.error('can not fetch remote data of : '+this.url);
+        LOGGER.error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        impex.console.error('load timeout : '+this.url);
+        LOGGER.error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
@@ -775,7 +775,7 @@ var Scanner = new function() {
             }
         }
         if(startTag){
-            impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+            LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
         }
 	}
 
@@ -875,7 +875,7 @@ var Scanner = new function() {
 				}
 
 				if(startTag){
-					impex.console.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+					LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
 				}
 			}
 		}else if(node.nodeType === 3){
@@ -1249,7 +1249,7 @@ var Builder = new function() {
 							nv = new Function("$var","return "+findStr)(newVal);
 							ov = new Function("$var","return "+findStr)(oldVal);
 						}catch(e){
-							impex.console.debug('error on parse watch params');
+							LOGGER.debug('error on parse watch params');
 							nv = null;
 						}
 					}
@@ -1295,11 +1295,15 @@ var Renderer = new function() {
  		}
 	}
 
+	var body = document.body;
 	//表达式节点渲染
 	function renderExpNode(expNodes){
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
+			if(!body.contains(expNode.node) && !expNode.toHTML){
+				continue;
+			}
 
 			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
@@ -1383,7 +1387,7 @@ var Renderer = new function() {
 		try{
 			rs = new Function('return '+evalExp)();
 		}catch(e){
-			impex.console.debug(e.message + ' when eval "' + evalExp+'"');
+			LOGGER.debug(e.message + ' when eval "' + evalExp+'"');
 		}
 		
 		return rs;
@@ -1558,11 +1562,21 @@ ViewModel.prototype = {
 			if(Util.isString(val)){
 				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
 			}
-			//fix \r\n on IE8
-			eval(evalStr + '= '+ val +'');
+			try{
+				//fix \r\n on IE8
+				eval(evalStr + '= '+ val);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
+			}
+			
 			return this;
 		}else{
-			return eval(evalStr);
+			try{
+				return eval(evalStr);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
+			}
+			
 		}
 	},
 	/**
@@ -1762,7 +1776,7 @@ Util.ext(Component.prototype,{
 		var keys = Object.keys(expObj.varTree);
 		if(keys.length < 1)return;
 		if(keys.length > 1){
-			impex.console.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
+			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
 			return;
 		}
 		
@@ -1801,7 +1815,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target.elements[0]);
+		var instance = ComponentFactory.newInstance(tmpl,target && target.elements[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1832,7 +1846,7 @@ Util.ext(Component.prototype,{
 	__init:function(tmplStr){
 		Scanner.scan(this.$view,this);
 
-		compDebug(this,'inited');
+		LOGGER.log(this,'inited');
 		
 		var rs = null;
 		this.onInit && (rs = this.onInit(tmplStr));
@@ -1854,18 +1868,18 @@ Util.ext(Component.prototype,{
 
 		this.$view.__display();
 		
-		Renderer.render(this);
-
 		if(this.$__suspendParent){
-			this.$parent = this.$__suspendParent;
+			this.$__suspendParent.add(this);
 			this.$__suspendParent = null;
 		}
+
+		Renderer.render(this);
 
 		this.$__state = Component.state.displayed;
 
 		Builder.build(this);
 
-		compDebug(this,'displayed');
+		LOGGER.log(this,'displayed');
 
 		this.onDisplay && this.onDisplay();
 	},
@@ -1875,7 +1889,7 @@ Util.ext(Component.prototype,{
 	destroy:function(){
 		if(this.$__state === Component.state.destroyed)return;
 
-		compDebug(this,'destroy');
+		LOGGER.log(this,'destroy');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -1909,9 +1923,9 @@ Util.ext(Component.prototype,{
 	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(this.$__state !== Component.state.displayed)return;
+		if(!(this instanceof Directive) && this.$__state !== Component.state.displayed)return;
 
-		compDebug(this,'suspend');
+		LOGGER.log(this,'suspend');
 
 		if(this.$parent){
 			var i = this.$parent.$__components.indexOf(this);
@@ -1960,7 +1974,7 @@ View.prototype = {
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var els = DOMViewProvider.compile(compileStr);
 		if(!els || els.length < 1){
-			impex.console.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.elements = els;
@@ -1973,7 +1987,7 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
+		if(!this.__target ||!this.__target.parentNode || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
 
 		var fragment = null;
 		if(this.elements.length > 1){
@@ -2018,6 +2032,7 @@ View.prototype = {
 		}
 	},
 	__suspend:function(component,hook){
+		if(!this.elements[0].parentNode)return;
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
 			this.elements[0].parentNode.insertBefore(this.__target,this.element);
@@ -2059,7 +2074,12 @@ View.prototype = {
 				tmpExpOutside = tmpExp;
 			}
 			
-			fnOutside(e);
+			try{
+				fnOutside(e);
+			}catch(error){
+				LOGGER.debug(error.message + 'eval error on event '+type+'('+tmp +')');
+			}
+			
 		};
 		for(var j=this.elements.length;j--;){
 			var el = this.elements[j];
@@ -2355,6 +2375,7 @@ var ViewManager = new function (){
 				fragment.appendChild(newView.elements[i]);
 			}
 		}
+		if(p)
 		p.insertBefore(fragment,targetV);
 	}
 
@@ -2474,6 +2495,12 @@ Util.ext(Directive.prototype,{
 		this.$view.elements[0].setAttribute(this.$name,attrVal);
 		this.$value = attrVal;
 
+		LOGGER.log(this,'inited');
+
+		this.onInit && this.onInit();
+
+		this.$__state = Component.state.inited;
+
 		//do observe
 		if(this.observe){
 			var expObj = lexer(attrVal);
@@ -2483,18 +2510,13 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
+				if(this.$parent)
 				Builder.buildExpModel(this.$parent,varObj,aon);
 			}
 			
 			var rs = Renderer.evalExp(this.$parent,expObj);
 			this.observe(rs);
 		}
-
-		compDebug(this,'inited');
-
-		this.onInit && this.onInit();
-
-		this.$__state = Component.state.inited;
 	}
 });
 /**
@@ -2577,11 +2599,13 @@ Factory.prototype = {
 		type = type.toLowerCase();
 
 		//keywords check
-		var ks = Object.keys(model);
-		for(var i=BUILD_IN_PROPS.length;i--;){
-			if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
-				impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
-				return;
+		if(this.baseClass === Component || this.baseClass === Directive ){
+			var ks = Object.keys(model);
+			for(var i=BUILD_IN_PROPS.length;i--;){
+				if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
+					LOGGER.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
+					return;
+				}
 			}
 		}
 
@@ -2648,7 +2672,7 @@ Util.ext(_ComponentFactory.prototype,{
 			var ks = Object.keys(props);
 			for(var i=BUILD_IN_PROPS.length;i--;){
 				if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
-					impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
+					LOGGER.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
 					return;
 				}
 			}
@@ -2868,40 +2892,14 @@ var ServiceFactory = new _ServiceFactory();
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
-	var DEBUG = false;
+	var LOGGER = new function(){
+	    this.log = function(){}
+	    this.debug = function(){}
+	    this.error = function(){}
+	    this.warn = function(){}
+	};
 
 	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
-
-	var lastComp;
-	function compDebug(comp,state){
-		var indent = '';
-		var p = comp.$parent;
-		while(p){
-			indent += '=';
-			p = p.$parent;
-		}
-		var info = '';
-		if(comp === lastComp){
-			info = '↑↑↑ ↑↑↑ ↑↑↑ ';
-		}else{
-			var props = [];
-			props.push('id:'+comp.$__id);
-			if(comp.$name)
-				props.push('name:'+comp.$name);
-			var viewName = comp.$view?comp.$view.elements[0].tagName:'';
-			props.push('view:'+viewName);
-			if(comp.$parent){
-				props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
-			}
-
-			var type = comp instanceof Directive?'Directive':'Component';
-
-			info = type+'{'+ props.join(',') +'} ';
-		}
-		lastComp = comp;
-		
-		impex.console.debug(indent + (indent?'> ':'') + info + state);
-	}
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -2921,7 +2919,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,6,0],
+	        v:[0,7,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2938,7 +2936,8 @@ var ServiceFactory = new _ServiceFactory();
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param  {boolean} cfg.debug 是否开启debug，默认false
+		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口，
+		 * 并至少实现 0 none 1 error 2 warn 3 debug 4 log 5个级别控制
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
@@ -2948,7 +2947,12 @@ var ServiceFactory = new _ServiceFactory();
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
-			DEBUG = cfg.debug;
+			LOGGER = cfg.logger || new function(){
+			    this.log = function(){}
+			    this.debug = function(){}
+			    this.error = function(){}
+			    this.warn = function(){}
+			};
 		};
 
 		/**
@@ -3021,7 +3025,7 @@ var ServiceFactory = new _ServiceFactory();
 		this.render = function(element,model,services){
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
-				impex.console.warn('element ['+name+'] has been rendered');
+				LOGGER.warn('element ['+name+'] has been rendered');
 				return;
 			}
 			var comp = ComponentFactory.newInstanceOf(name,element);
@@ -3078,32 +3082,6 @@ var ServiceFactory = new _ServiceFactory();
 			return rs;
 		}
 	}
-
-/**
- * impex日志系统
- */
-impex.console = new function(){
-	this.warn = function(txt){
-        if(!DEBUG)return;
-        console.warn('impex warn :: ' + txt);
-    }
-    this.error = function(txt){
-        console.error('impex error :: ' + txt);
-    }
-    this.debug = function(txt){
-		if(!DEBUG)return;
-        console.debug('impex debug :: ' + txt);
-    }
-}
-
-//polyfill
-self.console = self.console||new function(){
-    this.log = function(){}
-    this.info = function(){}
-    this.debug = function(){}
-    this.error = function(){}
-    this.warn = function(){}
-}
 /**
  * 内建服务，提供基础操作接口
  */
@@ -3169,7 +3147,7 @@ impex.service('ComponentManager',new function(){
     impex.directive('bind',{
         onInit:function(){
             if(!this.$params || this.$params.length < 1){
-                impex.console.warn('at least one attribute be binded');
+                LOGGER.warn('at least one attribute be binded');
             }
         },
         observe : function(rs){
@@ -3239,14 +3217,12 @@ impex.service('ComponentManager',new function(){
      * 效果与show相同，但是会移除视图
      * <br/>使用方式：<div x-if="exp"></div>
      */
-    impex.directive('if',new function(){
-        this.placeholder = null;
-        this.viewManager;
-        this.onCreate = function(viewManager){
+    impex.directive('if',{
+        onCreate : function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-        }
-        this.observe = function(rs){
+        },
+        observe : function(rs){
             if(rs){
                 if(this.$view.elements[0].parentNode)return;
                 //添加
@@ -3294,7 +3270,7 @@ impex.service('ComponentManager',new function(){
         onCreate:function(){
             var className = this.$view.attr('class');
             if(!className){
-                impex.console.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
+                LOGGER.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
                 return;
             }
             className = className.replace('x-cloak','');
@@ -3508,7 +3484,7 @@ impex.service('ComponentManager',new function(){
             });
             if(!ds){
                 //each语法错误
-                impex.console.error('invalid each expression : '+exp);
+                LOGGER.error('invalid each expression : '+exp);
                 return;
             }
 

@@ -32,8 +32,6 @@ var gulp = require('gulp'),
                         
     		'src/impex.js',
 
-            'src/tool/console.js',
-
     		'src/service/build-in.js',
             'src/directive/build-in.js',
 

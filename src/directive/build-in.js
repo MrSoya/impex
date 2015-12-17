@@ -17,7 +17,7 @@
     impex.directive('bind',{
         onInit:function(){
             if(!this.$params || this.$params.length < 1){
-                impex.console.warn('at least one attribute be binded');
+                LOGGER.warn('at least one attribute be binded');
             }
         },
         observe : function(rs){
@@ -87,14 +87,12 @@
      * 效果与show相同，但是会移除视图
      * <br/>使用方式：<div x-if="exp"></div>
      */
-    impex.directive('if',new function(){
-        this.placeholder = null;
-        this.viewManager;
-        this.onCreate = function(viewManager){
+    impex.directive('if',{
+        onCreate : function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-        }
-        this.observe = function(rs){
+        },
+        observe : function(rs){
             if(rs){
                 if(this.$view.elements[0].parentNode)return;
                 //添加
@@ -142,7 +140,7 @@
         onCreate:function(){
             var className = this.$view.attr('class');
             if(!className){
-                impex.console.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
+                LOGGER.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
                 return;
             }
             className = className.replace('x-cloak','');
@@ -356,7 +354,7 @@
             });
             if(!ds){
                 //each语法错误
-                impex.console.error('invalid each expression : '+exp);
+                LOGGER.error('invalid each expression : '+exp);
                 return;
             }
 

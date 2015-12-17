@@ -47,6 +47,7 @@ var ViewManager = new function (){
 				fragment.appendChild(newView.elements[i]);
 			}
 		}
+		if(p)
 		p.insertBefore(fragment,targetV);
 	}
 

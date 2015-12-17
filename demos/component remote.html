@@ -16,9 +16,11 @@
 
         <!-- 需要服务器环境 -->
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.console.js"></script>
         <script type="text/javascript">
+            imLog.level = 4;
             impex.config({
-                debug:true
+                logger:imLog
             });
         
             //自定义组件

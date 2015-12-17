@@ -20,16 +20,7 @@
                     parents:'x-span'
                 },
                 $template:"<button >{{=CONTENT}}</button>"
-            });
-
-            function deepCopy(source) {
-                var result=source instanceof Array?[]:{};
-                for (var key in source) {
-                    if(key.indexOf('$')>-1)continue;
-                  result[key] = typeof source[key]==='object'? deepCopy(source[key]):source[key];
-               }
-               return result; 
-            }            
+            });       
 
             impex.component('x-div',{
                 $restrict:{

@@ -23,11 +23,21 @@ ViewModel.prototype = {
 			if(Util.isString(val)){
 				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
 			}
-			//fix \r\n on IE8
-			eval(evalStr + '= '+ val +'');
+			try{
+				//fix \r\n on IE8
+				eval(evalStr + '= '+ val);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
+			}
+			
 			return this;
 		}else{
-			return eval(evalStr);
+			try{
+				return eval(evalStr);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
+			}
+			
 		}
 	},
 	/**

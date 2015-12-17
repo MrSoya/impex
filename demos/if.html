@@ -5,21 +5,19 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	<code>x &gt; 4 <i x-if="a.x > 4">true</i></code>
+        <code>x &gt; 4 <i x-if="a.x > 4">true {{alert(aaa)}}</i></code>
         <br>
-        <code>x &lt; 4 <i x-if="a.x < 4">true</i></code>
+        <code>x &lt; 4 <i x-if="a.x < 4">true {{alert(aaa)}}</i></code>
         <br>
         x:<input x-model="a.x" >
-
-        <div x-each="list as i" x-if="i > a.x && i < b.y && i > fn()">{{i + a.x}}</div>
-    
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
 
             //渲染
-            impex.render(document.body,new function(){
+            var debug = impex.render(document.body,new function(){
+                this.aaa = 10;
                 this.a = {
                     x:0
                 }

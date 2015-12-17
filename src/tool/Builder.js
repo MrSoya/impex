@@ -265,7 +265,7 @@ var Builder = new function() {
 							nv = new Function("$var","return "+findStr)(newVal);
 							ov = new Function("$var","return "+findStr)(oldVal);
 						}catch(e){
-							impex.console.debug('error on parse watch params');
+							LOGGER.debug('error on parse watch params');
 							nv = null;
 						}
 					}

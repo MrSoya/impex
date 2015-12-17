@@ -42,7 +42,7 @@ Util.ext(_ComponentFactory.prototype,{
 			var ks = Object.keys(props);
 			for(var i=BUILD_IN_PROPS.length;i--;){
 				if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
-					impex.console.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
+					LOGGER.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component');
 					return;
 				}
 			}
