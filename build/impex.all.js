@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-12-17
+ * last build: 2015-12-21
  */
 
 !function (global) {
@@ -1177,11 +1177,17 @@ var Builder = new function() {
 		}
 	}
 
+	var sqbExp = /(^\[)|(,\[)/;
 	function rerender(component,propChain,changeType,newVal,oldVal){
 		var props = component.$__expPropRoot.subProps;
 		var prop;
+		var hasSqb = false;
 		for(var i=0;i<propChain.length;i++){
 			var p = propChain[i];
+			if(sqbExp.test(Object.keys(props).join(','))){
+				hasSqb = true;
+				break;
+			}
 			if(props[p]){
 				prop = props[p];
 				props = props[p].subProps;
@@ -1189,19 +1195,22 @@ var Builder = new function() {
 			}
 			break;
 		}
-
 		if(!prop)return;
 
-		//如果props都是中括号符号，那么propChain无法匹配，
-		//那么就从最近一级匹配到的prop，以及i的长度，
-		//来检索符合条件的表达式映射节点，然后rerender对应的expNodes
-		var findLength = propChain.length - i;
-		var matchs = [];
-		if(findLength > 0){
-			findMatchProps(prop,findLength,matchs);
-		}else{
-			matchs.push(prop);	
-		}
+        var matchs = [];
+        if(hasSqb){
+            var findLength = propChain.length - i - 1;
+            var spks = Object.keys(prop.subProps);
+            for(var i=spks.length;i--;){
+                var k = spks[i];
+                if(k[0] === '[' || k === p){
+                    findMatchProps(prop.subProps[k],findLength,matchs);
+                }
+            }
+        }else {
+            if(i < propChain.length)return;
+            matchs.push(prop);
+        }
 		
 		var invokedWatchs = [];
 		for(var i=matchs.length;i--;){
@@ -1342,11 +1351,8 @@ var Renderer = new function() {
 				node[attrName] = val;
 			}
 		}else{
-			//fix bug in ie8 when text node in textarea
-			try{
-				//文本节点
-				node.nodeValue = val;
-			}catch(e){}
+			//文本节点
+			node.nodeValue = val;
 		}
 	}
 
@@ -1381,11 +1387,10 @@ var Renderer = new function() {
 
 	//计算表达式对象
 	function evalExp(component,expObj){
-		
 		var evalExp = getExpEvalStr(component,expObj);
 		var rs = '';
 		try{
-			rs = new Function('return '+evalExp)();
+			rs = eval(evalExp);
 		}catch(e){
 			LOGGER.debug(e.message + ' when eval "' + evalExp+'"');
 		}
@@ -1981,7 +1986,10 @@ View.prototype = {
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
-			var k = propMap[i].name;
+			var k = propMap[i].name.toLowerCase();
+			if(k.indexOf('-') > -1){
+				k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+			}
 			var v = propMap[i].value;
 			component[k] = v;
 		}
@@ -2919,7 +2927,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,7,0],
+	        v:[0,7,1],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

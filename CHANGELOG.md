@@ -1,4 +1,12 @@
 # Change Log
+## Version 0.7.1 - 2015/12/21
+### 新增
+* 支持组件属性横线格式自动转为驼峰格式(Camel-Case)的组件属性，如 <x-comp my-prop="x"></x-comp> 组件就会自动拥有myProp属性
+
+### 更新
+* 优化数据绑定性能
+
+
 ## Version 0.7.0 - 2015/12/17
 ### 新增
 * impex.config 支持logger属性

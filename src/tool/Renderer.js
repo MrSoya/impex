@@ -63,11 +63,8 @@ var Renderer = new function() {
 				node[attrName] = val;
 			}
 		}else{
-			//fix bug in ie8 when text node in textarea
-			try{
-				//文本节点
-				node.nodeValue = val;
-			}catch(e){}
+			//文本节点
+			node.nodeValue = val;
 		}
 	}
 
@@ -102,11 +99,10 @@ var Renderer = new function() {
 
 	//计算表达式对象
 	function evalExp(component,expObj){
-		
 		var evalExp = getExpEvalStr(component,expObj);
 		var rs = '';
 		try{
-			rs = new Function('return '+evalExp)();
+			rs = eval(evalExp);
 		}catch(e){
 			LOGGER.debug(e.message + ' when eval "' + evalExp+'"');
 		}

@@ -193,11 +193,17 @@ var Builder = new function() {
 		}
 	}
 
+	var sqbExp = /(^\[)|(,\[)/;
 	function rerender(component,propChain,changeType,newVal,oldVal){
 		var props = component.$__expPropRoot.subProps;
 		var prop;
+		var hasSqb = false;
 		for(var i=0;i<propChain.length;i++){
 			var p = propChain[i];
+			if(sqbExp.test(Object.keys(props).join(','))){
+				hasSqb = true;
+				break;
+			}
 			if(props[p]){
 				prop = props[p];
 				props = props[p].subProps;
@@ -205,19 +211,22 @@ var Builder = new function() {
 			}
 			break;
 		}
-
 		if(!prop)return;
 
-		//如果props都是中括号符号，那么propChain无法匹配，
-		//那么就从最近一级匹配到的prop，以及i的长度，
-		//来检索符合条件的表达式映射节点，然后rerender对应的expNodes
-		var findLength = propChain.length - i;
-		var matchs = [];
-		if(findLength > 0){
-			findMatchProps(prop,findLength,matchs);
-		}else{
-			matchs.push(prop);	
-		}
+        var matchs = [];
+        if(hasSqb){
+            var findLength = propChain.length - i - 1;
+            var spks = Object.keys(prop.subProps);
+            for(var i=spks.length;i--;){
+                var k = spks[i];
+                if(k[0] === '[' || k === p){
+                    findMatchProps(prop.subProps[k],findLength,matchs);
+                }
+            }
+        }else {
+            if(i < propChain.length)return;
+            matchs.push(prop);
+        }
 		
 		var invokedWatchs = [];
 		for(var i=matchs.length;i--;){

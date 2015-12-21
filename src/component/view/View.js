@@ -32,7 +32,10 @@ View.prototype = {
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
-			var k = propMap[i].name;
+			var k = propMap[i].name.toLowerCase();
+			if(k.indexOf('-') > -1){
+				k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+			}
 			var v = propMap[i].value;
 			component[k] = v;
 		}

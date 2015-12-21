@@ -6,13 +6,13 @@
     </head>
     <body >
 
-        thank you for using <x-input-text name="impex" maxlength="5" value="impex"></x-input-text>
+        thank you for using <x-input-text a-b="10"  name="impex" maxlength="5" value="impex"></x-input-text>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
             //自定义组件
             impex.component('x-input-text',{
-                $template:"<input {{=BINDPROPS}} type='text'>"
+                $template:"<input {{=BINDPROPS}} x='{{=a-b}}' type='text'>"
             });
 
             //渲染
