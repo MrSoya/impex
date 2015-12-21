@@ -20,6 +20,7 @@
 	    this.error = function(){}
 	    this.warn = function(){}
 	};
+	var DOC_BODY = null;
 
 	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
@@ -145,6 +146,9 @@
 		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
+			if(!DOC_BODY){
+				DOC_BODY = document.body;
+			}
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				LOGGER.warn('element ['+name+'] has been rendered');

@@ -16,13 +16,13 @@ var Renderer = new function() {
  		}
 	}
 
-	var body = document.body;
 	//表达式节点渲染
 	function renderExpNode(expNodes){
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
-			if(!body.contains(expNode.node) && !expNode.toHTML){
+			if(expNode.node.nodeType !== 3 && //for ie compatible
+				!DOC_BODY.contains(expNode.node) && !expNode.toHTML){
 				continue;
 			}
 
