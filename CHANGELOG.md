@@ -1,4 +1,20 @@
 # Change Log
+## Version 0.7.2 - 2015/12/23
+### 新增
+* Component.$isolate 隔离列表，可以禁止组件属性修改时，自动广播给子组件
+* impex.config 支持cacheable属性
+* 新demos
+
+### bug修复
+* 当父组件修改了变量x，并且子组件视图中表达式引用了x(实际上引用的是子组件自身模型上的x)，子组件视图也会刷新
+* destroyed 的组件没有从全局列表中去掉
+* destroyed 的指令没有从父节点指令列表中去掉
+* destroyed 的组件没有完全释放
+
+### 更新
+* 优化数据绑定性能
+
+
 ## Version 0.7.1 - 2015/12/21
 ### 新增
 * 支持组件属性横线格式自动转为驼峰格式(Camel-Case)的组件属性，如 <x-comp my-prop="x"></x-comp> 组件就会自动拥有myProp属性

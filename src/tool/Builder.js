@@ -109,7 +109,7 @@ var Builder = new function() {
 
     	function __observer(changes){
 			if(component.$__state === Component.state.suspend)return;
-			if(component.$__state === Component.state.destroyed)return;
+			if(component.$__state === null)return;
 
 			changeHandler(changes);
 		}
@@ -139,6 +139,8 @@ var Builder = new function() {
 		}
 	}
 
+	var __propStr = null,
+		__lastMatch = undefined;
 	function changeHandler(changes){
 		if(Util.isString(changes))return;
 
@@ -170,7 +172,9 @@ var Builder = new function() {
                     if(propName && !Util.isArray(change.object))
                         pc.push(propName);
 
-                    recurRender(component,pc,change.type,newObj,oldVal);
+                    __propStr = null;
+                    __lastMatch = undefined;
+                    recurRender(component,pc,change.type,newObj,oldVal,0,component);
                     //reobserve
                     observerProp(newObj,pc,component);
                 }
@@ -293,12 +297,51 @@ var Builder = new function() {
 			findMatchProps(prop.subProps[k],findLength-1,matchs);
 		}
 	}
-	function recurRender(component,propChain,changeType,newVal,oldVal){
-		rerender(component,propChain,changeType,newVal,oldVal);
+	function recurRender(component,propChain,changeType,newVal,oldVal,depth,topComp){
+		var toRender = true;
+		if(depth > 0){
+			if(!__propStr){
+				__propStr = '';
+				for(var k=0;k<propChain.length;k++){
+					var seg = propChain[k];
+					__propStr += seg[0]==='['?seg:'.'+seg;
+				}
+			}
+			var prop = undefined;
+            try{
+                prop = eval('impex.__components["'+component.$__id+'"]'+__propStr);
+            }catch(e){}
+            if(!Util.isUndefined(prop)){
+            	__lastMatch = component;
+                toRender = false;
+            }else 
+            if(__lastMatch && __lastMatch !== topComp)toRender = false;
+		}
+		if(toRender){
+			rerender(component,propChain,changeType,newVal,oldVal);
+		}
+		if(component.$isolate){
+			var pc0 = propChain[0];
+			for(var i=component.$isolate.length;i--;){
+				var k = component.$isolate[i];
+				if(k.indexOf('.')>0){
+					var kc = k.split('.');
+					var matchAll = true;
+					for(var kci=0;kci<kc.length;kci++){
+						if(kc[kci] !== propChain[kci]){
+							matchAll = false;
+						}
+					}
+					if(matchAll)return;
+				}else if(k === pc0){
+					return;
+				}
+			}
+		}
 
 		for(var j=component.$__components.length;j--;){
 			var subCtrlr = component.$__components[j];
- 			recurRender(subCtrlr,propChain,changeType,newVal,oldVal);
+ 			recurRender(subCtrlr,propChain,changeType,newVal,oldVal,depth+1,topComp);
  		}
 	}
 }

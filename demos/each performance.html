@@ -92,8 +92,7 @@
                 this.getCompCount = function(){
                     var that = this;
                     setTimeout(function(){
-                        var eachD = that.findD('x-each');
-                        var newCount = eachD.$subComponents.length + eachD.$cache.length;
+                        var newCount = Object.keys(impex.__components).length;
                         if(that.compCount != newCount){
                             that.compCount = newCount
                             that.comhl = 'onchange';

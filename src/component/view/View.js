@@ -131,7 +131,7 @@ View.prototype = {
 			try{
 				fnOutside(e);
 			}catch(error){
-				LOGGER.debug(error.message + 'eval error on event '+type+'('+tmp +')');
+				LOGGER.debug(error.message + ' on event '+type+'('+tmp +')');
 			}
 			
 		};

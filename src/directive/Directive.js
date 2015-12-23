@@ -57,6 +57,7 @@ function Directive (name,value) {
 Util.inherits(Directive,Component);
 Util.ext(Directive.prototype,{
 	init:function(){
+		impex.__components[this.$__id] = this;
 		//预处理自定义标签中的表达式
 		var exps = {};
 		var that = this;

@@ -55,21 +55,23 @@ Util.ext(_DirectiveFactory.prototype,{
 		if(filter){
 			rs.$filter = filter;
 		}
-		
-		//inject
-		var services = null;
-		if(this.types[type].services){
-			services = [];
-			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
-				services.push(serv);
-			}
-		}
+
 		component.add(rs);
+		
+		if(rs.onCreate){
+			//inject
+			var services = null;
+			if(this.types[type].services){
+				services = [];
+				for(var i=0;i<this.types[type].services.length;i++){
+					var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
+					services.push(serv);
+				}
+			}
 
-		rs.onCreate && (services?rs.onCreate.apply(rs,services):rs.onCreate());
+			services ? rs.onCreate.apply(rs,services) : rs.onCreate();
+		}
 
-		this.instances.push(rs);
 		return rs;
 	}
 });

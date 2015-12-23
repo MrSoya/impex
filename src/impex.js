@@ -20,6 +20,11 @@
 	    this.error = function(){}
 	    this.warn = function(){}
 	};
+
+	var CACHEABLE = false;
+
+	var im_compCache = {};
+	var im_counter = 0;
 	var DOC_BODY = null;
 
 	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
@@ -42,7 +47,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,7,1],
+	        v:[0,7,2],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -59,6 +64,7 @@
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
+		 * @param {Boolean} cfg.cacheable 是否缓存组件，如果开启该配置，所有被destroy的组件不会被释放，而是被缓存起来
 		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口，
 		 * 并至少实现 0 none 1 error 2 warn 3 debug 4 log 5个级别控制
 		 */
@@ -76,6 +82,8 @@
 			    this.error = function(){}
 			    this.warn = function(){}
 			};
+
+			CACHEABLE = cfg.cacheable || false;
 		};
 
 		/**
@@ -91,6 +99,10 @@
 		 * @return this
 		 */
 		this.component = function(name,model,services){
+			if(!model.$template && !model.$templateURL){
+				LOGGER.error("can not find property '$template' or '$templateURL' of component '"+name+"'");
+				return;
+			}
 			ComponentFactory.register(name,model,services);
 			return this;
 		}
@@ -157,8 +169,21 @@
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance(element,null,model,services);
+				comp = ComponentFactory.newInstance(element,null,model);
 			}
+
+			if(comp.onCreate){
+				var svs = null;
+				if(Util.isArray(services)){
+					//inject
+					svs = [];
+					for(var i=0;i<services.length;i++){
+						var serv = ServiceFactory.newInstanceOf(services[i],comp);
+						svs.push(serv);
+					}
+				}
+				svs ? comp.onCreate.apply(comp,svs) : comp.onCreate();
+			}			
 			
 			comp.init();
 			comp.display();

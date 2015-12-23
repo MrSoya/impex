@@ -21,26 +21,4 @@ impex.service('ComponentManager',new function(){
     this.hasTypeOf = function(type){
     	return ComponentFactory.hasTypeOf(type);
     }
-    /**
-     * 查询当前运行时所有符合条件的组件
-     * @param  {Object} conditions 条件对象
-     * @return {Array}  结果数组
-     */
-    this.findAll = function(conditions){
-    	var ins = ComponentFactory.instances;
-    	var rs = [];
-    	for(var i=ins.length;i--;){
-    		var matchAll = true;
-			for(var k in conditions){
-				if(comp[k] != conditions[k]){
-					matchAll = false;
-					break;
-				}
-			}
-			if(matchAll){
-				rs.push(comp);
-			}
-    	}
-    	return rs;
-    }
 });

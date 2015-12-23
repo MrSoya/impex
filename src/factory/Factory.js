@@ -3,7 +3,6 @@
  */
 function Factory(clazz) {
 	this.types = {};
-	this.instances = [];
 
 	this.baseClass = clazz;//基类
 };

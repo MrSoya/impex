@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        {{o.a}}
+        <x-xx>
+            <i x-each="[1,2,3,4] as i">
+                {{o['a'] + o.b}}
+            </i>
+            <p>
+            {{o.a}}
+            </p>
+            修改子组件：<br/>
+            a:<input type="text" x-model="o.a"><br/>
+            b:<input type="text" x-model="o.b">
+        </x-xx>
+
+        修改顶级组件：<input type="text" x-model="o.a">
+
+        <!-- 修改isolate ，观察console输出变化 -->
+    
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.console.js"></script>
+        <script type="text/javascript">
+
+            impex.config({
+                logger:imLog
+            });
+            impex.component('x-xx',{
+                $template:'<div>{{=CONTENT}}</div>',
+                o:{a:20,b:20},
+                $isolate : ['o.a']
+            })
+
+            //渲染
+            var debug = impex.render(document.body,new function(){
+                this.o = {
+                    a:12,
+                    b:34,
+                    x:[2,3,4],
+                    y:{
+                        a:'45'
+                    }
+                };
+            });
+            
+        </script>
+    </body>
+</html>

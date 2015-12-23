@@ -33,10 +33,8 @@ Util.ext(_ComponentFactory.prototype,{
 		}
 		
 		var rs = new this.baseClass(view);
-		this.instances.push(rs);
 
 		var props = arguments[2];
-		var svs = arguments[3];
 		if(props){
 			//keywords check
 			var ks = Object.keys(props);
@@ -48,19 +46,6 @@ Util.ext(_ComponentFactory.prototype,{
 			}
 			Util.ext(rs,props);
 		}
-
-		if(Util.isArray(svs)){
-			//inject
-			var services = [];
-			for(var i=0;i<svs.length;i++){
-				var serv = ServiceFactory.newInstanceOf(svs[i],rs);
-				services.push(serv);
-			}
-			
-			rs.onCreate && rs.onCreate.apply(rs,services);
-		}else{
-			rs.onCreate && rs.onCreate();
-		}
 		
 		return rs;
 	},
@@ -70,24 +55,31 @@ Util.ext(_ComponentFactory.prototype,{
 	newInstanceOf : function(type,target){
 		if(!this.types[type])return null;
 
-		var rs = new this.types[type].clazz(this.baseClass);
-		Util.extProp(rs,this.types[type].props);
+		var rs = null;
+		var cache = im_compCache[type];
+		if(CACHEABLE && cache && cache.length>0){
+			rs = cache.pop();
+		}else{
+			rs = new this.types[type].clazz(this.baseClass);
+			Util.extProp(rs,this.types[type].props);
+			rs.$name = type;
+		}
 
 		rs.$view = new View(null,target);
-		rs.$name = type;
 		
-		this.instances.push(rs);
-
-		//inject
-		var services = null;
-		if(this.types[type].services){
-			services = [];
-			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
-				services.push(serv);
+		if(rs.onCreate){
+			//inject
+			var services = null;
+			if(this.types[type].services){
+				services = [];
+				for(var i=0;i<this.types[type].services.length;i++){
+					var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],rs);
+					services.push(serv);
+				}
 			}
+
+			services ? rs.onCreate.apply(rs,services) : rs.onCreate();
 		}
-		rs.onCreate && rs.onCreate.apply(rs,services);
 
 		return rs;
 	}

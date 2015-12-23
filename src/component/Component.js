@@ -26,8 +26,7 @@
  * @extends ViewModel
  */
 function Component (view) {
-	var id = 'C_' + Object.keys(impex.__components).length;
-	impex.__components[id] = this;
+	var id = 'C_' + im_counter++;
 	this.$__id = id;
 	this.$__state = Component.state.created;
 	/**
@@ -71,6 +70,12 @@ function Component (view) {
 	 */
 	this.$restrict;
 	/**
+	 * 隔离列表，用于阻止组件属性变更时，自动广播子组件，如['x.y','a']。
+	 * 
+	 * @type {Array}
+	 */
+	this.$isolate;
+	/**
 	 * 构造函数，在组件被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
 	 */
@@ -92,7 +97,6 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	displayed : 'displayed',
-	destroyed : 'destroyed',
 	suspend : 'suspend'
 };
 Util.inherits(Component,ViewModel);
@@ -233,6 +237,8 @@ Util.ext(Component.prototype,{
 	 */
 	init:function(){
 		if(this.$__state !== Component.state.created)return;
+		impex.__components[this.$__id] = this;
+
 		if(this.$templateURL){
 			var that = this;
 			Util.loadTemplate(this.$templateURL,function(tmplStr){
@@ -294,7 +300,7 @@ Util.ext(Component.prototype,{
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.$__state === Component.state.destroyed)return;
+		if(this.$__state === null)return;
 
 		LOGGER.log(this,'destroy');
 
@@ -302,6 +308,10 @@ Util.ext(Component.prototype,{
 			var i = this.$parent.$__components.indexOf(this);
 			if(i > -1){
 				this.$parent.$__components.splice(i,1);
+			}
+			i = this.$parent.$__directives.indexOf(this);
+			if(i > -1){
+				this.$parent.$__directives.splice(i,1);
 			}
 			this.$parent = null;
 		}
@@ -320,7 +330,35 @@ Util.ext(Component.prototype,{
 
 		this.onDestroy && this.onDestroy();
 
-		this.$__state = Component.state.destroyed;
+		if(CACHEABLE && this.$name && !(this instanceof Directive)){
+			var cache = im_compCache[this.$name];
+			if(!cache)cache = im_compCache[this.$name] = [];
+
+			this.$__state = Component.state.created;
+			this.$__components = [];
+			this.$__directives = [];
+			this.$__expNodes = [];
+			this.$__expPropRoot = new ExpProp();
+
+			cache.push(this);
+		}else{
+			this.$__impex__observer = 
+			this.$__impex__propChains = 
+			this.$__state = 
+			this.$__id = 
+			this.$templateURL = 
+			this.$template = 
+			this.$restrict = 
+			this.$isolate = 
+			this.onCreate = 
+			this.onInit = 
+			this.onDisplay = 
+			this.onSuspend = 
+			this.onDestroy = null;
+		}
+
+		impex.__components[this.$__id] = null;
+		delete impex.__components[this.$__id];
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
