@@ -10,7 +10,7 @@
             a.b：{{JSON.stringify(a.b.c.list)}}
         </p>
         <p>
-            a.b.x：{{a['b'].x}}
+            a.b.x：{{a.b.x}}
         </p>
         <p>
             b：{{b}}
@@ -18,10 +18,10 @@
         <p>
             a.b.c.list：{{a.b.c['list']}}
         </p>
-        
 
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
             
             //渲染
@@ -33,9 +33,12 @@
                 };
                 this.b = 12;
                 this.a.b.c.list = [1,2,3,4];
+                this.onPropChange = function(){
+                    console.log(arguments)
+                }
 
                 this.onCreate = function(){
-                    this.watch('a["b"].x',function(){
+                    this.watch('a.b.x',function(){
                         console.log(1,arguments);
                     });
                     this.watch('b',function(){
@@ -44,14 +47,18 @@
                     this.watch('a.b.c.list',function(){
                         console.log(3,arguments);
                     });
-                }
+                    this.watch('*',function(){
+                        console.log(4,arguments);
+                    });
 
-                var that = this;
-                setTimeout(function(){
-                    that.a.b.c.list = [2,3,4];
-                    that.b = 'b';
-                    that.a.b.x = 1;
-                },1000);
+                    var that = this;
+                    setTimeout(function(){
+                        that.a.b.c.list = [2,3,4];
+                        that.b = 'b';
+                        that.a.b.x = 1;
+                        that.x =23;
+                    },1000);
+                }
             });
         </script>
     </body>

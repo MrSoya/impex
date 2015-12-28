@@ -234,13 +234,18 @@
             
             this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
             this.$viewManager.insertBefore(this.$placeholder,this.$view);
-
-            this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
+            if(this.$ds)
+                this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
             //更新视图
             this.destroy();
 
             var that = this;
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+                if(!that.$ds){
+                    that.$ds = that.$parentComp.data(that.$expInfo.ds);
+                    that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
+                    return;
+                }
 
                 var newKeysSize = 0;
                 var oldKeysSize = 0;

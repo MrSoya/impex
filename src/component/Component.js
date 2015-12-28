@@ -48,6 +48,7 @@ function Component (view) {
 	this.$__directives = [];
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
+	this.$__watcher;
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -183,18 +184,22 @@ Util.ext(Component.prototype,{
 	 * @param  {function} cbk      回调函数，[变动类型add/delete/update,新值，旧值]
 	 */
 	watch:function(expPath,cbk){
-		var expObj = lexer(expPath);
-		var keys = Object.keys(expObj.varTree);
-		if(keys.length < 1)return;
-		if(keys.length > 1){
-			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
-			return;
+		if(expPath === '*'){
+			this.$__watcher = cbk;
+		}else{
+			var expObj = lexer(expPath);
+			var keys = Object.keys(expObj.varTree);
+			if(keys.length < 1)return;
+			if(keys.length > 1){
+				LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
+				return;
+			}
+			
+			var varObj = expObj.varTree[keys[0]];
+			var watch = new Watch(cbk,this,varObj.segments);
+			//监控变量
+			Builder.buildExpModel(this,varObj,watch);
 		}
-		
-		var varObj = expObj.varTree[keys[0]];
-		var watch = new Watch(cbk,this,varObj.segments);
-		//监控变量
-		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
 	},

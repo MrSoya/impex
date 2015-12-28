@@ -175,6 +175,9 @@ var Builder = new function() {
                     __propStr = null;
                     __lastMatch = undefined;
                     recurRender(component,pc,change.type,newObj,oldVal,0,component);
+                    if(component.$__watcher instanceof Function){
+                    	component.$__watcher(change.type,newObj,oldVal,pc);
+                    }
                     //reobserve
                     observerProp(newObj,pc,component);
                 }
@@ -282,7 +285,7 @@ var Builder = new function() {
 							nv = null;
 						}
 					}
-					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov);
+					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov,propChain);
 					invokedWatchs.push(watch);
 				}
 			}

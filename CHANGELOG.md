@@ -1,4 +1,16 @@
 # Change Log
+## Version 0.7.3 - 2015/12/28
+### 新增
+* Component.watch现在支持*参数，可以响应任何属性的变化
+
+### bug修复
+* lexer某些场景解析错误
+* 当x-each的数据源为多级变量，且多级变量都不存在时会报错
+
+### 更新
+* Component.watch的回调参数增加了变动变量的路径数组
+
+
 ## Version 0.7.2 - 2015/12/23
 ### 新增
 * Component.$isolate 隔离列表，可以禁止组件属性修改时，自动广播给子组件

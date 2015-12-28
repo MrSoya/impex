@@ -64,7 +64,7 @@ var lexer = (function(){
 
                     //words
                     var tmp = varLiteral;
-                    if(VAR_EXP_START.test(varLiteral[0])){
+                    if(VAR_EXP_START.test(varLiteral[0]) && keyWords.indexOf(tmp)<0){
                         varObj.subVars['.'+varLiteral] = vo;
                         //keywords check
                         if(keyWords.indexOf(tmp) < 0)
@@ -145,8 +145,9 @@ var lexer = (function(){
                     //x[...].y ]
                     //x[..] ]
                     if(tmp[tmp.length-1] !== l){
-                        if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
-                            tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
+                        if(/[a-zA-Z0-9$_.]+\[.+\]/.test(literal)){
+                            tmp = tmp.replace(/[a-zA-Z0-9$_.]+\[.+\]/,'');
+                            if(tmp)
                             varObj.words.push(tmp);
                         }else{
                             //keywords check
@@ -160,6 +161,7 @@ var lexer = (function(){
                             tmp = tmp.substr(point);
                         }
                         
+                        if(tmp)
                         varObj.segments.push(tmp);
                         lastSegPos = i;
                     }

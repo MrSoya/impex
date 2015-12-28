@@ -7,7 +7,8 @@
     <body>
         <script type="text/javascript" src="lexer.js"></script>
         <script type="text/javascript">
-            lexer('a(true)');
+            // lexer("a(row.x[k])")
+            // lexer('a(true)');
             // lexer('time');
             // lexer("info[x[row[col.name].msg]]")
             // lexer("info[row[col.name]].msg")
@@ -20,20 +21,20 @@
             // lexer("a.b[a.c[x.y] + b.d].x + b.c['y']");
             // lexer("tpl1.listPanel.dataSource.data");
             // lexer('a.b[x.a][c.d][x.a].x["d\\""].x - fn(c.b[x.d+"x"+fx()].d) + x.a["]b"].x.b');
-         //    lexer('x.a["]b"].x.b.d - fn(x.b)');
-         //    lexer("x1*(2+y2)+parse('x')");
-         //    lexer("v==3?'x\\'':'y'");
-         //    lexer("a.b.c<=3?'x.a(\"':'y'");
-         //    lexer("'a' + fn(12,'xxx,34',y+1) + show()");
-         //    lexer('x');
+            // lexer('x.a["]b"].x.b.d - fn(x.b)');
+            // lexer("x1*(2+y2)+parse('x')");
+            // lexer("v==3?'x\\'':'y'");
+            // lexer("a.b.c<=3?'x.a(\"':'y'");
+            // lexer("'a' + fn(12,'xxx,34',y+1) + show()");
+            // lexer('x');
             // lexer("x['b'].x")
-         //    lexer("x['b'] + a.b['x'].c - x")
-         //    lexer("showMe('wow');root.tip='!!';root.showMe(root.tip);");
-         //    lexer("list[list.tip['inf'+'o']]")
-         //    lexer("list[list.tip['inf'+'o'-x['b']]]")
-         //    lexer('row[col.name]');
-         //    lexer("JSON.stringify(row[col['name']])")
-         //    lexer("info[row[col.name].msg + a[b]]")
+            // lexer("x['b'] + a.b['x'].c - x")
+            // lexer("showMe('wow');root.tip='!!';root.showMe(root.tip);");
+            // lexer("list[list.tip['inf'+'o']]")
+            // lexer("list[list.tip['inf'+'o'-x['b']]]")
+            // lexer('row[col.name]');
+            // lexer("JSON.stringify(row[col['name']])")
+            // lexer("info[row[col.name].msg + a[b]]")
         </script>
     </body>
 </html>

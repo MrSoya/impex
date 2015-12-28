@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-12-23
+ * last build: 2015-12-28
  */
 
 !function (global) {
@@ -402,7 +402,7 @@ var lexer = (function(){
 
                     //words
                     var tmp = varLiteral;
-                    if(VAR_EXP_START.test(varLiteral[0])){
+                    if(VAR_EXP_START.test(varLiteral[0]) && keyWords.indexOf(tmp)<0){
                         varObj.subVars['.'+varLiteral] = vo;
                         //keywords check
                         if(keyWords.indexOf(tmp) < 0)
@@ -483,8 +483,9 @@ var lexer = (function(){
                     //x[...].y ]
                     //x[..] ]
                     if(tmp[tmp.length-1] !== l){
-                        if(/[a-zA-Z0-9$_]+\[.+\]/.test(literal)){
-                            tmp = tmp.replace(/[a-zA-Z0-9$_]+\[.+\]/,'');
+                        if(/[a-zA-Z0-9$_.]+\[.+\]/.test(literal)){
+                            tmp = tmp.replace(/[a-zA-Z0-9$_.]+\[.+\]/,'');
+                            if(tmp)
                             varObj.words.push(tmp);
                         }else{
                             //keywords check
@@ -498,6 +499,7 @@ var lexer = (function(){
                             tmp = tmp.substr(point);
                         }
                         
+                        if(tmp)
                         varObj.segments.push(tmp);
                         lastSegPos = i;
                     }
@@ -1159,6 +1161,9 @@ var Builder = new function() {
                     __propStr = null;
                     __lastMatch = undefined;
                     recurRender(component,pc,change.type,newObj,oldVal,0,component);
+                    if(component.$__watcher instanceof Function){
+                    	component.$__watcher(change.type,newObj,oldVal,pc);
+                    }
                     //reobserve
                     observerProp(newObj,pc,component);
                 }
@@ -1266,7 +1271,7 @@ var Builder = new function() {
 							nv = null;
 						}
 					}
-					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov);
+					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov,propChain);
 					invokedWatchs.push(watch);
 				}
 			}
@@ -1689,6 +1694,7 @@ function Component (view) {
 	this.$__directives = [];
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
+	this.$__watcher;
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -1824,18 +1830,22 @@ Util.ext(Component.prototype,{
 	 * @param  {function} cbk      回调函数，[变动类型add/delete/update,新值，旧值]
 	 */
 	watch:function(expPath,cbk){
-		var expObj = lexer(expPath);
-		var keys = Object.keys(expObj.varTree);
-		if(keys.length < 1)return;
-		if(keys.length > 1){
-			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
-			return;
+		if(expPath === '*'){
+			this.$__watcher = cbk;
+		}else{
+			var expObj = lexer(expPath);
+			var keys = Object.keys(expObj.varTree);
+			if(keys.length < 1)return;
+			if(keys.length > 1){
+				LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
+				return;
+			}
+			
+			var varObj = expObj.varTree[keys[0]];
+			var watch = new Watch(cbk,this,varObj.segments);
+			//监控变量
+			Builder.buildExpModel(this,varObj,watch);
 		}
-		
-		var varObj = expObj.varTree[keys[0]];
-		var watch = new Watch(cbk,this,varObj.segments);
-		//监控变量
-		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
 	},
@@ -3012,7 +3022,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,7,2],
+	        v:[0,7,3],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3458,13 +3468,18 @@ impex.service('ComponentManager',new function(){
             
             this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
             this.$viewManager.insertBefore(this.$placeholder,this.$view);
-
-            this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
+            if(this.$ds)
+                this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
             //更新视图
             this.destroy();
 
             var that = this;
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+                if(!that.$ds){
+                    that.$ds = that.$parentComp.data(that.$expInfo.ds);
+                    that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
+                    return;
+                }
 
                 var newKeysSize = 0;
                 var oldKeysSize = 0;
