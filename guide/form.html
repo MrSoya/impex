@@ -224,6 +224,17 @@
 								<li>
 					<a href="#form-textarea">textarea</a>
 									</li>
+								<li>
+					<a href="#form-attr">特性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#form-attr-number">number</a>
+						</li>
+												<li>
+							<a href="#form-attr-debounce">debounce</a>
+						</li>
+											</ul>
+									</li>
 							</ul>
 		</li>
 				<li>
@@ -362,7 +373,7 @@
 							<p>
 								输入内容：{{content}}
 							</p>
-							<input x-bind="content">
+							<input x-model="content">
 						</div>
 					</div>
 
@@ -462,6 +473,29 @@
 						</div>
 					</div>
 
+					<pre><code class="language-markup">
+&lt;p&gt;
+	选中内容：{{name}}
+&lt;/p&gt;
+&lt;select x-model="name" multiple&gt;
+    &lt;option value="soya"&gt;soya&lt;/option&gt;
+    &lt;option value="impex"&gt;impex&lt;/option&gt;
+    &lt;option value="html5"&gt;html5&lt;/option&gt;
+&lt;/select&gt;</code>
+</pre>
+					<div class="output">
+						<div id="form-4-1">
+							<p>
+								多选内容：{{JSON.stringify(names)}}
+							</p>
+							<select x-model="names" multiple>
+			                    <option value="soya">soya</option>
+			                    <option value="impex">impex</option>
+			                    <option value="html5">html5</option>
+			                </select>
+						</div>
+					</div>
+
 					<h2 id="form-textarea">
 						textarea
 					</h2>
@@ -479,6 +513,45 @@
 							<textarea x-model="content" rows=5></textarea>
 						</div>
 					</div>
+
+					<h2 id="form-attr">
+						特性
+					</h2>
+					<p>
+						<code>x-model</code>指令可以配合一些特性参数来扩展功能
+					</p>
+
+					<h3 id="form-attr-number">
+						number
+					</h3>
+					<pre><code class="language-markup">
+&lt;input x-model="content" number &gt;</code>
+</pre>
+					<p>
+						number参数用来强制把输入内容转换为数字后才更新模型属性
+					</p>
+
+					<h3 id="form-attr-debounce">
+						debounce
+					</h3>
+					<pre><code class="language-markup">
+&lt;p&gt;
+	输入内容：{{content}}
+&lt;/p&gt;
+&lt;input x-model="content" debounce="500" &gt;</code>
+</pre>
+					<div class="output">
+						<div id="form-6">
+							<p>
+								输入内容：{{content}}
+							</p>
+							<input x-model="content" debounce="500">
+						</div>
+					</div>
+					<p>
+						debounce参数可以让输入的内容延迟更新模型(并不会延迟输入反馈)，在指定的时间内，所有输入都只会触发一次模型更新。
+						这个特性尤其在处理根据输入内容响应变化的场景时非常有用，比如根据输入内容自动发送ajax请求
+					</p>
 					
 							<footer>
 		<a class="prev" href="each.html">
@@ -652,6 +725,17 @@
 									</li>
 								<li>
 					<a href="#form-textarea">textarea</a>
+									</li>
+								<li>
+					<a href="#form-attr">特性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#form-attr-number">number</a>
+						</li>
+												<li>
+							<a href="#form-attr-debounce">debounce</a>
+						</li>
+											</ul>
 									</li>
 							</ul>
 		</li>

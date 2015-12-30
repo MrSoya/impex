@@ -73,7 +73,10 @@
 					<a href="#global-cfg-delimiters">delimiters</a>
 									</li>
 								<li>
-					<a href="#global-cfg-debug">debug</a>
+					<a href="#global-cfg-logger">logger</a>
+									</li>
+								<li>
+					<a href="#global-cfg-cacheable">cacheable</a>
 									</li>
 							</ul>
 		</li>
@@ -121,6 +124,9 @@
 									</li>
 								<li>
 					<a href="#component--restrict">$restrict</a>
+									</li>
+								<li>
+					<a href="#component--isolate">$isolate</a>
 									</li>
 								<li>
 					<a href="#component-on">on</a>
@@ -375,12 +381,11 @@
 					</p>
 				</li>
 			</ul>
-						<h3 id="global-cfg-debug">
-				<i class="tag">#</i> debug							</h3>
+						<h3 id="global-cfg-logger">
+				<i class="tag">#</i> logger							</h3>
 			<ul class="prop">
-								<li>Type: <code>Boolean</code></li>
-										<li>Default: <code>false</code></li>
-								<li>Usage: 
+								<li>Type: <code>Object</code></li>
+									<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.config({logger:imLog})</code></pre>
 											<p>新的调试使用日志系统，可以设置更精确的日志级别，并且可以自定义日志器</p>
@@ -389,6 +394,22 @@
 						</p>
 											<p>
 							<blockquote class='warning'>这可能会导致性能降低 ！</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-cfg-cacheable">
+				<i class="tag">#</i> cacheable							</h3>
+			<ul class="prop">
+								<li>Type: <code>Boolean</code></li>
+										<li>Default: <code>false</code></li>
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.config({cacheable:false})</code></pre>
+											<p>是否缓存组件，如果开启该配置，所有被destroy的组件不会被释放，而是被缓存起来</p>
+											<p>
+							<blockquote class='warning'>缓存会提升性能，但同时会加大内存使用量</blockquote>
 						</p>
 										
 					</p>
@@ -680,6 +701,22 @@ impex.component('x-panel',{
 					</p>
 				</li>
 			</ul>
+						<h3 id="component--isolate">
+				<i class="tag">#</i> $isolate							</h3>
+			<ul class="prop">
+								<li>Type: <code>Object</code></li>
+									<li>Usage: 
+					<p>
+											<p>隔离列表，可以禁止组件属性修改时，自动广播给子组件</p>
+											<pre><code class="language-javascript">impex.component('x-panel',{
+    $template:'&lt;div&gt;{{=CONTENT}}&lt;/div&gt;',
+    o:{a:20,b:20},
+    $isolate : ['o.a']
+})</code></pre>
+										
+					</p>
+				</li>
+			</ul>
 						<h3 id="component-on">
 				<i class="tag">#</i> on				( type , exp , handler )			</h3>
 			<ul class="prop">
@@ -821,11 +858,12 @@ impex.component('x-panel',{
 											<p>监控当前组件中的模型属性变化，如果发生变化，会触发回调</p>
 											<pre><code class="language-javascript">impex.component('x-panel',{
 	onCreate:function(){
-		this.watch('a.b.c',function(type,newVal,oldVal){
+		this.watch('a.b.c',function(type,newVal,oldVal,propChain){
 			//type could be add/delete/update
 		})
 	}
 })</code></pre>
+											<p>watch支持通配符*，这样任何组件属性的变更都会触发</p>
 										
 					</p>
 				</li>
@@ -1632,7 +1670,10 @@ impex.component('x-panel',{
 					<a href="#global-cfg-delimiters">delimiters</a>
 									</li>
 								<li>
-					<a href="#global-cfg-debug">debug</a>
+					<a href="#global-cfg-logger">logger</a>
+									</li>
+								<li>
+					<a href="#global-cfg-cacheable">cacheable</a>
 									</li>
 							</ul>
 		</li>
@@ -1680,6 +1721,9 @@ impex.component('x-panel',{
 									</li>
 								<li>
 					<a href="#component--restrict">$restrict</a>
+									</li>
+								<li>
+					<a href="#component--isolate">$isolate</a>
 									</li>
 								<li>
 					<a href="#component-on">on</a>

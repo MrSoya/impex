@@ -224,6 +224,17 @@
 								<li>
 					<a href="#form-textarea">textarea</a>
 									</li>
+								<li>
+					<a href="#form-attr">特性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#form-attr-number">number</a>
+						</li>
+												<li>
+							<a href="#form-attr-debounce">debounce</a>
+						</li>
+											</ul>
+									</li>
 							</ul>
 		</li>
 				<li>
@@ -481,8 +492,15 @@ impex.component('x-div',{
 						模型属性
 					</h3>
 					<p>
-						组件书写时的所有属性都会自动的绑定到组件实例上，并且都以字符形式
+						组件书写时的所有属性都会自动的绑定到组件实例上，并且都以字符形式。
 					</p>
+					<blockquote class="warning">
+						在HTML中，标签属性是不区分大小写的&lt;a Href=""&gt;和&lt;a href=""&gt;没有任何区别，都会被识别为小写格式，
+						所以，在组件模型的属性中存在的是小写格式的href
+					</blockquote>
+					<blockquote class="tip">
+						impex会自动把横线格式的属性自动转为驼峰格式(Camel-Case)的组件属性，如 &lt;x-comp my-prop="x"&gt;&lt;/x-comp&gt; 组件就会自动拥有myProp属性
+					</blockquote>
 
 					<h2 id="component-scope">
 						作用域
@@ -696,6 +714,17 @@ impex.component('x-div',{
 									</li>
 								<li>
 					<a href="#form-textarea">textarea</a>
+									</li>
+								<li>
+					<a href="#form-attr">特性</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#form-attr-number">number</a>
+						</li>
+												<li>
+							<a href="#form-attr-debounce">debounce</a>
+						</li>
+											</ul>
 									</li>
 							</ul>
 		</li>

@@ -81,26 +81,34 @@ impex.render(document.getElementById('each-3'),{
     }
 });
 
-if(document.getElementById('form-1'))
-var debug = impex.render(document.getElementById('form-1'),{
-    content:''
-});
-if(document.getElementById('form-2'))
-var debug = impex.render(document.getElementById('form-2'),{
-    names:[]
-});
-if(document.getElementById('form-3'))
-var debug = impex.render(document.getElementById('form-3'),{
-    name:''
-});
-if(document.getElementById('form-4'))
-var debug = impex.render(document.getElementById('form-4'),{
-    name:''
-});
-if(document.getElementById('form-5'))
-var debug = impex.render(document.getElementById('form-5'),{
-    content:''
-});
+if(document.getElementById('form-1')){
+    impex.render(document.getElementById('form-1'),{
+        content:''
+    });
+
+    impex.render(document.getElementById('form-2'),{
+        names:[]
+    });
+
+    impex.render(document.getElementById('form-3'),{
+        name:''
+    });
+
+    impex.render(document.getElementById('form-4'),{
+        name:''
+    });
+    impex.render(document.getElementById('form-4-1'),{
+        names:[]
+    });
+
+    impex.render(document.getElementById('form-5'),{
+        content:''
+    });
+    impex.render(document.getElementById('form-6'),{
+        content:''
+    });
+}
+
 
 impex.component('x-div',{
     $template : "<div {{=BINDPROPS}}>=={{=CONTENT}}==</div>"
