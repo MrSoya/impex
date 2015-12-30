@@ -170,7 +170,10 @@
      */
     impex.directive('model',{
         onCreate : function(){
-            switch(this.$view.elements[0].nodeName.toLowerCase()){
+            var el = this.$view.elements[0];
+            this.toNum = el.getAttribute('number');
+            this.debounce = el.getAttribute('debounce')>>0;
+            switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
                     var type = this.$view.attr('type');
@@ -188,9 +191,27 @@
                     
                     break;
                 case 'select':
-                    this.on('change','changeModel($event)');
+                    var mul = el.getAttribute('multiple');
+                    if(mul !== null){
+                        this.on('change','changeModelSelect($event)');
+                    }else{
+                        this.on('change','changeModel($event)');
+                    }
+                    
                     break;
             }
+        },
+        changeModelSelect : function(e){
+            var t = e.target || e.srcElement;
+            var val = t.value;
+            var parts = [];
+            for(var i=t.options.length;i--;){
+                var opt = t.options[i];
+                if(opt.selected){
+                    parts.push(opt.value);
+                }
+            }            
+            this.$parent.data(this.$value,parts);
         },
         changeModelCheck : function(e){
             var t = e.target || e.srcElement;
@@ -210,7 +231,28 @@
             this.$parent.data(this.$value,parts);
         },
         changeModel : function(e){
-            this.$parent.data(this.$value,(e.target || e.srcElement).value);
+            if(this.debounce){
+                if(this.debounceTimer){
+                    clearTimeout(this.debounceTimer);
+                    this.debounceTimer = null;
+                }
+                var that = this;
+                this.debounceTimer = setTimeout(function(){
+                    clearTimeout(that.debounceTimer);
+                    that.debounceTimer = null;
+                    
+                    that.setVal(e);
+                },this.debounce);
+            }else{
+                this.setVal(e);
+            }
+        },
+        setVal:function(e){
+            var v = (e.target || e.srcElement).value;
+            if(this.toNum !== null){
+                v = parseFloat(v);
+            }
+            this.$parent.data(this.$value,v);
         }
     });
 

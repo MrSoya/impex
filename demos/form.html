@@ -33,6 +33,9 @@
                     made by <i class="{{author=='MrSoya'?'bc':'rc'}}">{{author}}</i>
                     ,{{sex}}
                 </p>
+                <p>
+                    and {{others}}
+                </p>
             </p>
         	<p>
                 name:<input type="text" x-model="name" value="{{name}}">
@@ -78,6 +81,13 @@
                     {{desc}}
                 </textarea>
             </p>
+            <p>
+                others:
+                <select x-model="others" multiple="">
+                    <option value="soya2d">soya2d</option>
+                    <option value="h5stars">h5stars</option>
+                </select>
+            </p>
         </div>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -97,6 +107,7 @@
                 this.features = ['easily','efficiently','powerful'];
                 this.author = 'MrSoya';
                 this.sex = 'man';
+                this.others = [];
             });
             
         </script>

@@ -1,4 +1,11 @@
 # Change Log
+## Version 0.7.4 - 2015/12/30
+### 新增
+* 支持select标签多选模式时的x-model支持
+* 支持x-model特性，debounce、number
+* 新demo，演示debounce和number
+
+
 ## Version 0.7.3 - 2015/12/28
 ### 新增
 * Component.watch现在支持*参数，可以响应任何属性的变化
