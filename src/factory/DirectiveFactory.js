@@ -22,7 +22,7 @@ Util.ext(_DirectiveFactory.prototype,{
 	hasEndTag : function(type){
 		return this.types[type].props.$endTag;
 	},
-	newInstanceOf : function(type,nodes,component,attrName,attrValue){
+	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
 		var params = null;
@@ -42,11 +42,16 @@ Util.ext(_DirectiveFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
-		if(nodes[0].__impex__view){
-			rs.$view = nodes[0].__impex__view;
+		if(node.__impex__view){
+			rs.$view = node.__impex__view;
 		}else{
-			rs.$view = new View(nodes);
-			nodes[0].__impex__view = rs.$view;
+			var el = node,nodes = [node];
+			if(Util.isArray(node)){
+				el = node[0];
+				nodes = node;
+			}
+			rs.$view = new View(el,null,nodes);
+			node.__impex__view = rs.$view;
 		}
 
 		if(params){

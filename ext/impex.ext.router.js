@@ -15,7 +15,7 @@
 
 	var routerMap = {};
 	function changeComponent(url,component,compNameOrCbk,params,router){
-		var routerView = component.find('x-router-view') || router.lastComp;
+		var routerView = component.find('x-router-view')[0] || router.lastComp;
 
 		var compName = compNameOrCbk instanceof Function?compNameOrCbk.apply(router,params):compNameOrCbk;
 		

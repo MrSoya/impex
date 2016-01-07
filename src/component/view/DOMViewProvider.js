@@ -10,7 +10,7 @@ var DOMViewProvider = new function(){
 	 */
 	this.newInstance = function(template,target){
 		if(template === ''){
-			return new View([document.createTextNode('')],target);
+			return new View(null,target,[document.createTextNode('')]);
 		}
 		compiler.innerHTML = template;
 		if(!compiler.childNodes[0])return null;
@@ -20,20 +20,18 @@ var DOMViewProvider = new function(){
 			nodes.push(tmp);
 		}
 
-		var view = new View(nodes,target);
+		var view = new View(null,target,nodes);
 
 		return view;
 	}
 
-	var headEl = ['meta','title','base'];
 	this.compile = function(template){
 		compiler.innerHTML = template;
-		if(!compiler.children[0])return null;
+
 		var nodes = [];
-		while(compiler.children.length>0){
-			var tmp = compiler.removeChild(compiler.children[0]);
+		while(compiler.childNodes.length>0){
+			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			var tn = tmp.nodeName.toLowerCase();
-			if(headEl.indexOf(tn) > -1)continue;
 
 			nodes.push(tmp);
 		}

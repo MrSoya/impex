@@ -5,14 +5,15 @@
  * 一个组件或者指令只会拥有一个视图
  * @class
  */
-function View (elements,target) {
+function View (el,target,nodes) {
 	/**
 	 * 对可视元素的引用，在DOM中就是HTMLElement，
 	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * @type {Array}
+	 * @type {Object}
 	 */
-	this.elements = elements;
+	this.el = el;
 
+	this.__nodes = nodes;
 	this.__evMap = {};
 	this.__target = target;
 }
@@ -23,12 +24,14 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-		var els = DOMViewProvider.compile(compileStr);
-		if(!els || els.length < 1){
+		var nodes = DOMViewProvider.compile(compileStr);
+		if(!nodes || nodes.length < 1){
 			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.elements = els;
+		this.__nodes = nodes;
+		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -41,16 +44,16 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target ||!this.__target.parentNode || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
+		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
 
 		var fragment = null;
-		if(this.elements.length > 1){
+		if(this.__nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<this.elements.length;i++){
-				fragment.appendChild(this.elements[i]);
+			for(var i=0;i<this.__nodes.length;i++){
+				fragment.appendChild(this.__nodes[i]);
 			}
 		}else{
-			fragment = this.elements[0];
+			fragment = this.__nodes[0];
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
@@ -64,19 +67,19 @@ View.prototype = {
 	            var pair = events[i];
 	            var evHandler = pair[1];
 
-	            for(var j=this.elements.length;j--;){
-	            	if(this.elements[j].nodeType !== 1)continue;
-	            	Util.off(k,this.elements[j],evHandler);
+	            for(var j=this.__nodes.length;j--;){
+	            	if(this.__nodes[j].nodeType !== 1)continue;
+	            	Util.off(k,this.__nodes[j],evHandler);
 	            }
 	        }
 		}
 
-		var p = this.elements[0].parentNode;
+		var p = this.__nodes[0].parentNode;
 		if(p){
-			if(this.elements[0].__impex__view)
-				this.elements[0].__impex__view = null;
-			for(var i=this.elements.length;i--;){
-				p.removeChild(this.elements[i]);
+			if(this.__nodes[0].__impex__view)
+				this.__nodes[0].__impex__view = null;
+			for(var i=this.__nodes.length;i--;){
+				this.__nodes[i].parentNode && p.removeChild(this.__nodes[i]);
 			}
 		}
 
@@ -86,26 +89,21 @@ View.prototype = {
 		}
 	},
 	__suspend:function(component,hook){
-		if(!this.elements[0].parentNode)return;
+		var p = this.__nodes[0].parentNode;
+		if(!p)return;
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
-			this.elements[0].parentNode.insertBefore(this.__target,this.element);
+			p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
-		var p = null;
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].parentNode){
-				p = this.elements[i].parentNode;
-				break;
-			}
-		}
-		if(p)
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].parentNode)
-				p.removeChild(this.elements[i]);
+		for(var i=this.__nodes.length;i--;){
+			if(this.__nodes[i].parentNode)
+				p.removeChild(this.__nodes[i]);
 		}
 	},
 	__on:function(component,type,exp,handler){
+		if(!this.el)return;
+
 		var originExp = exp;
 		var comp = component;
 		var tmpExpOutside = '';
@@ -135,11 +133,8 @@ View.prototype = {
 			}
 			
 		};
-		for(var j=this.elements.length;j--;){
-			var el = this.elements[j];
-        	if(el.nodeType !== 1)continue;
-        	Util.on(type,el,evHandler);
-        }
+
+        Util.on(type,this.el,evHandler);
 		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
@@ -147,16 +142,15 @@ View.prototype = {
 		this.__evMap[type].push([exp,evHandler]);
 	},
 	__off:function(component,type,exp){
+		if(!this.el)return;
+
 		var events = this.__evMap[type];
         for(var i=events.length;i--;){
             var pair = events[i];
             var evExp = pair[0];
             var evHandler = pair[1];
             if(evExp == exp){
-            	for(var j=this.elements.length;j--;){
-	            	if(this.elements[j].nodeType !== 1)continue;
-	            	Util.off(type,this.elements[j],evHandler);
-	            }
+	            Util.off(type,this.el,evHandler);
             }
         }
 	},
@@ -166,32 +160,28 @@ View.prototype = {
 	 */
 	clone:function(){
 		var tmp = [];
-		for(var i=this.elements.length;i--;){
-			var c = this.elements[i].cloneNode(true);
+		for(var i=this.__nodes.length;i--;){
+			var c = this.__nodes[i].cloneNode(true);
 			tmp.unshift(c);
 		}
 		
-		var copy = new View(tmp);
+		var copy = new View(tmp.length===1&&tmp[0].nodeType===1?tmp[0]:null,null,tmp);
 		return copy;
 	},
 	/**
 	 * 显示视图
 	 */
 	show:function(){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].style.display = '';
-		}
+		this.el.style.display = '';
+
 		return this;
 	},
 	/**
 	 * 隐藏视图
 	 */
 	hide:function(){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].style.display = 'none';
-		}
+		this.el.style.display = 'none';
+
 		return this;
 	},
 	/**
@@ -201,16 +191,11 @@ View.prototype = {
 	 */
 	style:function(name,value){
 		if(arguments.length > 1){
-			for(var i=this.elements.length;i--;){
-				if(this.elements[i].nodeType !== 1)continue;
-				this.elements[i].style[name] = value;
-			}
+			this.el.style[name] = value;
+
 			return this;
 		}else{
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType === 1)break;
-			}
-			return this.elements[i].style[name];
+			return this.el.style[name];
 		}
 	},
 	/**
@@ -220,16 +205,11 @@ View.prototype = {
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
-			for(var i=this.elements.length;i--;){
-				if(this.elements[i].nodeType !== 1)continue;
-				this.elements[i].setAttribute(name,value);
-			}
+			this.el.setAttribute(name,value);
+
 			return this;
 		}else{
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType === 1)break;
-			}
-			return this.elements[i].getAttribute(name);
+			return this.el.getAttribute(name);
 		}
 	},
 	/**
@@ -237,10 +217,8 @@ View.prototype = {
 	 * @param  {String} name  属性名
 	 */
 	removeAttr:function(name){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].removeAttribute(name);
-		}
+		this.el.removeAttribute(name);
+		
 		return this;
 	},
 	/**
@@ -248,10 +226,7 @@ View.prototype = {
 	 * @param  {String} name  样式名
 	 */
 	hasClass:function(name){
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType === 1)break;
-		}
-		return this.elements[i].className.indexOf(name) > -1;
+		return this.el.className.indexOf(name) > -1;
 	},
 	/**
 	 * 添加样式到视图
@@ -259,10 +234,19 @@ View.prototype = {
 	 */
 	addClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].className += ' '+names;
+
+		names = names.split(' ');
+		var cls = this.el.className.split(' ');
+		var rs = '';
+		for(var n=names.length;n--;){
+			if(cls.indexOf(names[n]) < 0){
+				rs += names[n]+' ';
+			}
 		}
+		this.el.className += ' '+rs;
+		
+			
+		return this;
 	},
 	/**
 	 * 从视图删除指定样式
@@ -271,17 +255,19 @@ View.prototype = {
 	removeClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
 		var clss = names.split(' ');
-		for(var ci=clss.length;ci--;){
-			var cname = clss[ci];
+		var clsName = this.el.className;
+		if(clsName){
+			for(var ci=clss.length;ci--;){
+				var cname = clss[ci];
 
-			var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
-
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType !== 1)continue;
-
-				this.elements[i].className.replace(exp,'');
+				var exp = new RegExp('^'+cname+'\\s+|\\s+'+cname+'$|\\s+'+cname+'\\s+','img');
+				clsName = clsName.replace(exp,'');
 			}
+
+			this.el.className = clsName;
 		}
+		
+		return this;
 	},
 	/**
 	 * 从视图添加或移除指定样式
@@ -289,31 +275,22 @@ View.prototype = {
 	 */
 	toggleClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+
 		var clss = names.split(' ');
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType === 1)break;
-		}
 		var add = false;
+		var clsName = this.el.className;
 		for(var ci=clss.length;ci--;){
 			var cname = clss[ci];
 
-			if(this.elements[i].className.indexOf(cname) < 0){
+			if(clsName.indexOf(cname) < 0){
 				add = true;
 				break;
 			}
 		}
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType !== 1)continue;
-			if(add){
-				this.elements[i].className += ' '+names;
-			}else{
-				for(var ci=clss.length;ci--;){
-					var cname = clss[ci];
-					var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
-
-					this.elements[i].className.replace(exp,'');
-				}
-			}
+		if(add){
+			this.addClass(names);
+		}else{
+			this.removeClass(names);
 		}
 	}//fn over
 }

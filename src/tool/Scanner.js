@@ -56,7 +56,7 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(view,component){
-		var scanNodes = view.elements?view.elements:[view.element];
+		var scanNodes = view.__nodes?view.__nodes:[view.el];
 
         var startTag = null,
             nodes = [];
@@ -69,7 +69,6 @@ var Scanner = new function() {
                 var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
                 if(Util.isString(tmp)){
                     var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-                    component.$__directives.push(instance);
                     startTag = null;
                     nodes = [];
                 }
@@ -131,8 +130,7 @@ var Scanner = new function() {
 
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
-							component.$__directives.push(instance);
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
 							return;
 						}
 						if(DirectiveFactory.hasEndTag(c)){
@@ -150,8 +148,7 @@ var Scanner = new function() {
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
-							component.$__directives.push(instance);
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
 						}
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
 				    	recordExpNode(attVal,node,component,attName);
@@ -169,7 +166,6 @@ var Scanner = new function() {
 						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
 						if(Util.isString(tmp)){
 							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-							component.$__directives.push(instance);
 							startTag = null;
 							nodes = [];
 						}
@@ -204,8 +200,9 @@ var Scanner = new function() {
 
 			var filters = {};
 			var i = 1;
+			var varMap = null;
 			if(FILTER_EXP.test(modelExp)){
-				parseFilters(RegExp.$1,filters,component);
+				varMap = parseFilters(lexer(RegExp.$1),filters,component);
 				i = modelExp.indexOf(FILTER_EXP_START_TAG);
 			}
 
@@ -214,6 +211,8 @@ var Scanner = new function() {
 				expStr = modelExp.substring(0,i);
     		var tmp = lexer(expStr);
     		
+    		if(varMap)
+    			Util.ext(tmp.varTree,varMap);
     		//保存表达式
     		exps[modelExp] = {
     			words:tmp.words,
@@ -227,65 +226,55 @@ var Scanner = new function() {
 		component.$__expNodes.push(expNode);
 	}
 
-	function parseFilters(expStr,filters,component){
-		var inName = true,
-			inParam,
-			unknown;
-		var currName = '',
-			currParam = '',
-			currParams = [];
-		for(var i=0;i<expStr.length;i++){
-			var l = expStr[i];
-			switch(l){
-				case ' ':case '\t':
-					unknown = true;
-					continue;
+	function parseFilters(expNode,filters,component){
+		var currParams = [],
+			currParam = null;
+		var inParam = false;
+		var varMap = {};
+
+		var words = expNode.words;
+		for(var i=0;i<words.length;i++){
+			var w = words[i];
+			switch(w){
 				case ':':
 					inParam = true;
-					inName = false;
-					unknown = false;
-					if(currParam){
+					if(currParam !== null)
 						currParams.push(currParam);
-						currParam = '';
-					}
-					continue;
+					currParam = '';
+					break;
 				case '.':
 					inParam = false;
-					inName = true;
-					unknown = false;
-					if(currName && FilterFactory.hasTypeOf(currName)){
-						filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
-					}
-					if(currParam){
+					if(currParam !== null)
 						currParams.push(currParam);
-					}
-					currName = '';
 					currParam = '';
 					currParams = [];
-					continue;
+					break;
 				default:
-					if(unknown){
-						if(currName){
-							filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
+					if(w instanceof Array){
+						var partName = w[0].replace(/^\./,'')
+						var filterName = partName.toLowerCase();
+						if(!inParam && filterName && FilterFactory.hasTypeOf(filterName)){
+							currParam = null;
+							filters[filterName] = [FilterFactory.newInstanceOf(filterName,component),currParams];
+						}else{
+							var tmp = lexer(partName);
+							Util.ext(varMap,tmp.varTree);
+							currParams.push(tmp);
+							currParam = null;
 						}
-						if(currParam){
-							currParams.push(currParam);
-						}
-						return i;
+					}else{
+						if(!inParam || !w.replace(/\s+/,''))continue;
+						currParam += w.replace(/^['"]|['"]$/g,'');
 					}
 			}
-
-			if(inName)currName += l;
-			else if(inParam){
-				currParam += l;
-			}
-		}//over for
-
-		if(currName && FilterFactory.hasTypeOf(currName)){
-			filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 		}
+
 		if(currParam){
 			currParams.push(currParam);
 		}
+
+		return varMap;
 	}
+
+	this.parseFilters = parseFilters;
 }

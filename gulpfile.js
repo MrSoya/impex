@@ -23,17 +23,20 @@ var gulp = require('gulp'),
     		'src/directive/Directive.js',
             'src/filter/Filter.js',
             'src/service/Service.js',
+            'src/transition/Transition.js',
 
             'src/factory/Factory.js',
             'src/factory/ComponentFactory.js',
             'src/factory/DirectiveFactory.js',
             'src/factory/FilterFactory.js',
             'src/factory/ServiceFactory.js',
+            'src/factory/TransitionFactory.js',
                         
     		'src/impex.js',
 
     		'src/service/build-in.js',
             'src/directive/build-in.js',
+            'src/filter/build-in.js',
 
     		'src/shellEnd.js'
     	])

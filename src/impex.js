@@ -47,7 +47,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,7,4],
+	        v:[0,8,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -95,7 +95,7 @@
 		 * *模型属性是共享的，比如数组是所有实例公用。如果模型中的某些属性不想
 		 * 被表达式访问，只需要在名字前加上"$"符号<br/>
 		 * *模型方法会绑定到组件原型中，以节省内存
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.component = function(name,model,services){
@@ -111,7 +111,7 @@
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
 		 * @param  {Object} model 指令模型，用来定义新指令模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.directive = function(name,model,services){
@@ -123,7 +123,7 @@
 		 * 定义服务
 		 * @param  {string} name  服务名，注入时必须和创建时名称相同
 		 * @param  {Object} model 服务模型，用来定义新指令模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.service = function(name,model,services){
@@ -135,11 +135,22 @@
 		 * 定义过滤器
 		 * @param  {string} name  过滤器名
 		 * @param  {Object} model 过滤器模型，用来定义新过滤器模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.filter = function(name,model,services){
 			FilterFactory.register(name,model,services);
+			return this;
+		}
+
+		/**
+		 * 定义过渡器
+		 * @param  {string} name  过渡器名
+		 * @param  {Object} hook 过渡器钩子，可以在过渡的各个周期进行调用
+		 * @return this
+		 */
+		this.transition = function(name,hook){
+			TransitionFactory.register(name,hook);
 			return this;
 		}
 
@@ -155,7 +166,7 @@
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
 		 * @param  {Object} model 模型，用来给组件提供数据支持，如果节点本身已经是组件，
 		 * 该模型所包含参数会附加到模型中 
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
 			if(!DOC_BODY){

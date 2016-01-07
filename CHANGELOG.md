@@ -1,4 +1,32 @@
 # Change Log
+## Version 0.8.0 - 2016/1/7
+### 新增
+* 内置过滤器filterBy/limitBy/orderBy/json，可以用于表达式、指令以及each指令中
+* Transition类，用于实现过渡效果，自定义指令或组件可以通过注入[Transitions]服务来实现
+* each/if/show指令现在支持transition特性，用于指定CSS3或者javascript过渡
+* impex.transition()接口，用于注册过渡回调
+* 新增&更新大量demo
+
+### 更新
+* x-each/x-each-start语法变更，k=>v变为k,v
+* each指令现在支持过滤器操作
+* 视图的元素引用不再支持数组，而是单一元素el。如果组件模版有多个顶级节点，el为null
+* filter现在支持类型参数，如果一个字符串参数没有带引号，则会被认为是一个变量，
+filter参数中的变量变动也会引起视图的更新
+* Component.find()现在返回数组
+* 运行时视图上不会出现impex指令
+* 一些性能提升
+
+### bug修复
+* show/if指令在最开始会闪一下
+* 挂起组件重新显示时，重复构建模型
+
+### 移除(重要！)
+* Component.$view.elements
+* Component.findD()
+
+
+
 ## Version 0.7.4 - 2015/12/30
 ### 新增
 * 支持select标签多选模式时的x-model支持

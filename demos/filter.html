@@ -7,17 +7,20 @@
     <body>
         <div id="entry">
             <p>
-                {{ number => currency:¥:2}}
+                {{ list => orderBy :'' :'desc' .limitBy:count:0 .filterBy:numFilter .json}}
             </p>
             <p>
-                {{ number => currency:$:3}}
-            </p>
-            <p>
-                {{ number => currency:€:4}}
+                {{ list2 => orderBy :'name' :'desc' .filterBy:filter:'name' .json}}
             </p>
         </div>
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.console.js"></script>
         <script type="text/javascript">
+            imLog.level = 3;
+            impex.config({
+                logger:imLog
+            });
             //过滤器
             impex.filter('currency',{
                 to:function(sym,decimal){
@@ -33,10 +36,18 @@
                     return sym + ' ' + integer + parseFloat('0.'+pair[1]).toFixed(decimal).substr(1);
                 }
             });
+            
 
             //渲染
-            impex.render(document.getElementById('entry'),new function(){
+            var debug = impex.render(document.getElementById('entry'),new function(){
                 this.number = '4321234.5678';
+                this.list = [2,3,4,1,5,6];
+                this.numFilter = function(item){
+                    return item > 3;
+                }
+                this.count = 7;
+                this.filter = 'a';
+                this.list2 = [{name:'aaaa'},{name:'dcs'},{name:'fke'}];
             });
             
             

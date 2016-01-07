@@ -44,7 +44,7 @@
             props.push('id:'+comp.$__id);
             if(comp.$name)
                 props.push('name:'+comp.$name);
-            var viewName = comp.$view?comp.$view.elements[0].tagName:'';
+            var viewName = comp.$view?comp.$view.__nodes[0].tagName:'';
             props.push('view:'+viewName);
             if(comp.$parent){
                 props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));

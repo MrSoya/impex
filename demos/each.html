@@ -3,16 +3,16 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
     </head>
     <body>
-    	<ul>
-            <li x-each="list[list.tip['inf'+'o']] as k => v">{{k + ':' +v}}</li>   
+        <ul>
+            <li x-each="list[list.tip['inf'+'o']] as k , v">{{k + ':' +v}}</li>   
         </ul>
 
-        <div x-each="list1 as i=>k" class="{{k.p == i}}" x-click="changelist()">{{k.p == i}}</div>
-
-
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
 
             //渲染
@@ -23,17 +23,6 @@
                     },
                     info:['impex is ','a mvvm framework ','to build webUI ','simpler & stronger ']
                 };
-                this.list1 = [{p:1},{p:2}];
-                this.changelist = function(){
-                    if(this.list1.length<5){
-                        this.list1.push({p:3})
-                        this.list1.push({p:3})
-                        this.list1.push({p:3})
-                    }else{
-                        this.list1.pop();
-                    }
-                    
-                }
 
                 //组件显示时触发
                 this.onDisplay = function(){

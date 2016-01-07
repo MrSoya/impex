@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
+    </head>
+    <body>
+        <div 
+        x-each="list2 as k,v => filterBy:filterKey:'name' .orderBy:'name':'desc'">
+        {{k}} {{v => json}}
+        </div>
+        <p>
+            name:<input type="text" x-model="filterKey" >
+        </p>
+
+        <div 
+        x-each="list1 as k,v => filterBy:numFilter .orderBy:'p':'asc' " 
+        x-click="changelist()">{{k}} {{v.p}}</div>
+
+
+        <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            var debug = impex.render(document.body,new function(){
+                this.filterKey = '';
+                this.numFilter = function(item){
+                    return item.p >2;
+                }
+                this.list1 = [{p:3},{p:1},{p:2},{p:4}];
+                this.list2 = [{name:'impex'},{name:'soya'},{name:'h5stars'}];
+            });
+            
+        </script>
+    </body>
+</html>

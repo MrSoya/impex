@@ -25,7 +25,7 @@ var Builder = new function() {
 		//build components
 		for(var i=comp.$__components.length;i--;){
 			var subComp = comp.$__components[i];
-			if(comp.$__directives.indexOf(subComp) > -1)continue;
+			if(subComp instanceof Directive)continue;
 
 			//激活组件
 			subComp.init();
@@ -33,10 +33,11 @@ var Builder = new function() {
 		}
 
 		//build directives
-		for(var i=comp.$__directives.length;i--;){
-			var directive = comp.$__directives[i];
+		for(var i=comp.$__components.length;i--;){
+			var subComp = comp.$__components[i];
+			if(!(subComp instanceof Directive))continue;
 
-			directive.init();
+			subComp.init();
 		}
 	}
 

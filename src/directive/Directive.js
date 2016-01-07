@@ -75,8 +75,13 @@ Util.ext(Directive.prototype,{
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
-		if(this.$view)
-		this.$view.elements[0].setAttribute(this.$name,attrVal);
+		if(this.$view){
+			this.$view.removeAttr(this.$name);
+			if(this.$endTag){
+                var lastNode = this.$view.__nodes[this.$view.__nodes.length-1];
+                lastNode.removeAttribute(CMD_PREFIX+this.$endTag);
+            }
+		}
 		this.$value = attrVal;
 
 		LOGGER.log(this,'inited');

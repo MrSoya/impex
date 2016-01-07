@@ -28,7 +28,7 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			view = element;
 			if(Util.isDOM(element)){
-				view = new View([element]);
+				view = new View(element,null,[element]);
 			}
 		}
 		

@@ -6,7 +6,7 @@
     </head>
     <body>
     	<table border="1">
-    		<tr x-each="a.b.rows as i => row">
+    		<tr x-each="a.b.rows as i , row">
     			<td x-each="a.b.cols as col">
     				{{i}} : {{JSON.stringify(row[col['name']])}} : {{info[row[col.name]].msg}}
     			</td>

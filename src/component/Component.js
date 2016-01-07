@@ -45,7 +45,6 @@ function Component (view) {
 	 */
 	this.$parent;
 	this.$__components = [];
-	this.$__directives = [];
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
 	this.$__watcher;
@@ -125,10 +124,11 @@ Util.ext(Component.prototype,{
 	 * @param  {String} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @param {Boolean} recur 是否开启递归查找，默认false
-	 * @return {Component | null} 
+	 * @return {Array<Component>} 
 	 */
 	find:function(name,conditions,recur){
 		name = name.toLowerCase();
+		var rs = [];
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
 			if(name === '*' || comp.$name === name){
@@ -141,42 +141,15 @@ Util.ext(Component.prototype,{
 						}
 					}
 				if(matchAll){
-					return comp;
+					rs.push(comp);
 				}
 			}
 			if(recur && comp.$__components.length>0){
-				var rs = comp.find(name,conditions,true);
-				if(rs)return rs;
+				var tmp = comp.find(name,conditions,true);
+				if(rs)rs = rs.concat(tmp);
 			}
 		}
-		return null;
-	},
-	/**
-	 * 查找组件内指令，并返回符合条件的第一个实例
-	 * @param  {string} name       指令名，可以使用通配符*
-	 * @param  {Object} conditions 查询条件，JSON对象
-	 * @return {Directive | null} 
-	 */
-	findD:function(name,conditions){
-		name = name.toLowerCase();
-		for(var i=this.$__directives.length;i--;){
-			var d = this.$__directives[i];
-			if(name !== '*' && d.$name !== name)continue;
-
-			var matchAll = true;
-			if(conditions)
-				for(var k in conditions){
-					if(d[k] !== conditions[k]){
-						matchAll = false;
-						break;
-					}
-				}
-			if(matchAll){
-				return d;
-			}
-			
-		}
-		return null;
+		return rs;
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
@@ -218,7 +191,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target.elements?target.elements[0]:target);
+		var instance = ComponentFactory.newInstanceOf(type,target.__nodes?target.__nodes[0]:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -231,7 +204,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target && target.elements[0]);
+		var instance = ComponentFactory.newInstance(tmpl,target && target.__nodes[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -289,14 +262,12 @@ Util.ext(Component.prototype,{
 		if(this.$__suspendParent){
 			this.$__suspendParent.add(this);
 			this.$__suspendParent = null;
+		}else{
+			Renderer.render(this);
+			Builder.build(this);
 		}
 
-		Renderer.render(this);
-
 		this.$__state = Component.state.displayed;
-
-		Builder.build(this);
-
 		LOGGER.log(this,'displayed');
 
 		this.onDisplay && this.onDisplay();
@@ -314,10 +285,6 @@ Util.ext(Component.prototype,{
 			if(i > -1){
 				this.$parent.$__components.splice(i,1);
 			}
-			i = this.$parent.$__directives.indexOf(this);
-			if(i > -1){
-				this.$parent.$__directives.splice(i,1);
-			}
 			this.$parent = null;
 		}
 		
@@ -329,7 +296,6 @@ Util.ext(Component.prototype,{
 
 		this.$view = 
 		this.$__components = 
-		this.$__directives = 
 		this.$__expNodes = 
 		this.$__expPropRoot = null;
 
@@ -341,7 +307,6 @@ Util.ext(Component.prototype,{
 
 			this.$__state = Component.state.created;
 			this.$__components = [];
-			this.$__directives = [];
 			this.$__expNodes = [];
 			this.$__expPropRoot = new ExpProp();
 

@@ -68,6 +68,33 @@ var Renderer = new function() {
 		}
 	}
 
+	function clone(obj,ref){
+		if(obj === null)return null;
+		var rs = obj;
+		if(obj instanceof Array){
+			rs = obj.concat();
+			for(var i=rs.length;i--;){
+				rs[i] = clone(rs[i],ref);
+			}
+		}else if(Util.isObject(obj)){
+			rs = {};
+			var ks = Object.keys(obj);
+                if(ks.length>0){
+                    var r = !obj.$origin;
+                    for(var i=ks.length;i--;){
+                        var k = ks[i],
+                            v = obj[k];
+                        if(k.indexOf('$__impex__')===0)continue;
+                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
+                    }
+                }
+
+            if(ref !== false)
+                rs.$origin = obj;
+		}
+		return rs;
+	}
+
 	//计算表达式的值，每次都使用从内到外的查找方式
 	function calcExp(component,origin,expMap){
 		//循环获取每个表达式的值
@@ -79,11 +106,23 @@ var Renderer = new function() {
 
 			var filters = expObj.filters;
 			if(Object.keys(filters).length > 0){
+				if(rs && Util.isObject(rs)){
+					rs = clone(rs,0);
+				}
+
 				for(var k in filters){
 					var c = filters[k][0];
 					var params = filters[k][1];
+					var actParams = [];
+					for(var i=params.length;i--;){
+						var v = params[i];
+						if(v.varTree && v.words){
+							v = Renderer.evalExp(component,v);
+						}
+						actParams[i] = v;
+					}
 					c.$value = rs;
-					rs = c.to.apply(c,params);
+					rs = c.to.apply(c,actParams);
 				}
 			}
 
@@ -221,7 +260,7 @@ var Renderer = new function() {
 	function renderHTML(expNode,val,node,component){
 		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
-		var nView = new View([node]);
+		var nView = new View(null,null,[node]);
 		if(Util.isUndefined(expNode.__lastVal)){
 
 			var ph = ViewManager.createPlaceholder('-- [html] placeholder --');

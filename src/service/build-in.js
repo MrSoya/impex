@@ -13,12 +13,24 @@ impex.service('ViewManager',ViewManager);
  * 组件管理服务提供对组件的额外操作
  * 使用该服务，只需要注入即可
  */
-impex.service('ComponentManager',new function(){
+impex.service('ComponentManager',{
 	/**
 	 * 是否存在指定类型的组件
 	 * @return {Boolean} 
 	 */
-    this.hasTypeOf = function(type){
+    hasTypeOf : function(type){
     	return ComponentFactory.hasTypeOf(type);
     }
+});
+
+/**
+ * 组件管理服务提供对组件的额外操作
+ * 使用该服务，只需要注入即可
+ */
+impex.service('Transitions',new function(){
+	var transitionObjs = [];
+	this.get = function(type,component,onEndExp){
+		type = type||'x';
+		return TransitionFactory.get(type,component);
+	}
 });

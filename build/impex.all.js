@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-12-30
+ * last build: 2015-1-7
  */
 
 !function (global) {
@@ -751,7 +751,7 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(view,component){
-		var scanNodes = view.elements?view.elements:[view.element];
+		var scanNodes = view.__nodes?view.__nodes:[view.el];
 
         var startTag = null,
             nodes = [];
@@ -764,7 +764,6 @@ var Scanner = new function() {
                 var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
                 if(Util.isString(tmp)){
                     var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-                    component.$__directives.push(instance);
                     startTag = null;
                     nodes = [];
                 }
@@ -826,8 +825,7 @@ var Scanner = new function() {
 
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,atts[i].value);
-							component.$__directives.push(instance);
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
 							return;
 						}
 						if(DirectiveFactory.hasEndTag(c)){
@@ -845,8 +843,7 @@ var Scanner = new function() {
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,[node],component,atts[i].name,attVal);
-							component.$__directives.push(instance);
+							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
 						}
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
 				    	recordExpNode(attVal,node,component,attName);
@@ -864,7 +861,6 @@ var Scanner = new function() {
 						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
 						if(Util.isString(tmp)){
 							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-							component.$__directives.push(instance);
 							startTag = null;
 							nodes = [];
 						}
@@ -899,8 +895,9 @@ var Scanner = new function() {
 
 			var filters = {};
 			var i = 1;
+			var varMap = null;
 			if(FILTER_EXP.test(modelExp)){
-				parseFilters(RegExp.$1,filters,component);
+				varMap = parseFilters(lexer(RegExp.$1),filters,component);
 				i = modelExp.indexOf(FILTER_EXP_START_TAG);
 			}
 
@@ -909,6 +906,8 @@ var Scanner = new function() {
 				expStr = modelExp.substring(0,i);
     		var tmp = lexer(expStr);
     		
+    		if(varMap)
+    			Util.ext(tmp.varTree,varMap);
     		//保存表达式
     		exps[modelExp] = {
     			words:tmp.words,
@@ -922,67 +921,57 @@ var Scanner = new function() {
 		component.$__expNodes.push(expNode);
 	}
 
-	function parseFilters(expStr,filters,component){
-		var inName = true,
-			inParam,
-			unknown;
-		var currName = '',
-			currParam = '',
-			currParams = [];
-		for(var i=0;i<expStr.length;i++){
-			var l = expStr[i];
-			switch(l){
-				case ' ':case '\t':
-					unknown = true;
-					continue;
+	function parseFilters(expNode,filters,component){
+		var currParams = [],
+			currParam = null;
+		var inParam = false;
+		var varMap = {};
+
+		var words = expNode.words;
+		for(var i=0;i<words.length;i++){
+			var w = words[i];
+			switch(w){
 				case ':':
 					inParam = true;
-					inName = false;
-					unknown = false;
-					if(currParam){
+					if(currParam !== null)
 						currParams.push(currParam);
-						currParam = '';
-					}
-					continue;
+					currParam = '';
+					break;
 				case '.':
 					inParam = false;
-					inName = true;
-					unknown = false;
-					if(currName && FilterFactory.hasTypeOf(currName)){
-						filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
-					}
-					if(currParam){
+					if(currParam !== null)
 						currParams.push(currParam);
-					}
-					currName = '';
 					currParam = '';
 					currParams = [];
-					continue;
+					break;
 				default:
-					if(unknown){
-						if(currName){
-							filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
+					if(w instanceof Array){
+						var partName = w[0].replace(/^\./,'')
+						var filterName = partName.toLowerCase();
+						if(!inParam && filterName && FilterFactory.hasTypeOf(filterName)){
+							currParam = null;
+							filters[filterName] = [FilterFactory.newInstanceOf(filterName,component),currParams];
+						}else{
+							var tmp = lexer(partName);
+							Util.ext(varMap,tmp.varTree);
+							currParams.push(tmp);
+							currParam = null;
 						}
-						if(currParam){
-							currParams.push(currParam);
-						}
-						return i;
+					}else{
+						if(!inParam || !w.replace(/\s+/,''))continue;
+						currParam += w.replace(/^['"]|['"]$/g,'');
 					}
 			}
-
-			if(inName)currName += l;
-			else if(inParam){
-				currParam += l;
-			}
-		}//over for
-
-		if(currName && FilterFactory.hasTypeOf(currName)){
-			filters[currName] = [FilterFactory.newInstanceOf(currName,component),currParams];
 		}
+
 		if(currParam){
 			currParams.push(currParam);
 		}
+
+		return varMap;
 	}
+
+	this.parseFilters = parseFilters;
 }
 /**
  * 构建器
@@ -1011,7 +1000,7 @@ var Builder = new function() {
 		//build components
 		for(var i=comp.$__components.length;i--;){
 			var subComp = comp.$__components[i];
-			if(comp.$__directives.indexOf(subComp) > -1)continue;
+			if(subComp instanceof Directive)continue;
 
 			//激活组件
 			subComp.init();
@@ -1019,10 +1008,11 @@ var Builder = new function() {
 		}
 
 		//build directives
-		for(var i=comp.$__directives.length;i--;){
-			var directive = comp.$__directives[i];
+		for(var i=comp.$__components.length;i--;){
+			var subComp = comp.$__components[i];
+			if(!(subComp instanceof Directive))continue;
 
-			directive.init();
+			subComp.init();
 		}
 	}
 
@@ -1404,6 +1394,33 @@ var Renderer = new function() {
 		}
 	}
 
+	function clone(obj,ref){
+		if(obj === null)return null;
+		var rs = obj;
+		if(obj instanceof Array){
+			rs = obj.concat();
+			for(var i=rs.length;i--;){
+				rs[i] = clone(rs[i],ref);
+			}
+		}else if(Util.isObject(obj)){
+			rs = {};
+			var ks = Object.keys(obj);
+                if(ks.length>0){
+                    var r = !obj.$origin;
+                    for(var i=ks.length;i--;){
+                        var k = ks[i],
+                            v = obj[k];
+                        if(k.indexOf('$__impex__')===0)continue;
+                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
+                    }
+                }
+
+            if(ref !== false)
+                rs.$origin = obj;
+		}
+		return rs;
+	}
+
 	//计算表达式的值，每次都使用从内到外的查找方式
 	function calcExp(component,origin,expMap){
 		//循环获取每个表达式的值
@@ -1415,11 +1432,23 @@ var Renderer = new function() {
 
 			var filters = expObj.filters;
 			if(Object.keys(filters).length > 0){
+				if(rs && Util.isObject(rs)){
+					rs = clone(rs,0);
+				}
+
 				for(var k in filters){
 					var c = filters[k][0];
 					var params = filters[k][1];
+					var actParams = [];
+					for(var i=params.length;i--;){
+						var v = params[i];
+						if(v.varTree && v.words){
+							v = Renderer.evalExp(component,v);
+						}
+						actParams[i] = v;
+					}
 					c.$value = rs;
-					rs = c.to.apply(c,params);
+					rs = c.to.apply(c,actParams);
 				}
 			}
 
@@ -1557,7 +1586,7 @@ var Renderer = new function() {
 	function renderHTML(expNode,val,node,component){
 		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
-		var nView = new View([node]);
+		var nView = new View(null,null,[node]);
 		if(Util.isUndefined(expNode.__lastVal)){
 
 			var ph = ViewManager.createPlaceholder('-- [html] placeholder --');
@@ -1691,7 +1720,6 @@ function Component (view) {
 	 */
 	this.$parent;
 	this.$__components = [];
-	this.$__directives = [];
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
 	this.$__watcher;
@@ -1771,10 +1799,11 @@ Util.ext(Component.prototype,{
 	 * @param  {String} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
 	 * @param {Boolean} recur 是否开启递归查找，默认false
-	 * @return {Component | null} 
+	 * @return {Array<Component>} 
 	 */
 	find:function(name,conditions,recur){
 		name = name.toLowerCase();
+		var rs = [];
 		for(var i=this.$__components.length;i--;){
 			var comp = this.$__components[i];
 			if(name === '*' || comp.$name === name){
@@ -1787,42 +1816,15 @@ Util.ext(Component.prototype,{
 						}
 					}
 				if(matchAll){
-					return comp;
+					rs.push(comp);
 				}
 			}
 			if(recur && comp.$__components.length>0){
-				var rs = comp.find(name,conditions,true);
-				if(rs)return rs;
+				var tmp = comp.find(name,conditions,true);
+				if(rs)rs = rs.concat(tmp);
 			}
 		}
-		return null;
-	},
-	/**
-	 * 查找组件内指令，并返回符合条件的第一个实例
-	 * @param  {string} name       指令名，可以使用通配符*
-	 * @param  {Object} conditions 查询条件，JSON对象
-	 * @return {Directive | null} 
-	 */
-	findD:function(name,conditions){
-		name = name.toLowerCase();
-		for(var i=this.$__directives.length;i--;){
-			var d = this.$__directives[i];
-			if(name !== '*' && d.$name !== name)continue;
-
-			var matchAll = true;
-			if(conditions)
-				for(var k in conditions){
-					if(d[k] !== conditions[k]){
-						matchAll = false;
-						break;
-					}
-				}
-			if(matchAll){
-				return d;
-			}
-			
-		}
-		return null;
+		return rs;
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
@@ -1864,7 +1866,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target.elements?target.elements[0]:target);
+		var instance = ComponentFactory.newInstanceOf(type,target.__nodes?target.__nodes[0]:target);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1877,7 +1879,7 @@ Util.ext(Component.prototype,{
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target && target.elements[0]);
+		var instance = ComponentFactory.newInstance(tmpl,target && target.__nodes[0]);
 		this.$__components.push(instance);
 		instance.$parent = this;
 
@@ -1935,14 +1937,12 @@ Util.ext(Component.prototype,{
 		if(this.$__suspendParent){
 			this.$__suspendParent.add(this);
 			this.$__suspendParent = null;
+		}else{
+			Renderer.render(this);
+			Builder.build(this);
 		}
 
-		Renderer.render(this);
-
 		this.$__state = Component.state.displayed;
-
-		Builder.build(this);
-
 		LOGGER.log(this,'displayed');
 
 		this.onDisplay && this.onDisplay();
@@ -1960,10 +1960,6 @@ Util.ext(Component.prototype,{
 			if(i > -1){
 				this.$parent.$__components.splice(i,1);
 			}
-			i = this.$parent.$__directives.indexOf(this);
-			if(i > -1){
-				this.$parent.$__directives.splice(i,1);
-			}
 			this.$parent = null;
 		}
 		
@@ -1975,7 +1971,6 @@ Util.ext(Component.prototype,{
 
 		this.$view = 
 		this.$__components = 
-		this.$__directives = 
 		this.$__expNodes = 
 		this.$__expPropRoot = null;
 
@@ -1987,7 +1982,6 @@ Util.ext(Component.prototype,{
 
 			this.$__state = Component.state.created;
 			this.$__components = [];
-			this.$__directives = [];
 			this.$__expNodes = [];
 			this.$__expPropRoot = new ExpProp();
 
@@ -2050,14 +2044,15 @@ Util.ext(Component.prototype,{
  * 一个组件或者指令只会拥有一个视图
  * @class
  */
-function View (elements,target) {
+function View (el,target,nodes) {
 	/**
 	 * 对可视元素的引用，在DOM中就是HTMLElement，
 	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * @type {Array}
+	 * @type {Object}
 	 */
-	this.elements = elements;
+	this.el = el;
 
+	this.__nodes = nodes;
 	this.__evMap = {};
 	this.__target = target;
 }
@@ -2068,12 +2063,14 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-		var els = DOMViewProvider.compile(compileStr);
-		if(!els || els.length < 1){
+		var nodes = DOMViewProvider.compile(compileStr);
+		if(!nodes || nodes.length < 1){
 			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
-		this.elements = els;
+		this.__nodes = nodes;
+		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -2086,16 +2083,16 @@ View.prototype = {
 		}
 	},
 	__display:function(){
-		if(!this.__target ||!this.__target.parentNode || (this.elements[0].parentNode && this.elements[0].parentNode.nodeType===1))return;
+		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
 
 		var fragment = null;
-		if(this.elements.length > 1){
+		if(this.__nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<this.elements.length;i++){
-				fragment.appendChild(this.elements[i]);
+			for(var i=0;i<this.__nodes.length;i++){
+				fragment.appendChild(this.__nodes[i]);
 			}
 		}else{
-			fragment = this.elements[0];
+			fragment = this.__nodes[0];
 		}
 
 		this.__target.parentNode.replaceChild(fragment,this.__target);
@@ -2109,19 +2106,19 @@ View.prototype = {
 	            var pair = events[i];
 	            var evHandler = pair[1];
 
-	            for(var j=this.elements.length;j--;){
-	            	if(this.elements[j].nodeType !== 1)continue;
-	            	Util.off(k,this.elements[j],evHandler);
+	            for(var j=this.__nodes.length;j--;){
+	            	if(this.__nodes[j].nodeType !== 1)continue;
+	            	Util.off(k,this.__nodes[j],evHandler);
 	            }
 	        }
 		}
 
-		var p = this.elements[0].parentNode;
+		var p = this.__nodes[0].parentNode;
 		if(p){
-			if(this.elements[0].__impex__view)
-				this.elements[0].__impex__view = null;
-			for(var i=this.elements.length;i--;){
-				p.removeChild(this.elements[i]);
+			if(this.__nodes[0].__impex__view)
+				this.__nodes[0].__impex__view = null;
+			for(var i=this.__nodes.length;i--;){
+				this.__nodes[i].parentNode && p.removeChild(this.__nodes[i]);
 			}
 		}
 
@@ -2131,26 +2128,21 @@ View.prototype = {
 		}
 	},
 	__suspend:function(component,hook){
-		if(!this.elements[0].parentNode)return;
+		var p = this.__nodes[0].parentNode;
+		if(!p)return;
 		if(hook){
 			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
-			this.elements[0].parentNode.insertBefore(this.__target,this.element);
+			p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
-		var p = null;
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].parentNode){
-				p = this.elements[i].parentNode;
-				break;
-			}
-		}
-		if(p)
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].parentNode)
-				p.removeChild(this.elements[i]);
+		for(var i=this.__nodes.length;i--;){
+			if(this.__nodes[i].parentNode)
+				p.removeChild(this.__nodes[i]);
 		}
 	},
 	__on:function(component,type,exp,handler){
+		if(!this.el)return;
+
 		var originExp = exp;
 		var comp = component;
 		var tmpExpOutside = '';
@@ -2180,11 +2172,8 @@ View.prototype = {
 			}
 			
 		};
-		for(var j=this.elements.length;j--;){
-			var el = this.elements[j];
-        	if(el.nodeType !== 1)continue;
-        	Util.on(type,el,evHandler);
-        }
+
+        Util.on(type,this.el,evHandler);
 		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
@@ -2192,16 +2181,15 @@ View.prototype = {
 		this.__evMap[type].push([exp,evHandler]);
 	},
 	__off:function(component,type,exp){
+		if(!this.el)return;
+
 		var events = this.__evMap[type];
         for(var i=events.length;i--;){
             var pair = events[i];
             var evExp = pair[0];
             var evHandler = pair[1];
             if(evExp == exp){
-            	for(var j=this.elements.length;j--;){
-	            	if(this.elements[j].nodeType !== 1)continue;
-	            	Util.off(type,this.elements[j],evHandler);
-	            }
+	            Util.off(type,this.el,evHandler);
             }
         }
 	},
@@ -2211,32 +2199,28 @@ View.prototype = {
 	 */
 	clone:function(){
 		var tmp = [];
-		for(var i=this.elements.length;i--;){
-			var c = this.elements[i].cloneNode(true);
+		for(var i=this.__nodes.length;i--;){
+			var c = this.__nodes[i].cloneNode(true);
 			tmp.unshift(c);
 		}
 		
-		var copy = new View(tmp);
+		var copy = new View(tmp.length===1&&tmp[0].nodeType===1?tmp[0]:null,null,tmp);
 		return copy;
 	},
 	/**
 	 * 显示视图
 	 */
 	show:function(){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].style.display = '';
-		}
+		this.el.style.display = '';
+
 		return this;
 	},
 	/**
 	 * 隐藏视图
 	 */
 	hide:function(){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].style.display = 'none';
-		}
+		this.el.style.display = 'none';
+
 		return this;
 	},
 	/**
@@ -2246,16 +2230,11 @@ View.prototype = {
 	 */
 	style:function(name,value){
 		if(arguments.length > 1){
-			for(var i=this.elements.length;i--;){
-				if(this.elements[i].nodeType !== 1)continue;
-				this.elements[i].style[name] = value;
-			}
+			this.el.style[name] = value;
+
 			return this;
 		}else{
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType === 1)break;
-			}
-			return this.elements[i].style[name];
+			return this.el.style[name];
 		}
 	},
 	/**
@@ -2265,16 +2244,11 @@ View.prototype = {
 	 */
 	attr:function(name,value){
 		if(arguments.length > 1){
-			for(var i=this.elements.length;i--;){
-				if(this.elements[i].nodeType !== 1)continue;
-				this.elements[i].setAttribute(name,value);
-			}
+			this.el.setAttribute(name,value);
+
 			return this;
 		}else{
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType === 1)break;
-			}
-			return this.elements[i].getAttribute(name);
+			return this.el.getAttribute(name);
 		}
 	},
 	/**
@@ -2282,10 +2256,8 @@ View.prototype = {
 	 * @param  {String} name  属性名
 	 */
 	removeAttr:function(name){
-		for(var i=this.elements.length;i--;){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].removeAttribute(name);
-		}
+		this.el.removeAttribute(name);
+		
 		return this;
 	},
 	/**
@@ -2293,10 +2265,7 @@ View.prototype = {
 	 * @param  {String} name  样式名
 	 */
 	hasClass:function(name){
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType === 1)break;
-		}
-		return this.elements[i].className.indexOf(name) > -1;
+		return this.el.className.indexOf(name) > -1;
 	},
 	/**
 	 * 添加样式到视图
@@ -2304,10 +2273,19 @@ View.prototype = {
 	 */
 	addClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType !== 1)continue;
-			this.elements[i].className += ' '+names;
+
+		names = names.split(' ');
+		var cls = this.el.className.split(' ');
+		var rs = '';
+		for(var n=names.length;n--;){
+			if(cls.indexOf(names[n]) < 0){
+				rs += names[n]+' ';
+			}
 		}
+		this.el.className += ' '+rs;
+		
+			
+		return this;
 	},
 	/**
 	 * 从视图删除指定样式
@@ -2316,17 +2294,19 @@ View.prototype = {
 	removeClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
 		var clss = names.split(' ');
-		for(var ci=clss.length;ci--;){
-			var cname = clss[ci];
+		var clsName = this.el.className;
+		if(clsName){
+			for(var ci=clss.length;ci--;){
+				var cname = clss[ci];
 
-			var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
-
-			for(var i=0;i<this.elements.length;i++){
-				if(this.elements[i].nodeType !== 1)continue;
-
-				this.elements[i].className.replace(exp,'');
+				var exp = new RegExp('^'+cname+'\\s+|\\s+'+cname+'$|\\s+'+cname+'\\s+','img');
+				clsName = clsName.replace(exp,'');
 			}
+
+			this.el.className = clsName;
 		}
+		
+		return this;
 	},
 	/**
 	 * 从视图添加或移除指定样式
@@ -2334,31 +2314,22 @@ View.prototype = {
 	 */
 	toggleClass:function(names){
 		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+
 		var clss = names.split(' ');
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType === 1)break;
-		}
 		var add = false;
+		var clsName = this.el.className;
 		for(var ci=clss.length;ci--;){
 			var cname = clss[ci];
 
-			if(this.elements[i].className.indexOf(cname) < 0){
+			if(clsName.indexOf(cname) < 0){
 				add = true;
 				break;
 			}
 		}
-		for(var i=0;i<this.elements.length;i++){
-			if(this.elements[i].nodeType !== 1)continue;
-			if(add){
-				this.elements[i].className += ' '+names;
-			}else{
-				for(var ci=clss.length;ci--;){
-					var cname = clss[ci];
-					var exp = new RegExp('^'+cname+'\s+|\s+'+cname+'$|\s+'+cname+'\s+','img');
-
-					this.elements[i].className.replace(exp,'');
-				}
-			}
+		if(add){
+			this.addClass(names);
+		}else{
+			this.removeClass(names);
 		}
 	}//fn over
 }
@@ -2395,7 +2366,7 @@ var DOMViewProvider = new function(){
 	 */
 	this.newInstance = function(template,target){
 		if(template === ''){
-			return new View([document.createTextNode('')],target);
+			return new View(null,target,[document.createTextNode('')]);
 		}
 		compiler.innerHTML = template;
 		if(!compiler.childNodes[0])return null;
@@ -2405,20 +2376,18 @@ var DOMViewProvider = new function(){
 			nodes.push(tmp);
 		}
 
-		var view = new View(nodes,target);
+		var view = new View(null,target,nodes);
 
 		return view;
 	}
 
-	var headEl = ['meta','title','base'];
 	this.compile = function(template){
 		compiler.innerHTML = template;
-		if(!compiler.children[0])return null;
+
 		var nodes = [];
-		while(compiler.children.length>0){
-			var tmp = compiler.removeChild(compiler.children[0]);
+		while(compiler.childNodes.length>0){
+			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			var tn = tmp.nodeName.toLowerCase();
-			if(headEl.indexOf(tn) > -1)continue;
 
 			nodes.push(tmp);
 		}
@@ -2437,21 +2406,21 @@ var ViewManager = new function (){
      * @param  {View} targetView 目标视图
      */
 	this.replace = function(newView,targetView){
-		var targetV = targetView.elements[0],
-			newV = newView.elements[0],
-			p = targetView.elements[0].parentNode;
+		var targetV = targetView.__nodes[0],
+			newV = newView.__nodes[0],
+			p = targetView.__nodes[0].parentNode;
 		var fragment = newV;
-		if(newView.elements.length > 1){
+		if(newView.__nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.elements.length;i++){
-				fragment.appendChild(newView.elements[i]);
+			for(var i=0;i<newView.__nodes.length;i++){
+				fragment.appendChild(newView.__nodes[i]);
 			}
 		}
-		if(targetView.elements.length > 1){
+		if(targetView.__nodes.length > 1){
 			p.insertBefore(fragment,targetV);
 			
-			for(var i=targetView.elements.length;i--;){
-				p.removeChild(targetView.elements[i]);
+			for(var i=targetView.__nodes.length;i--;){
+				p.removeChild(targetView.__nodes[i]);
 			}
 		}else{
 			p.replaceChild(fragment,targetV);
@@ -2464,14 +2433,14 @@ var ViewManager = new function (){
 	 * @param  {View} targetView 目标视图
 	 */
 	this.insertBefore = function(newView,targetView){
-		var targetV = targetView.elements[0],
-			newV = newView.elements[0],
-			p = targetView.elements[0].parentNode;
+		var targetV = targetView.__nodes[0],
+			newV = newView.__nodes[0],
+			p = targetView.__nodes[0].parentNode;
 		var fragment = newV;
-		if(newView.elements.length > 1){
+		if(newView.__nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.elements.length;i++){
-				fragment.appendChild(newView.elements[i]);
+			for(var i=0;i<newView.__nodes.length;i++){
+				fragment.appendChild(newView.__nodes[i]);
 			}
 		}
 		if(p)
@@ -2484,24 +2453,62 @@ var ViewManager = new function (){
 	 * @param  {View} targetView 目标视图
 	 */
 	this.insertAfter = function(newView,targetView){
-		var targetV = targetView.elements[0],
-			newV = newView.elements[0],
-			p = targetView.elements[0].parentNode;
+		var targetV = targetView.__nodes[0],
+			newV = newView.__nodes[0],
+			p = targetView.__nodes[0].parentNode;
 		var last = p.lastChild;
 		var fragment = newV;
-		if(newView.elements.length > 1){
+		if(newView.__nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.elements.length;i++){
-				fragment.appendChild(newView.elements[i]);
+			for(var i=0;i<newView.__nodes.length;i++){
+				fragment.appendChild(newView.__nodes[i]);
 			}
 		}
 
 		if(last == targetV){
 			p.appendChild(fragment);
 		}else{
-			var next = targetView.elements[targetView.elements.length-1].nextSibling;
+			var next = targetView.__nodes[targetView.__nodes.length-1].nextSibling;
 			p.insertBefore(fragment,next);
 		}
+	}
+
+	/**
+	 * 在指定视图内插入视图，并插入到最后位置
+	 * @param  {View} newView 新视图
+	 * @param  {View} targetView 目标视图
+	 */
+	this.append = function(newView,targetView){
+		var newV = newView.__nodes[0],
+			p = targetView.__nodes[0];
+		var fragment = newV;
+		if(newView.__nodes.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<newView.__nodes.length;i++){
+				fragment.appendChild(newView.__nodes[i]);
+			}
+		}
+
+		p.appendChild(fragment);
+	}
+
+	/**
+	 * 在指定视图内插入视图，并插入到最前位置
+	 * @param  {View} newView 新视图
+	 * @param  {View} targetView 目标视图
+	 */
+	this.prepend = function(newView,targetView){
+		var newV = newView.__nodes[0],
+			p = targetView.__nodes[0];
+		var fragment = newV;
+		if(newView.__nodes.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<newView.__nodes.length;i++){
+				fragment.appendChild(newView.__nodes[i]);
+			}
+		}
+
+		p.insertBefore(fragment,p.firstChild);
 	}
 
 	/**
@@ -2511,7 +2518,7 @@ var ViewManager = new function (){
 	 * @return {View} 新视图
 	 */
 	this.createPlaceholder = function(content){
-		return new View([document.createComment(content)]);
+		return new View(null,null,[document.createComment(content)]);
 	}
 }
 /**
@@ -2591,8 +2598,13 @@ Util.ext(Directive.prototype,{
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
-		if(this.$view)
-		this.$view.elements[0].setAttribute(this.$name,attrVal);
+		if(this.$view){
+			this.$view.removeAttr(this.$name);
+			if(this.$endTag){
+                var lastNode = this.$view.__nodes[this.$view.__nodes.length-1];
+                lastNode.removeAttribute(CMD_PREFIX+this.$endTag);
+            }
+		}
 		this.$value = attrVal;
 
 		LOGGER.log(this,'inited');
@@ -2626,11 +2638,11 @@ Util.ext(Directive.prototype,{
  * </p>
  * 过滤器可以连接使用，并以声明的顺序依次执行，比如
  * <p>
- * 	{{ exp... => lower|cap}}
+ * 	{{ exp... => lower.cap}}
  * </p>
  * 过滤器支持参数，比如
  * <p>
- * 	{{ exp... => currency:€:4}}
+ * 	{{ exp... => currency:'€':4}}
  * </p>
  * @class 
  */
@@ -2682,6 +2694,122 @@ function Service () {
 	 */
 	this.onCreate;
 }
+/**
+ * @classdesc 过渡类。用于提供CSS3动画转换或js动画过渡回调接口
+ * @class 
+ */
+var TRANSITIONS = {
+    "transition"      : "transitionend",
+    "OTransition"     : "oTransitionEnd",
+    "MozTransition"   : "mozTransitionend",
+    "WebkitTransition": "webkitTransitionEnd"
+}
+var TESTNODE;
+function Transition (type,component,hook) {
+    if(!TESTNODE){
+        TESTNODE = document.createElement('div');
+        document.body.appendChild(TESTNODE);
+    }
+
+    if(!hook || hook.css !== false){
+        TESTNODE.className = (type + '-transition');
+        TESTNODE.style.left = '-9999px';
+        var cs = window.getComputedStyle(TESTNODE,null);
+        var durations = cs['transition-duration'].split(',');
+        var delay = cs['transition-delay'].split(',');
+        var max = -1;
+        for(var i=durations.length;i--;){
+            var du = parseFloat(durations[i]);
+            var de = parseFloat(delay[i]);
+            if(du+de > max)max = du+de;
+        }
+
+        if(max > 0){
+            var v = component.$view;
+            for(var i=component.$__expNodes.length;i--;){
+                var expNode = component.$__expNodes[i];
+                if(expNode.attrName === 'class'){
+                    expNode.origin += ' '+ type + '-transition';
+                }
+            }
+            v.addClass(type + '-transition');
+            this.$__longest = max;
+
+            var te = null;
+            for (var t in TRANSITIONS){
+                if (v.el.style[t] !== undefined){
+                    te = TRANSITIONS[t];
+                    break;
+                }
+            }
+            v.el.addEventListener(te,this.__done.bind(this),false);
+
+            this.$__css = true;
+        }
+    }else{
+    	this.$__css = false;
+    }
+
+    this.$__comp = component;
+    this.$__view = v;
+    this.$__hook = hook || {};
+    this.$__type = type;
+    
+}
+Transition.prototype = {
+	enter:function(){
+		this.$__start = 'enter';
+
+		if(this.$__css)
+        	this.$__view.addClass(this.$__type + '-enter');
+        //exec...
+        if(this.$__comp.enter){
+        	this.$__comp.enter();
+        }
+        if(this.$__hook.enter){
+        	this.$__hook.enter.call(this.$__comp,this.__enterDone.bind(this));
+        }
+        if(this.$__css){
+        	this.$__view.el.offsetHeight;
+        	this.$__view.removeClass(this.$__type + '-enter');
+        }
+	},
+	__enterDone:function(){
+		
+	},
+	leave:function(){
+		this.$__start = 'leave';
+
+		if(this.$__css)
+        	this.$__view.addClass(this.$__type + '-leave');
+        //exec...
+        if(this.$__hook.leave){
+        	this.__leaveDone.$__trans = this;
+        	this.$__hook.leave.call(this.$__comp,this.__leaveDone.bind(this));
+        }
+	},
+	__leaveDone:function(){
+		if(this.$__comp.leave){
+        	this.$__comp.leave();
+        }
+	},
+	__done:function(e){
+		if(e.elapsedTime < this.$__longest)return;
+        if(!this.$__start)return;
+
+        switch(this.$__start){
+        	case 'enter':
+        		this.__enterDone();
+        		break;
+        	case 'leave':
+        		this.__leaveDone();
+        		break;
+        }
+
+        this.$__start = '';
+        this.$__view.removeClass(this.$__type + '-leave');
+	}
+};
 /**
  * 工厂基类
  */
@@ -2757,7 +2885,7 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			view = element;
 			if(Util.isDOM(element)){
-				view = new View([element]);
+				view = new View(element,null,[element]);
 			}
 		}
 		
@@ -2841,7 +2969,7 @@ Util.ext(_DirectiveFactory.prototype,{
 	hasEndTag : function(type){
 		return this.types[type].props.$endTag;
 	},
-	newInstanceOf : function(type,nodes,component,attrName,attrValue){
+	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
 		var params = null;
@@ -2861,11 +2989,16 @@ Util.ext(_DirectiveFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.extProp(rs,this.types[type].props);
 
-		if(nodes[0].__impex__view){
-			rs.$view = nodes[0].__impex__view;
+		if(node.__impex__view){
+			rs.$view = node.__impex__view;
 		}else{
-			rs.$view = new View(nodes);
-			nodes[0].__impex__view = rs.$view;
+			var el = node,nodes = [node];
+			if(Util.isArray(node)){
+				el = node[0];
+				nodes = node;
+			}
+			rs.$view = new View(el,null,nodes);
+			node.__impex__view = rs.$view;
 		}
 
 		if(params){
@@ -2973,6 +3106,22 @@ Util.ext(_ServiceFactory.prototype,{
 });
 
 var ServiceFactory = new _ServiceFactory();
+/**
+ * 过渡工厂
+ */
+
+var TransitionFactory = {
+	hooks:{},
+	register:function(type,hook){
+		this.hooks[type] = hook;
+	},
+	transitions:{},
+	get:function(type,component){
+		var tmp = new Transition(type,component,this.hooks[type]);
+		
+		return tmp;
+	}
+}
 
  	
 	var CMD_PREFIX = 'x-';//指令前缀
@@ -3022,7 +3171,7 @@ var ServiceFactory = new _ServiceFactory();
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,7,4],
+	        v:[0,8,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3070,7 +3219,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * *模型属性是共享的，比如数组是所有实例公用。如果模型中的某些属性不想
 		 * 被表达式访问，只需要在名字前加上"$"符号<br/>
 		 * *模型方法会绑定到组件原型中，以节省内存
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.component = function(name,model,services){
@@ -3086,7 +3235,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
 		 * @param  {Object} model 指令模型，用来定义新指令模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.directive = function(name,model,services){
@@ -3098,7 +3247,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义服务
 		 * @param  {string} name  服务名，注入时必须和创建时名称相同
 		 * @param  {Object} model 服务模型，用来定义新指令模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.service = function(name,model,services){
@@ -3110,11 +3259,22 @@ var ServiceFactory = new _ServiceFactory();
 		 * 定义过滤器
 		 * @param  {string} name  过滤器名
 		 * @param  {Object} model 过滤器模型，用来定义新过滤器模版
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
 		this.filter = function(name,model,services){
 			FilterFactory.register(name,model,services);
+			return this;
+		}
+
+		/**
+		 * 定义过渡器
+		 * @param  {string} name  过渡器名
+		 * @param  {Object} hook 过渡器钩子，可以在过渡的各个周期进行调用
+		 * @return this
+		 */
+		this.transition = function(name,hook){
+			TransitionFactory.register(name,hook);
 			return this;
 		}
 
@@ -3130,7 +3290,7 @@ var ServiceFactory = new _ServiceFactory();
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
 		 * @param  {Object} model 模型，用来给组件提供数据支持，如果节点本身已经是组件，
 		 * 该模型所包含参数会附加到模型中 
-		 * @param  {Array | null} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
 			if(!DOC_BODY){
@@ -3223,14 +3383,26 @@ impex.service('ViewManager',ViewManager);
  * 组件管理服务提供对组件的额外操作
  * 使用该服务，只需要注入即可
  */
-impex.service('ComponentManager',new function(){
+impex.service('ComponentManager',{
 	/**
 	 * 是否存在指定类型的组件
 	 * @return {Boolean} 
 	 */
-    this.hasTypeOf = function(type){
+    hasTypeOf : function(type){
     	return ComponentFactory.hasTypeOf(type);
     }
+});
+
+/**
+ * 组件管理服务提供对组件的额外操作
+ * 使用该服务，只需要注入即可
+ */
+impex.service('Transitions',new function(){
+	var transitionObjs = [];
+	this.get = function(type,component,onEndExp){
+		type = type||'x';
+		return TransitionFactory.get(type,component);
+	}
 });
 /**
  * 内建指令
@@ -3284,7 +3456,34 @@ impex.service('ComponentManager',new function(){
      * <br/>使用方式：<div x-show="exp"></div>
      */
     impex.directive('show',{
+        onCreate:function(ts){
+            var transition = this.$view.attr('transition');
+            if(transition !== null){
+                this.$transition = ts.get(transition,this);
+            }
+            this.exec(false);
+        },
         observe : function(rs){
+            if(rs === this.$lastRs)return;
+            this.$lastRs = rs;
+
+            if(this.$transition){
+                if(rs){
+                    this.$transition.enter();
+                }else{
+                    this.$transition.leave();
+                }
+            }else{
+                this.exec(rs);
+            }
+        },
+        enter:function(){
+            this.exec(this.$lastRs);
+        },
+        leave:function(){
+            this.exec(this.$lastRs);
+        },
+        exec:function(rs){
             if(rs){
                 //显示
                 this.$view.show();
@@ -3293,7 +3492,7 @@ impex.service('ComponentManager',new function(){
                 this.$view.hide();
             }
         }
-    });
+    },['Transitions']);
     /**
      * x-show的范围版本
      */
@@ -3322,22 +3521,49 @@ impex.service('ComponentManager',new function(){
      * <br/>使用方式：<div x-if="exp"></div>
      */
     impex.directive('if',{
-        onCreate : function(viewManager){
+        onCreate : function(viewManager,ts){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+
+            var transition = this.$view.attr('transition');
+            if(transition !== null){
+                this.$transition = ts.get(transition,this);
+            }
+            this.$lastRs = false;
+            this.exec(false);
         },
         observe : function(rs){
+            if(rs === this.$lastRs)return;
+            this.$lastRs = rs;
+
+            if(this.$transition){
+                if(rs){
+                    this.$transition.enter();
+                }else{
+                    this.$transition.leave();
+                }
+            }else{
+                this.exec(rs);
+            }
+        },
+        enter:function(){
+            this.exec(this.$lastRs);
+        },
+        leave:function(){
+            this.exec(this.$lastRs);
+        },
+        exec:function(rs){
             if(rs){
-                if(this.$view.elements[0].parentNode)return;
+                if(this.$view.el.parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
-                if(!this.$view.elements[0].parentNode)return;
+                if(!this.$view.el.parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
         }
-    },['ViewManager']);
+    },['ViewManager','Transitions']);
 
     /**
      * x-if的范围版本
@@ -3356,11 +3582,11 @@ impex.service('ComponentManager',new function(){
         },
         observe : function(rs){
             if(rs){
-                if(this.$view.elements[0].parentNode)return;
+                if(this.$view.el.parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
-                if(!this.$view.elements[0].parentNode)return;
+                if(!this.$view.el.parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
@@ -3379,7 +3605,7 @@ impex.service('ComponentManager',new function(){
             }
             className = className.replace('x-cloak','');
             this.$view.attr('class',className);
-            updateCloakAttr(this.$parent,this.$view.elements[0],className);
+            updateCloakAttr(this.$parent,this.$view.el,className);
         }
     });
 
@@ -3404,9 +3630,10 @@ impex.service('ComponentManager',new function(){
      */
     impex.directive('model',{
         onCreate : function(){
-            var el = this.$view.elements[0];
+            var el = this.$view.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
+
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
@@ -3491,8 +3718,8 @@ impex.service('ComponentManager',new function(){
     });
 
     function eachModel(){
-        this.onCreate = function(viewManager){
-            this.$eachExp = /(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*=>\s*[a-zA-Z0-9_$]+?)|(?:[a-zA-Z0-9_$]+?))$/;
+        this.onCreate = function(viewManager,ts){
+            this.$eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.$viewManager = viewManager;
             this.$expInfo = this.parseExp(this.$value);
             this.$parentComp = this.$parent;
@@ -3502,6 +3729,12 @@ impex.service('ComponentManager',new function(){
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.$cacheSize = 20;
+
+            var transition = this.$view.attr('transition');
+            if(transition !== null){
+                this.$trans = transition;
+                this.$ts = ts;
+            }
         }
         this.onInit = function(){
             if(this.$__state === Component.state.inited)return;
@@ -3543,6 +3776,11 @@ impex.service('ComponentManager',new function(){
             });
         }
         this.rebuild = function(ds,diffSize,ki,vi){
+            ds = this.doFilter(ds);
+            if(diffSize === -999){
+                diffSize = ds.length - this.$subComponents.length;
+            }
+
             if(diffSize < 0){
                 var tmp = this.$subComponents.splice(0,diffSize*-1);
                 if(this.$cache.length < this.$cacheSize){
@@ -3550,7 +3788,12 @@ impex.service('ComponentManager',new function(){
                         this.$cache.push(tmp[i]);
                     }
                     for(var i=this.$cache.length;i--;){
-                        this.$cache[i].suspend(false);
+                        if(this.$trans && !this.$cache[i].$__leaving && this.$cache[i].$__state === 'displayed'){
+                            this.$cache[i].$__leaving = true;
+                            this.$cache[i].$transition.leave();
+                        }else{
+                            this.$cache[i].suspend(false);
+                        }
                     }
                 }else{
                     for(var i=tmp.length;i--;){
@@ -3591,15 +3834,87 @@ impex.service('ComponentManager',new function(){
             var target = this.$viewManager.createPlaceholder('');
             this.$viewManager.insertBefore(target,this.$placeholder);
             //视图
-            var copy = this.$__view.clone().removeAttr(this.$name);
+            var copy = this.$__view.clone();
             //创建子组件
             var subComp = parent.createSubComponent(copy,target);
             this.$subComponents.push(subComp);
+            if(this.$trans){
+                var that = this;
+                
+                subComp.onInit = function(){
+                    if(!this.$transition){
+                        this.$transition = that.$ts.get(that.$trans,this);
+                    }
+                };
+                subComp.onDisplay = function(){
+                    this.$transition.enter();
+                };
+                subComp.leave = function(){
+                    this.suspend(false);
+                    this.$__leaving = false;
+                }
+            }
+                
             return subComp;
         }
-        this.build = function(ds,ki,vi){            
+        
+        function clone(obj,ref){
+            if(obj === null)return null;
+            var rs = obj;
+            if(obj instanceof Array){
+                rs = obj.concat();
+                for(var i=rs.length;i--;){
+                    rs[i] = clone(rs[i],ref);
+                }
+            }else if(Util.isObject(obj)){
+                rs = {};
+                var ks = Object.keys(obj);
+                if(ks.length>0){
+                    var r = !obj.$origin;
+                    for(var i=ks.length;i--;){
+                        var k = ks[i],
+                            v = obj[k];
+                        if(k.indexOf('$__impex__')===0)continue;
+                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
+                    }
+                }
+
+                if(ref !== false)
+                    rs.$origin = obj;
+            }
+            return rs;
+        }
+        this.doFilter = function(rs){
+            if(!this.$filters)return rs;
+            var filters = this.$filters;
+            if(Object.keys(filters).length > 0){
+                if(rs && Util.isObject(rs)){
+                    rs = clone(rs);
+                }
+
+                for(var k in filters){
+                    var c = filters[k][0];
+                    var params = filters[k][1];
+                    var actParams = [];
+                    for(var i=params.length;i--;){
+                        var v = params[i];
+                        if(v.varTree && v.words){
+                            v = Renderer.evalExp(this.$parentComp,v);
+                        }
+                        actParams[i] = v;
+                    }
+                    c.$value = rs;
+                    rs = c.to.apply(c,actParams);
+                }
+                return rs;
+            }
+        }
+        this.build = function(ds,ki,vi){
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
+            
+            ds = this.doFilter(ds);
+
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
@@ -3621,16 +3936,32 @@ impex.service('ComponentManager',new function(){
         }
         this.parseExp = function(exp){
             var ds,k,v;
-            exp.replace(this.$eachExp,function(a,attrName,subAttr){
+            var that = this;
+            exp.replace(this.$eachExp,function(a,attrName,subAttr,filterExp){
                 ds = attrName;
                 var tmp = subAttr.replace(/\s/mg,'');
-                var kv = tmp.split('=>');
+                var kv = tmp.split(',');
                 if(kv.length>1){
                     k = kv[0];
                     v = kv[1];
                 }else{
                     v = kv[0];
                 }
+
+                if(filterExp){
+                    var filters = {};
+                    var varMap = Scanner.parseFilters(lexer(filterExp),filters,that.$parent);
+                    that.$filters = filters;
+
+                    for(var i in varMap){
+                        that.$parent.watch(i,function(type,newVal,oldVal){
+                            if(that.$ds)
+                            that.rebuild(that.$ds,-999,that.$expInfo.k,that.$expInfo.v);
+                        });
+                    }
+                }
+                
+                
                 
             });
             if(!ds){
@@ -3651,12 +3982,12 @@ impex.service('ComponentManager',new function(){
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：
-     * <br/> &lt;li x-each="datasource as k => v"&gt;{{k}} {{v}}&lt;/li&gt;
+     * <br/> &lt;li x-each="datasource as k , v"&gt;{{k}} {{v}}&lt;/li&gt;
      * <br/> &lt;li x-each="datasource as v"&gt;{{v}}&lt;/li&gt;
      * 
      * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
      */
-    impex.directive('each',each,['ViewManager']);
+    impex.directive('each',each,['ViewManager','Transitions']);
 
 
     var eachStart = new eachModel();
@@ -3671,6 +4002,79 @@ impex.service('ComponentManager',new function(){
      */
     impex.directive('each-start',eachStart,['ViewManager']);
 }(impex);
+impex.filter('json',{
+    to:function(){
+        return JSON.stringify(this.$value);
+    }
+});
+
+//filterBy:'xxx'
+//filterBy:'xxx':'name'
+//filterBy:filter
+impex.filter('filterBy',{
+    to:function(key,inName){
+        var ary = this.$value;
+        if(!(ary instanceof Array)){
+            console.warn('can only filter array');
+            return this.$value;
+        }
+        var rs = [];
+        if(key instanceof Function){
+            for(var i=ary.length;i--;){
+                var need = key.call(this,ary[i]);
+                if(need){
+                    rs.unshift(ary[i]);
+                }
+            }
+        }else{
+            for(var i=ary.length;i--;){
+                var item = ary[i];
+                if(inName){
+                    if(!key || item[inName].indexOf(key) > -1){
+                        rs.unshift(item);
+                    }
+                }else{
+                    if(!key || item.indexOf && item.indexOf(key) > -1){
+                        rs.unshift(item);
+                    }
+                }
+            }
+        }
+        return rs;
+    }
+});
+
+//[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
+impex.filter('limitBy',{
+    to:function(count,start){
+        if(!(this.$value instanceof Array)){
+            console.warn('can only filter array');
+            return this.$value;
+        }
+        if(!count)return this.$value;
+        return this.$value.splice(start||0,count);
+    }
+});
+
+//[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
+impex.filter('orderBy',{
+    to:function(key,dir){
+        if(!(this.$value instanceof Array)){
+            console.warn('can only filter array');
+            return this.$value;
+        }
+        this.$value.sort(function(a,b){
+            var x = key?a[key]:a,
+                y = key?b[key]:b;
+
+            return (x+'').localeCompare(y+'');
+        });
+        if(dir === 'desc'){
+            this.$value.reverse();
+        }
+        return this.$value;
+    }
+});
 
  	if ( typeof module === "object" && typeof module.exports === "object" ) {
  		module.exports = impex;
