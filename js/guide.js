@@ -55,6 +55,8 @@ impex.render(document.getElementById('syntax-2'),{
 
 if(document.getElementById('syntax-3'))
 impex.render(document.getElementById('syntax-3'));
+if(document.getElementById('syntax-4'))
+impex.render(document.getElementById('syntax-4'));
 
 if(document.getElementById('each-1'))
 impex.render(document.getElementById('each-1'),{
@@ -167,3 +169,35 @@ impex.render(document.getElementById('directive-2'),new function(){
 
 if(document.getElementById('filter-1'))
 impex.render(document.getElementById('filter-1'));
+
+if(document.getElementById('transition-1'))
+impex.render(document.getElementById('transition-1'),{
+    show:'show'
+});
+if(document.getElementById('transition-2')){
+    impex.transition('impex',{
+        enter:function(){
+            this.$view.el.innerHTML = 'impex enter';
+        },
+        leave:function(){
+            this.$view.el.innerHTML = 'impex leave';
+        }
+    });
+    impex.render(document.getElementById('transition-2'),{
+        show:'show',
+        state:''
+    });
+}
+if(document.getElementById('transition-3')){
+    impex.transition('impex2',{
+        enter:function(done){
+            $(this.$view.el).animate({opacity:1,fontSize:'2rem'},500,'swing',done);
+        },
+        leave:function(done){
+            $(this.$view.el).animate({opacity:0,fontSize:'1rem'},500,'swing',done);
+        }
+    });
+    impex.render(document.getElementById('transition-3'),{
+        show:'show'
+    });
+}

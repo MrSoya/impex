@@ -34,8 +34,12 @@
 						<li onmouseover="moveIndicator(this)" class="">
 							<a href="../demos/">Demos</a>
 						</li>
-						<li onmouseover="moveIndicator(this)">
-							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						<li onmouseover="moveIndicator(this)" class="dropdown">
+							<a href="#">社区</a>
+							<ul class="dropdown-menu">
+							    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+							    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+							</ul>
 						</li>
 					</ul>
 				</div>
@@ -49,17 +53,21 @@
 
 	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
-			<li onmouseover="moveIndicator(this)" class="actived">
+			<li class="actived">
 				<a href="../guide/">教程</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../api/">API</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../demos/">Demos</a>
 			</li>
-			<li onmouseover="moveIndicator(this)">
-				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			<li>
+				<a href="#">社区</a>
+				<ul>
+				    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+				    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+				</ul>
 			</li>
 			<li>
 				<nav class="doc-nav ">
@@ -150,6 +158,9 @@
 										<ul class="nav indent">
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
+						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
 						</li>
 											</ul>
 									</li>
@@ -344,6 +355,33 @@
 									</li>
 							</ul>
 		</li>
+				<li>
+			<a class="link " 
+				href="transition.html">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
+									</li>
+							</ul>
+		</li>
 			</ul>
 </nav>			</li>
 		</ul>
@@ -440,7 +478,7 @@ impex.directive('tip',{
 						可以使用大括号来完成额外的操作，比如预解析
 					</p>
 					<pre><code class="language-markup">&lt;!-- button需要绑定不同的click函数 --&gt;
-&lt;button x-each="btns as i=&gt;btn" x-click="{{btn.click+'('+i+')'}}"&gt;
+&lt;button x-each="btns as i,btn" x-click="{{btn.click+'('+i+')'}}"&gt;
     {{btn.name + i}}
 &lt;/button&gt;</code></pre>
 <pre><code class="language-javascript">//注册指令
@@ -461,7 +499,7 @@ impex.render(document.getElementById('entry'),new function(){
 </code></pre>
 					<div class="output">
 						<div id="directive-2">
-							<button x-each="btns as i=>btn" x-click="{{btn.click+'('+i+')'}}">
+							<button x-each="btns as i,btn" x-click="{{btn.click+'('+i+')'}}">
 							    {{btn.name + i}}
 							</button>
 						</div>
@@ -569,6 +607,9 @@ impex.render(document.getElementById('entry'),new function(){
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
 						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
+						</li>
 											</ul>
 									</li>
 							</ul>
@@ -759,6 +800,33 @@ impex.render(document.getElementById('entry'),new function(){
 									</li>
 								<li>
 					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="transition.html">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
 									</li>
 							</ul>
 		</li>

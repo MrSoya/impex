@@ -60,9 +60,96 @@ window.addEventListener('load',function(){
             }
         });
 
+        impex.component('demo-todo',{
+            $template:'<section class="todos">\
+                            <header>\
+                                <input x-keydown="addTodo($event)" placeholder="What needs to be done?">\
+                            </header>\
+                            <section>\
+                                <ul class="todolist">\
+                                    <li x-each="todos as v => filterBy:filterType:\'type\' " \
+                                        transition="todo" \
+                                        class="{{v.type==\'completed\'?\'completed\':\'\'}}"\
+                                    >\
+                                        <input type="checkbox" x-checked="v.type==\'completed\'" x-click="done($event,v)">\
+                                        {{v.val}} <i x-click="removeTodo(v)" class="close">&times;</i>\
+                                    </li>\
+                                </ul>\
+                            </section>\
+                            <footer>\
+                                <span>{{activeTodos}} item left</span>\
+                                <a class="button {{filterType===\'\'?\'active\':\'\'}}" x-click="filterTodos(\'\')">All</a>\
+                                <a class="button {{filterType===\'active\'?\'active\':\'\'}}" x-click="filterTodos(\'active\')">Active</a>\
+                                <a class="button {{filterType===\'completed\'?\'active\':\'\'}}" x-click="filterTodos(\'completed\')">Completed</a>\
+                            </footer>\
+                        </section>',
+            todos:[
+                {id:1,val:'read a book',type:'active'},
+                {id:1,val:'have a drink',type:'completed'},
+                {id:1,val:'write a game',type:'active'},
+            ],
+            filterType:'',
+            activeTodos:0,
+            onInit:function(){
+                this.watch('todos',function(type,newVal){
+                    this.activeTodos = newVal.filter(function(todo){
+                        return todo.type === 'active';
+                    }).length;
+                })
+            },
+            addTodo:function(e){
+                var t = e.target;
+                if(e.keyCode === 13 && t.value.trim()){
 
-        if($('div[name="calc"]')){
+                    this.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+                    t.value = '';
+                }
+            },
+            removeTodo:function(todo){
+                var oTodo = todo.$origin;
+                var i = this.todos.indexOf(oTodo);
+                if(i > -1)
+                this.todos.splice(i,1);
+            },
+            done:function(e,todo){
+                var type = 'active';
+                if(e.target.checked){
+                    type = 'completed';
+                }
+
+                todo.type = type;
+                todo.$origin.type = type;
+
+                this.activeTodos = this.todos.filter(function(td){
+                    return td.type === 'active';
+                }).length;
+
+                var t = this.filterType;
+                this.filterType = '';
+                this.filterType = t;
+            },
+            filterTodos:function(type){
+                this.filterType = type;
+            }
+        });
+
+
+        if($('div[name="calc"]')[0]){
             window.demos.output = '<demo-calc></demo-calc>'
+        }
+
+        if($('div[name="todo"]')[0]){
+            impex.directive('keydown',{
+                onCreate:function(){
+                    this.on('keydown',this.$value);
+                }
+            })
+            impex.directive('checked',{
+                observe:function(rs){
+                    this.$view.el.checked = rs;
+                }
+            })
+            window.demos.output = '<demo-todo></demo-todo>'
         }
     }
 

@@ -34,8 +34,12 @@
 						<li onmouseover="moveIndicator(this)" class="">
 							<a href="../demos/">Demos</a>
 						</li>
-						<li onmouseover="moveIndicator(this)">
-							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						<li onmouseover="moveIndicator(this)" class="dropdown">
+							<a href="#">社区</a>
+							<ul class="dropdown-menu">
+							    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+							    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+							</ul>
 						</li>
 					</ul>
 				</div>
@@ -49,17 +53,21 @@
 
 	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../guide/">教程</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="actived">
+			<li class="actived">
 				<a href="../api/">API</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../demos/">Demos</a>
 			</li>
-			<li onmouseover="moveIndicator(this)">
-				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			<li>
+				<a href="#">社区</a>
+				<ul>
+				    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+				    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+				</ul>
 			</li>
 			<li>
 				<nav class="doc-nav ">
@@ -96,6 +104,9 @@
 									</li>
 								<li>
 					<a href="#global-api-filter">filter</a>
+									</li>
+								<li>
+					<a href="#global-api-transition">transition</a>
 									</li>
 								<li>
 					<a href="#global-api-render">render</a>
@@ -136,9 +147,6 @@
 									</li>
 								<li>
 					<a href="#component-find">find</a>
-									</li>
-								<li>
-					<a href="#component-findD">findD</a>
 									</li>
 								<li>
 					<a href="#component-watch">watch</a>
@@ -200,7 +208,7 @@
 				组件 - 视图			</a>
 			<ul class="nav indent ">
 								<li>
-					<a href="#component-view-elements">elements</a>
+					<a href="#component-view-elements">el</a>
 									</li>
 								<li>
 					<a href="#component-view-clone">clone</a>
@@ -331,6 +339,25 @@
 		</li>
 				<li>
 			<a class="link " 
+				href="#filter-buildin">
+				过滤器 - 内建过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-buildin-filterBy">filterBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-binlimitBy">limitBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-orderBy">orderBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-json">json</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
 				href="#service">
 				服务			</a>
 			<ul class="nav indent ">
@@ -349,6 +376,32 @@
 			<ul class="nav indent ">
 								<li>
 					<a href="#service-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service-buildin">
+				服务 - 内建服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-buildin-ViewManager">ViewManager</a>
+									</li>
+								<li>
+					<a href="#service-buildin-Transitions">Transitions</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#transition">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition--enter">enter</a>
+									</li>
+								<li>
+					<a href="#transition--leave">leave</a>
 									</li>
 							</ul>
 		</li>
@@ -444,7 +497,7 @@
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.component('x-panel',{
 	$template : &quot;&lt;div style='color:red'&gt;{{=CONTENT}}&lt;/div&gt;&quot;,
@@ -481,7 +534,7 @@
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.directive('mousedown',{
     onInit : function(){
@@ -519,7 +572,7 @@
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.service('ViewHelper',{
 	//any functions here...
@@ -557,7 +610,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.filter('lower',{
     to:function(){
@@ -571,6 +624,42 @@ impex.component('x-panel',{
 											<pre><code class="language-markup">&lt;x-panel&gt;
   Hello {{ name =&gt; lower}} !
 &lt;/x-panel&gt;</code></pre>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="global-api-transition">
+				<i class="tag">#</i> transition				( name , hook )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} name</code>
+
+																	</li>
+															<li>
+									<code>
+										{Object} hook</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">impex.transition('x',{
+	css:false,//禁止使用CSS过渡
+    enter:function(done){
+        //do enter
+        done();
+    },
+    leave:function(done){
+    	//do leave
+    	done();
+    }
+});</code></pre>
 										
 					</p>
 				</li>
@@ -599,7 +688,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.render(document.body,{
 	//any props here...
@@ -630,7 +719,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<pre><code class="language-javascript">impex.findAll('x-panel',{name:'exp'})</code></pre>
 										
@@ -741,7 +830,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>绑定事件到组件</p>
 										
@@ -767,7 +856,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>从组件解绑事件</p>
 										
@@ -798,38 +887,22 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+										<li>
+						Return:
+						<ul>
+							<li>
+								<code>
+									{Array}
+								</code>
+							</li>
+						</ul> 
+					</li>
+													<li>Usage: 
 					<p>
-											<p>查找子组件，并返回符合条件的第一个实例</p>
+											<p>查找子组件，并返回符合条件的所有实例</p>
 											<p>
 							<blockquote class='warning'>如果不开启递归查找，该方法只会查询直接子节点集合！</blockquote>
 						</p>
-										
-					</p>
-				</li>
-			</ul>
-						<h3 id="component-findD">
-				<i class="tag">#</i> findD				( name , conditions )			</h3>
-			<ul class="prop">
-									<li>
-						Arguments:
-						<ul>
-															<li>
-									<code>
-										{String} name</code>
-
-																	</li>
-															<li>
-									<code>
-										{Object} conditions</code>
-
-																	</li>
-														
-						</ul> 
-					</li>
-								<li>Usage: 
-					<p>
-											<p>查找组件内指令，并返回符合条件的第一个实例</p>
 										
 					</p>
 				</li>
@@ -853,7 +926,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>监控当前组件中的模型属性变化，如果发生变化，会触发回调</p>
 											<pre><code class="language-javascript">impex.component('x-panel',{
@@ -882,7 +955,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>添加子组件到父组件</p>
 										
@@ -908,7 +981,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>创建一个未初始化的子组件</p>
 										
@@ -934,7 +1007,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>创建一个匿名子组件</p>
 										
@@ -978,7 +1051,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，但数据都不会销毁</p>
 											<p><code>hook</code> 标识是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
@@ -1016,7 +1089,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>设置或者获取模型值，如果第二个参数为空就是获取模型值。设置模型值时，context为当前域的模型，如果当前模型不匹配表达式，则赋值无效。获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null</p>
 										
@@ -1037,7 +1110,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>查找拥有指定属性的最近的祖先组件</p>
 										
@@ -1063,7 +1136,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>当组件被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
 										
@@ -1084,7 +1157,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>当组件初始化时，该回调被触发，系统会扫描组件中的所有表达式并建立数据模型</p>
 										
@@ -1127,12 +1200,12 @@ impex.component('x-panel',{
 							</p>
 			
 						<h3 id="component-view-elements">
-				<i class="tag">#</i> elements							</h3>
+				<i class="tag">#</i> el							</h3>
 			<ul class="prop">
-								<li>Type: <code>Array</code></li>
+								<li>Type: <code>HTMLElement | null</code></li>
 									<li>Usage: 
 					<p>
-											<p>当组件被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+											<p>对可视元素的引用，在DOM中就是HTMLElement，在绝大多数情况下，都不应该直接使用该属性</p>
 										
 					</p>
 				</li>
@@ -1186,7 +1259,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>获取或设置视图的样式</p>
 										
@@ -1212,7 +1285,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>获取或设置视图的属性值</p>
 										
@@ -1233,7 +1306,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>删除视图属性</p>
 										
@@ -1254,7 +1327,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>视图是否包含指定样式</p>
 										
@@ -1275,7 +1348,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>添加样式到视图</p>
 										
@@ -1296,7 +1369,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>从视图删除指定样式</p>
 										
@@ -1317,7 +1390,7 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>从视图添加或移除指定样式</p>
 										
@@ -1529,7 +1602,7 @@ impex.component('x-panel',{
 								<h2 id="filter">
 				过滤器			</h2>
 			<p>
-				指令继承自组件，所以指令也具有组件的生命周期。唯一例外的是，指令没有<code>onDisplay</code>			</p>
+							</p>
 			
 						<h3 id="filter--component">
 				<i class="tag">#</i> $component							</h3>
@@ -1561,15 +1634,15 @@ impex.component('x-panel',{
 						<ul>
 															<li>
 									<code>
-										{...String} ...args</code>
+										{...Object} ...args</code>
 
 									可变参数，根据表达式中书写的参数决定								</li>
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
-											<p>转变函数，该函数是实际进行转变的入口</p>
+											<p>过滤函数，该函数是实际进行转变的入口</p>
 										
 					</p>
 				</li>
@@ -1593,9 +1666,160 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
+													<li>Usage: 
+					<p>
+											<p>当过滤器被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="filter-buildin">
+				过滤器 - 内建过滤器			</h2>
+			<p>
+							</p>
+			
+						<h3 id="filter-buildin-filterBy">
+				<i class="tag">#</i> filterBy				( key , prop )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{Function|String} key</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} prop</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+										<li>
+						Return:
+						<ul>
+							<li>
+								<code>
+									{Array}
+								</code>
+							</li>
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<pre><code class="language-markup">{{ list =&gt; filterBy:'impex'}}</code></pre>
+											<p>选出list中包含impex字符的项</p>
+											<pre><code class="language-markup">{{ list =&gt; filterBy:'impex':'type'}}</code></pre>
+											<p>选出list中项属性type包含impex字符的所有项</p>
+											<pre><code class="language-markup">{{ list =&gt; filterBy:impexFilter}}</code></pre>
+											<pre><code class="language-javascript">
+function impexFilter(item){
+	return item.type.indexOf('impex') &gt; -1;
+}</code></pre>
+											<p>使用自定义impexFilter过滤函数进行过滤</p>
+											<p>
+							<blockquote class='tip'>该过滤器可以是用在表达式以及each指令中</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="filter-buildin-binlimitBy">
+				<i class="tag">#</i> limitBy				( count , start )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{int} count</code>
+
+																	</li>
+															<li>
+									<code>
+										{int} start</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+										<li>
+						Return:
+						<ul>
+							<li>
+								<code>
+									{Array}
+								</code>
+							</li>
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<pre><code class="language-markup">{{ [1,2,3,4,5] =&gt; limitBy:3:1}}</code></pre>
+											<p>结果[2,3,4]</p>
+											<pre><code class="language-markup">{{ [1,2,3,4,5] =&gt; limitBy:3}}</code></pre>
+											<p>结果[1,2,3]</p>
+											<p>
+							<blockquote class='tip'>该过滤器可以是用在表达式以及each指令中</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="filter-buildin-orderBy">
+				<i class="tag">#</i> orderBy				( key , dir )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} key</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} dir</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+										<li>
+						Return:
+						<ul>
+							<li>
+								<code>
+									{Array}
+								</code>
+							</li>
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<pre><code class="language-markup">{{ [1,3,2,5,4] =&gt; orderBy:'':'desc'}}</code></pre>
+											<p>结果[5,4,3,2,1]</p>
+											<pre><code class="language-markup">{{ [1,3,2,5,4] =&gt; orderBy}}</code></pre>
+											<p>结果[1,2,3,4,5]</p>
+											<p>
+							<blockquote class='tip'>该过滤器可以是用在表达式以及each指令中</blockquote>
+						</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="filter-buildin-json">
+				<i class="tag">#</i> json				(  )			</h3>
+			<ul class="prop">
 								<li>Usage: 
 					<p>
-											<p>当转换器被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+											<pre><code class="language-markup">{{ [1,3,2,5,4] =&gt; orderBy:'':'desc' .json}}</code></pre>
+											<p>仅是对结果进行JSON格式的输出</p>
+											<p>
+							<blockquote class='tip'>该过滤器可以是用在表达式以及each指令中</blockquote>
+						</p>
 										
 					</p>
 				</li>
@@ -1646,9 +1870,71 @@ impex.component('x-panel',{
 														
 						</ul> 
 					</li>
-								<li>Usage: 
+													<li>Usage: 
 					<p>
 											<p>当服务被创建时，该回调触发，系统会把指定的服务注入到参数中</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="service-buildin">
+				服务 - 内建服务			</h2>
+			<p>
+							</p>
+			
+						<h3 id="service-buildin-ViewManager">
+				<i class="tag">#</i> ViewManager							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>ViewManager是用于操作视图的服务，在HTML中就是DOM，
+							提供了如下接口</p>
+											<p>
+							<ul>
+								<li>vm.replace(newView,targetView)</li>
+								<li>vm.insertBefore(newView,targetView)</li>
+								<li>vm.insertAfter(newView,targetView)</li>
+								<li>vm.append(newView,targetView)</li>
+								<li>vm.prepend(newView,targetView)</li>
+							</ul></p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="service-buildin-Transitions">
+				<i class="tag">#</i> Transitions							</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<p>过渡服务只提供了一个接口 transitions.get(type,component)，用于获取Transition对象</p>
+										
+					</p>
+				</li>
+			</ul>
+								<h2 id="transition">
+				过渡			</h2>
+			<p>
+				Transition实例不能直接创建，只能通过<code>Transitions</code>服务获取，通常使用在自定义指令中。
+			过渡实例用于调度过渡效果的开始和结束。可以在源码包中内建指令部分找到应用示例，比如x-if			</p>
+			
+						<h3 id="transition--enter">
+				<i class="tag">#</i> enter				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">transition.enter()</code></pre>
+											<p>进入动画，并对元素应用<code>.*-enter</code>样式</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="transition--leave">
+				<i class="tag">#</i> leave				(  )			</h3>
+			<ul class="prop">
+								<li>Usage: 
+					<p>
+											<pre><code class="language-javascript">transition.leave()</code></pre>
+											<p>离开动画，并对元素应用<code>.*-leave</code>样式</p>
 										
 					</p>
 				</li>
@@ -1695,6 +1981,9 @@ impex.component('x-panel',{
 					<a href="#global-api-filter">filter</a>
 									</li>
 								<li>
+					<a href="#global-api-transition">transition</a>
+									</li>
+								<li>
 					<a href="#global-api-render">render</a>
 									</li>
 								<li>
@@ -1733,9 +2022,6 @@ impex.component('x-panel',{
 									</li>
 								<li>
 					<a href="#component-find">find</a>
-									</li>
-								<li>
-					<a href="#component-findD">findD</a>
 									</li>
 								<li>
 					<a href="#component-watch">watch</a>
@@ -1797,7 +2083,7 @@ impex.component('x-panel',{
 				组件 - 视图			</a>
 			<ul class="nav indent ">
 								<li>
-					<a href="#component-view-elements">elements</a>
+					<a href="#component-view-elements">el</a>
 									</li>
 								<li>
 					<a href="#component-view-clone">clone</a>
@@ -1928,6 +2214,25 @@ impex.component('x-panel',{
 		</li>
 				<li>
 			<a class="link " 
+				href="#filter-buildin">
+				过滤器 - 内建过滤器			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#filter-buildin-filterBy">filterBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-binlimitBy">limitBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-orderBy">orderBy</a>
+									</li>
+								<li>
+					<a href="#filter-buildin-json">json</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
 				href="#service">
 				服务			</a>
 			<ul class="nav indent ">
@@ -1946,6 +2251,32 @@ impex.component('x-panel',{
 			<ul class="nav indent ">
 								<li>
 					<a href="#service-lifecycle-onCreate">onCreate</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#service-buildin">
+				服务 - 内建服务			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#service-buildin-ViewManager">ViewManager</a>
+									</li>
+								<li>
+					<a href="#service-buildin-Transitions">Transitions</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="#transition">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition--enter">enter</a>
+									</li>
+								<li>
+					<a href="#transition--leave">leave</a>
 									</li>
 							</ul>
 		</li>

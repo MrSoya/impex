@@ -2,7 +2,6 @@
  * 指令扩展
  */
 ;!function(impex){
-
 	///////////////////// 事件指令 /////////////////////
     /**
      * 视图点击指令
@@ -55,7 +54,7 @@
      */
     impex.directive('mouseleave',{
         onInit : function(){
-        	var currentTarget = this.$view.elements[0];
+        	var currentTarget = this.$view.el;
             this.on('mouseout',this.$value,function(e,origin){
             	var target = e.target || e.srcElement;
 

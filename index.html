@@ -12,12 +12,18 @@
 		<link href="css/doc.css" rel="stylesheet">
 		<link href="css/prism.css" rel="stylesheet">
 		<style type="text/css">
+			body{
+				overflow: auto !important;
+			}
 			.head h1{
 				font-size:6rem;
-				margin: 12rem 0 3rem;
+				margin: 6rem 0 3rem;
 			}
-			.head h1 + p{
+			.head p{
 				color: #a0a0a0;
+			}
+			.head .point{
+				color:#000;
 			}
 			.head .download{
 				padding: 1rem 5rem;
@@ -62,6 +68,71 @@
 			float: left;
     		margin-right: 2rem !important;
 		}
+
+		.intro{
+			margin: 3rem 0 1rem;
+			padding: 3rem 0 2rem;
+			background-color: #3998D6;
+			color: rgba(255,255,255,.9);
+			text-align: center;
+		}
+		.intro ul{
+			display: inline-block;
+		}
+		.intro li{
+			text-align: left;
+			list-style: none !important;
+			font-size: 1.2em;
+			line-height: 2;
+		}
+		.intro > i{
+			font-size: 1.5rem;
+		}
+		.features{
+			background-color: #fafafa;
+			padding: 3rem 0 1rem;
+		}
+		.features h1{
+			font-size: 1.5rem;
+			color: rgba(0,0,0,.6);
+			text-align: center;
+		}
+		.features h1 .icon{
+
+		}
+		.features p{
+			min-height: 10rem;
+		}
+
+		.start{
+			border:1px solid #3998D6;
+			font-size: 2rem;
+			color: #000;
+			padding: .5rem 3rem;
+			display: inline-block;
+			margin: 5rem 0;
+			transition:background-color .2s,color .2s;
+		}
+		.start:hover{
+			text-decoration: none;
+			background-color: #3998D6;
+			color: #fff;
+		}
+		.example{
+			text-align: center;
+			padding: 1rem 0 2rem;
+		}
+		.example > i{
+			color: #757575;
+			font-size: 1.5rem;
+		}
+
+		footer{
+			margin: 2rem 0;
+			padding: 2rem 0;
+			text-align: center;
+			font-size: 1.1em;
+		}
 		</style>
 	</head>
 	<body>
@@ -73,11 +144,27 @@
 							<li class="" ><a href="guide/">教程</a></li>
 							<li class="" ><a href="api/">API</a></li>
 							<li class="" ><a href="demos/">demos</a></li>
-							<li ><a href="http://www.h5stars.com/t_impex.html" target="_blank">社区</a></li>
+							<li class="dropdown">
+								<a href="#" data-toggle="dropdown">社区</a>
+								<span class="caret"></span>
+								<ul class="dropdown-menu">
+								    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+								    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+								</ul>
+							</li>
 						</ul>
 						<h1>impex.js</h1>
 						<p>
-							一个基于数据驱动的组件式开发引擎
+							一个基于数据驱动的组件式web开发引擎
+						</p>
+						<p>
+							适用于现代化的
+						</p>
+						<p class="point">
+							桌面 & 移动
+						</p>
+						<p>
+							浏览器
 						</p>
 
 						<a class="download" href="guide/prepare.html" target="_blank">
@@ -105,16 +192,31 @@
 				</div>
 			</div>
 		</nav>
-		<section class="container">
+		<section class="intro">
+			<div class="content">
+				<h1>有什么用？</h1>
+				<ul>
+					<li><i class="glyphicon glyphicon-ok"></i> 让web开发更简单、更高效</li>
+					<li><i class="glyphicon glyphicon-ok"></i> 使用组装的方式构建UI</li>
+					<li><i class="glyphicon glyphicon-ok"></i> 使用数据驱动而不是修改DOM来更新视图</li>
+					<li><i class="glyphicon glyphicon-ok"></i> 使用标记而不是javascript代码来扩展视图</li>
+					<li><i class="glyphicon glyphicon-ok"></i> 使用域模型而不是全局函数来编写控制逻辑</li>
+					<li><i class="glyphicon glyphicon-ok"></i> 使用简单的API而无需复杂的MV(*)概念来完成应用构建</li>
+					<li>...</li>
+				</ul>
+			</div>
+			<i class="glyphicon glyphicon-menu-down"></i>
+		</section>
+		<section class="container example">
 			<div class="row content">
-				<pre><code class="language-markup">&lt;!-- 视图 --&gt;
-&lt;div id="entry"&gt;
+				<pre><code class="language-markup" x-ignore>&lt;!-- 视图 --&gt;
+&lt;body&gt;
   Hello &#123;&#123; name &#125;&#125; !
   &lt;input x-model="name" value="&#123;&#123;name&#125;&#125;"&gt;
-&lt;/div&gt;</code>
+&lt;/body&gt;</code>
 </pre>
-<pre><code class="language-javascript">// 组件 
-var debug = impex.render(document.body,{
+<pre><code class="language-javascript">// (匿名)组件 
+impex.render(document.body,{
 	name:'impex'
 });
 </code>
@@ -122,11 +224,83 @@ var debug = impex.render(document.body,{
 					<div class="output">
 						<div >
 							Hello {{name}} !
-							<input x-model="name" value="">
+							<input x-model="name" value="" maxlength="10">
 						</div>
 					</div>
 			</div>
 		</section>
+		<section class="features">
+			<div class="container">
+				<div class="row content">
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/lesscode.png">
+							简单
+						</h1>
+						<p>
+							就像上面的例子那样，最复杂的impex应用也不会比这个复杂多少。当然，功能依然强大
+						</p>
+					</div>
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/flash.png">
+							高效
+						</h1>
+						<p>
+							impex基于数据差异化的异步更新，可以准确、即时的更新视图或是触发监控
+						</p>
+					</div>
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/modules.png">
+							组件化
+						</h1>
+						<p>
+							组件化并一定适用于所有开发，但组件化适用于绝大部分的UI场景。
+							impex支持功能组件化(数据+控制+视图)，以便让组件可以重用，并提升效率
+						</p>
+					</div>
+				</div>
+				<div class="row content">
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/ext.png">
+							可扩展
+						</h1>
+						<p>
+							impex提供了丰富的扩展接口，可以简单扩展出更有针对性的功能。实际上，
+							impex的核心库很小，源码包中就内置了一些扩展
+						</p>
+					</div>
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/no.png">
+							无依赖
+						</h1>
+						<p>
+							impex的运行不依赖任何第三方库，但可以很好的与其他库结合使用，比如JQuery、Underscore等
+						</p>
+					</div>
+					<div class="col-md-4">
+						<h1>
+							<img class="icon" src="imgs/cp.png">
+							跨平台
+						</h1>
+						<p>
+							impex可以运行在桌面或者移动端上的任何现代化浏览器上，并且借助扩展
+							还可以支持到IE8
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+		<footer>
+			<a href="guide/" class="start">开始impex</a>
+			<p>
+				impex.js 基于<a href="http://opensource.org/licenses/MIT">MIT许可发布</a>
+			</p>
+			Powered by <a href="https://github.com/MrSoya">MrSoya</a> ©2015
+		</footer>
 		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
 		<script src="js/jquery-1.11.3.min.js"></script>
 		<!-- Include all compiled plugins (below), or include individual files as needed -->

@@ -34,8 +34,12 @@
 						<li onmouseover="moveIndicator(this)" class="actived">
 							<a href="../demos/">Demos</a>
 						</li>
-						<li onmouseover="moveIndicator(this)">
-							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						<li onmouseover="moveIndicator(this)" class="dropdown">
+							<a href="#">社区</a>
+							<ul class="dropdown-menu">
+							    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+							    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+							</ul>
 						</li>
 					</ul>
 				</div>
@@ -49,17 +53,21 @@
 
 	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../guide/">教程</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../api/">API</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="actived">
+			<li class="actived">
 				<a href="../demos/">Demos</a>
 			</li>
-			<li onmouseover="moveIndicator(this)">
-				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			<li>
+				<a href="#">社区</a>
+				<ul>
+				    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+				    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+				</ul>
 			</li>
 			<li>
 				<nav class="doc-nav ">
@@ -69,11 +77,14 @@
 				href="demos-calc.html">
 				计算器			</a>
 			<ul class="nav indent ">
-				<br />
-<b>Notice</b>:  Undefined variable: navs in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
-<br />
-<b>Warning</b>:  Invalid argument supplied for foreach() in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
-			</ul>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="demos-todo.html">
+				Todos			</a>
+			<ul class="nav indent ">
+							</ul>
 		</li>
 			</ul>
 </nav>			</li>
@@ -211,6 +222,7 @@ impex.render(document.body,{
 								.calc{
     border:1px solid #aaa;
     width: 340px;
+    margin: 0 auto;
 }
 .block-display{
     background-color: #f6f6f6;
@@ -264,11 +276,14 @@ impex.render(document.body,{
 				href="demos-calc.html">
 				计算器			</a>
 			<ul class="nav indent ">
-				<br />
-<b>Notice</b>:  Undefined variable: navs in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
-<br />
-<b>Warning</b>:  Invalid argument supplied for foreach() in <b>D:\xampp\htdocs\impex\side-nav.html</b> on line <b>19</b><br />
-			</ul>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="demos-todo.html">
+				Todos			</a>
+			<ul class="nav indent ">
+							</ul>
 		</li>
 			</ul>
 </nav>				</div>

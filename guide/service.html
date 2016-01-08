@@ -34,8 +34,12 @@
 						<li onmouseover="moveIndicator(this)" class="">
 							<a href="../demos/">Demos</a>
 						</li>
-						<li onmouseover="moveIndicator(this)">
-							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						<li onmouseover="moveIndicator(this)" class="dropdown">
+							<a href="#">社区</a>
+							<ul class="dropdown-menu">
+							    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+							    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+							</ul>
 						</li>
 					</ul>
 				</div>
@@ -49,24 +53,28 @@
 
 	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
-			<li onmouseover="moveIndicator(this)" class="actived">
+			<li class="actived">
 				<a href="../guide/">教程</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../api/">API</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../demos/">Demos</a>
 			</li>
-			<li onmouseover="moveIndicator(this)">
-				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			<li>
+				<a href="#">社区</a>
+				<ul>
+				    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+				    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+				</ul>
 			</li>
 			<li>
 				<nav class="doc-nav ">
 	<ul class="sideNav ">
 				<li>
 			<a class="link " 
-				href="overview.html">
+				href="overview.php">
 				概述			</a>
 			<ul class="nav indent ">
 								<li>
@@ -82,7 +90,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="prepare.html">
+				href="prepare.php">
 				准备			</a>
 			<ul class="nav indent ">
 								<li>
@@ -101,7 +109,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="gettingstarted.html">
+				href="gettingstarted.php">
 				开始			</a>
 			<ul class="nav indent ">
 								<li>
@@ -117,7 +125,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="syntax.html">
+				href="syntax.php">
 				语法			</a>
 			<ul class="nav indent ">
 								<li>
@@ -151,13 +159,16 @@
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
 						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
+						</li>
 											</ul>
 									</li>
 							</ul>
 		</li>
 				<li>
 			<a class="link " 
-				href="conditions.html">
+				href="conditions.php">
 				条件渲染			</a>
 			<ul class="nav indent ">
 								<li>
@@ -184,7 +195,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="each.html">
+				href="each.php">
 				列表渲染			</a>
 			<ul class="nav indent ">
 								<li>
@@ -206,7 +217,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="form.html">
+				href="form.php">
 				表单			</a>
 			<ul class="nav indent ">
 								<li>
@@ -239,7 +250,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="component.html">
+				href="component.php">
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
@@ -285,7 +296,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="directive.html">
+				href="directive.php">
 				指令			</a>
 			<ul class="nav indent ">
 								<li>
@@ -317,7 +328,7 @@
 		</li>
 				<li>
 			<a class="link " 
-				href="filter.html">
+				href="filter.php">
 				过滤器			</a>
 			<ul class="nav indent ">
 								<li>
@@ -330,7 +341,7 @@
 		</li>
 				<li>
 			<a class="link actived" 
-				href="service.html">
+				href="service.php">
 				服务			</a>
 			<ul class="nav indent actived">
 								<li>
@@ -341,6 +352,33 @@
 									</li>
 								<li>
 					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="transition.php">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
 									</li>
 							</ul>
 		</li>
@@ -368,7 +406,6 @@ impex.service('HTTP',{
 		//...
 	}
 });
-},['HTTP'])
 </code></pre>
 
 					<p>
@@ -429,8 +466,11 @@ impex.service('HTTP',{
 </code></pre>
 					
 							<footer>
-		<a class="prev" href="filter.html">
+		<a class="prev" href="filter.php">
 		<i class="glyphicon glyphicon-menu-left"></i>过滤器	</a>
+		<a class="next" href="transition.php">
+		过渡<i class="glyphicon glyphicon-menu-right"></i>
+	</a>
 	</footer>
 <p>
 	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
@@ -440,7 +480,7 @@ impex.service('HTTP',{
 	<ul class="sideNav ">
 				<li>
 			<a class="link " 
-				href="overview.html">
+				href="overview.php">
 				概述			</a>
 			<ul class="nav indent ">
 								<li>
@@ -456,7 +496,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="prepare.html">
+				href="prepare.php">
 				准备			</a>
 			<ul class="nav indent ">
 								<li>
@@ -475,7 +515,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="gettingstarted.html">
+				href="gettingstarted.php">
 				开始			</a>
 			<ul class="nav indent ">
 								<li>
@@ -491,7 +531,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="syntax.html">
+				href="syntax.php">
 				语法			</a>
 			<ul class="nav indent ">
 								<li>
@@ -525,13 +565,16 @@ impex.service('HTTP',{
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
 						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
+						</li>
 											</ul>
 									</li>
 							</ul>
 		</li>
 				<li>
 			<a class="link " 
-				href="conditions.html">
+				href="conditions.php">
 				条件渲染			</a>
 			<ul class="nav indent ">
 								<li>
@@ -558,7 +601,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="each.html">
+				href="each.php">
 				列表渲染			</a>
 			<ul class="nav indent ">
 								<li>
@@ -580,7 +623,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="form.html">
+				href="form.php">
 				表单			</a>
 			<ul class="nav indent ">
 								<li>
@@ -613,7 +656,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="component.html">
+				href="component.php">
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
@@ -659,7 +702,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="directive.html">
+				href="directive.php">
 				指令			</a>
 			<ul class="nav indent ">
 								<li>
@@ -691,7 +734,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link " 
-				href="filter.html">
+				href="filter.php">
 				过滤器			</a>
 			<ul class="nav indent ">
 								<li>
@@ -704,7 +747,7 @@ impex.service('HTTP',{
 		</li>
 				<li>
 			<a class="link actived" 
-				href="service.html">
+				href="service.php">
 				服务			</a>
 			<ul class="nav indent actived">
 								<li>
@@ -715,6 +758,33 @@ impex.service('HTTP',{
 									</li>
 								<li>
 					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="transition.php">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
 									</li>
 							</ul>
 		</li>

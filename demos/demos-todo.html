@@ -95,10 +95,10 @@
 			<div class="row doc-panel">
 				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
 				<div class="col-md-8 col-xs-8 content"> 		
-					<h1 id="demos-calc">计算器</h1>
+					<h1 id="demos-todo">Todos</h1>
 					<p>
 						<blockquote class='tip'>
-							这个demo用到的特性包括列表渲染、事件指令、表达式处理等
+							这个demo用到的特性包括列表渲染、事件指令、过滤器、过渡动画等
 						</blockquote>
 					</p>
 					
@@ -112,149 +112,233 @@
 						<div style="clear: both;"></div>
 						<pre class="content" x-show="actived=='HTML'">
 							<code class="language-markup" x-ignore>
-&lt;div class="calc"&gt;
-    &lt;div class="block-display {{exp.length &gt;9?exp.length &gt;20?'small-font':'normal-font':''}}"&gt;
-        {{exp =&gt; format}}
-    &lt;/div&gt;
-    &lt;div class="block-buttons"&gt;
-        &lt;div x-each="buttons as btn"&gt;
-            &lt;button x-click="addExp(btn)"&gt;{{btn}}&lt;/button&gt;
-        &lt;/div&gt;
-        &lt;div style="clear: both;"&gt;&lt;/div&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
+&lt;section class="todos"&gt;
+    &lt;header&gt;
+        &lt;input x-keydown="addTodo($event)" placeholder="What needs to be done?"&gt;
+    &lt;/header&gt;
+    &lt;section&gt;
+        &lt;ul class="todolist"&gt;
+            &lt;li x-each="todos as v =&gt; filterBy:filterType:'type' " 
+                transition="todo" 
+                class="{{v.type=='completed'?'completed':''}}"
+            &gt;
+                &lt;input type="checkbox" x-checked="v.type=='completed'" x-click="done($event,v)"&gt;
+                {{v.val}} &lt;i x-click="removeTodo(v)" class="close"&gt;&times;&lt;/i&gt;
+            &lt;/li&gt;
+        &lt;/ul&gt;
+    &lt;/section&gt;
+    &lt;footer&gt;
+        &lt;span&gt;{{activeTodos}} item left&lt;/span&gt;
+        &lt;a class="button {{filterType===''?'active':''}}" x-click="filterTodos('')"&gt;All&lt;/a&gt;
+        &lt;a class="button {{filterType==='active'?'active':''}}" x-click="filterTodos('active')"&gt;Active&lt;/a&gt;
+        &lt;a class="button {{filterType==='completed'?'active':''}}" x-click="filterTodos('completed')"&gt;Completed&lt;/a&gt;
+    &lt;/footer&gt;
+&lt;/section&gt;
 							</code>
 						</pre>
 						<pre class="content" x-show="actived=='CSS'">
 							<code class="language-css">
-.calc{
-    border:1px solid #aaa;
-    width: 340px;
-}
-.block-display{
-    background-color: #f6f6f6;
-    width: 100%;
-    font-size: 3rem;
-    font-family: Arial;
-    direction: rtl;
-    padding: 1rem 0;
-    overflow: hidden;
-
-    transition:font-size .2s;
-}
-.block-buttons{
-    background-color: #eee;
-}
-.block-buttons button{
-    background: #eee;
-    border: none;
-    width: 25%;
-    float: left;
+/* transition start */
+.todo-transition {
+    transition: all .5s;
     font-size: 1.5rem;
-    padding: 1rem 0;
+    height: 2rem;
+    padding: .5rem 0;
+    overflow: hidden;
+}
+
+.todo-enter, .todo-leave {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+}
+/* transition end */
+
+.todos{
+    background-color: #fff;
+    border: 1px solid #eee;
+    width: 400px;
+    padding: .5rem;
+    margin: 0 auto;
+    font-family: arial;
+}
+.todos header input{
+    border: none;
+    width: 100%;
+    font-size: 1.5rem;
+    border-bottom:1px solid #eee; 
+}
+.todos header input:focus{
     outline: none;
 }
-.block-buttons button:hover{
-    background-color: #ddd;
+.todos .todolist{
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
-.normal-font{
-    font-size: 2rem;
+.todos .todolist li{
+    border-bottom:1px solid #eee; 
 }
-.small-font{
-    font-size: 1rem;
+.todos .todolist li.completed{
+    text-decoration: line-through;
+    color: #aaa;
+}
+.todos .todolist li .close{
+    float: right;
+    cursor: default;
+}
+.todos .todolist li .close:hover{
+    color: red;
+}
+.todos footer{
+    padding-top: 1rem;
+    text-align: center;
+}
+.todos footer span{
+    float: left;
+}
+.todos .button{
+    border: 1px solid transparent;
+    padding: .2rem;
+    cursor: default;
+}
+.todos .active{
+    border: 1px solid #aaa;
 }
 							</code>
 						</pre>
 						<pre class="content" x-show="actived=='JS'">
-							<code class="language-javascript">//过滤器
-impex.filter('format',{
-    to:function(){
-        var tmp = this.$value;
-        if(!/^0\./.test(this.$value)){
-            tmp = tmp.replace(/^0\./,'');
-
-            if(this.$value.length>1){
-                tmp = tmp.replace(/^0/,'');
-            }
-        }
-
-
-
-        return tmp;
+							<code class="language-javascript">//指令
+impex.directive('keydown',{
+    onCreate:function(){
+        this.on('keydown',this.$value);
+    }
+});
+impex.directive('checked',{
+    observe:function(rs){
+        this.$view.el.checked = rs;
     }
 });
 
 //渲染
 impex.render(document.body,{
-    buttons:[
-        '1','2','3','+',
-        '4','5','6','-',
-        '7','8','9','*',
-        '0','(',')','/',
-        '.','←','C','=',
-    ],
-    exp:'0',
-    clear:function () {
-        this.exp = '0';
+    todos:[],
+    filterType:'',
+    activeTodos:0,
+    onInit:function(){
+        this.watch('todos',function(type,newVal){
+            this.activeTodos = newVal.filter(function(todo){
+                return todo.type === 'active';
+            }).length;
+        })
     },
-    addExp:function(v){
-        switch(v){
-            case 'C':
-                this.clear();
-                return;
-            case '←':
-                if(this.exp.length>1)
-                    this.exp = this.exp.substring(0,this.exp.length-1);
-                return;
-            case '=':
-                var v = eval(this.exp.replace(/^0/,''));
-                this.exp = v+'';
-                return;
-            default:
-                this.exp += v;
+    addTodo:function(e){
+        var t = e.target;
+        if(e.keyCode === 13 && t.value.trim()){
+
+            this.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+            t.value = '';
         }
+    },
+    removeTodo:function(todo){
+        var oTodo = todo.$origin;
+        var i = this.todos.indexOf(oTodo);
+        if(i > -1)
+        this.todos.splice(i,1);
+    },
+    done:function(e,todo){
+        var type = 'active';
+        if(e.target.checked){
+            type = 'completed';
+        }
+
+        todo.type = type;
+        todo.$origin.type = type;
+
+        this.activeTodos = this.todos.filter(function(td){
+            return td.type === 'active';
+        }).length;
+    },
+    filterTodos:function(type){
+        this.filterType = type;
     }
 });
 							</code>
 						</pre>
-						<div name="calc" class=" content" x-show="actived=='out'">
+						<div name="todo" class=" content" x-show="actived=='out'">
 							<style type="text/css">
-								.calc{
-    border:1px solid #aaa;
-    width: 340px;
-    margin: 0 auto;
-}
-.block-display{
-    background-color: #f6f6f6;
-    width: 100%;
-    font-size: 3rem;
-    font-family: Arial;
-    direction: rtl;
-    padding: 1rem 0;
-    overflow: hidden;
-
-    transition:font-size .2s;
-}
-.block-buttons{
-    background-color: #eee;
-}
-.block-buttons button{
-    background: #eee;
-    border: none;
-    width: 25%;
-    float: left;
+.todo-transition {
+    transition: all .5s;
     font-size: 1.5rem;
-    padding: 1rem 0;
+    height: 3rem;
+    padding: .5rem 0;
+    overflow: hidden;
+}
+
+.todo-enter, .todo-leave {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+}
+
+.todos{
+    background-color: #fff;
+    border: 1px solid #eee;
+    width: 400px;
+    padding: .5rem;
+    margin: 3rem auto;
+    font-family: arial;
+}
+@media (max-width: 400px){
+    .todos{
+        width: 100%;
+    }
+}
+.todos header input{
+    border: none;
+    width: 100%;
+    font-size: 1.5rem;
+    border-bottom:1px solid #eee; 
+}
+.todos header input:focus{
     outline: none;
 }
-.block-buttons button:hover{
-    background-color: #ddd;
+.todos .todolist{
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
-.normal-font{
-    font-size: 2rem;
+.todos .todolist li{
+    float:none;
+    font-size: 1.5rem;
+    border-bottom:1px solid #eee; 
 }
-.small-font{
-    font-size: 1rem;
+.todos .todolist li.completed{
+    text-decoration: line-through;
+    color: #aaa;
+}
+.todos .todolist li .close{
+    float: right;
+    cursor: default;
+}
+.todos .todolist li .close:hover{
+    color: red;
+}
+.todos footer{
+    padding-top: 1rem;
+    text-align: center;
+    margin: 0;
+}
+.todos footer span{
+    float: left;
+}
+.todos .button{
+    border: 1px solid transparent;
+    padding: .2rem;
+    cursor: default;
+}
+.todos .active{
+    border: 1px solid #aaa;
 }
 							</style>
 							{{# output}}

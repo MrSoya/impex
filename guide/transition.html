@@ -124,10 +124,10 @@
 							</ul>
 		</li>
 				<li>
-			<a class="link actived" 
+			<a class="link " 
 				href="syntax.html">
 				语法			</a>
-			<ul class="nav indent actived">
+			<ul class="nav indent ">
 								<li>
 					<a href="#syntax-exp">表达式</a>
 										<ul class="nav indent">
@@ -356,10 +356,10 @@
 							</ul>
 		</li>
 				<li>
-			<a class="link " 
+			<a class="link actived" 
 				href="transition.html">
 				过渡			</a>
-			<ul class="nav indent ">
+			<ul class="nav indent actived">
 								<li>
 					<a href="#transition-why">为什么</a>
 									</li>
@@ -391,291 +391,194 @@
 			<div class="row doc-panel">
 				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
 				<div class="col-md-8 col-xs-8 content"> 		
-					<h1 id="syntax">语法</h1>
+					<h1 id="transition">过渡</h1>
 					<p>
-						impex.js 的表达式提供了模型与视图解耦的能力，而表达式是写在HTML代码中，
-						为了 impex.js 能够识别这些表达式，需要遵循一些简单的语法
+						过渡可以让应用看起来具有更好的视觉效果，尤其实在视图动态切换时
 					</p>
-
-					<h2 id="syntax-exp">
-						表达式
+					<h2 id="transition-why">
+						为什么
 					</h2>
+					<p>
+						无论使用CSS3或者javascript，都可以直接给元素指定动画，
+						那么为什么还会出现这章内容？的确，大部分元素都可以直接指定动画，
+						但别忘了 impex.js 是基于数据绑定的自动视图更新机制。
+						这种机制允许你使用 if/show/each 等视图控制指令，并即时的更新视图，
+						但是问题在于，当自动更新发生时，DOM操作是不受外部控制的，
+						比如当使用 if 指令时，元素会突然插入和移除，想用CSS控制动画是不可能的，
+						这就是为什么需要过渡接口
+					</p>
 
-					<h3 id="syntax-exp-text">
-						文本
-					</h3>
-					<p>
-						impex.js 最直接的数据绑定方式就是文本表达式
-					</p>
-					<pre><code class="language-markup">
-&lt;div id="entry"&gt;
-  Hello &#123;&#123; name &#125;&#125; !
-&lt;/div&gt;</code>
-</pre>
-					<p>
-						只需要在表达式限定符中编写标准javascript(语句)语法即可，impex.js 支持标准的javascript原生语法
-					</p>
-					<pre><code class="language-markup">
-&lt;div id="entry"&gt;
-  Hello &#123;&#123; name + '!' &#125;&#125;
-&lt;/div&gt;</code>
-</pre>
-					<p>
-						你可以在表达式中书写任意复杂的javascript语句代码，impex.js 会自动分析出哪些是变量(name)，哪些是常量(!)，
-						并对变量进行监控。但是，定义语句是不被允许的
-					</p>
-					<pre><code class="language-markup">&lt;!-- 错误语法 --&gt;
-&lt;div id="entry"&gt;
-  &#123;&#123; var Hello = "Hello"; name + '!' &#125;&#125;
-&lt;/div&gt;</code>
-</pre>
 
-					<h3 id="syntax-exp-html">
-						HTML
-					</h3>
+					<h2 id="transition-limit">
+						限制
+					</h2>
 					<p>
-						默认情况，表达式总是会被渲染为纯文本，即便内容包含了HTML标签。impex.js 提供了渲染
-						HTML的专属表达式，基本和文本表达式相同，只是开头多了一个<code>#</code>号
+						正如上文所说，过渡的使用被限制在有限的(内置)指令中，比如 if/show/each，
+						使用过渡必须在这些指令所在的元素上。
 					</p>
-					<pre><code class="language-markup">&lt;!-- HTML过滤器 --&gt;
-&lt;div id="entry"&gt;
-  &#123;&#123;# html &#125;&#125;
-&lt;/div&gt;</code>
-</pre>
-<pre><code class="language-javascript">// 组件 
-var debug = impex.render(document.getElementById('entry'),{
-	html:'&lt;b&gt; HTML &lt;/b&gt;'
-});
-</code>
-</pre>
+					<blockquote class="tip">
+						if/show/each这些只是内置指令，依然可以通过<code>Transitions</code>服务来让
+						自定义指令拥有过渡能力
+					</blockquote>
+
+
+					<h2 id="transition-css">
+						CSS过渡
+					</h2>
+					<pre><code class="language-css">/*过渡样式*/
+.impex-transition {
+    transition: all .3s;
+    font-size:2rem;
+}
+
+.impex-enter, .impex-leave {
+    font-size:1rem;
+    opacity: 0;
+}
+</code></pre>
+<pre><code class="language-markup"><!-- 声明过渡 -->
+&lt;div x-show="show" transition="impex" &gt;impex here&lt;/div&gt;
+</code></pre>
 					<div class="output">
-						<div id="syntax-1">
-							{{# html}}
+						<div id="transition-1">
+							<style type="text/css">
+								.impex-transition {
+    transition: all .3s;
+    font-size:2rem;
+    height: 2.5rem;
+    overflow: hidden;
+}
+
+.impex-enter, .impex-leave {
+    font-size:1rem;
+    opacity: 0;
+    height: 0;
+}
+							</style>
+							<p>
+								<div x-show="show" transition="impex" >impex here</div>
+							</p>
+							<label>
+			                    显示 <input type="radio" name="transition1" checked="" x-model="show" value="impex">
+			                </label> 
+			                <label>
+			                    隐藏 <input type="radio" name="transition1" x-model="show" value="">
+			                </label> 
 						</div>
 					</div>
 					<p>
-						html内容中可以继续包含impex组件，这样可以动态构建复杂的嵌套结构
+						基于CSS的过渡很简单，只需要声明一个<code>transition</code>特性即可，
+						该特性的值用来指定过渡使用哪<b>一组</b>样式。注意是“一组”样式
 					</p>
 
-					<h3 id="syntax-exp-tmpl">
-						模板
+
+					<h3 id="transition-css-class">
+						样式组
 					</h3>
 					<p>
-						模板表达式只能应用于组件定义中，作为组件的视图代码
-					</p>
-					<pre><code class="language-markup">&lt;!-- 调用代码 --&gt;
-&lt;x-div id="entry" name="x-div" type="demo"&gt;
-  inner
-&lt;/x-div&gt;</code>
-</pre>
-					<pre><code class="language-markup">&lt;!-- x-div 模板代码 --&gt;
-&lt;div &#123;&#123;= BINDPROPS &#125;&#125; id="{{= id}}"&gt;
-  &#123;&#123;= CONTENT &#125;&#125;
-&lt;/div&gt;</code>
-</pre>
-					<p>
-						看起来模板表达式只是比普通表达式多了一个 "=" 号，但模板表达式只在创建组件前进行预编译，
-						并不会监控任何变量。实际上，只是一个替换。
-					</p>
-					<p>
-						模板表达式中包含一些固定变量，用来表示不同的替换方式
+						使用CSS定义过渡必须定义一组符合规范的样式，包括
 						<ul>
 							<li>
-								<code>CONTENT :</code>用来替换组件标签内部的所有内容，标签体 
+								<code>.*-transition</code>用于定义过渡元素的基础样式
 							</li>
 							<li>
-								<code>BINDPROPS :</code>用来替换组件标签上的所有属性。只能用于属性上 
+								<code>.*-enter</code>用于定义过渡元素进入的动画效果
+							</li>
+							<li>
+								<code>.*-leave</code>用于定义过渡元素离开的动画效果
 							</li>
 						</ul>
 					</p>
+					<p>
+						impex 会在合适的时候调用自动赋予元素对应的样式。
+					</p>
 
-					<h2 id="syntax-d">
-						指令
+
+					<h2 id="transition-hook">
+						过渡钩子
 					</h2>
 					<p>
-						不同于组件，指令的前缀是固定的<code>x-</code>，并且只能以属性的形式存在于标签中，
-						如果组件是用于创建视图，那么指令就是用于增强视图，比如增加事件相应等
+						impex提供了全局接口<code>impex.transition()</code>来定义过渡回调，
+						回调会分别在过渡的不同周期触发，
 					</p>
-					<p>
-						impex.js 支持指令参数和过滤回调
-					</p>
-					<pre><code class="language-*">x-directive[:param1[:param2:...]][.filter]</code>
-</pre>
-					<p>
-						<ul>
-							<li>
-								<code>:param</code>表示一个参数，指令可以有0-N个参数，这些参数会在指令创建后，保存在<code>$params</code>$params属性中
-							</li>
-							<li>
-								<code>.filter</code>表示一个过滤回调，回调只能有一个，在每次表达式变动时都会触发，回调参数就是表达式的计算结果
-							</li>
-						</ul>
-						在所有内置指令中，只有<code>x-bind</code>支持参数，<a href="../api/#directive-buildin-bind">x-bind</a>
-					</p>
-
-
-
-					<h3 id="syntax-d-each">
-						each
-					</h3>
-					<p>
-						each是指令中比较特殊的一个，因为他的特殊语法是 impex.js 中唯一不同于原生javascript的地方
-					</p>
-					<pre><code class="language-markup">&lt;!-- 语法1 --&gt;
-&lt;div x-each="collection as k , v"&gt;
-  {{$index}} : {{k}} : {{v}} 
-&lt;/div&gt;</code>
-</pre>
-<pre><code class="language-markup">&lt;!-- 语法2 --&gt;
-&lt;div x-each="collection as v"&gt;
-  {{$index}} : {{v}} 
-&lt;/div&gt;</code>
-</pre>
-					<p>
-						就像for语句样，each指令内部会形成独立的作用域，该域中你可以使用以下变量
-						<ul>
-							<li>
-								<code>$index :</code>索引值，从0开始 
-							</li>
-							<li>
-								<code>k :</code>自定义变量，如果<code>collection</code>是数组，该值和<code>$index</code>相等，
-								如果是对象，则为对象的key 
-							</li>
-							<li>
-								<code>v :</code>自定义变量，对应索引的集合值
-							</li>
-						</ul>
-					</p>
-
-					<h3 id="syntax-d-event">
-						事件
-					</h3>
 					
-					<pre><code class="language-markup">&lt;button x-click="toggleSize($event,true)"&gt; toggle size &lt;/button&gt;</code>
-</pre>				<p>
-						除了与原生的javascript事件语法相同外，多了一个<code>$event</code>变量，该变量表示原生事件对象
+<pre><code class="language-javascript">
+impex.transition('impex',{
+	enter:function(){
+        this.$view.el.innerHTML = 'impex enter';
+    },
+    leave:function(){
+        this.$view.el.innerHTML = 'impex leave';
+    }
+});
+</code></pre>
+					<div class="output">
+						<div id="transition-2">
+							<style type="text/css">
+								.impex-transition {
+    transition: all .3s;
+    font-size:2rem;
+    height: 2.5rem;
+    overflow: hidden;
+}
+
+.impex-enter, .impex-leave {
+    font-size:1rem;
+    opacity: 0;
+    height: 0;
+}
+							</style>
+							<p>
+								<div x-show="show" transition="impex" >impex </div>
+							</p>
+							<label>
+			                    显示 <input type="radio" name="transition1" checked="" x-model="show" value="impex">
+			                </label> 
+			                <label>
+			                    隐藏 <input type="radio" name="transition1" x-model="show" value="">
+			                </label> 
+						</div>
+					</div>
+					<p>
+						在CSS方式过渡下，impex可以获取到动画何时结束，并触发合适的回调。但如果是javascript过渡，
+						就必须主动的通知动画完成，这样 impex 才可以继续执行后续操作
 					</p>
 
-					<h2 id="syntax-c">
-						过滤器
+
+					<h2 id="transition-js">
+						Javascript过渡
 					</h2>
-					<p>
-						过滤器为表达式提供了额外的扩展，可以让代码更具语义化
-					</p>
-					<pre><code class="language-*">=> filter1[:param1[:param2:...]] [.filter2[:param1[:param2:...]]]...</code>
-</pre>
-						
-<pre><code class="language-markup">&lt;!-- 金额过滤 --&gt;
-{{money => currency:'¥':2}}<br/>
-{{money => currency:'$':3}}<br/>
-{{money => currency:'€':4}}<br/>
-</code>
-</pre>
-<pre><code class="language-javascript">//过滤器
-impex.filter('currency',{
-    to:function(sym,decimal){
-        var pair = this.$value.split('.');
-        var inte = pair[0].replace(/\s/g,'');
-        var integer = '';
-        for(var i=0;i&lt;inte.length;i++){
-            integer += inte[i];
-            if(i%3==0 && i+1&lt;inte.length){
-                integer += ',';
-            }
-        }
-        return sym + ' ' + integer + parseFloat('0.'+pair[1]).toFixed(decimal).substr(1);
+					
+<pre><code class="language-javascript">
+impex.transition('impex',{
+	enter:function(done){
+        $(this.$view.el).animate({opacity:1,fontSize:'2rem'},500,'swing',done);
+    },
+    leave:function(done){
+        $(this.$view.el).animate({opacity:0,fontSize:'1rem'},500,'swing',done);
     }
-});</code>
-</pre>
+});
+</code></pre>
 					<div class="output">
-						<div id="syntax-2">
-							{{money => currency:'¥':2}}<br/>
-							{{money => currency:'$':3}}<br/>
-							{{money => currency:'€':4}}<br/>
+						<div id="transition-3">
+							<p>
+								<div x-show="show" transition="impex2" >impex </div>
+							</p>
+							<label>
+			                    显示 <input type="radio" name="transition1" checked="" x-model="show" value="impex">
+			                </label> 
+			                <label>
+			                    隐藏 <input type="radio" name="transition1" x-model="show" value="">
+			                </label> 
 						</div>
 					</div>
 					<p>
-						过滤器可以有0-N个参数，可以看到，回调参数的数量是根据实际使用时参数数量决定。
-						过滤器的参数使用<code>:</code>分割
+						javascript过渡方式可以使用在不支持CSS3的场景中
 					</p>
-					<p>
-						<blockquote class="warning">
-							过滤器的参数是区分类型的，如果一个字符串参数没有引号，会被认为是一个变量，
-							过滤器参数中的变量变动也会引起视图的更新
-						</blockquote>
-					</p>
-
-					<h3 id="syntax-c-chain">
-						链式过滤
-					</h3>
-					<p>
-						多个过滤器可以链式调用，使用<code>.</code>符分割
-					</p>
-					<pre><code class="language-markup">{{# ' HELLO IMPEX !' => trim:'side' .lower .cap}}</code>
-</pre>
-<pre><code class="language-javascript">//过滤器
-impex.filter('trim',{
-    to:function(type){
-        if(type === 'side'){
-            return this.$value.replace(/^\s*|\s*$/mg,'');
-        }
-        return this.$value.replace(/\s/mg,'');
-    }
-}).filter('lower',{
-    to:function(){
-        return this.$value.toLowerCase();
-    }
-}).filter('cap',{
-    to:function(){
-        var cap = this.$value[0].toUpperCase();
-        return (cap + this.$value.substr(1)).big();
-    }
-});</code>
-</pre>
-					<div class="output">
-						<div id="syntax-3">
-							{{# ' HELLO IMPEX !' => trim:'side'.lower.cap}}
-						</div>
-					</div>
-
-					<h3 id="syntax-c-each">
-						each过滤
-					</h3>
-					<p>
-						过滤器不仅可以用在表达式中，同样可以用在指令中，但<b>仅限</b>each指令
-					</p>
-					<pre>
-<code class="language-markup">&lt;div x-each="[1,2,3,4,5] as number => limitBy:3:2 .orderBy:'':'desc'"&gt;
-  {{number}} 
-&lt;/div&gt;</code>
-</pre>
-					<div class="output">
-						<div id="syntax-4">
-							<div x-each="[1,2,3,4,5] as number => limitBy:3:2 .orderBy:'':'desc'">
-								{{number}} 
-							</div>
-						</div>
-					</div>
-					<p>
-						<code>limitBy</code>和<code>orderBy</code>都是内置过滤器，更多信息可以<a href="../api/#filter-buildin">查看相关API</a>
-					</p>
-					<p>
-						<blockquote class="warning">
-							一旦指令中使用了过滤器，最终的域内<abbr title="对象、数组">引用变量</abbr>都不会直接指向对应的模型变量，
-							因为过滤器会clone原始数据并处理返回。如果想引用过滤后对应的原始对象，可以通过<code>$origin</code>属性获取
-						</blockquote>
-					</p>
-					<pre>
-<code class="language-markup">&lt;div x-each="list as item "&gt;
-  {{item.$origin}} 
-&lt;/div&gt;</code>
-</pre>
+					
 							<footer>
-		<a class="prev" href="gettingstarted.html">
-		<i class="glyphicon glyphicon-menu-left"></i>开始	</a>
-		<a class="next" href="conditions.html">
-		条件渲染<i class="glyphicon glyphicon-menu-right"></i>
-	</a>
+		<a class="prev" href="service.html">
+		<i class="glyphicon glyphicon-menu-left"></i>服务	</a>
 	</footer>
 <p>
 	希望以上内容对你有所帮助，如果发现错误或者想参与编辑，可以在 <a href="https://github.com/MrSoya/impex/tree/gh-pages">Github 上 fork 此站点</a>
@@ -735,10 +638,10 @@ impex.filter('trim',{
 							</ul>
 		</li>
 				<li>
-			<a class="link actived" 
+			<a class="link " 
 				href="syntax.html">
 				语法			</a>
-			<ul class="nav indent actived">
+			<ul class="nav indent ">
 								<li>
 					<a href="#syntax-exp">表达式</a>
 										<ul class="nav indent">
@@ -967,10 +870,10 @@ impex.filter('trim',{
 							</ul>
 		</li>
 				<li>
-			<a class="link " 
+			<a class="link actived" 
 				href="transition.html">
 				过渡			</a>
-			<ul class="nav indent ">
+			<ul class="nav indent actived">
 								<li>
 					<a href="#transition-why">为什么</a>
 									</li>

@@ -200,6 +200,13 @@ nav.index .items{
 nav.index .items li a:hover{
 	border-bottom:1px solid #3998D6;
 }
+nav .items li .dropdown-menu{
+	border-radius:0;
+	left: -2rem;
+}
+nav .items li .dropdown-menu li a:hover{
+	background: none !important;
+}
 
 
 .download{
@@ -224,28 +231,28 @@ nav.index .items li a:hover{
 	border:1px solid #aaa;
 	background-color: #f8f8f8;
 }
-.bucket ul{
+.bucket >ul{
 	width: 100%;
 	background-color: #ccc;
 }
-.bucket ul,
-.bucket ul > li{
+.bucket >ul,
+.bucket >ul > li{
 	list-style: none !important;
 	float: left;
     padding-left: 0;
 }
-.bucket ul > li{
+.bucket >ul > li{
 	padding: .2rem 1rem;
 }
-.bucket ul > li.actived,
-.bucket ul > li:hover{
+.bucket >ul > li.actived,
+.bucket >ul > li:hover{
 	background-color: #f8f8f8;
 }
-.bucket ul > li.actived a,
-.bucket ul > li:hover a{
+.bucket >ul > li.actived a,
+.bucket >ul > li:hover a{
 	color: #333;
 }
-.bucket ul > li a{
+.bucket >ul > li a{
 	color: #fff;
 }
 .bucket .content{

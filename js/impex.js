@@ -14,6 +14,7 @@ window.addEventListener('load',function(){
 	moveIndicator(activedNode);
 },false);
 
+var sub;
 function moveIndicator(node){
 	node = node || activedNode;
 	var w = node.offsetWidth;
@@ -21,6 +22,14 @@ function moveIndicator(node){
 	var indicator = document.getElementById('indicator');
 	indicator.style.width = w+'px';
 	indicator.style.left = l+'px';
+
+	var tmp = $('.dropdown-menu',node);
+	if(tmp[0]){
+		tmp.css('display','block');
+		sub = tmp;
+	}else{
+		sub && sub.css('display','none');
+	}
 }
 
 var show = false;

@@ -34,8 +34,12 @@
 						<li onmouseover="moveIndicator(this)" class="">
 							<a href="../demos/">Demos</a>
 						</li>
-						<li onmouseover="moveIndicator(this)">
-							<a href="http://www.h5stars.com/t_impex.html">社区</a>
+						<li onmouseover="moveIndicator(this)" class="dropdown">
+							<a href="#">社区</a>
+							<ul class="dropdown-menu">
+							    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+							    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+							</ul>
 						</li>
 					</ul>
 				</div>
@@ -49,17 +53,21 @@
 
 	<div class="show-720 side-nav" id="sideNav">
 		<ul class="items">
-			<li onmouseover="moveIndicator(this)" class="actived">
+			<li class="actived">
 				<a href="../guide/">教程</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../api/">API</a>
 			</li>
-			<li onmouseover="moveIndicator(this)" class="">
+			<li class="">
 				<a href="../demos/">Demos</a>
 			</li>
-			<li onmouseover="moveIndicator(this)">
-				<a href="http://www.h5stars.com/t_impex.html">社区</a>
+			<li>
+				<a href="#">社区</a>
+				<ul>
+				    <li><a target="_new" href="https://github.com/MrSoya/impex/issues">Github</a></li>
+				    <li><a target="_new" href="http://www.h5stars.com/t_impex.html">H5stars</a></li>
+				</ul>
 			</li>
 			<li>
 				<nav class="doc-nav ">
@@ -150,6 +158,9 @@
 										<ul class="nav indent">
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
+						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
 						</li>
 											</ul>
 									</li>
@@ -344,6 +355,33 @@
 									</li>
 							</ul>
 		</li>
+				<li>
+			<a class="link " 
+				href="transition.html">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
+									</li>
+							</ul>
+		</li>
 			</ul>
 </nav>			</li>
 		</ul>
@@ -356,7 +394,7 @@
 					<h1 id="gettingstarted">开始</h1>
 					<p>
 						impex.js 的设计目标是让每个对构建web应用感兴趣的人都可以使用，所以从接口设计到语法支持
-						impex.js 都保持简单的写法
+						impex.js 都保持简洁的写法
 					</p>
 
 					<h2 id="helloImpex">
@@ -535,6 +573,9 @@ var debug = impex.render(document.getElementById('entry'),{
 												<li>
 							<a href="#syntax-c-chain">链式过滤</a>
 						</li>
+												<li>
+							<a href="#syntax-c-each">each过滤</a>
+						</li>
 											</ul>
 									</li>
 							</ul>
@@ -725,6 +766,33 @@ var debug = impex.render(document.getElementById('entry'),{
 									</li>
 								<li>
 					<a href="#service-mode">模式</a>
+									</li>
+							</ul>
+		</li>
+				<li>
+			<a class="link " 
+				href="transition.html">
+				过渡			</a>
+			<ul class="nav indent ">
+								<li>
+					<a href="#transition-why">为什么</a>
+									</li>
+								<li>
+					<a href="#transition-limit">限制</a>
+									</li>
+								<li>
+					<a href="#transition-css">CSS过渡</a>
+										<ul class="nav indent">
+												<li>
+							<a href="#transition-css-class">样式组</a>
+						</li>
+											</ul>
+									</li>
+								<li>
+					<a href="#transition-hook">过渡钩子</a>
+									</li>
+								<li>
+					<a href="#transition-js">Javascript过渡</a>
 									</li>
 							</ul>
 		</li>
