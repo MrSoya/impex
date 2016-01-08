@@ -927,7 +927,20 @@ var Scanner = new function() {
 		var inParam = false;
 		var varMap = {};
 
-		var words = expNode.words;
+		var words = [];
+		var wds = expNode.words;
+		for(var i=0;i<wds.length;i++){
+			if(wds[i] instanceof Array){
+				var w = wds[i][0];
+				var tmp = w.split('.');
+				
+				for(var k=1;k<tmp.length;k++){
+					words.push([tmp[k]]);
+				}
+			}else{
+				words.push(wds[i]);
+			}
+		}
 		for(var i=0;i<words.length;i++){
 			var w = words[i];
 			switch(w){
@@ -946,7 +959,7 @@ var Scanner = new function() {
 					break;
 				default:
 					if(w instanceof Array){
-						var partName = w[0].replace(/^\./,'')
+						var partName = w[0];
 						var filterName = partName.toLowerCase();
 						if(!inParam && filterName && FilterFactory.hasTypeOf(filterName)){
 							currParam = null;

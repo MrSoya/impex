@@ -29,7 +29,7 @@ impex.service('ComponentManager',{
  */
 impex.service('Transitions',new function(){
 	var transitionObjs = [];
-	this.get = function(type,component,onEndExp){
+	this.get = function(type,component){
 		type = type||'x';
 		return TransitionFactory.get(type,component);
 	}

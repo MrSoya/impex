@@ -147,6 +147,10 @@
                     this.activeTodos = this.todos.filter(function(td){
                         return td.type === 'active';
                     }).length;
+
+                    var t = this.filterType;
+                    this.filterType = 1;
+                    this.filterType = t;
                 },
                 filterTodos:function(type){
                     this.filterType = type;
