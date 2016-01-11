@@ -127,7 +127,7 @@
             this.exec(false);
         },
         observe : function(rs){
-            if(rs === this.$lastRs)return;
+            if(rs === this.$lastRs && !this.$view.el.parentNode)return;
             this.$lastRs = rs;
 
             if(this.$transition){

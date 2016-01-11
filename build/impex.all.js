@@ -1807,7 +1807,7 @@ Util.ext(Component.prototype,{
 		this.$view.__off(this,type,exp);
 	},
 	/**
-	 * 查找子组件，并返回符合条件的第一个实例。如果不开启递归查找，
+	 * 查找子组件，并返回符合条件的所有实例。如果不开启递归查找，
 	 * 该方法只会查询直接子节点集合
 	 * @param  {String} name       组件名，可以使用通配符*
 	 * @param  {Object} conditions 查询条件，JSON对象
@@ -3412,7 +3412,7 @@ impex.service('ComponentManager',{
  */
 impex.service('Transitions',new function(){
 	var transitionObjs = [];
-	this.get = function(type,component,onEndExp){
+	this.get = function(type,component){
 		type = type||'x';
 		return TransitionFactory.get(type,component);
 	}
@@ -3546,7 +3546,7 @@ impex.service('Transitions',new function(){
             this.exec(false);
         },
         observe : function(rs){
-            if(rs === this.$lastRs)return;
+            if(rs === this.$lastRs && !this.$view.el.parentNode)return;
             this.$lastRs = rs;
 
             if(this.$transition){
