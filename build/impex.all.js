@@ -3753,6 +3753,7 @@ impex.service('Transitions',new function(){
             if(this.$__state === Component.state.inited)return;
             //获取数据源
             this.$ds = this.$parent.data(this.$expInfo.ds);
+            this.$lastDS = this.$ds;
             
             this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
             this.$viewManager.insertBefore(this.$placeholder,this.$view);
@@ -3765,9 +3766,12 @@ impex.service('Transitions',new function(){
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 if(!that.$ds){
                     that.$ds = that.$parentComp.data(that.$expInfo.ds);
+                    that.$lastDS = $ds;
                     that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
                     return;
                 }
+
+                that.$lastDS = newVal;
 
                 var newKeysSize = 0;
                 var oldKeysSize = 0;
@@ -3968,8 +3972,8 @@ impex.service('Transitions',new function(){
 
                     for(var i in varMap){
                         that.$parent.watch(i,function(type,newVal,oldVal){
-                            if(that.$ds)
-                            that.rebuild(that.$ds,-999,that.$expInfo.k,that.$expInfo.v);
+                            if(that.$lastDS)
+                            that.rebuild(that.$lastDS,-999,that.$expInfo.k,that.$expInfo.v);
                         });
                     }
                 }
