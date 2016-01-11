@@ -3,7 +3,7 @@
 > 一个基于数据驱动的组件式web开发引擎
 
 ## Website
-[http://mrsoya.github.io/impex/](http://mrsoya.github.io/impex/)
+[http://impexjs.org/](http://impexjs.org/)
 
 ## Demo
 
