@@ -133,6 +133,14 @@
 			text-align: center;
 			font-size: 1.1em;
 		}
+		@media (max-width: 720px){
+			pre,pre code{
+				width: 100%;
+			}
+			.output{
+				width: 100%;
+			}
+		}
 		</style>
 	</head>
 	<body>
@@ -208,7 +216,7 @@
 			<i class="glyphicon glyphicon-menu-down"></i>
 		</section>
 		<section class="container example">
-			<div class="row content">
+			<div class="content">
 				<pre><code class="language-markup" x-ignore>&lt;!-- 视图 --&gt;
 &lt;body&gt;
   Hello &#123;&#123; name &#125;&#125; !
