@@ -26,7 +26,7 @@
             //自定义组件
             impex.component('x-button',{
                 onInit:function(){
-                    this.on('click','tip()');
+                    this.$view.on('click','tip()');
                     this.times = 0;
                 },
                 color:'#000',

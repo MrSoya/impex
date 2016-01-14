@@ -9,7 +9,7 @@
      */
     impex.directive('click',{
         onInit : function(){
-            this.on('click',this.$value);
+            this.$view.on('click',this.$value);
         }
     });
     /**
@@ -18,7 +18,7 @@
      */
     impex.directive('mouseover',{
         onInit : function(){
-            this.on('mouseover',this.$value);
+            this.$view.on('mouseover',this.$value);
         }
     });
     /**
@@ -27,7 +27,7 @@
      */
     impex.directive('mouseout',{
         onInit : function(){
-            this.on('mouseout',this.$value);
+            this.$view.on('mouseout',this.$value);
         }
     });
     /**
@@ -36,7 +36,7 @@
      */
     impex.directive('mousedown',{
         onInit : function(){
-            this.on('mousedown',this.$value);
+            this.$view.on('mousedown',this.$value);
         }
     });
     /**
@@ -45,7 +45,7 @@
      */
     impex.directive('mouseup',{
         onInit : function(){
-            this.on('mouseup',this.$value);
+            this.$view.on('mouseup',this.$value);
         }
     });
     /**
@@ -55,8 +55,8 @@
     impex.directive('mouseleave',{
         onInit : function(){
         	var currentTarget = this.$view.el;
-            this.on('mouseout',this.$value,function(e,origin){
-            	var target = e.target || e.srcElement;
+            this.$view.on('mouseout',this.$value,function(e,origin){
+            	var target = e.target;
 
             	if(!contains(currentTarget,target))return false;
 
@@ -86,7 +86,7 @@
      */
     impex.directive('focus',{
         onInit : function(){
-            this.on('focus',this.$value);
+            this.$view.on('focus',this.$value);
         }
     });
     /**
@@ -95,7 +95,7 @@
      */
     impex.directive('blur',{
         onInit : function(){
-            this.on('blur',this.$value);
+            this.$view.on('blur',this.$value);
         }
     });
 
@@ -106,7 +106,7 @@
     impex.directive('mousewheel',{
         onInit : function(){
             var type = document.body.onmousewheel == null?'mousewheel':'DOMMouseScroll';
-            this.on(type,this.$value);
+            this.$view.on(type,this.$value);
         }
     });
 }(impex);

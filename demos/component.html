@@ -8,13 +8,12 @@
         <x-button id="btn1" border="0">
         </x-button>
 
-
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
             //自定义组件
             impex.component('x-button',{
                 onInit:function(){
-                    this.on('click','tip()');
+                    this.$view.on('click','tip()');
                     this.times = 0;
                 },
                 tip : function(n){

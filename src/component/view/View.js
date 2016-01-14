@@ -42,6 +42,8 @@ View.prototype = {
 			var v = propMap[i].value;
 			component[k] = v;
 		}
+
+		this.__comp = component;
 	},
 	__display:function(){
 		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
@@ -69,7 +71,7 @@ View.prototype = {
 
 	            for(var j=this.__nodes.length;j--;){
 	            	if(this.__nodes[j].nodeType !== 1)continue;
-	            	Util.off(k,this.__nodes[j],evHandler);
+	            	this.__nodes[j].removeEventListener(k,evHandler,false);
 	            }
 	        }
 		}
@@ -101,11 +103,17 @@ View.prototype = {
 				p.removeChild(this.__nodes[i]);
 		}
 	},
-	__on:function(component,type,exp,handler){
+	/**
+	 * 绑定事件到视图
+	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
+     * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
+     * @param  {function} handler   事件处理回调，回调参数e
+	 */
+	on:function(type,exp,handler){
 		if(!this.el)return;
 
 		var originExp = exp;
-		var comp = component;
+		var comp = this.__comp;
 		var tmpExpOutside = '';
 		var fnOutside = null;
 		var evHandler = function(e){
@@ -134,14 +142,19 @@ View.prototype = {
 			
 		};
 
-        Util.on(type,this.el,evHandler);
+        this.el.addEventListener(type,evHandler,false);
 		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
 		}
 		this.__evMap[type].push([exp,evHandler]);
 	},
-	__off:function(component,type,exp){
+	/**
+	 * 从组件解绑事件
+	 * @param  {string} type 事件名
+     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 */
+	off:function(type,exp){
 		if(!this.el)return;
 
 		var events = this.__evMap[type];
@@ -150,7 +163,7 @@ View.prototype = {
             var evExp = pair[0];
             var evHandler = pair[1];
             if(evExp == exp){
-	            Util.off(type,this.el,evHandler);
+	            this.el.removeEventListener(type,evHandler,false);
             }
         }
 	},
@@ -245,7 +258,6 @@ View.prototype = {
 		}
 		this.el.className += ' '+rs;
 		
-			
 		return this;
 	},
 	/**

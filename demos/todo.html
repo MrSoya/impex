@@ -95,12 +95,13 @@
                 <a class="btn {{filterType==='completed'?'active':''}}" x-click="filterTodos('completed')">Completed</a>
             </footer>
         </section>
+
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
             impex.directive('keydown',{
                 onCreate:function(){
-                    this.on('keydown',this.$value);
+                    this.$view.on('keydown',this.$value);
                 }
             })
             impex.directive('checked',{
@@ -119,7 +120,7 @@
                         this.activeTodos = newVal.filter(function(todo){
                             return todo.type === 'active';
                         }).length;
-                    })
+                    });
                 },
                 addTodo:function(e){
                     var t = e.target;
@@ -130,8 +131,7 @@
                     }
                 },
                 removeTodo:function(todo){
-                    var oTodo = todo.$origin;
-                    var i = this.todos.indexOf(oTodo);
+                    var i = this.todos.indexOf(todo);
                     if(i > -1)
                     this.todos.splice(i,1);
                 },
@@ -142,7 +142,6 @@
                     }
 
                     todo.type = type;
-                    todo.$origin.type = type;
 
                     this.activeTodos = this.todos.filter(function(td){
                         return td.type === 'active';

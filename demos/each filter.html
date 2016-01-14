@@ -8,16 +8,13 @@
     </head>
     <body>
         <div 
-        x-each="list2 as k,v => filterBy:filterKey:'name' .orderBy:'name':'desc'">
+        x-each="list2 as k,v => filterBy:filterKey:'name' .orderBy:orderKey:'desc'">
         {{k}} {{v => json}}
         </div>
         <p>
             name:<input type="text" x-model="filterKey" >
         </p>
-
-        <div 
-        x-each="list1 as k,v => filterBy:numFilter .orderBy:'p':'asc' " 
-        x-click="changelist()">{{k}} {{v.p}}</div>
+        {{list1 => filterBy:numFilter .orderBy:'p':'desc' .json}}
 
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -27,6 +24,7 @@
             //渲染
             var debug = impex.render(document.body,new function(){
                 this.filterKey = '';
+                this.orderKey = '';
                 this.numFilter = function(item){
                     return item.p >2;
                 }

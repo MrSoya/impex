@@ -15,7 +15,6 @@ var gulp = require('gulp'),
             'src/tool/Builder.js',
             'src/tool/Renderer.js',
 
-    		'src/component/ViewModel.js',
             'src/component/Component.js',
             'src/component/view/View.js',
             'src/component/view/DOMViewProvider.js',

@@ -22,11 +22,11 @@
             
             //渲染
             impex.render(document.body,new function(){
-                this.value = 0;
+                this.value = 10;
                 var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
                 this.bindWheel = function(comp){
                     var that = this;
-                    comp.on(type,null,function(e){
+                    comp.$view.on(type,null,function(e){
                         var wd = e.wheelDelta;
                         var d = e.detail;
                         var dir;

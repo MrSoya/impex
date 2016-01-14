@@ -93,19 +93,23 @@
     impex.directive('show-start',{
         $endTag : 'show-end',
         onCreate : function(){
-            this.$view.removeAttr('x-show-start');
 
             //更新视图
             this.__init();
             this.display();
         },
         observe : function(rs){
+            var nodes = this.$view.__nodes;
             if(rs){
                 //显示
-                this.$view.show();
+                for(var i=nodes.length;i--;){
+                    if(nodes[i].style)nodes[i].style.display = '';
+                }
             }else{
                 // 隐藏
-                this.$view.hide();
+                for(var i=nodes.length;i--;){
+                    if(nodes[i].style)nodes[i].style.display = 'none';
+                }
             }
         }
     });
@@ -168,7 +172,6 @@
         onCreate : function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-            this.$view.removeAttr('x-if-start');
 
             //更新视图
             this.__init();
@@ -234,23 +237,23 @@
                     var type = this.$view.attr('type');
                     switch(type){
                         case 'radio':
-                            this.on('click','changeModel($event)');
+                            this.$view.on('click','changeModel($event)');
                             break;
                         case 'checkbox':
-                            this.on('click','changeModelCheck($event)');
+                            this.$view.on('click','changeModelCheck($event)');
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.on(hack,'changeModel($event)');
+                            this.$view.on(hack,'changeModel($event)');
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.on('change','changeModelSelect($event)');
+                        this.$view.on('change','changeModelSelect($event)');
                     }else{
-                        this.on('change','changeModel($event)');
+                        this.$view.on('change','changeModel($event)');
                     }
                     
                     break;
@@ -347,7 +350,7 @@
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 if(!that.$ds){
                     that.$ds = that.$parentComp.data(that.$expInfo.ds);
-                    that.$lastDS = $ds;
+                    that.$lastDS = that.$ds;
                     that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
                     return;
                 }
@@ -418,8 +421,16 @@
                 if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.$subComponents[index];
+
                 //模型
-                subComp[vi] = ds[k];
+                var v = ds[k];
+                if(ds[k] && ds[k].$__impex__origin){
+                    v = ds[k].$__impex__origin;
+
+                    ds[k].$__impex__origin = null;
+                    delete ds[k].$__impex__origin;
+                }
+                subComp[vi] = v;
                 subComp['$index'] = index++;
                 if(ki)subComp[ki] = isIntK?k>>0:k;
 
@@ -468,7 +479,7 @@
                 rs = {};
                 var ks = Object.keys(obj);
                 if(ks.length>0){
-                    var r = !obj.$origin;
+                    var r = ref ===false ? false : !obj.$__impex__origin;
                     for(var i=ks.length;i--;){
                         var k = ks[i],
                             v = obj[k];
@@ -477,8 +488,8 @@
                     }
                 }
 
-                if(ref !== false)
-                    rs.$origin = obj;
+                if(ref !== false && !rs.$__impex__origin)
+                    rs.$__impex__origin = obj;
             }
             return rs;
         }
@@ -521,7 +532,14 @@
                 var subComp = this.createSubComp();
                 
                 //模型
-                subComp[vi] = ds[k];
+                var v = ds[k];
+                if(ds[k] && ds[k].$__impex__origin){
+                    v = ds[k].$__impex__origin;
+
+                    ds[k].$__impex__origin = null;
+                    delete ds[k].$__impex__origin;
+                }
+                subComp[vi] = v;
                 subComp['$index'] = index++;
                 if(ki)subComp[ki] = isIntK?k>>0:k;
             }

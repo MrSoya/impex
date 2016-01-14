@@ -232,7 +232,7 @@ var Builder = new function() {
                 }
             }
         }else {
-            if(i < propChain.length)return;
+            // if(i < propChain.length)return;
             matchs.push(prop);
         }
 		

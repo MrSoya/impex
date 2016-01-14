@@ -23,7 +23,6 @@
  * </p>
  * 
  * @class 
- * @extends ViewModel
  */
 function Component (view) {
 	var id = 'C_' + im_counter++;
@@ -48,6 +47,7 @@ function Component (view) {
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
 	this.$__watcher;
+	this.$__events = {};
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -99,24 +99,122 @@ Component.state = {
 	displayed : 'displayed',
 	suspend : 'suspend'
 };
-Util.inherits(Component,ViewModel);
+function broadcast(comps,type,params){
+	for(var i=0;i<comps.length;i++){
+		var comp = comps[i];
+		var evs = comp.$__events[type];
+		var conti = true;
+		if(evs){
+			conti = false;
+			for(var l=0;l<evs.length;l++){
+				conti = evs[l].apply(comp,params);
+			}
+		}
+		if(conti && comp.$__components.length>0){
+			broadcast(comp.$__components,type,params);
+		}
+	}
+}
 Util.ext(Component.prototype,{
 	/**
-	 * 绑定事件到组件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
-     * @param  {function} handler   事件处理回调，回调参数e
+	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
+	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
+	 * 获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null
+	 * @param  {string} path 表达式路径
+	 * @param  {var} val  值
+	 * @return this
 	 */
-	on:function(type,exp,handler){
-		this.$view.__on(this,type,exp,handler);
+	data:function(path,val){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		if(arguments.length > 1){
+			if(Util.isObject(val) || Util.isArray(val)){
+				val = JSON.stringify(val);
+			}else 
+			if(Util.isString(val)){
+				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+			}
+			try{
+				eval(evalStr + '= '+ val);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
+			}
+			
+			return this;
+		}else{
+			try{
+				return eval(evalStr);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
+			}
+			
+		}
 	},
 	/**
-	 * 从组件解绑事件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 * 查找拥有指定属性的最近的上级组件
+	 * @param  {String} path 表达式路径
+	 * @return {Component}
 	 */
-	off:function(type,exp){
-		this.$view.__off(this,type,exp);
+	closest:function(path){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
+		return impex.__components[RegExp.$1];
+	},
+	/**
+	 * 绑定自定义事件到组件
+	 * @param  {String} type 自定义事件名
+     * @param  {Function} handler   事件处理回调，回调参数[target，arg1,...]
+	 */
+	on:function(type,handler){
+		var evs = this.$__events[type];
+		if(!evs){
+			evs = this.$__events[type] = [];
+		}
+		evs.push(handler);
+	},
+	/**
+	 * 触发组件自定义事件，进行冒泡
+	 * @param  {String} type 自定义事件名
+	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
+	 */
+	emit:function(){
+		var type = arguments[0];
+		var params = [this];
+		for (var i =1 ; i < arguments.length; i++) {
+			params.push(arguments[i]);
+		}
+		var my = this.$parent;
+		setTimeout(function(){
+			while(my){
+				var evs = my.$__events[type];
+				if(evs){
+					var interrupt = true;
+					for(var i=0;i<evs.length;i++){
+						interrupt = !evs[i].apply(my,params);
+					}
+					if(interrupt)return;
+				}				
+
+				my = my.$parent;
+			}
+		},0);
+	},
+	/**
+	 * 触发组件自定义事件，进行广播
+	 * @param  {String} type 自定义事件名
+	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
+	 */
+	broadcast:function(){
+		var type = arguments[0];
+		var params = [this];
+		for (var i =1 ; i < arguments.length; i++) {
+			params.push(arguments[i]);
+		}
+		var my = this;
+		setTimeout(function(){
+			broadcast(my.$__components,type,params);
+		},0);
 	},
 	/**
 	 * 查找子组件，并返回符合条件的所有实例。如果不开启递归查找，

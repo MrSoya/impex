@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-1-7
+ * last build: 2015-1-14
  */
 
 !function (global) {

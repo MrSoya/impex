@@ -37,7 +37,6 @@
 ```
 
 ## 兼容性
-* IE8(with impex.ext.ie8)
 * IE9+
 * FF38+
 * chrome43+

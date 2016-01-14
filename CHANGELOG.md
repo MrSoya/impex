@@ -1,4 +1,24 @@
 # Change Log
+## Version 0.9.0 - 2016/1/14
+### 新增
+* Component.emit()，用于向上级组件发送事件
+* Component.broadcast()，用于向下级组件广播事件
+* Component.$view.on/off，用于视图事件的注册和解除
+* 新增demo
+
+### 更新
+* 组件结构优化
+* Component.on()不再进行视图事件注册，而是注册自定义事件
+* each指令应用过滤器后，直接指向原始数据的引用，不再需要$origin
+* 其他更新
+
+### bug修复
+* 被if指令隐藏的视图没有渲染
+
+### 移除(重要！)
+* 对IE8的支持
+
+
 ## Version 0.8.0 - 2016/1/7
 ### 新增
 * 内置过滤器filterBy/limitBy/orderBy/json，可以用于表达式、指令以及each指令中

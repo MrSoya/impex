@@ -90,31 +90,6 @@ var Util = new function () {
                     return obj && typeof obj === 'object' && obj.nodeType && typeof obj.nodeName === 'string';
                 }
 
-    /**
-     * 绑定事件到DOM上
-     */
-    this.on = function(type,element,cbk){
-        if(element.addEventListener){
-            element.addEventListener(type,cbk,false);
-        }else{
-            if(type.indexOf('on') < 0){
-                type = 'on'+type;
-            }
-            element.attachEvent(type,cbk);
-        }
-    }
-
-    this.off = function(type,element,cbk){
-        if(element.removeEventListener){
-            element.removeEventListener(type,cbk,false);
-        }else{
-            if(type.indexOf('on') < 0){
-                type = 'on'+type;
-            }
-            element.detachEvent(type,cbk);
-        }
-    }
-
     function loadError(){
         LOGGER.error('can not fetch remote data of : '+this.url);
     }

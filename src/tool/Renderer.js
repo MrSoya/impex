@@ -21,10 +21,6 @@ var Renderer = new function() {
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
-			if(expNode.node.nodeType !== 3 && //for ie compatible
-				!DOC_BODY.contains(expNode.node) && !expNode.toHTML){
-				continue;
-			}
 
 			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
@@ -68,29 +64,25 @@ var Renderer = new function() {
 		}
 	}
 
-	function clone(obj,ref){
+	function clone(obj){
 		if(obj === null)return null;
 		var rs = obj;
 		if(obj instanceof Array){
 			rs = obj.concat();
 			for(var i=rs.length;i--;){
-				rs[i] = clone(rs[i],ref);
+				rs[i] = clone(rs[i]);
 			}
 		}else if(Util.isObject(obj)){
 			rs = {};
 			var ks = Object.keys(obj);
-                if(ks.length>0){
-                    var r = !obj.$origin;
-                    for(var i=ks.length;i--;){
-                        var k = ks[i],
-                            v = obj[k];
-                        if(k.indexOf('$__impex__')===0)continue;
-                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
-                    }
+            if(ks.length>0){
+                for(var i=ks.length;i--;){
+                    var k = ks[i],
+                        v = obj[k];
+                    if(k.indexOf('$__impex__')===0)continue;
+                    rs[k] = typeof obj[k]==='object'? clone(obj[k]): obj[k];
                 }
-
-            if(ref !== false)
-                rs.$origin = obj;
+            }
 		}
 		return rs;
 	}
@@ -107,7 +99,7 @@ var Renderer = new function() {
 			var filters = expObj.filters;
 			if(Object.keys(filters).length > 0){
 				if(rs && Util.isObject(rs)){
-					rs = clone(rs,0);
+					rs = clone(rs);
 				}
 
 				for(var k in filters){

@@ -278,7 +278,6 @@ var lexer = (function(){
     return function(sentence){
         if(cache[sentence])return cache[sentence];
 
-
         var words = [],
             varMap = {};
 

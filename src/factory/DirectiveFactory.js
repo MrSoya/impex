@@ -61,7 +61,17 @@ Util.ext(_DirectiveFactory.prototype,{
 			rs.$filter = filter;
 		}
 
+		rs.$view.__comp = rs;
+
 		component.add(rs);
+
+		if(rs.$view){
+			rs.$view.removeAttr(rs.$name);
+			if(rs.$endTag){
+                var lastNode = rs.$view.__nodes[rs.$view.__nodes.length-1];
+                lastNode.removeAttribute(CMD_PREFIX+rs.$endTag);
+            }
+		}
 		
 		if(rs.onCreate){
 			//inject

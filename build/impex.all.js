@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-1-7
+ * last build: 2015-1-14
  */
 
 !function (global) {
@@ -101,31 +101,6 @@ var Util = new function () {
                 function(obj){
                     return obj && typeof obj === 'object' && obj.nodeType && typeof obj.nodeName === 'string';
                 }
-
-    /**
-     * 绑定事件到DOM上
-     */
-    this.on = function(type,element,cbk){
-        if(element.addEventListener){
-            element.addEventListener(type,cbk,false);
-        }else{
-            if(type.indexOf('on') < 0){
-                type = 'on'+type;
-            }
-            element.attachEvent(type,cbk);
-        }
-    }
-
-    this.off = function(type,element,cbk){
-        if(element.removeEventListener){
-            element.removeEventListener(type,cbk,false);
-        }else{
-            if(type.indexOf('on') < 0){
-                type = 'on'+type;
-            }
-            element.detachEvent(type,cbk);
-        }
-    }
 
     function loadError(){
         LOGGER.error('can not fetch remote data of : '+this.url);
@@ -615,7 +590,6 @@ var lexer = (function(){
     var cache = {};
     return function(sentence){
         if(cache[sentence])return cache[sentence];
-
 
         var words = [],
             varMap = {};
@@ -1220,7 +1194,7 @@ var Builder = new function() {
                 }
             }
         }else {
-            if(i < propChain.length)return;
+            // if(i < propChain.length)return;
             matchs.push(prop);
         }
 		
@@ -1360,10 +1334,6 @@ var Renderer = new function() {
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
-			if(expNode.node.nodeType !== 3 && //for ie compatible
-				!DOC_BODY.contains(expNode.node) && !expNode.toHTML){
-				continue;
-			}
 
 			var val = null;
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
@@ -1407,29 +1377,25 @@ var Renderer = new function() {
 		}
 	}
 
-	function clone(obj,ref){
+	function clone(obj){
 		if(obj === null)return null;
 		var rs = obj;
 		if(obj instanceof Array){
 			rs = obj.concat();
 			for(var i=rs.length;i--;){
-				rs[i] = clone(rs[i],ref);
+				rs[i] = clone(rs[i]);
 			}
 		}else if(Util.isObject(obj)){
 			rs = {};
 			var ks = Object.keys(obj);
-                if(ks.length>0){
-                    var r = !obj.$origin;
-                    for(var i=ks.length;i--;){
-                        var k = ks[i],
-                            v = obj[k];
-                        if(k.indexOf('$__impex__')===0)continue;
-                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
-                    }
+            if(ks.length>0){
+                for(var i=ks.length;i--;){
+                    var k = ks[i],
+                        v = obj[k];
+                    if(k.indexOf('$__impex__')===0)continue;
+                    rs[k] = typeof obj[k]==='object'? clone(obj[k]): obj[k];
                 }
-
-            if(ref !== false)
-                rs.$origin = obj;
+            }
 		}
 		return rs;
 	}
@@ -1446,7 +1412,7 @@ var Renderer = new function() {
 			var filters = expObj.filters;
 			if(Object.keys(filters).length > 0){
 				if(rs && Util.isObject(rs)){
-					rs = clone(rs,0);
+					rs = clone(rs);
 				}
 
 				for(var k in filters){
@@ -1633,60 +1599,6 @@ var Renderer = new function() {
 
 
 /**
- * @classdesc 视图模型类，提供组件关联模型的操作
- * @class 
- */
-function ViewModel () {
-};
-ViewModel.prototype = {
-	/**
-	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
-	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
-	 * 获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null
-	 * @param  {string} path 表达式路径
-	 * @param  {var} val  值
-	 * @return this
-	 */
-	data:function(path,val){
-		var expObj = lexer(path);
-		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		if(arguments.length > 1){
-			if(Util.isObject(val) || Util.isArray(val)){
-				val = JSON.stringify(val);
-			}else 
-			if(Util.isString(val)){
-				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
-			}
-			try{
-				//fix \r\n on IE8
-				eval(evalStr + '= '+ val);
-			}catch(e){
-				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
-			}
-			
-			return this;
-		}else{
-			try{
-				return eval(evalStr);
-			}catch(e){
-				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
-			}
-			
-		}
-	},
-	/**
-	 * 查找拥有指定属性的最近的祖先组件
-	 * @param  {string} path 表达式路径
-	 * @return {Component}
-	 */
-	closest:function(path){
-		var expObj = lexer(path);
-		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
-		return impex.__components[RegExp.$1];
-	}
-}
-/**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
  * 组件也可以有属性。impex支持两种属性处理方式
  * <p>
@@ -1711,7 +1623,6 @@ ViewModel.prototype = {
  * </p>
  * 
  * @class 
- * @extends ViewModel
  */
 function Component (view) {
 	var id = 'C_' + im_counter++;
@@ -1736,6 +1647,7 @@ function Component (view) {
 	this.$__expNodes = [];
 	this.$__expPropRoot = new ExpProp();
 	this.$__watcher;
+	this.$__events = {};
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -1787,24 +1699,122 @@ Component.state = {
 	displayed : 'displayed',
 	suspend : 'suspend'
 };
-Util.inherits(Component,ViewModel);
+function broadcast(comps,type,params){
+	for(var i=0;i<comps.length;i++){
+		var comp = comps[i];
+		var evs = comp.$__events[type];
+		var conti = true;
+		if(evs){
+			conti = false;
+			for(var l=0;l<evs.length;l++){
+				conti = evs[l].apply(comp,params);
+			}
+		}
+		if(conti && comp.$__components.length>0){
+			broadcast(comp.$__components,type,params);
+		}
+	}
+}
 Util.ext(Component.prototype,{
 	/**
-	 * 绑定事件到组件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
-     * @param  {function} handler   事件处理回调，回调参数e
+	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
+	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
+	 * 获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null
+	 * @param  {string} path 表达式路径
+	 * @param  {var} val  值
+	 * @return this
 	 */
-	on:function(type,exp,handler){
-		this.$view.__on(this,type,exp,handler);
+	data:function(path,val){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		if(arguments.length > 1){
+			if(Util.isObject(val) || Util.isArray(val)){
+				val = JSON.stringify(val);
+			}else 
+			if(Util.isString(val)){
+				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+			}
+			try{
+				eval(evalStr + '= '+ val);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
+			}
+			
+			return this;
+		}else{
+			try{
+				return eval(evalStr);
+			}catch(e){
+				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
+			}
+			
+		}
 	},
 	/**
-	 * 从组件解绑事件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 * 查找拥有指定属性的最近的上级组件
+	 * @param  {String} path 表达式路径
+	 * @return {Component}
 	 */
-	off:function(type,exp){
-		this.$view.__off(this,type,exp);
+	closest:function(path){
+		var expObj = lexer(path);
+		var evalStr = Renderer.getExpEvalStr(this,expObj);
+		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
+		return impex.__components[RegExp.$1];
+	},
+	/**
+	 * 绑定自定义事件到组件
+	 * @param  {String} type 自定义事件名
+     * @param  {Function} handler   事件处理回调，回调参数[target，arg1,...]
+	 */
+	on:function(type,handler){
+		var evs = this.$__events[type];
+		if(!evs){
+			evs = this.$__events[type] = [];
+		}
+		evs.push(handler);
+	},
+	/**
+	 * 触发组件自定义事件，进行冒泡
+	 * @param  {String} type 自定义事件名
+	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
+	 */
+	emit:function(){
+		var type = arguments[0];
+		var params = [this];
+		for (var i =1 ; i < arguments.length; i++) {
+			params.push(arguments[i]);
+		}
+		var my = this.$parent;
+		setTimeout(function(){
+			while(my){
+				var evs = my.$__events[type];
+				if(evs){
+					var interrupt = true;
+					for(var i=0;i<evs.length;i++){
+						interrupt = !evs[i].apply(my,params);
+					}
+					if(interrupt)return;
+				}				
+
+				my = my.$parent;
+			}
+		},0);
+	},
+	/**
+	 * 触发组件自定义事件，进行广播
+	 * @param  {String} type 自定义事件名
+	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
+	 */
+	broadcast:function(){
+		var type = arguments[0];
+		var params = [this];
+		for (var i =1 ; i < arguments.length; i++) {
+			params.push(arguments[i]);
+		}
+		var my = this;
+		setTimeout(function(){
+			broadcast(my.$__components,type,params);
+		},0);
 	},
 	/**
 	 * 查找子组件，并返回符合条件的所有实例。如果不开启递归查找，
@@ -2094,6 +2104,8 @@ View.prototype = {
 			var v = propMap[i].value;
 			component[k] = v;
 		}
+
+		this.__comp = component;
 	},
 	__display:function(){
 		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
@@ -2121,7 +2133,7 @@ View.prototype = {
 
 	            for(var j=this.__nodes.length;j--;){
 	            	if(this.__nodes[j].nodeType !== 1)continue;
-	            	Util.off(k,this.__nodes[j],evHandler);
+	            	this.__nodes[j].removeEventListener(k,evHandler,false);
 	            }
 	        }
 		}
@@ -2153,11 +2165,17 @@ View.prototype = {
 				p.removeChild(this.__nodes[i]);
 		}
 	},
-	__on:function(component,type,exp,handler){
+	/**
+	 * 绑定事件到视图
+	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
+     * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
+     * @param  {function} handler   事件处理回调，回调参数e
+	 */
+	on:function(type,exp,handler){
 		if(!this.el)return;
 
 		var originExp = exp;
-		var comp = component;
+		var comp = this.__comp;
 		var tmpExpOutside = '';
 		var fnOutside = null;
 		var evHandler = function(e){
@@ -2186,14 +2204,19 @@ View.prototype = {
 			
 		};
 
-        Util.on(type,this.el,evHandler);
+        this.el.addEventListener(type,evHandler,false);
 		
 		if(!this.__evMap[type]){
 			this.__evMap[type] = [];
 		}
 		this.__evMap[type].push([exp,evHandler]);
 	},
-	__off:function(component,type,exp){
+	/**
+	 * 从组件解绑事件
+	 * @param  {string} type 事件名
+     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 */
+	off:function(type,exp){
 		if(!this.el)return;
 
 		var events = this.__evMap[type];
@@ -2202,7 +2225,7 @@ View.prototype = {
             var evExp = pair[0];
             var evHandler = pair[1];
             if(evExp == exp){
-	            Util.off(type,this.el,evHandler);
+	            this.el.removeEventListener(type,evHandler,false);
             }
         }
 	},
@@ -2297,7 +2320,6 @@ View.prototype = {
 		}
 		this.el.className += ' '+rs;
 		
-			
 		return this;
 	},
 	/**
@@ -2611,13 +2633,7 @@ Util.ext(Directive.prototype,{
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
-		if(this.$view){
-			this.$view.removeAttr(this.$name);
-			if(this.$endTag){
-                var lastNode = this.$view.__nodes[this.$view.__nodes.length-1];
-                lastNode.removeAttribute(CMD_PREFIX+this.$endTag);
-            }
-		}
+		
 		this.$value = attrVal;
 
 		LOGGER.log(this,'inited');
@@ -3021,7 +3037,17 @@ Util.ext(_DirectiveFactory.prototype,{
 			rs.$filter = filter;
 		}
 
+		rs.$view.__comp = rs;
+
 		component.add(rs);
+
+		if(rs.$view){
+			rs.$view.removeAttr(rs.$name);
+			if(rs.$endTag){
+                var lastNode = rs.$view.__nodes[rs.$view.__nodes.length-1];
+                lastNode.removeAttribute(CMD_PREFIX+rs.$endTag);
+            }
+		}
 		
 		if(rs.onCreate){
 			//inject
@@ -3151,20 +3177,19 @@ var TransitionFactory = {
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
-	var LOGGER = new function(){
-	    this.log = function(){}
-	    this.debug = function(){}
-	    this.error = function(){}
-	    this.warn = function(){}
+	var LOGGER = {
+	    log : function(){},
+	    debug : function(){},
+	    error : function(){},
+	    warn : function(){}
 	};
 
 	var CACHEABLE = false;
 
 	var im_compCache = {};
 	var im_counter = 0;
-	var DOC_BODY = null;
 
-	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
+	var BUILD_IN_PROPS = ['emit','broadcast','data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -3184,7 +3209,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,8,0],
+	        v:[0,9,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3202,8 +3227,7 @@ var TransitionFactory = {
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
 		 * @param {Boolean} cfg.cacheable 是否缓存组件，如果开启该配置，所有被destroy的组件不会被释放，而是被缓存起来
-		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口，
-		 * 并至少实现 0 none 1 error 2 warn 3 debug 4 log 5个级别控制
+		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
@@ -3306,9 +3330,6 @@ var TransitionFactory = {
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
-			if(!DOC_BODY){
-				DOC_BODY = document.body;
-			}
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				LOGGER.warn('element ['+name+'] has been rendered');
@@ -3512,19 +3533,23 @@ impex.service('Transitions',new function(){
     impex.directive('show-start',{
         $endTag : 'show-end',
         onCreate : function(){
-            this.$view.removeAttr('x-show-start');
 
             //更新视图
             this.__init();
             this.display();
         },
         observe : function(rs){
+            var nodes = this.$view.__nodes;
             if(rs){
                 //显示
-                this.$view.show();
+                for(var i=nodes.length;i--;){
+                    if(nodes[i].style)nodes[i].style.display = '';
+                }
             }else{
                 // 隐藏
-                this.$view.hide();
+                for(var i=nodes.length;i--;){
+                    if(nodes[i].style)nodes[i].style.display = 'none';
+                }
             }
         }
     });
@@ -3587,7 +3612,6 @@ impex.service('Transitions',new function(){
         onCreate : function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-            this.$view.removeAttr('x-if-start');
 
             //更新视图
             this.__init();
@@ -3653,23 +3677,23 @@ impex.service('Transitions',new function(){
                     var type = this.$view.attr('type');
                     switch(type){
                         case 'radio':
-                            this.on('click','changeModel($event)');
+                            this.$view.on('click','changeModel($event)');
                             break;
                         case 'checkbox':
-                            this.on('click','changeModelCheck($event)');
+                            this.$view.on('click','changeModelCheck($event)');
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.on(hack,'changeModel($event)');
+                            this.$view.on(hack,'changeModel($event)');
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.on('change','changeModelSelect($event)');
+                        this.$view.on('change','changeModelSelect($event)');
                     }else{
-                        this.on('change','changeModel($event)');
+                        this.$view.on('change','changeModel($event)');
                     }
                     
                     break;
@@ -3766,7 +3790,7 @@ impex.service('Transitions',new function(){
             this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
                 if(!that.$ds){
                     that.$ds = that.$parentComp.data(that.$expInfo.ds);
-                    that.$lastDS = $ds;
+                    that.$lastDS = that.$ds;
                     that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
                     return;
                 }
@@ -3837,8 +3861,16 @@ impex.service('Transitions',new function(){
                 if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.$subComponents[index];
+
                 //模型
-                subComp[vi] = ds[k];
+                var v = ds[k];
+                if(ds[k] && ds[k].$__impex__origin){
+                    v = ds[k].$__impex__origin;
+
+                    ds[k].$__impex__origin = null;
+                    delete ds[k].$__impex__origin;
+                }
+                subComp[vi] = v;
                 subComp['$index'] = index++;
                 if(ki)subComp[ki] = isIntK?k>>0:k;
 
@@ -3887,7 +3919,7 @@ impex.service('Transitions',new function(){
                 rs = {};
                 var ks = Object.keys(obj);
                 if(ks.length>0){
-                    var r = !obj.$origin;
+                    var r = ref ===false ? false : !obj.$__impex__origin;
                     for(var i=ks.length;i--;){
                         var k = ks[i],
                             v = obj[k];
@@ -3896,8 +3928,8 @@ impex.service('Transitions',new function(){
                     }
                 }
 
-                if(ref !== false)
-                    rs.$origin = obj;
+                if(ref !== false && !rs.$__impex__origin)
+                    rs.$__impex__origin = obj;
             }
             return rs;
         }
@@ -3940,7 +3972,14 @@ impex.service('Transitions',new function(){
                 var subComp = this.createSubComp();
                 
                 //模型
-                subComp[vi] = ds[k];
+                var v = ds[k];
+                if(ds[k] && ds[k].$__impex__origin){
+                    v = ds[k].$__impex__origin;
+
+                    ds[k].$__impex__origin = null;
+                    delete ds[k].$__impex__origin;
+                }
+                subComp[vi] = v;
                 subComp['$index'] = index++;
                 if(ki)subComp[ki] = isIntK?k>>0:k;
             }
@@ -4032,7 +4071,7 @@ impex.filter('filterBy',{
     to:function(key,inName){
         var ary = this.$value;
         if(!(ary instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         var rs = [];
@@ -4065,7 +4104,7 @@ impex.filter('filterBy',{
 impex.filter('limitBy',{
     to:function(count,start){
         if(!(this.$value instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         if(!count)return this.$value;
@@ -4077,7 +4116,7 @@ impex.filter('limitBy',{
 impex.filter('orderBy',{
     to:function(key,dir){
         if(!(this.$value instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         this.$value.sort(function(a,b){

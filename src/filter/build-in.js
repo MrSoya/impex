@@ -11,7 +11,7 @@ impex.filter('filterBy',{
     to:function(key,inName){
         var ary = this.$value;
         if(!(ary instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         var rs = [];
@@ -44,7 +44,7 @@ impex.filter('filterBy',{
 impex.filter('limitBy',{
     to:function(count,start){
         if(!(this.$value instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         if(!count)return this.$value;
@@ -56,7 +56,7 @@ impex.filter('limitBy',{
 impex.filter('orderBy',{
     to:function(key,dir){
         if(!(this.$value instanceof Array)){
-            console.warn('can only filter array');
+            LOGGER.warn('can only filter array');
             return this.$value;
         }
         this.$value.sort(function(a,b){

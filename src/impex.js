@@ -14,20 +14,19 @@
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
-	var LOGGER = new function(){
-	    this.log = function(){}
-	    this.debug = function(){}
-	    this.error = function(){}
-	    this.warn = function(){}
+	var LOGGER = {
+	    log : function(){},
+	    debug : function(){},
+	    error : function(){},
+	    warn : function(){}
 	};
 
 	var CACHEABLE = false;
 
 	var im_compCache = {};
 	var im_counter = 0;
-	var DOC_BODY = null;
 
-	var BUILD_IN_PROPS = ['data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
+	var BUILD_IN_PROPS = ['emit','broadcast','data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -47,7 +46,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,8,0],
+	        v:[0,9,0],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -65,8 +64,7 @@
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
 		 * @param {Boolean} cfg.cacheable 是否缓存组件，如果开启该配置，所有被destroy的组件不会被释放，而是被缓存起来
-		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口，
-		 * 并至少实现 0 none 1 error 2 warn 3 debug 4 log 5个级别控制
+		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
@@ -169,9 +167,6 @@
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
-			if(!DOC_BODY){
-				DOC_BODY = document.body;
-			}
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				LOGGER.warn('element ['+name+'] has been rendered');
