@@ -139,6 +139,22 @@ impex.component('x-body',{
 if(document.getElementById('component-2'))
 var debug = impex.render(document.getElementById('component-2'));
 
+if(document.getElementById('component-3')){
+    impex.component('x-a',{//组件模型
+        $template : "<div>{{a}} {{=CONTENT}}</div>",//视图模版
+        a : 10 //模型属性
+    })
+    .component('x-b',{//组件模型
+        $template : "<div>{{a+b}} {{=CONTENT}}</div>",//视图模版
+        b : 5 //模型属性
+    })
+    .component('x-c',{//组件模型
+        $template : "<div>{{a+b+c}} {{=CONTENT}}</div>",//视图模版
+        c : 1 //模型属性
+    });
+    impex.render(document.getElementById('component-3'));
+}
+
 impex.directive('tip',{
     onInit : function(){//鼠标悬浮时提示内容
         this.on('mouseover',"showTip()");

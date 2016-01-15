@@ -255,6 +255,9 @@
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -265,6 +268,9 @@
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -283,13 +289,13 @@
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>
@@ -395,7 +401,7 @@
 					<h1 id="prepare">准备</h1>
 					<p>
 						<blockquote class='warning'>
-							impex.js 不支持IE8 以下浏览器 &nbsp;&&nbsp; 使用 impex.js 会降低页面SEO能力 
+							impex.js 不支持IE9 以下浏览器 &nbsp;&&nbsp; 使用 impex.js 会降低页面SEO能力 
 						</blockquote>
 					</p>
 					
@@ -420,8 +426,7 @@ impex
 │   ├── impex.all.js 未压缩的核心代码
 │   ├── impex.all.min.js 压缩后的核心代码
 ├── ext
-│   ├── impex.ext.directives.js 扩展指令包，提供了常用事件以及视图->模型绑定指令
-│   ├── impex.ext.ie8.js 如果需要兼容IE8请使用
+│   ├── impex.ext.directives.js 扩展指令包，提供了复杂事件的封装
 │   ├── impex.ext.router.js impex.js 提供的默认路由方案
 │   └── .... 其他扩展
 ├── demos
@@ -445,7 +450,7 @@ impex
 					</h2>
 					<p>
 						impex.js 内置了一些常用指令，如果你对容量大小十分在意，不需要或者还需要内置其他东西，可以重新构建 impex.js。
-						impex.js 使用 [gulp](http://gulpjs.com) 来构建源码，而在这之前你需要安装了nodejs，然后只需要在 impex 工程目录执行如下命令
+						impex.js 使用 <a href="http://gulpjs.com" target="_blank">gulp</a> 来构建源码，而在这之前你需要安装了nodejs，然后只需要在 impex 工程目录执行如下命令
 							
 					</p>
 					<p>
@@ -685,6 +690,9 @@ impex.config({logger:imLog})</code></pre>
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -695,6 +703,9 @@ impex.config({logger:imLog})</code></pre>
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -713,13 +724,13 @@ impex.config({logger:imLog})</code></pre>
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>

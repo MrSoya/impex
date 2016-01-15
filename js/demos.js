@@ -25,7 +25,7 @@ window.addEventListener('load',function(){
                             </div>\
                             <div class="block-buttons">\
                                 <div x-each="buttons as btn">\
-                                    <button x-click="addExp(btn)">{{btn}}</button>\
+                                    <button :click="addExp(btn)">{{btn}}</button>\
                                 </div>\
                                 <div style="clear: both;"></div>\
                             </div>\
@@ -63,7 +63,7 @@ window.addEventListener('load',function(){
         impex.component('demo-todo',{
             $template:'<section class="todos">\
                             <header>\
-                                <input x-keydown="addTodo($event)" placeholder="What needs to be done?">\
+                                <input :keydown="addTodo($event)" placeholder="What needs to be done?">\
                             </header>\
                             <section>\
                                 <ul class="todolist">\
@@ -71,16 +71,16 @@ window.addEventListener('load',function(){
                                         transition="todo" \
                                         class="{{v.type==\'completed\'?\'completed\':\'\'}}"\
                                     >\
-                                        <input type="checkbox" x-checked="v.type==\'completed\'" x-click="done($event,v)">\
-                                        {{v.val}} <i x-click="removeTodo(v)" class="close">&times;</i>\
+                                        <input type="checkbox" x-checked="v.type==\'completed\'" :click="done($event,v)">\
+                                        {{v.val}} <i :click="removeTodo(v)" class="close">&times;</i>\
                                     </li>\
                                 </ul>\
                             </section>\
                             <footer>\
                                 <span>{{activeTodos}} item left</span>\
-                                <a class="button {{filterType===\'\'?\'active\':\'\'}}" x-click="filterTodos(\'\')">All</a>\
-                                <a class="button {{filterType===\'active\'?\'active\':\'\'}}" x-click="filterTodos(\'active\')">Active</a>\
-                                <a class="button {{filterType===\'completed\'?\'active\':\'\'}}" x-click="filterTodos(\'completed\')">Completed</a>\
+                                <a class="button {{filterType===\'\'?\'active\':\'\'}}" :click="filterTodos(\'\')">All</a>\
+                                <a class="button {{filterType===\'active\'?\'active\':\'\'}}" :click="filterTodos(\'active\')">Active</a>\
+                                <a class="button {{filterType===\'completed\'?\'active\':\'\'}}" :click="filterTodos(\'completed\')">Completed</a>\
                             </footer>\
                         </section>',
             todos:[
@@ -106,8 +106,7 @@ window.addEventListener('load',function(){
                 }
             },
             removeTodo:function(todo){
-                var oTodo = todo.$origin;
-                var i = this.todos.indexOf(oTodo);
+                var i = this.todos.indexOf(todo);
                 if(i > -1)
                 this.todos.splice(i,1);
             },
@@ -118,7 +117,6 @@ window.addEventListener('load',function(){
                 }
 
                 todo.type = type;
-                todo.$origin.type = type;
 
                 this.activeTodos = this.todos.filter(function(td){
                     return td.type === 'active';
@@ -139,11 +137,6 @@ window.addEventListener('load',function(){
         }
 
         if($('div[name="todo"]')[0]){
-            impex.directive('keydown',{
-                onCreate:function(){
-                    this.on('keydown',this.$value);
-                }
-            })
             impex.directive('checked',{
                 observe:function(rs){
                     this.$view.el.checked = rs;

@@ -105,17 +105,17 @@
 					
 					<section class="bucket">
 						<ul>
-							<li class="{{actived=='HTML'?'actived':''}}" ><a href="javascript:;" x-click="active('HTML')">HTML</a></li>
-							<li class="{{actived=='CSS'?'actived':''}}" ><a href="javascript:;" x-click="active('CSS')">CSS</a></li>
-							<li class="{{actived=='JS'?'actived':''}}" ><a href="javascript:;" x-click="active('JS')">Javascript</a></li>
-							<li class="{{actived=='out'?'actived':''}}" ><a href="javascript:;" x-click="active('out')">Output</a></li>
+							<li class="{{actived=='HTML'?'actived':''}}" ><a href="javascript:;" :click="active('HTML')">HTML</a></li>
+							<li class="{{actived=='CSS'?'actived':''}}" ><a href="javascript:;" :click="active('CSS')">CSS</a></li>
+							<li class="{{actived=='JS'?'actived':''}}" ><a href="javascript:;" :click="active('JS')">Javascript</a></li>
+							<li class="{{actived=='out'?'actived':''}}" ><a href="javascript:;" :click="active('out')">Output</a></li>
 						</ul>
 						<div style="clear: both;"></div>
 						<pre class="content" x-show="actived=='HTML'">
 							<code class="language-markup" x-ignore>
 &lt;section class="todos"&gt;
     &lt;header&gt;
-        &lt;input x-keydown="addTodo($event)" placeholder="What needs to be done?"&gt;
+        &lt;input :keydown="addTodo($event)" placeholder="What needs to be done?"&gt;
     &lt;/header&gt;
     &lt;section&gt;
         &lt;ul class="todolist"&gt;
@@ -123,16 +123,16 @@
                 transition="todo" 
                 class="{{v.type=='completed'?'completed':''}}"
             &gt;
-                &lt;input type="checkbox" x-checked="v.type=='completed'" x-click="done($event,v)"&gt;
-                {{v.val}} &lt;i x-click="removeTodo(v)" class="close"&gt;&times;&lt;/i&gt;
+                &lt;input type="checkbox" x-checked="v.type=='completed'" :click="done($event,v)"&gt;
+                {{v.val}} &lt;i :click="removeTodo(v)" class="close"&gt;&times;&lt;/i&gt;
             &lt;/li&gt;
         &lt;/ul&gt;
     &lt;/section&gt;
     &lt;footer&gt;
         &lt;span&gt;{{activeTodos}} item left&lt;/span&gt;
-        &lt;a class="button {{filterType===''?'active':''}}" x-click="filterTodos('')"&gt;All&lt;/a&gt;
-        &lt;a class="button {{filterType==='active'?'active':''}}" x-click="filterTodos('active')"&gt;Active&lt;/a&gt;
-        &lt;a class="button {{filterType==='completed'?'active':''}}" x-click="filterTodos('completed')"&gt;Completed&lt;/a&gt;
+        &lt;a class="button {{filterType===''?'active':''}}" :click="filterTodos('')"&gt;All&lt;/a&gt;
+        &lt;a class="button {{filterType==='active'?'active':''}}" :click="filterTodos('active')"&gt;Active&lt;/a&gt;
+        &lt;a class="button {{filterType==='completed'?'active':''}}" :click="filterTodos('completed')"&gt;Completed&lt;/a&gt;
     &lt;/footer&gt;
 &lt;/section&gt;
 							</code>
@@ -210,11 +210,7 @@
 						</pre>
 						<pre class="content" x-show="actived=='JS'">
 							<code class="language-javascript">//指令
-impex.directive('keydown',{
-    onCreate:function(){
-        this.on('keydown',this.$value);
-    }
-});
+
 impex.directive('checked',{
     observe:function(rs){
         this.$view.el.checked = rs;
@@ -236,14 +232,12 @@ impex.render(document.body,{
     addTodo:function(e){
         var t = e.target;
         if(e.keyCode === 13 && t.value.trim()){
-
             this.todos.push({id:Math.random()+'',val:t.value,type:'active'});
             t.value = '';
         }
     },
     removeTodo:function(todo){
-        var oTodo = todo.$origin;
-        var i = this.todos.indexOf(oTodo);
+        var i = this.todos.indexOf(todo);
         if(i > -1)
         this.todos.splice(i,1);
     },
@@ -254,7 +248,6 @@ impex.render(document.body,{
         }
 
         todo.type = type;
-        todo.$origin.type = type;
 
         this.activeTodos = this.todos.filter(function(td){
             return td.type === 'active';

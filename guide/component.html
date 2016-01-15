@@ -255,6 +255,9 @@
 				组件			</a>
 			<ul class="nav indent actived">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -265,6 +268,9 @@
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -283,13 +289,13 @@
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>
@@ -393,11 +399,27 @@
 				<div class="col-md-1 hidden-xs" ><!-- holder --></div>
 				<div class="col-md-8 col-xs-8 content"> 		
 					<h1 id="component">组件</h1>
+					<h2 id="component-what">
+						是什么
+					</h2>
 					<p>
-						在 impex.js 中一切皆组件，即使没有注册过组件，当调用<code>impex.render(...)</code>时，
-						系统依然会自动创建一个匿名组件。一个impex应用中或多或少都会出现自定义组件，所以掌握组件的
-						详细信息是十分必要的
+						在 impex.js 中一切皆组件，组件是impex构建UI的基本单元。
+						组件可以是一个按钮、输入框，也可以是一个面板、容器，
+						更可以是一个包含了按钮、输入框的面板、容器。
+						也就是说，组件构成了整个impex应用。
+						每个组件都包含自己独立的视图，控制器和数据，
+						通过控制器修改数据来驱动视图的更新。组件总是保证自己关联视图的状态更新。
 					</p>
+					<p>
+						<img src="tree.png">
+					</p>
+					<p>
+						上面这幅图很好的诠释了组件在构建应用中的角色。
+						impex的入口总是从一个组件开始，如果render的DOM元素并不是一个已经注册的组件， 那么系统会自动创建一个匿名组件，并递归解析内部的所有组件，
+						最终构成一个组件树，也就是完整的webUI
+					</p>
+
+
 					<h2 id="component-use">
 						使用
 					</h2>
@@ -408,9 +430,11 @@
 						注册
 					</h3>
 					<pre><code class="language-javascript">//注册组件
-impex.component('x-div',{
-	$template : "&lt;div {{=BINDPROPS}}&gt;=={{=CONTENT}}==&lt;/div&gt;"
+impex.component('x-div',{//组件模型
+	$template : "&lt;div {{=BINDPROPS}}&gt;{{delimiter}} {{=CONTENT}} {{delimiter}}&lt;/div&gt;",//视图模版
+	delimiter : '==' //模型属性
 })
+//{{delimiter}} 是组件视图中的表达式，表达式中引用了模型属性delimiter
 </code></pre>
 <pre><code class="language-markup">&lt;!-- 使用组件 --&gt;
 &lt;x-div style='color:#aaa;font-size:2rem'&gt;
@@ -436,6 +460,9 @@ impex.component('x-div',{
 					</p>
 					<p>
 						组件的注册是全局的，也就是说相同名字的组件会被覆盖
+					</p>
+					<p>
+						组件命名遵循<a href="https://www.w3.org/TR/custom-elements/#concepts" target="_blank">W3C命名规范</a>
 					</p>
 
 					<h3 id="component-use-restrict">
@@ -486,6 +513,27 @@ impex.component('x-button',{
 						模板表达式只做编译前的替换，没有任何其他操作，比如监控之类。更多模板
 						表达式语法<a href="../guide/syntax.html#syntax-exp-tmpl">请看这里</a>
 					</p>
+
+					<h3 id="component-use-anon">
+						匿名组件
+					</h3>
+					<p>
+						即使没有注册过组件，当调用<code>impex.render(...)</code>时，
+						系统依然会自动创建一个匿名组件。匿名组件通常由系统自动维护，
+						使用者不能也不应该对匿名组件进行操作。会产生匿名组件的操作包括：
+					</p>
+					<ul>
+						<li>impex.render()</li>
+						<li>{{# }}表达式</li>
+						<li>某些指令，比如x-each产生的每个项</li>
+						<li>...</li>
+					</ul>
+
+					<p>
+						
+					</p>
+
+
 
 					<h2 id="component-props">
 						属性
@@ -541,40 +589,97 @@ impex.component('x-div',{
 						impex会自动把横线格式的属性自动转为驼峰格式(Camel-Case)的组件属性，如 &lt;x-comp my-prop="x"&gt;&lt;/x-comp&gt; 组件就会自动拥有myProp属性
 					</blockquote>
 
-					<h2 id="component-scope">
-						作用域
+					<h2 id="component-comm">
+						组件通信
 					</h2>
+					<p>
+						
+					</p>
 
-					<h3 id="component-scope-tree">
-						组件树
+					<h3 id="component-comm-scope">
+						作用域
 					</h3>
 					<p>
-						<img src="tree.png">
+						组件的作用域包括视图、和模型数据。
 					</p>
 					<p>
-						之前说过，impex的入口总是从一个组件开始，如果render的DOM元素并不是一个已经注册的组件，
-						那么系统会自动创建一个匿名组件，并递归解析内部的所有组件，最终构成一个组件树。
+						<i>对于视图</i>，就像本章开头介绍的那样，整个impex应用都对应了一棵组件树。
+						父组件的视图包含了子组件的视图。所以，一旦销毁父组件，子组件也会被销毁。
 					</p>
 					<p>
-						因为使用递归方式构建，对于同步组件，子组件总是先于父组件构建完成，但是异步组件就像它的名字样，会异步完成，
-						如果需要在组件的<a href="../api/#component-lifecycle">生命周期回调</a>中进行操作，请记住这些信息
+						尽管组件拥有视图属性，并可以独立的对视图进行操作，比如隐藏、修改样式等...。
+						但是，除了为视图绑定事件外，其他操作最好使用指令进行，比如<code>x-show</code>等。
+						因为对组件来说，视图只是其中的一部分。当一个视图要显示、销毁或者挂起时，
+						不仅视图需要变动，组件模型本身也需要变动。只对视图操作会导致组件模型和视图状态不一致，
+						导致错误。
 					</p>
+					<p>
+						<i>对于数据</i>，子组件的视图表达式中可以引用到父组件的模型值，而在子组件的模型中无法直接引用。
+						但是，如果组件想要通用并且复用，就不能假设父组件拥有某个变量。因为组件的上级组件是不可预知的。
+						从这点来说，组件视图中最好总是只访问组件自身的模型值。
+					</p>
+					<p>
+						<pre><code class="language-javascript">
+//注册组件
+impex.component('x-a',{//组件模型
+	$template : "&lt;div&gt;{{a}} {{=CONTENT}}&lt;/div&gt;",//视图模版
+	a : 10 //模型属性
+})
+.component('x-b',{//组件模型
+	$template : "&lt;div&gt;{{a+b}} {{=CONTENT}}&lt;/div&gt;",//视图模版
+	b : 5 //模型属性
+})
+.component('x-c',{//组件模型
+	$template : "&lt;div&gt;{{a+b+c}} {{=CONTENT}}&lt;/div&gt;",//视图模版
+	c : 1 //模型属性
+})
+</code></pre>
+<pre><code class="language-markup">&lt;!-- 使用组件 --&gt;
+&lt;x-a&gt; &lt;!-- 顶级组件 --&gt;
+	&lt;x-b&gt; &lt;!-- 上级组件 --&gt;
+		&lt;x-c&gt; &lt;!-- 下级组件 --&gt;
+			impex
+		&lt;/x-c&gt;
+	&lt;/x-b&gt;
+&lt;/x-a&gt;</code></pre>
+					</p>
+					<div class="output">
+						<div id="component-3">
+							<!-- 使用组件 -->
+							<x-a> <!-- 顶级组件 -->
+								<x-b> <!-- 上级组件 -->
+									<x-c> <!-- 下级组件 -->
+										impex
+									</x-c>
+								</x-b>
+							</x-a>
+						</div>
+					</div>
 
-					<h3 id="component-scope-comm">
+					<h3 id="component-comm-comm">
 						组件通信
 					</h3>
 
 					<p>
-						每个组件都应该是一个拥有独立逻辑和视图的自包含的对象，不应该直接使用父组件的属性或者方法，
-						如果要使用，也应该通过接口注入的方式进行转移，以此来保持组件内部属性的独立。
+						每个组件都应该是一个拥有独立逻辑和视图的自包含的对象，不应该直接使用父/子组件的属性或者方法，
+						这会造成组件之间耦合，无法实现重用。为此，impex 提供了事件接口来解决这个问题
+					</p>
+					<ul>
+						<li><code>on()</code>方法用于注册自定义事件监听</li>
+						<li><code>emit()</code>方法用于触发上级组件的自定义事件，基于冒泡方式</li>
+						<li><code>broadcast()</code>方法用于广播下级组件的自定义事件，采用递归方式</li>
+					</ul>
+					<p>
+						无论<code>emit()</code>还是<code>broadcast()</code>方法，当触发一次事件后，
+						除非<code>handler</code>明确返回<code>true</code>，否则事件不在继续触发。
 					</p>
 					<p>
-						但是，如果你想，impex 也支持。
+						除此以外，必要时可以通过直接访问组件引用来进行数据交换，这些方式包括
 					</p>
 
 					<p>
 						<ul>
-							<li>在表达式中，子组件可以直接引用父组件的属性、方法</li>
+							<li>在视图表达式中，子组件可以直接引用父组件的属性、方法</li>
 							<li>子组件可以通过<code>$parent</code>属性来访问父组件实例</li>
 							<li>父组件可以通过<code>find()</code>方法来查找子组件</li>
 							<li>平级组件无法直接通信</li>
@@ -776,6 +881,9 @@ impex.component('x-div',{
 				组件			</a>
 			<ul class="nav indent actived">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -786,6 +894,9 @@ impex.component('x-div',{
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -804,13 +915,13 @@ impex.component('x-div',{
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>

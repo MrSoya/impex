@@ -144,7 +144,10 @@
 					<a href="#component-on">on</a>
 									</li>
 								<li>
-					<a href="#component-off">off</a>
+					<a href="#component-emit">emit</a>
+									</li>
+								<li>
+					<a href="#component-broadcast">broadcast</a>
 									</li>
 								<li>
 					<a href="#component-find">find</a>
@@ -210,6 +213,12 @@
 			<ul class="nav indent ">
 								<li>
 					<a href="#component-view-elements">el</a>
+									</li>
+								<li>
+					<a href="#component-view-on">on</a>
+									</li>
+								<li>
+					<a href="#component-view-off">off</a>
 									</li>
 								<li>
 					<a href="#component-view-clone">clone</a>
@@ -808,7 +817,7 @@ impex.component('x-panel',{
 				</li>
 			</ul>
 						<h3 id="component-on">
-				<i class="tag">#</i> on				( type , exp , handler )			</h3>
+				<i class="tag">#</i> on				( type , handler )			</h3>
 			<ul class="prop">
 									<li>
 						Arguments:
@@ -816,11 +825,6 @@ impex.component('x-panel',{
 															<li>
 									<code>
 										{String} type</code>
-
-																	</li>
-															<li>
-									<code>
-										{String} exp</code>
 
 																	</li>
 															<li>
@@ -833,13 +837,13 @@ impex.component('x-panel',{
 					</li>
 													<li>Usage: 
 					<p>
-											<p>绑定事件到组件</p>
+											<p>绑定自定义事件到组件，响应emit / broadcast</p>
 										
 					</p>
 				</li>
 			</ul>
-						<h3 id="component-off">
-				<i class="tag">#</i> off				( type , exp )			</h3>
+						<h3 id="component-emit">
+				<i class="tag">#</i> emit				( type , data... )			</h3>
 			<ul class="prop">
 									<li>
 						Arguments:
@@ -851,7 +855,7 @@ impex.component('x-panel',{
 																	</li>
 															<li>
 									<code>
-										{String} exp</code>
+										{...Object} data...</code>
 
 																	</li>
 														
@@ -859,7 +863,33 @@ impex.component('x-panel',{
 					</li>
 													<li>Usage: 
 					<p>
-											<p>从组件解绑事件</p>
+											<p>触发上级组件的自定义事件，以冒泡方式</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-broadcast">
+				<i class="tag">#</i> broadcast				( type , data... )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String} type</code>
+
+																	</li>
+															<li>
+									<code>
+										{...Object} data...</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<p>触发下级组件的自定义事件，以广播方式</p>
 										
 					</p>
 				</li>
@@ -1207,6 +1237,63 @@ impex.component('x-panel',{
 									<li>Usage: 
 					<p>
 											<p>对可视元素的引用，在DOM中就是HTMLElement，在绝大多数情况下，都不应该直接使用该属性</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-on">
+				<i class="tag">#</i> on				(  type , exp , handler )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String}  type</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} exp</code>
+
+																	</li>
+															<li>
+									<code>
+										{Function} handler</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<p>绑定事件到视图，在HTML中就是DOM</p>
+										
+					</p>
+				</li>
+			</ul>
+						<h3 id="component-view-off">
+				<i class="tag">#</i> off				(  type , exp )			</h3>
+			<ul class="prop">
+									<li>
+						Arguments:
+						<ul>
+															<li>
+									<code>
+										{String}  type</code>
+
+																	</li>
+															<li>
+									<code>
+										{String} exp</code>
+
+																	</li>
+														
+						</ul> 
+					</li>
+													<li>Usage: 
+					<p>
+											<p>从视图解绑事件，在HTML中就是DOM</p>
 										
 					</p>
 				</li>
@@ -1581,7 +1668,7 @@ impex.component('x-panel',{
 			<ul class="prop">
 								<li>Usage: 
 					<p>
-											<pre><code class="language-markup">&lt;div x-each=&quot;collection as k =&gt; v&quot;&gt;&lt;/div&gt;</code></pre>
+											<pre><code class="language-markup">&lt;div x-each=&quot;collection as k , v&quot;&gt;&lt;/div&gt;</code></pre>
 											<p>each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象/常量或者变量</p>
 										
 					</p>
@@ -1593,7 +1680,7 @@ impex.component('x-panel',{
 								<li>Usage: 
 					<p>
 											<pre><code class="language-markup">
-&lt;div x-each-start=&quot;collection as k =&gt; v&quot;&gt;start&lt;/div&gt;
+&lt;div x-each-start=&quot;collection as k , v&quot;&gt;start&lt;/div&gt;
 &lt;div x-each-end&gt;end&lt;/div&gt;</code></pre>
 											<p>x-each的范围版本</p>
 										
@@ -2019,7 +2106,10 @@ function impexFilter(item){
 					<a href="#component-on">on</a>
 									</li>
 								<li>
-					<a href="#component-off">off</a>
+					<a href="#component-emit">emit</a>
+									</li>
+								<li>
+					<a href="#component-broadcast">broadcast</a>
 									</li>
 								<li>
 					<a href="#component-find">find</a>
@@ -2085,6 +2175,12 @@ function impexFilter(item){
 			<ul class="nav indent ">
 								<li>
 					<a href="#component-view-elements">el</a>
+									</li>
+								<li>
+					<a href="#component-view-on">on</a>
+									</li>
+								<li>
+					<a href="#component-view-off">off</a>
 									</li>
 								<li>
 					<a href="#component-view-clone">clone</a>

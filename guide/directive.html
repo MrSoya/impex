@@ -255,6 +255,9 @@
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -265,6 +268,9 @@
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -283,13 +289,13 @@
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>
@@ -479,7 +485,7 @@ impex.directive('tip',{
 						可以使用大括号来完成额外的操作，比如预解析
 					</p>
 					<pre><code class="language-markup">&lt;!-- button需要绑定不同的click函数 --&gt;
-&lt;button x-each="btns as i,btn" x-click="{{btn.click+'('+i+')'}}"&gt;
+&lt;button x-each="btns as i,btn" :click="{{btn.click+'('+i+')'}}"&gt;
     {{btn.name + i}}
 &lt;/button&gt;</code></pre>
 <pre><code class="language-javascript">//注册指令
@@ -500,7 +506,7 @@ impex.render(document.getElementById('entry'),new function(){
 </code></pre>
 					<div class="output">
 						<div id="directive-2">
-							<button x-each="btns as i,btn" x-click="{{btn.click+'('+i+')'}}">
+							<button x-each="btns as i,btn" :click="{{btn.click+'('+i+')'}}">
 							    {{btn.name + i}}
 							</button>
 						</div>
@@ -703,6 +709,9 @@ impex.render(document.getElementById('entry'),new function(){
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -713,6 +722,9 @@ impex.render(document.getElementById('entry'),new function(){
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -731,13 +743,13 @@ impex.render(document.getElementById('entry'),new function(){
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>

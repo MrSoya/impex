@@ -255,6 +255,9 @@
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -265,6 +268,9 @@
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -283,13 +289,13 @@
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>
@@ -539,7 +545,7 @@ var debug = impex.render(document.getElementById('entry'),{
 								<code>$index :</code>索引值，从0开始 
 							</li>
 							<li>
-								<code>k :</code>自定义变量，如果<code>collection</code>是数组，该值和<code>$index</code>相等，
+								<code>k :</code>自定义变量，如果collection是数组，该值和<code>$index</code>相等，
 								如果是对象，则为对象的key 
 							</li>
 							<li>
@@ -552,9 +558,18 @@ var debug = impex.render(document.getElementById('entry'),{
 						事件
 					</h3>
 					
-					<pre><code class="language-markup">&lt;button x-click="toggleSize($event,true)"&gt; toggle size &lt;/button&gt;</code>
+					<pre><code class="language-markup">&lt;button x-on:click="toggleSize($event,true)"&gt; toggle size &lt;/button&gt;</code>
+</pre>				
+					<p>
+						impex 内置了<code>x-on</code>指令，用于视图事件的绑定，为了简化大量事件的绑定书写，
+						impex 提供了事件专用的冒号语法
+					</p>
+					<pre><code class="language-markup">&lt;button :click="toggleSize($event,true)"&gt; toggle size &lt;/button&gt;</code>
 </pre>				<p>
-						除了与原生的javascript事件语法相同外，多了一个<code>$event</code>变量，该变量表示原生事件对象
+						实际上，冒号指令还是会调用<code>x-on</code>指令，更多信息可以<a href="../api/#component-on">查看相关API</a>
+					</p>
+					<p>
+						除了与原生的javascript事件语法相同外，事件指令多了一个<code>$event</code>变量，该变量表示原生事件对象
 					</p>
 
 					<h2 id="syntax-c">
@@ -660,17 +675,6 @@ impex.filter('trim',{
 					<p>
 						<code>limitBy</code>和<code>orderBy</code>都是内置过滤器，更多信息可以<a href="../api/#filter-buildin">查看相关API</a>
 					</p>
-					<p>
-						<blockquote class="warning">
-							一旦指令中使用了过滤器，最终的域内<abbr title="对象、数组">引用变量</abbr>都不会直接指向对应的模型变量，
-							因为过滤器会clone原始数据并处理返回。如果想引用过滤后对应的原始对象，可以通过<code>$origin</code>属性获取
-						</blockquote>
-					</p>
-					<pre>
-<code class="language-markup">&lt;div x-each="list as item "&gt;
-  {{item.$origin}} 
-&lt;/div&gt;</code>
-</pre>
 							<footer>
 		<a class="prev" href="gettingstarted.html">
 		<i class="glyphicon glyphicon-menu-left"></i>开始	</a>
@@ -866,6 +870,9 @@ impex.filter('trim',{
 				组件			</a>
 			<ul class="nav indent ">
 								<li>
+					<a href="#component-what">是什么</a>
+									</li>
+								<li>
 					<a href="#component-use">使用</a>
 										<ul class="nav indent">
 												<li>
@@ -876,6 +883,9 @@ impex.filter('trim',{
 						</li>
 												<li>
 							<a href="#component-use-exp">模板表达式</a>
+						</li>
+												<li>
+							<a href="#component-use-anon">匿名组件</a>
 						</li>
 											</ul>
 									</li>
@@ -894,13 +904,13 @@ impex.filter('trim',{
 											</ul>
 									</li>
 								<li>
-					<a href="#component-scope">作用域</a>
+					<a href="#component-comm">组件通信</a>
 										<ul class="nav indent">
 												<li>
-							<a href="#component-scope-tree">组件树</a>
+							<a href="#component-comm-scope">作用域</a>
 						</li>
 												<li>
-							<a href="#component-scope-comm">组件通信</a>
+							<a href="#component-comm-comm">组件通信</a>
 						</li>
 											</ul>
 									</li>
