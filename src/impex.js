@@ -57,7 +57,7 @@
 	     * @type {String}
 	     * @constant
 	     */
-		this.website = 'http://mrsoya.github.io/impex';
+		this.website = 'http://impexjs.org';
 
 		/**
 		 * 设置impex参数

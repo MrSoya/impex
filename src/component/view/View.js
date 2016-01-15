@@ -150,7 +150,7 @@ View.prototype = {
 		this.__evMap[type].push([exp,evHandler]);
 	},
 	/**
-	 * 从组件解绑事件
+	 * 从视图解绑事件
 	 * @param  {string} type 事件名
      * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
 	 */
