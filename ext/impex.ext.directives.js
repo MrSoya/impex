@@ -3,51 +3,7 @@
  */
 ;!function(impex){
 	///////////////////// 事件指令 /////////////////////
-    /**
-     * 视图点击指令
-     * <br/>使用方式：<div x-click="fn() + fx()"></div>
-     */
-    impex.directive('click',{
-        onInit : function(){
-            this.$view.on('click',this.$value);
-        }
-    });
-    /**
-     * 鼠标移入视图指令，不包含子视图
-     * <br/>使用方式：<div x-mouseover="fn() + fx()"></div>
-     */
-    impex.directive('mouseover',{
-        onInit : function(){
-            this.$view.on('mouseover',this.$value);
-        }
-    });
-    /**
-     * 鼠标移出视图指令，不包含子视图
-     * <br/>使用方式：<div x-mouseout="fn() + fx()"></div>
-     */
-    impex.directive('mouseout',{
-        onInit : function(){
-            this.$view.on('mouseout',this.$value);
-        }
-    });
-    /**
-     * 鼠标按下视图指令，不包含子视图
-     * <br/>使用方式：<div x-mousedown="fn() + fx()"></div>
-     */
-    impex.directive('mousedown',{
-        onInit : function(){
-            this.$view.on('mousedown',this.$value);
-        }
-    });
-    /**
-     * 鼠标弹起视图指令，不包含子视图
-     * <br/>使用方式：<div x-mouseup="fn() + fx()"></div>
-     */
-    impex.directive('mouseup',{
-        onInit : function(){
-            this.$view.on('mouseup',this.$value);
-        }
-    });
+
     /**
      * 鼠标移出视图指令，包含子视图
      * <br/>使用方式：<div x-mouseleave="fn() + fx()"></div>
@@ -79,25 +35,6 @@
     	return false;
     }
 
-
-    /**
-     * 获取焦点视图指令，不包含子视图
-     * <br/>使用方式：<div x-focus="fn() + fx()"></div>
-     */
-    impex.directive('focus',{
-        onInit : function(){
-            this.$view.on('focus',this.$value);
-        }
-    });
-    /**
-     * 失去焦点视图指令，不包含子视图
-     * <br/>使用方式：<div x-focus="fn() + fx()"></div>
-     */
-    impex.directive('blur',{
-        onInit : function(){
-            this.$view.on('blur',this.$value);
-        }
-    });
 
     /**
      * 鼠标滚动视图指令，不包含子视图

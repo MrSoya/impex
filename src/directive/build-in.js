@@ -9,12 +9,24 @@
      */
     impex.directive('ignore',{
         $final:true
-    });
+    })
+    /**
+     * 绑定视图事件，以参数指定事件类型，用于减少单一事件指令书写
+     * <br/>使用方式1：<img x-on:load:mousedown:touchstart="hi()" x-on:dblclick="hello()">
+     * <br/>使用方式2：<img :load:mousedown:touchstart="hi()" :dblclick="hello()">
+     */
+    .directive('on',{
+        onInit:function(){
+            for(var i=this.$params.length;i--;){
+                this.$view.on(this.$params[i],this.$value);
+            }
+        }
+    })
     /**
      * 绑定视图属性，并用表达式的值设置属性
      * <br/>使用方式：<img x-bind:src="exp">
      */
-    impex.directive('bind',{
+    .directive('bind',{
         onInit:function(){
             if(!this.$params || this.$params.length < 1){
                 LOGGER.warn('at least one attribute be binded');
@@ -44,12 +56,12 @@
             }
             
         }
-    });
+    })
     /**
      * 控制视图显示指令，根据表达式计算结果控制
      * <br/>使用方式：<div x-show="exp"></div>
      */
-    impex.directive('show',{
+    .directive('show',{
         onCreate:function(ts){
             var transition = this.$view.attr('transition');
             if(transition !== null){
@@ -86,11 +98,11 @@
                 this.$view.hide();
             }
         }
-    },['Transitions']);
+    },['Transitions'])
     /**
      * x-show的范围版本
      */
-    impex.directive('show-start',{
+    .directive('show-start',{
         $endTag : 'show-end',
         onCreate : function(){
 
@@ -112,13 +124,12 @@
                 }
             }
         }
-    });
-
+    })
     /**
      * 效果与show相同，但是会移除视图
      * <br/>使用方式：<div x-if="exp"></div>
      */
-    impex.directive('if',{
+    .directive('if',{
         onCreate : function(viewManager,ts){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
@@ -161,13 +172,12 @@
                 this.viewManager.replace(this.placeholder,this.$view);
             }
         }
-    },['ViewManager','Transitions']);
-
+    },['ViewManager','Transitions'])
     /**
      * x-if的范围版本
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
      */
-    impex.directive('if-start',{
+    .directive('if-start',{
         $endTag : 'if-end',
         onCreate : function(viewManager){
             this.viewManager = viewManager;
@@ -188,12 +198,11 @@
                 this.viewManager.replace(this.placeholder,this.$view);
             }
         }
-    },['ViewManager']);
-
+    },['ViewManager'])
     /**
      * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
      */
-    impex.directive('cloak',{
+    .directive('cloak',{
         onCreate:function(){
             var className = this.$view.attr('class');
             if(!className){
@@ -204,28 +213,14 @@
             this.$view.attr('class',className);
             updateCloakAttr(this.$parent,this.$view.el,className);
         }
-    });
-
-    function updateCloakAttr(component,node,newOrigin){
-        for(var i=component.$__expNodes.length;i--;){
-            var expNode = component.$__expNodes[i];
-            if(expNode.node == node && expNode.attrName === 'class'){
-                expNode.origin = newOrigin;
-            }
-        }
-
-        for(var j=component.$__components.length;j--;){
-            updateCloakAttr(component.$__components[j],node,newOrigin);
-        }
-    }
-
+    })
 
     ///////////////////// 模型控制指令 /////////////////////
     /**
      * 绑定模型属性，当控件修改值后，模型值也会修改
      * <br/>使用方式：<input x-model="model.prop">
      */
-    impex.directive('model',{
+    .directive('model',{
         onCreate : function(){
             var el = this.$view.el;
             this.toNum = el.getAttribute('number');
@@ -314,6 +309,18 @@
         }
     });
 
+    function updateCloakAttr(component,node,newOrigin){
+        for(var i=component.$__expNodes.length;i--;){
+            var expNode = component.$__expNodes[i];
+            if(expNode.node == node && expNode.attrName === 'class'){
+                expNode.origin = newOrigin;
+            }
+        }
+
+        for(var j=component.$__components.length;j--;){
+            updateCloakAttr(component.$__components[j],node,newOrigin);
+        }
+    }
     function eachModel(){
         this.onCreate = function(viewManager,ts){
             this.$eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;

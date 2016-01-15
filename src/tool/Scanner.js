@@ -68,7 +68,7 @@ var Scanner = new function() {
                 var endTag = DirectiveFactory.hasEndTag(startTag[0]);
                 var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
                 if(Util.isString(tmp)){
-                    var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+                    DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
                     startTag = null;
                     nodes = [];
                 }
@@ -95,16 +95,33 @@ var Scanner = new function() {
 		return null;
 	}
 
-	//扫描算法
-	//1. 如果发现是组件,记录，中断
-	//2. 如果发现是指令，记录，查看是否final，如果是，中断
-	//3. 如果发现是表达式，记录
 	function scan(node,component){
 		if(node.tagName === 'SCRIPT')return;
 
 		if(node.attributes || node.nodeType === 11){
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
+				
+				var atts = node.attributes;
+				//检测是否有子域属性，比如each
+				for(var i=atts.length;i--;){
+					if(atts[i].name.indexOf(CMD_PREFIX) !== 0)continue;
+					
+					var c = atts[i].name.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+
+					if(DirectiveFactory.hasTypeOf(c)){
+						if(DirectiveFactory.isFinal(c)){
+							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							return;
+						}
+						if(DirectiveFactory.hasEndTag(c)){
+							return [c,atts[i].value];
+						}
+					}
+				}
+
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){
 					var pr = getRestrictParent(component);
@@ -121,23 +138,7 @@ var Scanner = new function() {
 					return;
 				}
 
-				var atts = node.attributes;
-				//检测是否有子域属性，比如each
-				for(var i=atts.length;i--;){
-					var c = atts[i].name.replace(CMD_PREFIX,'');
-					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-					if(CPDI > -1)c = c.substring(0,CPDI);
-
-					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
-							return;
-						}
-						if(DirectiveFactory.hasEndTag(c)){
-							return [c,atts[i].value];
-						}
-					}
-				}
+				//others
 				for(var i=atts.length;i--;){
 					var att = atts[i];
 					var attName = att.name;
@@ -148,8 +149,10 @@ var Scanner = new function() {
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							var instance = DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
+							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
 						}
+					}else if(attName[0] === ':'){
+						DirectiveFactory.newInstanceOf('on',node,component,atts[i].name,attVal);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
 				    	recordExpNode(attVal,node,component,attName);
 					}
@@ -165,7 +168,7 @@ var Scanner = new function() {
 						var endTag = DirectiveFactory.hasEndTag(startTag[0]);
 						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
 						if(Util.isString(tmp)){
-							var instance = DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
+							DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
 							startTag = null;
 							nodes = [];
 						}

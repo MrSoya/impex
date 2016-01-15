@@ -2,12 +2,12 @@ impex.filter('json',{
     to:function(){
         return JSON.stringify(this.$value);
     }
-});
+})
 
 //filterBy:'xxx'
 //filterBy:'xxx':'name'
 //filterBy:filter
-impex.filter('filterBy',{
+.filter('filterBy',{
     to:function(key,inName){
         var ary = this.$value;
         if(!(ary instanceof Array)){
@@ -38,10 +38,10 @@ impex.filter('filterBy',{
         }
         return rs;
     }
-});
+})
 
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
-impex.filter('limitBy',{
+.filter('limitBy',{
     to:function(count,start){
         if(!(this.$value instanceof Array)){
             LOGGER.warn('can only filter array');
@@ -50,10 +50,10 @@ impex.filter('limitBy',{
         if(!count)return this.$value;
         return this.$value.splice(start||0,count);
     }
-});
+})
 
 //[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
-impex.filter('orderBy',{
+.filter('orderBy',{
     to:function(key,dir){
         if(!(this.$value instanceof Array)){
             LOGGER.warn('can only filter array');

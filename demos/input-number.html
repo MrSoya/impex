@@ -6,8 +6,8 @@
     </head>
     <body>
     	Number:<input type="text" 
-            x-focus="bindWheel(this)" 
-            x-blur="unbindWheel(this)" 
+            x-on:focus="bindWheel(this)" 
+            x-on:blur="unbindWheel(this)" 
             x-model="value" 
             value="{{value||0}}">响应鼠标滚动
     
@@ -47,7 +47,7 @@
                     });
                 }
                 this.unbindWheel = function(comp){
-                    comp.off(type,null);
+                    comp.$view.off(type,null);
                 }
                 this.onInit = function(){
                     this.watch('value',function(type,newVal,oldVal){

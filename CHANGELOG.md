@@ -1,4 +1,19 @@
 # Change Log
+## Version 0.9.1 - 2016/1/15
+### 新增
+* x-on指令，以及冒号语法
+
+### 更新
+* 非重要更新
+* demos
+
+### bug修复
+* Transition 某些条件下没有触发
+
+### 移除(重要！)
+* impex.ext.directives 中的单一事件指令
+
+
 ## Version 0.9.0 - 2016/1/14
 ### 新增
 * Component.emit()，用于向上级组件发送事件

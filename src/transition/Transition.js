@@ -30,8 +30,12 @@ function Transition (type,component,hook) {
 
         if(max > 0){
             var v = component.$view;
-            for(var i=component.$__expNodes.length;i--;){
-                var expNode = component.$__expNodes[i];
+            var expNodes = component.$__expNodes;
+            if(expNodes.length<1 && component.$parent){
+                expNodes = component.$parent.$__expNodes;
+            }
+            for(var i=expNodes.length;i--;){
+                var expNode = expNodes[i];
                 if(expNode.attrName === 'class'){
                     expNode.origin += ' '+ type + '-transition';
                 }

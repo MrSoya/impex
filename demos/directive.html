@@ -5,17 +5,13 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	<button x-dblclick="showMe('wow',true);root.tip='!!';root.showMe(root.tip);">点我两下试试！！</button>
+    	<button 
+            :mousedown="console.log(3434)"
+            :click:mouseup="console.log(root,$event)" 
+            x-on:dblclick="showMe('wow',true);root.tip='!!';root.showMe(root.tip);">点我两下试试！！</button>
     
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            //自定义事件
-            impex.directive('dblclick',{
-                onCreate : function(){
-                    this.on('dblclick',this.$value);
-                }
-            });
-
             
             //渲染
             impex.render(document.body,new function(){

@@ -49,14 +49,13 @@
             </div>
             <div class="block-buttons">
                 <div x-each="buttons as btn">
-                    <button x-click="addExp(btn)">{{btn}}</button>
+                    <button :click="addExp(btn)">{{btn}}</button>
                 </div>
                 <div style="clear: both;"></div>
             </div>
         </div>
     
         <script type="text/javascript" src="../build/impex.all.js"></script>
-        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
             impex.filter('format',{
                 to:function(){

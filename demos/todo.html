@@ -84,7 +84,7 @@
                         class="{{v.type=='completed'?'completed':''}}"
                     >
                         <input type="checkbox" x-checked="v.type=='completed'" x-click="done($event,v)">
-                        {{v.val}} <i x-click="removeTodo(v)" class="close">&times;</i>
+                        {{v.val}} <i :click="removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
             </section>
@@ -97,7 +97,6 @@
         </section>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
-        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
             impex.directive('keydown',{
                 onCreate:function(){
