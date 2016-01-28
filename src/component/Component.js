@@ -410,6 +410,9 @@ Util.ext(Component.prototype,{
 
 			cache.push(this);
 		}else{
+			impex.__components[this.$__id] = null;
+			delete impex.__components[this.$__id];
+
 			this.$__impex__observer = 
 			this.$__impex__propChains = 
 			this.$__state = 
@@ -425,8 +428,6 @@ Util.ext(Component.prototype,{
 			this.onDestroy = null;
 		}
 
-		impex.__components[this.$__id] = null;
-		delete impex.__components[this.$__id];
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，

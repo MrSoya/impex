@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-1-14
+ * last build: 2015-1-28
  */
 
 !function (global) {
@@ -370,14 +370,16 @@ var lexer = (function(){
         for(var i=0;i<sentence.length;i++){
             var l = sentence[i];
             if(stack.length>0){
-                if(VAR_EXP_BODY.test(l)){
+                if(VAR_EXP_START.test(l)){
                     var vo = Var();
                     var varLiteral = varParse(varMap,sentence.substr(i),true,vo);
                     i = i + varLiteral.length - 1;
 
                     //words
                     var tmp = varLiteral;
-                    if(VAR_EXP_START.test(varLiteral[0]) && keyWords.indexOf(tmp)<0){
+                    if(VAR_EXP_START.test(varLiteral[0]) && 
+                        keyWords.indexOf(tmp)<0
+                    ){
                         varObj.subVars['.'+varLiteral] = vo;
                         //keywords check
                         if(keyWords.indexOf(tmp) < 0)
@@ -444,6 +446,7 @@ var lexer = (function(){
                             tmpStr = tmpStr.substr(index);
                             varObj.segments.push(tmpStr);
                         }else{
+                            if(tmpStr)
                             varObj.segments.push(tmpStr);
                         }
                         lastSegPos = i;
@@ -458,24 +461,24 @@ var lexer = (function(){
                     //x[...].y ]
                     //x[..] ]
                     if(tmp[tmp.length-1] !== l){
-                        if(/[a-zA-Z0-9$_.]+\[.+\]/.test(literal)){
-                            tmp = tmp.replace(/[a-zA-Z0-9$_.]+\[.+\]/,'');
-                            if(tmp)
-                            varObj.words.push(tmp);
-                        }else{
-                            //keywords check
-                            if(keyWords.indexOf(tmp) < 0)
+                        tmp = tmp.substring(lastWordPos+1,tmp.length);
+
+                        if(tmp){//is var
+                            if(sentence.indexOf(tmp) === 0){
                                 varObj.words.push(['.'+tmp]);
+                            }else{
+                                varObj.words.push(tmp);
+                            }
                         }
 
                         //segments
                         var point = tmp.lastIndexOf('.');
-                        if(point >0 ){
+                        if(point > 0){
                             tmp = tmp.substr(point);
                         }
                         
                         if(tmp)
-                        varObj.segments.push(tmp);
+                            varObj.segments.push(tmp);
                         lastSegPos = i;
                     }
                     lastWordPos = i;
@@ -2013,6 +2016,9 @@ Util.ext(Component.prototype,{
 
 			cache.push(this);
 		}else{
+			impex.__components[this.$__id] = null;
+			delete impex.__components[this.$__id];
+
 			this.$__impex__observer = 
 			this.$__impex__propChains = 
 			this.$__state = 
@@ -2028,8 +2034,6 @@ Util.ext(Component.prototype,{
 			this.onDestroy = null;
 		}
 
-		impex.__components[this.$__id] = null;
-		delete impex.__components[this.$__id];
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -2091,12 +2095,14 @@ View.prototype = {
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var nodes = DOMViewProvider.compile(compileStr);
 		if(!nodes || nodes.length < 1){
-			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			LOGGER.error('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.__nodes = nodes;
 		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
-
+		if(nodes.length > 1){
+			LOGGER.warn('more than 1 root node of component['+component.$name+']');
+		}
 
 		if(propMap)
 		for(var i=propMap.length;i--;){
@@ -2215,7 +2221,7 @@ View.prototype = {
 		this.__evMap[type].push([exp,evHandler]);
 	},
 	/**
-	 * 从组件解绑事件
+	 * 从视图解绑事件
 	 * @param  {string} type 事件名
      * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
 	 */
@@ -2426,6 +2432,11 @@ var DOMViewProvider = new function(){
 		while(compiler.childNodes.length>0){
 			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			var tn = tmp.nodeName.toLowerCase();
+
+			if(tmp.nodeType === 3){
+				var v = tmp.nodeValue.replace(/\s/mg,'');
+				if(v === '')continue;
+			}
 
 			nodes.push(tmp);
 		}
@@ -3216,7 +3227,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,1],
+	        v:[0,9,2],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3227,7 +3238,7 @@ var TransitionFactory = {
 	     * @type {String}
 	     * @constant
 	     */
-		this.website = 'http://mrsoya.github.io/impex';
+		this.website = 'http://impexjs.org';
 
 		/**
 		 * 设置impex参数
@@ -3378,36 +3389,6 @@ var TransitionFactory = {
 		}
 
 		this.__components = {};
-
-		/**
-		 * 查找组件实例，并返回符合条件的所有实例
-		 * @param  {string} name       组件名，可以使用通配符*
-		 * @param  {Object} conditions 查询条件，JSON对象
-		 * @return {Array}  
-		 */
-		this.findAll = function(name,conditions){
-			name = name.toLowerCase();
-			var rs = [];
-			var ks = Object.keys(this.__components);
-			for(var i=ks.length;i--;){
-				var comp = this.__components[ks[i]];
-				if(name !== '*' && comp.$name !== name)continue;
-
-				var matchAll = true;
-				if(conditions)
-					for(var k in conditions){
-						if(comp[k] !== conditions[k]){
-							matchAll = false;
-							break;
-						}
-					}
-				if(matchAll){
-					rs.push(comp);
-				}
-				
-			}
-			return rs;
-		}
 	}
 /**
  * 内建服务，提供基础操作接口

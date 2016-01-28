@@ -33,6 +33,11 @@ var DOMViewProvider = new function(){
 			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			var tn = tmp.nodeName.toLowerCase();
 
+			if(tmp.nodeType === 3){
+				var v = tmp.nodeValue.replace(/\s/mg,'');
+				if(v === '')continue;
+			}
+
 			nodes.push(tmp);
 		}
 		return nodes;

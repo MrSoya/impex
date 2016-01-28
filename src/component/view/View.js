@@ -26,12 +26,14 @@ View.prototype = {
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
 		var nodes = DOMViewProvider.compile(compileStr);
 		if(!nodes || nodes.length < 1){
-			LOGGER.warn('invalid template "'+tmpl+'" of component['+component.$name+']');
+			LOGGER.error('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.__nodes = nodes;
 		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
-
+		if(nodes.length > 1){
+			LOGGER.warn('more than 1 root node of component['+component.$name+']');
+		}
 
 		if(propMap)
 		for(var i=propMap.length;i--;){

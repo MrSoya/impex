@@ -57,14 +57,16 @@ var lexer = (function(){
         for(var i=0;i<sentence.length;i++){
             var l = sentence[i];
             if(stack.length>0){
-                if(VAR_EXP_BODY.test(l)){
+                if(VAR_EXP_START.test(l)){
                     var vo = Var();
                     var varLiteral = varParse(varMap,sentence.substr(i),true,vo);
                     i = i + varLiteral.length - 1;
 
                     //words
                     var tmp = varLiteral;
-                    if(VAR_EXP_START.test(varLiteral[0]) && keyWords.indexOf(tmp)<0){
+                    if(VAR_EXP_START.test(varLiteral[0]) && 
+                        keyWords.indexOf(tmp)<0
+                    ){
                         varObj.subVars['.'+varLiteral] = vo;
                         //keywords check
                         if(keyWords.indexOf(tmp) < 0)
@@ -131,6 +133,7 @@ var lexer = (function(){
                             tmpStr = tmpStr.substr(index);
                             varObj.segments.push(tmpStr);
                         }else{
+                            if(tmpStr)
                             varObj.segments.push(tmpStr);
                         }
                         lastSegPos = i;
@@ -145,24 +148,24 @@ var lexer = (function(){
                     //x[...].y ]
                     //x[..] ]
                     if(tmp[tmp.length-1] !== l){
-                        if(/[a-zA-Z0-9$_.]+\[.+\]/.test(literal)){
-                            tmp = tmp.replace(/[a-zA-Z0-9$_.]+\[.+\]/,'');
-                            if(tmp)
-                            varObj.words.push(tmp);
-                        }else{
-                            //keywords check
-                            if(keyWords.indexOf(tmp) < 0)
+                        tmp = tmp.substring(lastWordPos+1,tmp.length);
+
+                        if(tmp){//is var
+                            if(sentence.indexOf(tmp) === 0){
                                 varObj.words.push(['.'+tmp]);
+                            }else{
+                                varObj.words.push(tmp);
+                            }
                         }
 
                         //segments
                         var point = tmp.lastIndexOf('.');
-                        if(point >0 ){
+                        if(point > 0){
                             tmp = tmp.substr(point);
                         }
                         
                         if(tmp)
-                        varObj.segments.push(tmp);
+                            varObj.segments.push(tmp);
                         lastSegPos = i;
                     }
                     lastWordPos = i;
