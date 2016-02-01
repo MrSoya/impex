@@ -26,7 +26,7 @@ impex.filter('json',{
             for(var i=ary.length;i--;){
                 var item = ary[i];
                 if(inName){
-                    if(!key || item[inName].indexOf(key) > -1){
+                    if(!key || (item[inName]+'').indexOf(key) > -1){
                         rs.unshift(item);
                     }
                 }else{

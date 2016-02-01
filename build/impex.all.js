@@ -3227,7 +3227,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,2],
+	        v:[0,9,3],
 	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3495,6 +3495,7 @@ impex.service('Transitions',new function(){
             if(transition !== null){
                 this.$transition = ts.get(transition,this);
             }
+            this.$lastRs = false;
             this.exec(false);
         },
         observe : function(rs){
@@ -4081,7 +4082,7 @@ impex.filter('json',{
             for(var i=ary.length;i--;){
                 var item = ary[i];
                 if(inName){
-                    if(!key || item[inName].indexOf(key) > -1){
+                    if(!key || (item[inName]+'').indexOf(key) > -1){
                         rs.unshift(item);
                     }
                 }else{

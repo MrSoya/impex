@@ -1,4 +1,10 @@
 # Change Log
+## Version 0.9.3 - 2016/2/1
+### bug修复
+* filterBy过滤器，对非字符串类型的key报错
+* x-show指令无法使用基于CSS的transition
+
+
 ## Version 0.9.2 - 2016/1/28
 ### 新增
 * 当组件模版的顶级元素超过1个时，会给出警告信息

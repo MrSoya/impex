@@ -67,6 +67,7 @@
             if(transition !== null){
                 this.$transition = ts.get(transition,this);
             }
+            this.$lastRs = false;
             this.exec(false);
         },
         observe : function(rs){
