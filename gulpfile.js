@@ -4,7 +4,7 @@ var gulp = require('gulp'),
     rename = require('gulp-rename'),
     del = require('del');
 
-	gulp.task('build', function() {
+	gulp.task('build', ['clean'], function() {
     return gulp.src([
     		'src/shellStart.js',
             'src/tool/Util.js',
@@ -30,7 +30,7 @@ var gulp = require('gulp'),
             'src/factory/FilterFactory.js',
             'src/factory/ServiceFactory.js',
             'src/factory/TransitionFactory.js',
-                        
+
     		'src/impex.js',
 
     		'src/service/build-in.js',
@@ -50,6 +50,4 @@ var gulp = require('gulp'),
 	    del(['build'], cb)
 	});
 
-	gulp.task('default', ['clean'], function() {
-	    gulp.start('build');
-	});
+	gulp.task('default', ['build']);
