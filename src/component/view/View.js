@@ -24,13 +24,23 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
+
+		if(component.onBeforeCompile){
+            compileStr = component.onBeforeCompile(compileStr);
+        }
+
 		var nodes = DOMViewProvider.compile(compileStr);
 		if(!nodes || nodes.length < 1){
 			LOGGER.error('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.__nodes = nodes;
-		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		if(component.$replace){
+			this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		}else{
+			this.el = this.__target;
+		}
+		
 		if(nodes.length > 1){
 			LOGGER.warn('more than 1 root node of component['+component.$name+']');
 		}
@@ -47,8 +57,8 @@ View.prototype = {
 
 		this.__comp = component;
 	},
-	__display:function(){
-		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
+	__display:function(component){
+		if(!this.__target ||!this.__target.parentNode)return;
 
 		var fragment = null;
 		if(this.__nodes.length > 1){
@@ -60,7 +70,12 @@ View.prototype = {
 			fragment = this.__nodes[0];
 		}
 
-		this.__target.parentNode.replaceChild(fragment,this.__target);
+		if(component.$replace){
+			this.__target.parentNode.replaceChild(fragment,this.__target);
+		}else{
+			this.__target.innerHTML = '';
+			this.__target.appendChild(fragment);
+		}
 		fragment = null;
 		this.__target = null;
 	},

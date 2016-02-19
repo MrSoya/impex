@@ -1,4 +1,13 @@
 # Change Log
+## Version 0.9.4 - 2016/2/17
+### 新增
+* Component.$replace替换模式，如果为false，组件标签会保留只替换内部
+* Component.onBeforeCompile 生命周期回调
+
+### 更新
+* demos
+
+
 ## Version 0.9.3 - 2016/2/1
 ### bug修复
 * filterBy过滤器，对非字符串类型的key报错

@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-1-28
+ * last build: 2015-2-17
  */
 
 !function (global) {
@@ -1606,12 +1606,7 @@ var Renderer = new function() {
 
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
- * 组件也可以有属性。impex支持两种属性处理方式
- * <p>
- * <ol>
- * 		<li></li>
- * </ol>
- * </p>
+ * 组件也可以有属性。
  * <br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
@@ -1663,6 +1658,12 @@ function Component (view) {
 	 * 组件模板url，动态加载组件模板
 	 */
 	this.$templateURL;
+	/**
+	 * 是否为替换模式生成组件，如果为false，组件模版会插入组件标签内部
+	 * @default true
+	 * @type {Boolean}
+	 */
+	this.$replace = true;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -1961,7 +1962,7 @@ Util.ext(Component.prototype,{
 			this.$__state !== Component.state.suspend
 		)return;
 
-		this.$view.__display();
+		this.$view.__display(this);
 		
 		if(this.$__suspendParent){
 			this.$__suspendParent.add(this);
@@ -2093,13 +2094,23 @@ View.prototype = {
 		var innerHTML = this.__target.innerHTML;
 
 		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
+
+		if(component.onBeforeCompile){
+            compileStr = component.onBeforeCompile(compileStr);
+        }
+
 		var nodes = DOMViewProvider.compile(compileStr);
 		if(!nodes || nodes.length < 1){
 			LOGGER.error('invalid template "'+tmpl+'" of component['+component.$name+']');
 			return false;
 		}
 		this.__nodes = nodes;
-		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		if(component.$replace){
+			this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		}else{
+			this.el = this.__target;
+		}
+		
 		if(nodes.length > 1){
 			LOGGER.warn('more than 1 root node of component['+component.$name+']');
 		}
@@ -2116,8 +2127,8 @@ View.prototype = {
 
 		this.__comp = component;
 	},
-	__display:function(){
-		if(!this.__target ||!this.__target.parentNode || (this.el && this.el.parentNode && this.el.parentNode.nodeType===1))return;
+	__display:function(component){
+		if(!this.__target ||!this.__target.parentNode)return;
 
 		var fragment = null;
 		if(this.__nodes.length > 1){
@@ -2129,7 +2140,12 @@ View.prototype = {
 			fragment = this.__nodes[0];
 		}
 
-		this.__target.parentNode.replaceChild(fragment,this.__target);
+		if(component.$replace){
+			this.__target.parentNode.replaceChild(fragment,this.__target);
+		}else{
+			this.__target.innerHTML = '';
+			this.__target.appendChild(fragment);
+		}
 		fragment = null;
 		this.__target = null;
 	},
@@ -3227,8 +3243,8 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,3],
-	        state:'beta',
+	        v:[0,9,4],
+	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }

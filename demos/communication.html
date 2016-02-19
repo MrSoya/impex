@@ -24,10 +24,11 @@
                 onInit:function(){
                     
                 },
+                $replace:false,
                 hi:function(){
                     this.broadcast('hello','hi...boys');
                 },
-                $template:"<div><button x-click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
+                $template:"<div><button :click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
             });
             impex.component('x-b',{
                 msg:"",
@@ -50,7 +51,7 @@
                 hi:function(){
                     this.emit('hello','hug me');
                 },
-                $template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button x-click='hi()'>wanted a hug</button></div>"
+                $template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button :click='hi()'>wanted a hug</button></div>"
             });
 
             //渲染

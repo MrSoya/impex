@@ -1,11 +1,6 @@
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
- * 组件也可以有属性。impex支持两种属性处理方式
- * <p>
- * <ol>
- * 		<li></li>
- * </ol>
- * </p>
+ * 组件也可以有属性。
  * <br/>
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
@@ -57,6 +52,12 @@ function Component (view) {
 	 * 组件模板url，动态加载组件模板
 	 */
 	this.$templateURL;
+	/**
+	 * 是否为替换模式生成组件，如果为false，组件模版会插入组件标签内部
+	 * @default true
+	 * @type {Boolean}
+	 */
+	this.$replace = true;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -355,7 +356,7 @@ Util.ext(Component.prototype,{
 			this.$__state !== Component.state.suspend
 		)return;
 
-		this.$view.__display();
+		this.$view.__display(this);
 		
 		if(this.$__suspendParent){
 			this.$__suspendParent.add(this);
