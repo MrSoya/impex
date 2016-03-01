@@ -71,6 +71,7 @@
             this.exec(false);
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs === this.$lastRs)return;
             this.$lastRs = rs;
 
@@ -112,6 +113,7 @@
             this.display();
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             var nodes = this.$view.__nodes;
             if(rs){
                 //显示
@@ -143,6 +145,7 @@
             this.exec(false);
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs === this.$lastRs && !this.$view.el.parentNode)return;
             this.$lastRs = rs;
 
@@ -189,6 +192,7 @@
             this.display();
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs){
                 if(this.$view.el.parentNode)return;
                 //添加
@@ -330,6 +334,8 @@
             this.$parentComp = this.$parent;
             this.$__view = this.$view;
             this.$cache = [];
+
+            this.$cacheable = this.$view.attr('cache')==='false'?false:true;
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
@@ -410,12 +416,16 @@
                     }
                 }
             }else if(diffSize > 0){
-                var tmp = this.$cache.splice(0,diffSize);
-                for(var i=0;i<tmp.length;i++){
-                    this.$subComponents.push(tmp[i]);
-                    this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                var restSize = diffSize;
+                if(this.$cacheable){
+                    var tmp = this.$cache.splice(0,diffSize);
+                    for(var i=0;i<tmp.length;i++){
+                        this.$subComponents.push(tmp[i]);
+                        this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                    }
+                    var restSize = diffSize - tmp.length;
                 }
-                var restSize = diffSize - tmp.length;
+                
                 while(restSize--){
                     this.createSubComp();
                 }
@@ -444,6 +454,17 @@
 
                 subComp.init();
                 subComp.display();
+                onDisplay(subComp);
+            }
+        }
+        function onDisplay(comp){
+            for(var i=0;i<comp.$__components.length;i++){
+                var sub = comp.$__components[i];
+                if(sub.onDisplay)
+                    sub.onDisplay();
+                if(sub.$__components.length > 0){
+                    onDisplay(sub);
+                }
             }
         }
         this.createSubComp = function(){

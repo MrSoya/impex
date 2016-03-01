@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-2-17
+ * last build: 2015-3-1
  */
 
 !function (global) {
@@ -686,15 +686,19 @@ var Scanner = new function() {
 			var text = node.nodeValue;
 			var segments = [];
 			var lastPos = 0;
-			text.replace(REG_EXP,function(fullTxt,modelExp,pos){				
-				segments.push(text.substring(lastPos,pos));
+			text.replace(REG_EXP,function(fullTxt,modelExp,pos){
+				var txt = text.substring(lastPos,pos);
+				if(txt)segments.push(txt);
 				segments.push(fullTxt);
 
 				lastPos = pos + fullTxt.length;
 			});
 
-			segments.push(text.substring(lastPos,text.length));
+			var txt = text.substring(lastPos,text.length);
+			if(txt)segments.push(txt);
 
+			if(segments.length<2)return;
+			
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
 				var tn = document.createTextNode(segments[i]);
@@ -774,22 +778,27 @@ var Scanner = new function() {
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
 				
-				var atts = node.attributes;
+				var atts = [];
+				for(var i=node.attributes.length;i--;){
+					var tmp = node.attributes[i];
+					atts.push([tmp.name,tmp.value]);
+				}
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
-					if(atts[i].name.indexOf(CMD_PREFIX) !== 0)continue;
+					var name = atts[i][0];
+					if(name.indexOf(CMD_PREFIX) !== 0)continue;
 					
-					var c = atts[i].name.replace(CMD_PREFIX,'');
+					var c = name.replace(CMD_PREFIX,'');
 					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							DirectiveFactory.newInstanceOf(c,node,component,name,atts[i][1]);
 							return;
 						}
 						if(DirectiveFactory.hasEndTag(c)){
-							return [c,atts[i].value];
+							return [c,atts[i][1]];
 						}
 					}
 				}
@@ -812,19 +821,18 @@ var Scanner = new function() {
 
 				//others
 				for(var i=atts.length;i--;){
-					var att = atts[i];
-					var attName = att.name;
-					var attVal = att.value;
+					var attName = atts[i][0];
+					var attVal = atts[i][1];
 					if(REG_CMD.test(attName)){
 						var c = attName.replace(CMD_PREFIX,'');
 						var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
+							DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
 						}
 					}else if(attName[0] === ':'){
-						DirectiveFactory.newInstanceOf('on',node,component,atts[i].name,attVal);
+						DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
 				    	recordExpNode(attVal,node,component,attName);
 					}
@@ -1378,6 +1386,10 @@ var Renderer = new function() {
 				node[attrName] = val;
 			}
 		}else{
+			if(node.parentNode && node.parentNode.tagName === 'TEXTAREA'){
+				node.parentNode.nodeValue = val;
+			}
+			if(node.parentNode)//for IE11
 			//文本节点
 			node.nodeValue = val;
 		}
@@ -1964,10 +1976,7 @@ Util.ext(Component.prototype,{
 
 		this.$view.__display(this);
 		
-		if(this.$__suspendParent){
-			this.$__suspendParent.add(this);
-			this.$__suspendParent = null;
-		}else{
+		if(this.$__state !== Component.state.suspend){
 			Renderer.render(this);
 			Builder.build(this);
 		}
@@ -2047,16 +2056,6 @@ Util.ext(Component.prototype,{
 		if(!(this instanceof Directive) && this.$__state !== Component.state.displayed)return;
 
 		LOGGER.log(this,'suspend');
-
-		if(this.$parent){
-			var i = this.$parent.$__components.indexOf(this);
-			if(i > -1){
-				this.$parent.$__components.splice(i,1);
-			}
-			this.$__suspendParent = this.$parent;
-
-			this.$parent = null;
-		}
 		
 		this.$view.__suspend(this,hook===false?false:true);
 
@@ -3243,7 +3242,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,4],
+	        v:[0,9,6],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3515,6 +3514,7 @@ impex.service('Transitions',new function(){
             this.exec(false);
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs === this.$lastRs)return;
             this.$lastRs = rs;
 
@@ -3556,6 +3556,7 @@ impex.service('Transitions',new function(){
             this.display();
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             var nodes = this.$view.__nodes;
             if(rs){
                 //显示
@@ -3587,6 +3588,7 @@ impex.service('Transitions',new function(){
             this.exec(false);
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs === this.$lastRs && !this.$view.el.parentNode)return;
             this.$lastRs = rs;
 
@@ -3633,6 +3635,7 @@ impex.service('Transitions',new function(){
             this.display();
         },
         observe : function(rs){
+            if(this.$parent.$__state === Component.state.suspend)return;
             if(rs){
                 if(this.$view.el.parentNode)return;
                 //添加
@@ -3774,6 +3777,8 @@ impex.service('Transitions',new function(){
             this.$parentComp = this.$parent;
             this.$__view = this.$view;
             this.$cache = [];
+
+            this.$cacheable = this.$view.attr('cache')==='false'?false:true;
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
@@ -3854,12 +3859,16 @@ impex.service('Transitions',new function(){
                     }
                 }
             }else if(diffSize > 0){
-                var tmp = this.$cache.splice(0,diffSize);
-                for(var i=0;i<tmp.length;i++){
-                    this.$subComponents.push(tmp[i]);
-                    this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                var restSize = diffSize;
+                if(this.$cacheable){
+                    var tmp = this.$cache.splice(0,diffSize);
+                    for(var i=0;i<tmp.length;i++){
+                        this.$subComponents.push(tmp[i]);
+                        this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                    }
+                    var restSize = diffSize - tmp.length;
                 }
-                var restSize = diffSize - tmp.length;
+                
                 while(restSize--){
                     this.createSubComp();
                 }
@@ -3888,6 +3897,17 @@ impex.service('Transitions',new function(){
 
                 subComp.init();
                 subComp.display();
+                onDisplay(subComp);
+            }
+        }
+        function onDisplay(comp){
+            for(var i=0;i<comp.$__components.length;i++){
+                var sub = comp.$__components[i];
+                if(sub.onDisplay)
+                    sub.onDisplay();
+                if(sub.$__components.length > 0){
+                    onDisplay(sub);
+                }
             }
         }
         this.createSubComp = function(){

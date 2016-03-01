@@ -358,10 +358,7 @@ Util.ext(Component.prototype,{
 
 		this.$view.__display(this);
 		
-		if(this.$__suspendParent){
-			this.$__suspendParent.add(this);
-			this.$__suspendParent = null;
-		}else{
+		if(this.$__state !== Component.state.suspend){
 			Renderer.render(this);
 			Builder.build(this);
 		}
@@ -441,16 +438,6 @@ Util.ext(Component.prototype,{
 		if(!(this instanceof Directive) && this.$__state !== Component.state.displayed)return;
 
 		LOGGER.log(this,'suspend');
-
-		if(this.$parent){
-			var i = this.$parent.$__components.indexOf(this);
-			if(i > -1){
-				this.$parent.$__components.splice(i,1);
-			}
-			this.$__suspendParent = this.$parent;
-
-			this.$parent = null;
-		}
 		
 		this.$view.__suspend(this,hook===false?false:true);
 

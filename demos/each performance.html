@@ -23,11 +23,11 @@
     </head>
     <body>
         <!-- 运行该demo，必须支持MutationObserver API，比如IE11+ -->
-        <button x-click="addList()">增加2元素</button>
-        <button x-click="delList()">删除2元素</button>
-        <button x-click="changeList()">增加1元素删除1元素</button>
-        <button x-click="replaceList()">替换数组</button>
-        <button x-click="sortList()">数组排序</button>
+        <button :click="addList()">增加2元素</button>
+        <button :click="delList()">删除2元素</button>
+        <button :click="changeList()">增加1元素删除1元素</button>
+        <button :click="replaceList()">替换数组</button>
+        <button :click="sortList()">数组排序</button>
         <p class="stat">
             DOM节点增加:<span class="{{addhl}}">{{addDOMCount}}</span>
             DOM节点删除:<span class="{{delhl}}">{{delDOMCount}}</span>
@@ -36,7 +36,11 @@
         </p>
         
     	<ul id="opt">
-            <li x-each="list as k , v">{{k + ':' +v}}</li>   
+            <li x-each="list as k , v">
+            {{k + ':' +v}}
+            <a-b></a-b>
+            <b x-if="true">111</b>
+            </li>   
         </ul>
         
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -47,6 +51,12 @@
             impex.config({
                 logger:imLog
             });
+            impex.component('a-b',{
+                $template:'<b>123123</b>',
+                onDisplay:function(){
+                    alert(3434)
+                }
+            })
 
             //渲染
             var debug = impex.render(document.body,new function(){

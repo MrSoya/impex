@@ -59,6 +59,10 @@ var Renderer = new function() {
 				node[attrName] = val;
 			}
 		}else{
+			if(node.parentNode && node.parentNode.tagName === 'TEXTAREA'){
+				node.parentNode.nodeValue = val;
+			}
+			if(node.parentNode)//for IE11
 			//文本节点
 			node.nodeValue = val;
 		}

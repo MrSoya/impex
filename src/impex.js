@@ -46,7 +46,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,4],
+	        v:[0,9,6],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

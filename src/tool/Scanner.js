@@ -14,15 +14,19 @@ var Scanner = new function() {
 			var text = node.nodeValue;
 			var segments = [];
 			var lastPos = 0;
-			text.replace(REG_EXP,function(fullTxt,modelExp,pos){				
-				segments.push(text.substring(lastPos,pos));
+			text.replace(REG_EXP,function(fullTxt,modelExp,pos){
+				var txt = text.substring(lastPos,pos);
+				if(txt)segments.push(txt);
 				segments.push(fullTxt);
 
 				lastPos = pos + fullTxt.length;
 			});
 
-			segments.push(text.substring(lastPos,text.length));
+			var txt = text.substring(lastPos,text.length);
+			if(txt)segments.push(txt);
 
+			if(segments.length<2)return;
+			
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
 				var tn = document.createTextNode(segments[i]);
@@ -102,22 +106,27 @@ var Scanner = new function() {
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
 				
-				var atts = node.attributes;
+				var atts = [];
+				for(var i=node.attributes.length;i--;){
+					var tmp = node.attributes[i];
+					atts.push([tmp.name,tmp.value]);
+				}
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
-					if(atts[i].name.indexOf(CMD_PREFIX) !== 0)continue;
+					var name = atts[i][0];
+					if(name.indexOf(CMD_PREFIX) !== 0)continue;
 					
-					var c = atts[i].name.replace(CMD_PREFIX,'');
+					var c = name.replace(CMD_PREFIX,'');
 					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
 						if(DirectiveFactory.isFinal(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,atts[i].value);
+							DirectiveFactory.newInstanceOf(c,node,component,name,atts[i][1]);
 							return;
 						}
 						if(DirectiveFactory.hasEndTag(c)){
-							return [c,atts[i].value];
+							return [c,atts[i][1]];
 						}
 					}
 				}
@@ -140,19 +149,18 @@ var Scanner = new function() {
 
 				//others
 				for(var i=atts.length;i--;){
-					var att = atts[i];
-					var attName = att.name;
-					var attVal = att.value;
+					var attName = atts[i][0];
+					var attVal = atts[i][1];
 					if(REG_CMD.test(attName)){
 						var c = attName.replace(CMD_PREFIX,'');
 						var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,atts[i].name,attVal);
+							DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
 						}
 					}else if(attName[0] === ':'){
-						DirectiveFactory.newInstanceOf('on',node,component,atts[i].name,attVal);
+						DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
 				    	recordExpNode(attVal,node,component,attName);
 					}
