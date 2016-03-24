@@ -25,7 +25,10 @@ var Scanner = new function() {
 			var txt = text.substring(lastPos,text.length);
 			if(txt)segments.push(txt);
 
-			if(segments.length<2)return;
+			if(segments.length<2){
+				replacements.unshift(null);
+				continue;
+			}
 			
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
@@ -37,7 +40,7 @@ var Scanner = new function() {
 		
 		for(var i=textNodeAry.length;i--;){
 			var n = textNodeAry[i];
-			if(replacements[i].childNodes.length>1 && n.parentNode)
+			if(replacements[i] && replacements[i].childNodes.length>1 && n.parentNode)
 				n.parentNode.replaceChild(replacements[i],n);
 		}
 	}
@@ -111,6 +114,7 @@ var Scanner = new function() {
 					var tmp = node.attributes[i];
 					atts.push([tmp.name,tmp.value]);
 				}
+				var scopeDirs = [];
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var name = atts[i][0];
@@ -121,15 +125,27 @@ var Scanner = new function() {
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,name,atts[i][1]);
-							return;
-						}
-						if(DirectiveFactory.hasEndTag(c)){
-							return [c,atts[i][1]];
+						if(DirectiveFactory.isFinal(c) || DirectiveFactory.hasEndTag(c)){
+							scopeDirs.push([c,atts[i],DirectiveFactory.priority(c) || 0]);
 						}
 					}
 				}
+
+				if(scopeDirs.length>0){
+					scopeDirs.sort(function(a,b){
+						return b[2] - a[2];
+					});
+					var c = scopeDirs[0][0],
+						attr = scopeDirs[0][1];
+					if(DirectiveFactory.isFinal(c)){
+						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						return;
+					}
+					if(DirectiveFactory.hasEndTag(c)){
+						return [c,attr[1]];
+					}
+				}
+
 
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){

@@ -50,6 +50,11 @@ function Directive (name,value) {
 	 */
 	this.$endTag = null;
 	/**
+	 * 指令优先级用于定义同类指令的执行顺序。最大999
+	 * @type {Number}
+	 */
+	this.$priority = 0;
+	/**
 	 * 当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果
 	 */
 	this.observe;

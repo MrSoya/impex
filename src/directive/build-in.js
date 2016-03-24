@@ -194,11 +194,11 @@
         observe : function(rs){
             if(this.$parent.$__state === Component.state.suspend)return;
             if(rs){
-                if(this.$view.el.parentNode)return;
+                if(this.$view.__nodes[0].parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
-                if(!this.$view.el.parentNode)return;
+                if(!this.$view.__nodes[0].parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
@@ -215,8 +215,13 @@
                 return;
             }
             className = className.replace('x-cloak','');
-            this.$view.attr('class',className);
-            updateCloakAttr(this.$parent,this.$view.el,className);
+            
+            var that = this;
+            setTimeout(function(){
+                updateCloakAttr(that.$parent,that.$view.el,className);
+                var curr = that.$view.attr('class').replace('x-cloak','');
+                that.$view.attr('class',curr);
+            },0);
         }
     })
 
@@ -335,13 +340,19 @@
             this.$__view = this.$view;
             this.$cache = [];
 
-            this.$cacheable = this.$view.attr('cache')==='false'?false:true;
+            if(this.$view.el){
+                this.$cacheable = this.$view.attr('cache')==='false'?false:true;
+            }else{
+                this.$cacheable = this.$view.__nodes[0].getAttribute('cache')==='false'?false:true;
+            }
+
+            
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.$cacheSize = 20;
 
-            var transition = this.$view.attr('transition');
+            var transition = this.$view.el?this.$view.attr('transition'):this.$view.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.$trans = transition;
                 this.$ts = ts;
@@ -494,8 +505,7 @@
             }
                 
             return subComp;
-        }
-        
+        }      
         function clone(obj,ref){
             if(obj === null)return null;
             var rs = obj;
@@ -624,6 +634,7 @@
     };
     var each = new eachModel();
     each.$final = true;
+    each.$priority = 999;
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：
@@ -637,6 +648,7 @@
 
     var eachStart = new eachModel();
     eachStart.$endTag = 'each-end';
+    eachStart.$priority = 999;
     /**
      * each-start/end指令类似each，但是可以循环范围内的所有节点。数据源可以是数组或者对象
      * <br/>使用方式：

@@ -16,7 +16,7 @@
         
             impex.directive('change',{
                 onCreate : function(){
-                    this.on('change',this.$value,function(e,exp){
+                    this.$view.on('change',this.$value,function(e,exp){
                         return exp.replace('$selected',e.target.options[e.target.selectedIndex].value);
                     });
                 }

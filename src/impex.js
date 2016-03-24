@@ -6,7 +6,7 @@
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
-	var REG_EXP = /\{\{(.*?)\}\}/img,
+	var REG_EXP = /\{\{#?(.*?)\}\}/img,
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 
@@ -46,7 +46,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,6],
+	        v:[0,9,7],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -167,6 +167,10 @@
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
+			if(!element){
+				LOGGER.error('invalid element, can not render');
+				return;
+			}
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				LOGGER.warn('element ['+name+'] has been rendered');

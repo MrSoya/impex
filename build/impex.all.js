@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-3-1
+ * last build: 2015-3-24
  */
 
 !function (global) {
@@ -697,7 +697,10 @@ var Scanner = new function() {
 			var txt = text.substring(lastPos,text.length);
 			if(txt)segments.push(txt);
 
-			if(segments.length<2)return;
+			if(segments.length<2){
+				replacements.unshift(null);
+				continue;
+			}
 			
 			var fragment = document.createDocumentFragment();
 			for(var i=0;i<segments.length;i++){
@@ -709,7 +712,7 @@ var Scanner = new function() {
 		
 		for(var i=textNodeAry.length;i--;){
 			var n = textNodeAry[i];
-			if(replacements[i].childNodes.length>1 && n.parentNode)
+			if(replacements[i] && replacements[i].childNodes.length>1 && n.parentNode)
 				n.parentNode.replaceChild(replacements[i],n);
 		}
 	}
@@ -783,6 +786,7 @@ var Scanner = new function() {
 					var tmp = node.attributes[i];
 					atts.push([tmp.name,tmp.value]);
 				}
+				var scopeDirs = [];
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
 					var name = atts[i][0];
@@ -793,15 +797,27 @@ var Scanner = new function() {
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,name,atts[i][1]);
-							return;
-						}
-						if(DirectiveFactory.hasEndTag(c)){
-							return [c,atts[i][1]];
+						if(DirectiveFactory.isFinal(c) || DirectiveFactory.hasEndTag(c)){
+							scopeDirs.push([c,atts[i],DirectiveFactory.priority(c) || 0]);
 						}
 					}
 				}
+
+				if(scopeDirs.length>0){
+					scopeDirs.sort(function(a,b){
+						return b[2] - a[2];
+					});
+					var c = scopeDirs[0][0],
+						attr = scopeDirs[0][1];
+					if(DirectiveFactory.isFinal(c)){
+						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						return;
+					}
+					if(DirectiveFactory.hasEndTag(c)){
+						return [c,attr[1]];
+					}
+				}
+
 
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){
@@ -1386,9 +1402,6 @@ var Renderer = new function() {
 				node[attrName] = val;
 			}
 		}else{
-			if(node.parentNode && node.parentNode.tagName === 'TEXTAREA'){
-				node.parentNode.nodeValue = val;
-			}
 			if(node.parentNode)//for IE11
 			//文本节点
 			node.nodeValue = val;
@@ -2637,6 +2650,11 @@ function Directive (name,value) {
 	 */
 	this.$endTag = null;
 	/**
+	 * 指令优先级用于定义同类指令的执行顺序。最大999
+	 * @type {Number}
+	 */
+	this.$priority = 0;
+	/**
 	 * 当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果
 	 */
 	this.observe;
@@ -3031,6 +3049,9 @@ Util.ext(_DirectiveFactory.prototype,{
 	hasEndTag : function(type){
 		return this.types[type].props.$endTag;
 	},
+	priority : function(type){
+		return this.types[type].props.$priority;
+	},
 	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
@@ -3056,8 +3077,8 @@ Util.ext(_DirectiveFactory.prototype,{
 		}else{
 			var el = node,nodes = [node];
 			if(Util.isArray(node)){
-				el = node[0];
 				nodes = node;
+				el = node.length>1?null:node[0];
 			}
 			rs.$view = new View(el,null,nodes);
 			node.__impex__view = rs.$view;
@@ -3075,7 +3096,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		component.add(rs);
 
 		if(rs.$view){
-			rs.$view.removeAttr(rs.$name);
+			rs.$view.__nodes[0].removeAttribute(rs.$name);
 			if(rs.$endTag){
                 var lastNode = rs.$view.__nodes[rs.$view.__nodes.length-1];
                 lastNode.removeAttribute(CMD_PREFIX+rs.$endTag);
@@ -3202,7 +3223,7 @@ var TransitionFactory = {
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
-	var REG_EXP = /\{\{(.*?)\}\}/img,
+	var REG_EXP = /\{\{#?(.*?)\}\}/img,
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 
@@ -3242,7 +3263,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,6],
+	        v:[0,9,7],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3363,6 +3384,10 @@ var TransitionFactory = {
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
 		this.render = function(element,model,services){
+			if(!element){
+				LOGGER.error('invalid element, can not render');
+				return;
+			}
 			var name = element.tagName.toLowerCase();
 			if(elementRendered(element)){
 				LOGGER.warn('element ['+name+'] has been rendered');
@@ -3637,11 +3662,11 @@ impex.service('Transitions',new function(){
         observe : function(rs){
             if(this.$parent.$__state === Component.state.suspend)return;
             if(rs){
-                if(this.$view.el.parentNode)return;
+                if(this.$view.__nodes[0].parentNode)return;
                 //添加
                 this.viewManager.replace(this.$view,this.placeholder);
             }else{
-                if(!this.$view.el.parentNode)return;
+                if(!this.$view.__nodes[0].parentNode)return;
                 //删除
                 this.viewManager.replace(this.placeholder,this.$view);
             }
@@ -3658,8 +3683,13 @@ impex.service('Transitions',new function(){
                 return;
             }
             className = className.replace('x-cloak','');
-            this.$view.attr('class',className);
-            updateCloakAttr(this.$parent,this.$view.el,className);
+            
+            var that = this;
+            setTimeout(function(){
+                updateCloakAttr(that.$parent,that.$view.el,className);
+                var curr = that.$view.attr('class').replace('x-cloak','');
+                that.$view.attr('class',curr);
+            },0);
         }
     })
 
@@ -3778,13 +3808,19 @@ impex.service('Transitions',new function(){
             this.$__view = this.$view;
             this.$cache = [];
 
-            this.$cacheable = this.$view.attr('cache')==='false'?false:true;
+            if(this.$view.el){
+                this.$cacheable = this.$view.attr('cache')==='false'?false:true;
+            }else{
+                this.$cacheable = this.$view.__nodes[0].getAttribute('cache')==='false'?false:true;
+            }
+
+            
             
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.$cacheSize = 20;
 
-            var transition = this.$view.attr('transition');
+            var transition = this.$view.el?this.$view.attr('transition'):this.$view.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.$trans = transition;
                 this.$ts = ts;
@@ -3937,8 +3973,7 @@ impex.service('Transitions',new function(){
             }
                 
             return subComp;
-        }
-        
+        }      
         function clone(obj,ref){
             if(obj === null)return null;
             var rs = obj;
@@ -4067,6 +4102,7 @@ impex.service('Transitions',new function(){
     };
     var each = new eachModel();
     each.$final = true;
+    each.$priority = 999;
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：
@@ -4080,6 +4116,7 @@ impex.service('Transitions',new function(){
 
     var eachStart = new eachModel();
     eachStart.$endTag = 'each-end';
+    eachStart.$priority = 999;
     /**
      * each-start/end指令类似each，但是可以循环范围内的所有节点。数据源可以是数组或者对象
      * <br/>使用方式：
@@ -4147,6 +4184,7 @@ impex.filter('json',{
 //[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
 .filter('orderBy',{
     to:function(key,dir){
+        if(!key && !dir)return this.$value;
         if(!(this.$value instanceof Array)){
             LOGGER.warn('can only filter array');
             return this.$value;
@@ -4155,7 +4193,13 @@ impex.filter('json',{
             var x = key?a[key]:a,
                 y = key?b[key]:b;
 
-            return (x+'').localeCompare(y+'');
+            if(typeof x === "string"){
+                return x.localeCompare(y);
+            }else if(typeof x === "number"){
+                return x - y;
+            }else{
+                return (x+'').localeCompare(y);
+            }
         });
         if(dir === 'desc'){
             this.$value.reverse();

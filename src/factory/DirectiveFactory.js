@@ -22,6 +22,9 @@ Util.ext(_DirectiveFactory.prototype,{
 	hasEndTag : function(type){
 		return this.types[type].props.$endTag;
 	},
+	priority : function(type){
+		return this.types[type].props.$priority;
+	},
 	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
@@ -47,8 +50,8 @@ Util.ext(_DirectiveFactory.prototype,{
 		}else{
 			var el = node,nodes = [node];
 			if(Util.isArray(node)){
-				el = node[0];
 				nodes = node;
+				el = node.length>1?null:node[0];
 			}
 			rs.$view = new View(el,null,nodes);
 			node.__impex__view = rs.$view;
@@ -66,7 +69,7 @@ Util.ext(_DirectiveFactory.prototype,{
 		component.add(rs);
 
 		if(rs.$view){
-			rs.$view.removeAttr(rs.$name);
+			rs.$view.__nodes[0].removeAttribute(rs.$name);
 			if(rs.$endTag){
                 var lastNode = rs.$view.__nodes[rs.$view.__nodes.length-1];
                 lastNode.removeAttribute(CMD_PREFIX+rs.$endTag);

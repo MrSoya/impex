@@ -77,7 +77,7 @@
             </p>
             <p>
                 desc:
-                <textarea x-model="desc" rows=5>
+                <textarea x-model="desc" rows=5 x-tval="desc">
                     {{desc}}
                 </textarea>
             </p>
@@ -100,8 +100,14 @@
                 logger:imLog
             });
 
+            impex.directive('tval',{
+                observe:function(rs){
+                    this.$view.el.innerHTML=rs;
+                }
+            });
+
             //渲染
-            impex.render(document.getElementById('entry'),new function(){
+            var debug = impex.render(document.getElementById('entry'),new function(){
                 this.name = 'impex';
                 this.v = impex.version.toString();
                 this.desc = 'is a powerful web application engine';

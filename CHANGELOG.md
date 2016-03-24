@@ -1,4 +1,20 @@
 # Change Log
+## Version 0.9.7 - 2016/3/24
+### 新增
+* Directive.priority属性，用于标识指令优先级
+
+### 更新
+* 当指令的顶级节点多于1个，指令的$view.el为null
+* 过滤器 orderBy 区分了数字、字符以及其他 
+* demos
+
+### bug修复
+* {{# }}表达式在某些情况下出错
+* IE下兼容问题
+* x-cloak
+* x-if指令和x-each指令同时使用报错
+
+
 ## Version 0.9.6 - 2016/3/1
 ### 更新
 * 优化预编译性能

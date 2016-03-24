@@ -55,6 +55,7 @@ impex.filter('json',{
 //[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
 .filter('orderBy',{
     to:function(key,dir){
+        if(!key && !dir)return this.$value;
         if(!(this.$value instanceof Array)){
             LOGGER.warn('can only filter array');
             return this.$value;
@@ -63,7 +64,13 @@ impex.filter('json',{
             var x = key?a[key]:a,
                 y = key?b[key]:b;
 
-            return (x+'').localeCompare(y+'');
+            if(typeof x === "string"){
+                return x.localeCompare(y);
+            }else if(typeof x === "number"){
+                return x - y;
+            }else{
+                return (x+'').localeCompare(y);
+            }
         });
         if(dir === 'desc'){
             this.$value.reverse();
