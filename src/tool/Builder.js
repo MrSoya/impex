@@ -149,7 +149,7 @@ var Builder = new function() {
 			var change = changes[i];
 
 			var propName = change.name;
-			if(propName && propName.indexOf('$')===0)
+			if(propName && propName.indexOf('$')===0 && propName!=='$index')
 				continue;
 
 			var newObj = change.object[propName];

@@ -1,4 +1,12 @@
 # Change Log
+## Version 0.10.0 - 2016/3/30
+### 新增
+* x-each的for语法，用来循环数字：[begin] to [end] as k,v....
+
+### bug修复
+* x-each中的$index没有重置的问题
+
+
 ## Version 0.9.7 - 2016/3/24
 ### 新增
 * Directive.priority属性，用于标识指令优先级

@@ -5,7 +5,7 @@
  * Copyright 2015 MrSoya and other contributors
  * Released under the MIT license
  *
- * last build: 2015-3-24
+ * last build: 2015-3-30
  */
 
 !function (global) {
@@ -1141,7 +1141,7 @@ var Builder = new function() {
 			var change = changes[i];
 
 			var propName = change.name;
-			if(propName && propName.indexOf('$')===0)
+			if(propName && propName.indexOf('$')===0 && propName!=='$index')
 				continue;
 
 			var newObj = change.object[propName];
@@ -3263,7 +3263,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,9,7],
+	        v:[0,10,0],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3802,6 +3802,7 @@ impex.service('Transitions',new function(){
     function eachModel(){
         this.onCreate = function(viewManager,ts){
             this.$eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
+            this.$forExp = /^\s*(\d+|[a-zA-Z_$].+?)\s+to\s+(\d+|[a-zA-Z_$].+?)\s*$/;
             this.$viewManager = viewManager;
             this.$expInfo = this.parseExp(this.$value);
             this.$parentComp = this.$parent;
@@ -3814,11 +3815,11 @@ impex.service('Transitions',new function(){
                 this.$cacheable = this.$view.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
-            
-            
             this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.$cacheSize = 20;
+
+            this.$step = this.$view.el?this.$view.attr('step'):this.$view.__nodes[0].getAttribute('step');
 
             var transition = this.$view.el?this.$view.attr('transition'):this.$view.__nodes[0].getAttribute('transition');
             if(transition !== null){
@@ -3828,8 +3829,71 @@ impex.service('Transitions',new function(){
         }
         this.onInit = function(){
             if(this.$__state === Component.state.inited)return;
+            var that = this;
             //获取数据源
-            this.$ds = this.$parent.data(this.$expInfo.ds);
+            if(this.$forExp.test(this.$expInfo.ds)){
+                var begin = RegExp.$1,
+                    end = RegExp.$2,
+                    step = parseFloat(this.$step);
+                if(step < 0){
+                    LOGGER.error('step <=0 : '+step);
+                    return;
+                }
+                step = step || 1;
+                if(isNaN(begin)){
+                    this.$parent.watch(begin,function(type,newVal,oldVal){
+                        var ds = getForDs(newVal,end,step);
+                        var diff = ds.length - that.$lastDS.length;
+                        that.$lastDS = ds;
+                        that.rebuild(ds,diff,that.$expInfo.k,that.$expInfo.v);
+                    });
+                    begin = this.$parent.data(begin);
+                }
+                if(isNaN(end)){
+                    this.$parent.watch(end,function(type,newVal,oldVal){
+                        var ds = getForDs(begin,newVal,step);
+                        var diff = ds.length - that.$lastDS.length;
+                        that.$lastDS = ds;
+                        that.rebuild(ds,diff,that.$expInfo.k,that.$expInfo.v);
+                    });
+                    end = this.$parent.data(end);
+                }
+                begin = parseFloat(begin);
+                end = parseFloat(end);
+                
+                this.$ds = getForDs(begin,end,step);
+            }else{
+                this.$ds = this.$parent.data(this.$expInfo.ds);
+                this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
+                    if(!that.$ds){
+                        that.$ds = that.$parentComp.data(that.$expInfo.ds);
+                        that.$lastDS = that.$ds;
+                        that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
+                        return;
+                    }
+
+                    that.$lastDS = newVal;
+
+                    var newKeysSize = 0;
+                    var oldKeysSize = 0;
+
+                    for(var k in newVal){
+                        if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
+                        newKeysSize++;
+                    }
+                    if(newKeysSize === 0){
+                        oldKeysSize = that.$subComponents.length;
+                    }else{
+                        for(var k in oldVal){
+                            if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
+                            oldKeysSize++;
+                        }
+                    }
+                    
+                    that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
+                });
+            }
+            
             this.$lastDS = this.$ds;
             
             this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
@@ -3838,36 +3902,14 @@ impex.service('Transitions',new function(){
                 this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
             //更新视图
             this.destroy();
-
-            var that = this;
-            this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
-                if(!that.$ds){
-                    that.$ds = that.$parentComp.data(that.$expInfo.ds);
-                    that.$lastDS = that.$ds;
-                    that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
-                    return;
-                }
-
-                that.$lastDS = newVal;
-
-                var newKeysSize = 0;
-                var oldKeysSize = 0;
-
-                for(var k in newVal){
-                    if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                    newKeysSize++;
-                }
-                if(newKeysSize === 0){
-                    oldKeysSize = that.$subComponents.length;
-                }else{
-                    for(var k in oldVal){
-                        if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                        oldKeysSize++;
-                    }
-                }
-                
-                that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
-            });
+        }
+        function getForDs(begin,end,step){
+            var dir = end - begin < 0?-1:1;
+            var ds = [];
+            for(var i=begin;i<=end;i+=step){
+                ds.push(i);
+            }
+            return ds;
         }
         this.rebuild = function(ds,diffSize,ki,vi){
             ds = this.doFilter(ds);
@@ -4083,8 +4125,6 @@ impex.service('Transitions',new function(){
                         });
                     }
                 }
-                
-                
                 
             });
             if(!ds){

@@ -156,7 +156,6 @@ View.prototype = {
 			}catch(error){
 				LOGGER.debug(error.message + ' on event '+type+'('+tmp +')');
 			}
-			
 		};
 
         this.el.addEventListener(type,evHandler,false);
