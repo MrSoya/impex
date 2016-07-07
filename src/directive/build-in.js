@@ -8,7 +8,7 @@
      * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
      */
     impex.directive('ignore',{
-        $final:true
+        final:true
     })
     /**
      * 绑定视图事件，以参数指定事件类型，用于减少单一事件指令书写
@@ -17,8 +17,8 @@
      */
     .directive('on',{
         onInit:function(){
-            for(var i=this.$params.length;i--;){
-                this.$view.on(this.$params[i],this.$value);
+            for(var i=this.params.length;i--;){
+                this.view.on(this.params[i],this.value);
             }
         }
     })
@@ -28,18 +28,18 @@
      */
     .directive('bind',{
         onInit:function(){
-            if(!this.$params || this.$params.length < 1){
+            if(!this.params || this.params.length < 1){
                 LOGGER.warn('at least one attribute be binded');
             }
         },
         observe : function(rs){
-            if(!this.$params || this.$params.length < 1)return;
+            if(!this.params || this.params.length < 1)return;
 
             var filter = null;
-            if(this.$filter){
-                var owner = this.closest(this.$filter);
+            if(this.filter){
+                var owner = this.closest(this.filter);
                 if(owner){
-                    filter = owner[this.$filter];
+                    filter = owner[this.filter];
                 }
             }
 
@@ -50,9 +50,9 @@
                 }
             }
 
-            for(var i=this.$params.length;i--;){
-                var p = this.$params[i];
-                this.$view.attr(p,rs);
+            for(var i=this.params.length;i--;){
+                var p = this.params[i];
+                this.view.attr(p,rs);
             }
             
         }
@@ -63,41 +63,41 @@
      */
     .directive('show',{
         onCreate:function(ts){
-            var transition = this.$view.attr('transition');
+            var transition = this.view.attr('transition');
             if(transition !== null){
-                this.$transition = ts.get(transition,this);
+                this.transition = ts.get(transition,this);
             }
-            this.$lastRs = false;
+            this.lastRs = false;
             this.exec(false);
         },
         observe : function(rs){
-            if(this.$parent.$__state === Component.state.suspend)return;
-            if(rs === this.$lastRs)return;
-            this.$lastRs = rs;
+            if(this.parent.__state === Component.state.suspend)return;
+            if(rs === this.lastRs)return;
+            this.lastRs = rs;
 
-            if(this.$transition){
+            if(this.transition){
                 if(rs){
-                    this.$transition.enter();
+                    this.transition.enter();
                 }else{
-                    this.$transition.leave();
+                    this.transition.leave();
                 }
             }else{
                 this.exec(rs);
             }
         },
         enter:function(){
-            this.exec(this.$lastRs);
+            this.exec(this.lastRs);
         },
         leave:function(){
-            this.exec(this.$lastRs);
+            this.exec(this.lastRs);
         },
         exec:function(rs){
             if(rs){
                 //显示
-                this.$view.show();
+                this.view.show();
             }else{
                 // 隐藏
-                this.$view.hide();
+                this.view.hide();
             }
         }
     },['Transitions'])
@@ -105,16 +105,15 @@
      * x-show的范围版本
      */
     .directive('show-start',{
-        $endTag : 'show-end',
-        onCreate : function(){
-
+        endTag : 'show-end',
+        onCreate:function(){
             //更新视图
             this.__init();
             this.display();
         },
         observe : function(rs){
-            if(this.$parent.$__state === Component.state.suspend)return;
-            var nodes = this.$view.__nodes;
+            if(this.parent.__state === Component.state.suspend)return;
+            var nodes = this.view.__nodes;
             if(rs){
                 //显示
                 for(var i=nodes.length;i--;){
@@ -133,47 +132,47 @@
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate : function(viewManager,ts){
+        onCreate:function(viewManager,ts){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
 
-            var transition = this.$view.attr('transition');
+            var transition = this.view.attr('transition');
             if(transition !== null){
-                this.$transition = ts.get(transition,this);
+                this.transition = ts.get(transition,this);
             }
-            this.$lastRs = false;
+            this.lastRs = false;
             this.exec(false);
         },
         observe : function(rs){
-            if(this.$parent.$__state === Component.state.suspend)return;
-            if(rs === this.$lastRs && !this.$view.el.parentNode)return;
-            this.$lastRs = rs;
+            if(this.parent.__state === Component.state.suspend)return;
+            if(rs === this.lastRs && !this.view.el.parentNode)return;
+            this.lastRs = rs;
 
-            if(this.$transition){
+            if(this.transition){
                 if(rs){
-                    this.$transition.enter();
+                    this.transition.enter();
                 }else{
-                    this.$transition.leave();
+                    this.transition.leave();
                 }
             }else{
                 this.exec(rs);
             }
         },
         enter:function(){
-            this.exec(this.$lastRs);
+            this.exec(this.lastRs);
         },
         leave:function(){
-            this.exec(this.$lastRs);
+            this.exec(this.lastRs);
         },
         exec:function(rs){
             if(rs){
-                if(this.$view.el.parentNode)return;
+                if(this.view.el.parentNode)return;
                 //添加
-                this.viewManager.replace(this.$view,this.placeholder);
+                this.viewManager.replace(this.view,this.placeholder);
             }else{
-                if(!this.$view.el.parentNode)return;
+                if(!this.view.el.parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.$view);
+                this.viewManager.replace(this.placeholder,this.view);
             }
         }
     },['ViewManager','Transitions'])
@@ -182,8 +181,8 @@
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
      */
     .directive('if-start',{
-        $endTag : 'if-end',
-        onCreate : function(viewManager){
+        endTag : 'if-end',
+        onCreate:function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
 
@@ -192,15 +191,15 @@
             this.display();
         },
         observe : function(rs){
-            if(this.$parent.$__state === Component.state.suspend)return;
+            if(this.parent.__state === Component.state.suspend)return;
             if(rs){
-                if(this.$view.__nodes[0].parentNode)return;
+                if(this.view.__nodes[0].parentNode)return;
                 //添加
-                this.viewManager.replace(this.$view,this.placeholder);
+                this.viewManager.replace(this.view,this.placeholder);
             }else{
-                if(!this.$view.__nodes[0].parentNode)return;
+                if(!this.view.__nodes[0].parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.$view);
+                this.viewManager.replace(this.placeholder,this.view);
             }
         }
     },['ViewManager'])
@@ -209,18 +208,18 @@
      */
     .directive('cloak',{
         onCreate:function(){
-            var className = this.$view.attr('class');
+            var className = this.view.attr('class');
             if(!className){
-                LOGGER.warn("can not find attribute[class] of element["+this.$view.name+"] which directive[cloak] on");
+                LOGGER.warn("can not find attribute[class] of element["+this.view.name+"] which directive[cloak] on");
                 return;
             }
             className = className.replace('x-cloak','');
             
             var that = this;
             setTimeout(function(){
-                updateCloakAttr(that.$parent,that.$view.el,className);
-                var curr = that.$view.attr('class').replace('x-cloak','');
-                that.$view.attr('class',curr);
+                updateCloakAttr(that.parent,that.view.el,className);
+                var curr = that.view.attr('class').replace('x-cloak','');
+                that.view.attr('class',curr);
             },0);
         }
     })
@@ -231,210 +230,194 @@
      * <br/>使用方式：<input x-model="model.prop">
      */
     .directive('model',{
-        onCreate : function(){
-            var el = this.$view.el;
+        onCreate:function(){
+            var el = this.view.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
 
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
-                    var type = this.$view.attr('type');
+                    var type = this.view.attr('type');
                     switch(type){
                         case 'radio':
-                            this.$view.on('click','changeModel($event)');
+                            this.view.on('click','changeModel($event)');
                             break;
                         case 'checkbox':
-                            this.$view.on('click','changeModelCheck($event)');
+                            this.view.on('click','changeModelCheck($event)');
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.$view.on(hack,'changeModel($event)');
+                            this.view.on(hack,'changeModel($event)');
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.$view.on('change','changeModelSelect($event)');
+                        this.view.on('change','changeModelSelect($event)');
                     }else{
-                        this.$view.on('change','changeModel($event)');
+                        this.view.on('change','changeModel($event)');
                     }
                     
                     break;
             }
         },
-        changeModelSelect : function(e){
-            var t = e.target || e.srcElement;
-            var val = t.value;
-            var parts = [];
-            for(var i=t.options.length;i--;){
-                var opt = t.options[i];
-                if(opt.selected){
-                    parts.push(opt.value);
+        methods:{
+            changeModelSelect : function(e){
+                var t = e.target || e.srcElement;
+                var val = t.value;
+                var parts = [];
+                for(var i=t.options.length;i--;){
+                    var opt = t.options[i];
+                    if(opt.selected){
+                        parts.push(opt.value);
+                    }
+                }            
+                this.parent.d2(this.value,parts);
+            },
+            changeModelCheck : function(e){
+                var t = e.target || e.srcElement;
+                var val = t.value;
+                var parts = this.parent.d2(this.value);
+                if(!(parts instanceof Array)){
+                    parts = [parts];
                 }
-            }            
-            this.$parent.data(this.$value,parts);
-        },
-        changeModelCheck : function(e){
-            var t = e.target || e.srcElement;
-            var val = t.value;
-            var parts = this.$parent.data(this.$value);
-            if(!(parts instanceof Array)){
-                parts = [parts];
-            }
-            if(t.checked){
-                parts.push(val);
-            }else{
-                var i = parts.indexOf(val);
-                if(i > -1){
-                    parts.splice(i,1);
+                if(t.checked){
+                    parts.push(val);
+                }else{
+                    var i = parts.indexOf(val);
+                    if(i > -1){
+                        parts.splice(i,1);
+                    }
                 }
-            }
-            this.$parent.data(this.$value,parts);
-        },
-        changeModel : function(e){
-            if(this.debounce){
-                if(this.debounceTimer){
-                    clearTimeout(this.debounceTimer);
-                    this.debounceTimer = null;
+                this.parent.d2(this.value,parts);
+            },
+            changeModel : function(e){
+                if(this.debounce){
+                    if(this.debounceTimer){
+                        clearTimeout(this.debounceTimer);
+                        this.debounceTimer = null;
+                    }
+                    var that = this;
+                    this.debounceTimer = setTimeout(function(){
+                        clearTimeout(that.debounceTimer);
+                        that.debounceTimer = null;
+                        
+                        that.setVal(e);
+                    },this.debounce);
+                }else{
+                    this.setVal(e);
                 }
-                var that = this;
-                this.debounceTimer = setTimeout(function(){
-                    clearTimeout(that.debounceTimer);
-                    that.debounceTimer = null;
-                    
-                    that.setVal(e);
-                },this.debounce);
-            }else{
-                this.setVal(e);
-            }
+            },
         },
         setVal:function(e){
             var v = (e.target || e.srcElement).value;
             if(this.toNum !== null){
                 v = parseFloat(v);
             }
-            this.$parent.data(this.$value,v);
+            this.parent.d2(this.value,v);
         }
     });
 
     function updateCloakAttr(component,node,newOrigin){
-        for(var i=component.$__expNodes.length;i--;){
-            var expNode = component.$__expNodes[i];
+        for(var i=component.__expNodes.length;i--;){
+            var expNode = component.__expNodes[i];
             if(expNode.node == node && expNode.attrName === 'class'){
                 expNode.origin = newOrigin;
             }
         }
 
-        for(var j=component.$__components.length;j--;){
-            updateCloakAttr(component.$__components[j],node,newOrigin);
+        for(var j=component.children.length;j--;){
+            updateCloakAttr(component.children[j],node,newOrigin);
         }
     }
     function eachModel(){
         this.onCreate = function(viewManager,ts){
-            this.$eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
-            this.$forExp = /^\s*(\d+|[a-zA-Z_$].+?)\s+to\s+(\d+|[a-zA-Z_$].+?)\s*$/;
-            this.$viewManager = viewManager;
-            this.$expInfo = this.parseExp(this.$value);
-            this.$parentComp = this.$parent;
-            this.$__view = this.$view;
-            this.$cache = [];
+            this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
+            this.forExp = /^\s*(\d+|[a-zA-Z_$].+?)\s+to\s+(\d+|[a-zA-Z_$].+?)\s*$/;
+            this.viewManager = viewManager;
+            this.expInfo = this.parseExp(this.value);
+            this.parentComp = this.parent;
+            this.__view = this.view;
+            this.cache = [];
 
-            if(this.$view.el){
-                this.$cacheable = this.$view.attr('cache')==='false'?false:true;
+            if(this.view.el){
+                this.cacheable = this.view.attr('cache')==='false'?false:true;
             }else{
-                this.$cacheable = this.$view.__nodes[0].getAttribute('cache')==='false'?false:true;
+                this.cacheable = this.view.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
-            this.$subComponents = [];//子组件，用于快速更新each视图，提高性能
+            this.subComponents = [];//子组件，用于快速更新each视图，提高性能
 
-            this.$cacheSize = 20;
+            this.cacheSize = 20;
 
-            this.$step = this.$view.el?this.$view.attr('step'):this.$view.__nodes[0].getAttribute('step');
+            this.step = this.view.el?this.view.attr('step'):this.view.__nodes[0].getAttribute('step');
 
-            var transition = this.$view.el?this.$view.attr('transition'):this.$view.__nodes[0].getAttribute('transition');
+            var transition = this.view.el?this.view.attr('transition'):this.view.__nodes[0].getAttribute('transition');
             if(transition !== null){
-                this.$trans = transition;
-                this.$ts = ts;
+                this.trans = transition;
+                this.ts = ts;
             }
         }
         this.onInit = function(){
-            if(this.$__state === Component.state.inited)return;
+            if(this.__state === Component.state.inited)return;
             var that = this;
             //获取数据源
-            if(this.$forExp.test(this.$expInfo.ds)){
+            if(this.forExp.test(this.expInfo.ds)){
                 var begin = RegExp.$1,
                     end = RegExp.$2,
-                    step = parseFloat(this.$step);
+                    step = parseFloat(this.step);
                 if(step < 0){
                     LOGGER.error('step <=0 : '+step);
                     return;
                 }
                 step = step || 1;
                 if(isNaN(begin)){
-                    this.$parent.watch(begin,function(type,newVal,oldVal){
+                    this.parent.watch(begin,function(type,newVal,oldVal){
                         var ds = getForDs(newVal,end,step);
-                        var diff = ds.length - that.$lastDS.length;
-                        that.$lastDS = ds;
-                        that.rebuild(ds,diff,that.$expInfo.k,that.$expInfo.v);
+                        that.lastDS = ds;
+                        that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    begin = this.$parent.data(begin);
+                    begin = this.parent.d2(begin);
                 }
                 if(isNaN(end)){
-                    this.$parent.watch(end,function(type,newVal,oldVal){
+                    this.parent.watch(end,function(type,newVal,oldVal){
                         var ds = getForDs(begin,newVal,step);
-                        var diff = ds.length - that.$lastDS.length;
-                        that.$lastDS = ds;
-                        that.rebuild(ds,diff,that.$expInfo.k,that.$expInfo.v);
+                        that.lastDS = ds;
+                        that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    end = this.$parent.data(end);
+                    end = this.parent.d2(end);
                 }
                 begin = parseFloat(begin);
                 end = parseFloat(end);
                 
-                this.$ds = getForDs(begin,end,step);
+                this.ds = getForDs(begin,end,step);
             }else{
-                this.$ds = this.$parent.data(this.$expInfo.ds);
-                this.$parentComp.watch(this.$expInfo.ds,function(type,newVal,oldVal){
-                    if(!that.$ds){
-                        that.$ds = that.$parentComp.data(that.$expInfo.ds);
-                        that.$lastDS = that.$ds;
-                        that.build(that.$ds,that.$expInfo.k,that.$expInfo.v);
+                this.ds = this.parent.d2(this.expInfo.ds);
+                this.parentComp.watch(this.expInfo.ds,function(type,newVal,oldVal){
+                    if(!that.ds){
+                        that.ds = that.parentComp.d2(that.expInfo.ds);
+                        that.lastDS = that.ds;
+                        that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;
                     }
 
-                    that.$lastDS = newVal;
-
-                    var newKeysSize = 0;
-                    var oldKeysSize = 0;
-
-                    for(var k in newVal){
-                        if(!newVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                        newKeysSize++;
-                    }
-                    if(newKeysSize === 0){
-                        oldKeysSize = that.$subComponents.length;
-                    }else{
-                        for(var k in oldVal){
-                            if(!oldVal.hasOwnProperty(k) || k.indexOf('$')===0)continue;
-                            oldKeysSize++;
-                        }
-                    }
-                    
-                    that.rebuild(newVal,newKeysSize - oldKeysSize,that.$expInfo.k,that.$expInfo.v);
+                    that.lastDS = newVal;                    
+                    that.rebuild(newVal,that.expInfo.k,that.expInfo.v);
                 });
             }
             
-            this.$lastDS = this.$ds;
+            this.lastDS = this.ds;
             
-            this.$placeholder = this.$viewManager.createPlaceholder('-- directive [each] placeholder --');
-            this.$viewManager.insertBefore(this.$placeholder,this.$view);
-            if(this.$ds)
-                this.build(this.$ds,this.$expInfo.k,this.$expInfo.v);
+            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
+            this.viewManager.insertBefore(this.placeholder,this.view);
+            if(this.ds)
+                this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
             this.destroy();
         }
+        
         function getForDs(begin,end,step){
             var dir = end - begin < 0?-1:1;
             var ds = [];
@@ -443,24 +426,23 @@
             }
             return ds;
         }
-        this.rebuild = function(ds,diffSize,ki,vi){
+        this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
-            if(diffSize === -999){
-                diffSize = ds.length - this.$subComponents.length;
-            }
+            
+            var diffSize = ds.length - this.subComponents.length;
 
             if(diffSize < 0){
-                var tmp = this.$subComponents.splice(0,diffSize*-1);
-                if(this.$cache.length < this.$cacheSize){
+                var tmp = this.subComponents.splice(0,diffSize*-1);
+                if(this.cache.length < this.cacheSize){
                     for(var i=tmp.length;i--;){
-                        this.$cache.push(tmp[i]);
+                        this.cache.push(tmp[i]);
                     }
-                    for(var i=this.$cache.length;i--;){
-                        if(this.$trans && !this.$cache[i].$__leaving && this.$cache[i].$__state === 'displayed'){
-                            this.$cache[i].$__leaving = true;
-                            this.$cache[i].$transition.leave();
+                    for(var i=this.cache.length;i--;){
+                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === 'displayed'){
+                            this.cache[i].__leaving = true;
+                            this.cache[i].transition.leave();
                         }else{
-                            this.$cache[i].suspend(false);
+                            this.cache[i].suspend(false);
                         }
                     }
                 }else{
@@ -470,11 +452,11 @@
                 }
             }else if(diffSize > 0){
                 var restSize = diffSize;
-                if(this.$cacheable){
-                    var tmp = this.$cache.splice(0,diffSize);
+                if(this.cacheable){
+                    var tmp = this.cache.splice(0,diffSize);
                     for(var i=0;i<tmp.length;i++){
-                        this.$subComponents.push(tmp[i]);
-                        this.$viewManager.insertBefore(tmp[i].$view,this.$placeholder);
+                        this.subComponents.push(tmp[i]);
+                        this.viewManager.insertBefore(tmp[i].view,this.placeholder);
                     }
                     var restSize = diffSize - tmp.length;
                 }
@@ -491,7 +473,7 @@
                 if(isIntK && isNaN(k))continue;
                 if(k.indexOf('$__')===0)continue;
 
-                var subComp = this.$subComponents[index];
+                var subComp = this.subComponents[index];
 
                 //模型
                 var v = ds[k];
@@ -501,9 +483,9 @@
                     ds[k].$__impex__origin = null;
                     delete ds[k].$__impex__origin;
                 }
-                subComp[vi] = v;
-                subComp['$index'] = index++;
-                if(ki)subComp[ki] = isIntK?k>>0:k;
+                subComp.data[vi] = v;
+                subComp.data['$index'] = index++;
+                if(ki)subComp.data[ki] = isIntK?k>>0:k;
 
                 subComp.init();
                 subComp.display();
@@ -511,43 +493,43 @@
             }
         }
         function onDisplay(comp){
-            for(var i=0;i<comp.$__components.length;i++){
-                var sub = comp.$__components[i];
+            for(var i=0;i<comp.children.length;i++){
+                var sub = comp.children[i];
                 if(sub.onDisplay)
                     sub.onDisplay();
-                if(sub.$__components.length > 0){
+                if(sub.children.length > 0){
                     onDisplay(sub);
                 }
             }
         }
         this.createSubComp = function(){
-            var parent = this.$parentComp;
-            var target = this.$viewManager.createPlaceholder('');
-            this.$viewManager.insertBefore(target,this.$placeholder);
+            var parent = this.parentComp;
+            var target = this.viewManager.createPlaceholder('');
+            this.viewManager.insertBefore(target,this.placeholder);
             //视图
-            var copy = this.$__view.clone();
+            var copy = this.__view.clone();
             //创建子组件
             var subComp = parent.createSubComponent(copy,target);
-            this.$subComponents.push(subComp);
-            if(this.$trans){
+            this.subComponents.push(subComp);
+            if(this.trans){
                 var that = this;
                 
                 subComp.onInit = function(){
-                    if(!this.$transition){
-                        this.$transition = that.$ts.get(that.$trans,this);
+                    if(!this.transition){
+                        this.transition = that.ts.get(that.trans,this);
                     }
                 };
                 subComp.onDisplay = function(){
-                    this.$transition.enter();
+                    this.transition.enter();
                 };
                 subComp.leave = function(){
                     this.suspend(false);
-                    this.$__leaving = false;
+                    this.__leaving = false;
                 }
             }
                 
             return subComp;
-        }      
+        }
         function clone(obj,ref){
             if(obj === null)return null;
             var rs = obj;
@@ -575,8 +557,8 @@
             return rs;
         }
         this.doFilter = function(rs){
-            if(!this.$filters)return rs;
-            var filters = this.$filters;
+            if(!this.filters)return rs;
+            var filters = this.filters;
             if(Object.keys(filters).length > 0){
                 if(rs && Util.isObject(rs)){
                     rs = clone(rs);
@@ -589,11 +571,11 @@
                     for(var i=params.length;i--;){
                         var v = params[i];
                         if(v.varTree && v.words){
-                            v = Renderer.evalExp(this.$parentComp,v);
+                            v = Renderer.evalExp(this.parentComp,v);
                         }
                         actParams[i] = v;
                     }
-                    c.$value = rs;
+                    c.value = rs;
                     rs = c.to.apply(c,actParams);
                 }
                 return rs;
@@ -611,6 +593,7 @@
                 if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.createSubComp();
+                // subComp.data = {};
                 
                 //模型
                 var v = ds[k];
@@ -620,21 +603,22 @@
                     ds[k].$__impex__origin = null;
                     delete ds[k].$__impex__origin;
                 }
-                subComp[vi] = v;
-                subComp['$index'] = index++;
-                if(ki)subComp[ki] = isIntK?k>>0:k;
+
+                subComp.data[vi] = v;
+                subComp.data['$index'] = index++;
+                if(ki)subComp.data[ki] = isIntK?k>>0:k;
             }
 
             //初始化组件
-            for(var i=this.$subComponents.length;i--;){
-                this.$subComponents[i].init();
-                this.$subComponents[i].display();
+            for(var i=this.subComponents.length;i--;){
+                this.subComponents[i].init();
+                this.subComponents[i].display();
             }
         }
         this.parseExp = function(exp){
             var ds,k,v;
             var that = this;
-            exp.replace(this.$eachExp,function(a,attrName,subAttr,filterExp){
+            exp.replace(this.eachExp,function(a,attrName,subAttr,filterExp){
                 ds = attrName;
                 var tmp = subAttr.replace(/\s/mg,'');
                 var kv = tmp.split(',');
@@ -647,13 +631,13 @@
 
                 if(filterExp){
                     var filters = {};
-                    var varMap = Scanner.parseFilters(lexer(filterExp),filters,that.$parent);
-                    that.$filters = filters;
+                    var varMap = Scanner.parseFilters(lexer(filterExp),filters,that.parent);
+                    that.filters = filters;
 
                     for(var i in varMap){
-                        that.$parent.watch(i,function(type,newVal,oldVal){
-                            if(that.$lastDS)
-                            that.rebuild(that.$lastDS,-999,that.$expInfo.k,that.$expInfo.v);
+                        that.parent.watch(i,function(type,newVal,oldVal){
+                            if(that.lastDS)
+                            that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                         });
                     }
                 }
@@ -673,8 +657,8 @@
         }
     };
     var each = new eachModel();
-    each.$final = true;
-    each.$priority = 999;
+    each.final = true;
+    each.priority = 999;
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：
@@ -687,8 +671,8 @@
 
 
     var eachStart = new eachModel();
-    eachStart.$endTag = 'each-end';
-    eachStart.$priority = 999;
+    eachStart.endTag = 'each-end';
+    eachStart.priority = 999;
     /**
      * each-start/end指令类似each，但是可以循环范围内的所有节点。数据源可以是数组或者对象
      * <br/>使用方式：

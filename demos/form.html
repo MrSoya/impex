@@ -102,19 +102,22 @@
 
             impex.directive('tval',{
                 observe:function(rs){
-                    this.$view.el.innerHTML=rs;
+                    this.view.el.innerHTML=rs;
                 }
             });
 
             //渲染
-            var debug = impex.render(document.getElementById('entry'),new function(){
-                this.name = 'impex';
-                this.v = impex.version.toString();
-                this.desc = 'is a powerful web application engine';
-                this.features = ['easily','efficiently','powerful'];
-                this.author = 'MrSoya';
-                this.sex = 'man';
-                this.others = [];
+            var debug = impex.render(document.getElementById('entry'),{
+                data:{
+                    name : 'impex',
+                    v : impex.version.toString(),
+                    desc : 'is a powerful web application engine',
+                    features : ['easily','efficiently','powerful'],
+                    author : 'MrSoya',
+                    sex : 'man',
+                    others : []
+                }
+                
             });
             
         </script>

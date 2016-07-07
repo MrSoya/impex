@@ -15,25 +15,27 @@
             impex.filter('trim',{
                 to:function(type){
                     if(type === 'side'){
-                        return this.$value.replace(/^\s*|\s*$/,'');
+                        return this.value.replace(/^\s*|\s*$/,'');
                     }
-                    return this.$value.replace(/\s/mg,'');
+                    return this.value.replace(/\s/mg,'');
                 }
             }).filter('lower',{
                 to:function(){
-                    return this.$value.toLowerCase();
+                    return this.value.toLowerCase();
                 }
             }).filter('cap',{
-                $html:true,
+                html:true,
                 to:function(){
-                    var cap = this.$value[0].toUpperCase();
-                    return (cap + this.$value.substr(1)).big();
+                    var cap = this.value[0].toUpperCase();
+                    return (cap + this.value.substr(1)).big();
                 }
             });
 
             //渲染
-            var comp = impex.render(document.getElementById('entry'),new function(){
-                this.version = impex.version.toString();
+            var comp = impex.render(document.getElementById('entry'),{
+                data:{
+                    version : impex.version.toString()
+                }
             });
             
             

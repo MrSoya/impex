@@ -21,37 +21,41 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-a',{
-                onInit:function(){
-                    
+                replace:false,
+                methods:{
+                    hi:function(){
+                        this.broadcast('hello','hi...boys');
+                    }
                 },
-                $replace:false,
-                hi:function(){
-                    this.broadcast('hello','hi...boys');
-                },
-                $template:"<div><button :click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
+                template:"<div><button :click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
             });
             impex.component('x-b',{
-                msg:"",
-                onInit:function(){
-                    this.on('hello',function(target,msg){
-                        this.msg = msg +' from '+target.$name;
-                        if(this.name === 'child1')
-                            return true;
-                    });
+                data:{
+                    msg:""
                 },
-                $template:"<div>i'm {{=name}} {{msg}} {{=CONTENT}}</div>"
+                events:{
+                    hello:function(target,msg){
+                        this.data.msg = msg +' from '+target.name;
+                        if(this.data.name === 'child1')return true;
+                    }
+                },
+                template:"<div>i'm {{=name}} {{msg}} {{=CONTENT}}</div>"
             });
             impex.component('x-c',{
-                msg:"",
-                onInit:function(){
-                    this.on('hello',function(target,msg){
-                        this.msg = msg +' from '+target.$name;
-                    });
+                data:{
+                    msg:""
                 },
-                hi:function(){
-                    this.emit('hello','hug me');
+                methods:{
+                    hi:function(){
+                        this.emit('hello','hug me');
+                    }
                 },
-                $template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button :click='hi()'>wanted a hug</button></div>"
+                events:{
+                    hello:function(target,msg){
+                        this.data.msg = msg +' from '+target.name;
+                    }
+                },
+                template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button :click='hi()'>wanted a hug</button></div>"
             });
 
             //渲染

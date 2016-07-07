@@ -10,28 +10,21 @@ Factory.prototype = {
 	/**
 	 * 注册子类
 	 */
-	register : function(type,model,services){
+	register : function(type,param,services){
 		type = type.toLowerCase();
-
-		//keywords check
-		if(this.baseClass === Component || this.baseClass === Directive ){
-			var ks = Object.keys(model);
-			for(var i=BUILD_IN_PROPS.length;i--;){
-				if(ks.indexOf(BUILD_IN_PROPS[i])>-1){
-					LOGGER.error('attempt to overwrite build-in property['+BUILD_IN_PROPS[i]+'] of Component['+type+']');
-					return;
-				}
-			}
-		}
 
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 
 		var props = {};
-		Util.extProp(props,model);
+		Util.ext(props,param);
 
 		Util.inherits(clazz,this.baseClass);
 
-		Util.extMethod(clazz.prototype,model);
+		if(param.methods){
+			for(var k in param.methods){
+				clazz.prototype[METHOD_PREFIX + k] = param.methods[k];
+			}
+		}
 
 		this.types[type] = {clazz:clazz,props:props,services:services};
 	},
@@ -41,5 +34,21 @@ Factory.prototype = {
 	 */
 	hasTypeOf : function(type){
 		return type in this.types;
+	},
+	//子类调用
+	createCbk : function(comp,type){
+		if(comp.onCreate){
+			//inject
+			var services = null;
+			if(this.types[type].services){
+				services = [];
+				for(var i=0;i<this.types[type].services.length;i++){
+					var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
+					services.push(serv);
+				}
+			}
+			
+			services ? comp.onCreate.apply(comp,services) : comp.onCreate();
+		}
 	}
 }

@@ -83,6 +83,9 @@ var lexer = (function(){
                         varObj.segments.push(part);
                         lastSegPos = i;
                     }
+                    if(l === ')'){
+                        varObj.isFunc = true;
+                    }
                     //push words
                     varObj.words.push(l);
                     lastWordPos = i;

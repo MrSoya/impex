@@ -26,15 +26,19 @@
             //自定义组件
             impex.component('x-button',{
                 onInit:function(){
-                    this.$view.on('click','tip()');
-                    this.times = 0;
+                    this.view.on('click','tip()');
                 },
-                color:'#000',
-                tip : function(n){
-                    alert('clicked '+(this.times++)+' times');
+                data:{
+                    times:0,
+                    color:'#000',
+                    $$date:{}
                 },
-                $$date:{},
-                $templateURL:"x-button.html"
+                methods:{
+                    tip : function(n){
+                        alert('clicked '+(this.data.times++)+' times');
+                    }
+                },
+                templateURL:"x-button.html"
             });
 
             //渲染

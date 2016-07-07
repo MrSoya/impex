@@ -83,16 +83,16 @@
                         transition="todo" 
                         class="{{v.type=='completed'?'completed':''}}"
                     >
-                        <input type="checkbox" x-checked="v.type=='completed'" x-click="done($event,v)">
+                        <input type="checkbox" x-checked="v.type=='completed'" :click="done($event,v)">
                         {{v.val}} <i :click="removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
             </section>
             <footer>
                 <span>{{activeTodos}} item left</span>
-                <a class="btn {{filterType===''?'active':''}}" x-click="filterTodos('')">All</a>
-                <a class="btn {{filterType==='active'?'active':''}}" x-click="filterTodos('active')">Active</a>
-                <a class="btn {{filterType==='completed'?'active':''}}" x-click="filterTodos('completed')">Completed</a>
+                <a class="btn {{filterType===''?'active':''}}" :click="filterTodos('')">All</a>
+                <a class="btn {{filterType==='active'?'active':''}}" :click="filterTodos('active')">Active</a>
+                <a class="btn {{filterType==='completed'?'active':''}}" :click="filterTodos('completed')">Completed</a>
             </footer>
         </section>
 
@@ -100,20 +100,22 @@
         <script type="text/javascript">
             impex.directive('keydown',{
                 onCreate:function(){
-                    this.$view.on('keydown',this.$value);
+                    this.view.on('keydown',this.value);
                 }
             })
             impex.directive('checked',{
                 observe:function(rs){
-                    this.$view.el.checked = rs;
+                    this.view.el.checked = rs;
                 }
             })
 
             //渲染
             var debug = impex.render(document.body,{
-                todos:[],
-                filterType:'',
-                activeTodos:0,
+                data:{
+                    todos:[],
+                    filterType:'',
+                    activeTodos:0,
+                },
                 onInit:function(){
                     this.watch('todos',function(type,newVal){
                         this.activeTodos = newVal.filter(function(todo){
@@ -121,38 +123,41 @@
                         }).length;
                     });
                 },
-                addTodo:function(e){
-                    var t = e.target;
-                    if(e.keyCode === 13 && t.value.trim()){
+                methods:{
+                    addTodo:function(e){
+                        var t = e.target;
+                        if(e.keyCode === 13 && t.value.trim()){
 
-                        this.todos.push({id:Math.random()+'',val:t.value,type:'active'});
-                        t.value = '';
+                            this.data.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+                            t.value = '';
+                        }
+                    },
+                    removeTodo:function(todo){
+                        var i = this.data.todos.indexOf(todo);
+                        if(i > -1)
+                        this.data.todos.splice(i,1);
+                    },
+                    done:function(e,todo){
+                        var type = 'active';
+                        if(e.target.checked){
+                            type = 'completed';
+                        }
+
+                        todo.type = type;
+
+                        this.data.activeTodos = this.data.todos.filter(function(td){
+                            return td.type === 'active';
+                        }).length;
+
+                        var t = this.filterType;
+                        this.data.filterType = 1;
+                        this.data.filterType = t;
+                    },
+                    filterTodos:function(type){
+                        this.data.filterType = type;
                     }
-                },
-                removeTodo:function(todo){
-                    var i = this.todos.indexOf(todo);
-                    if(i > -1)
-                    this.todos.splice(i,1);
-                },
-                done:function(e,todo){
-                    var type = 'active';
-                    if(e.target.checked){
-                        type = 'completed';
-                    }
-
-                    todo.type = type;
-
-                    this.activeTodos = this.todos.filter(function(td){
-                        return td.type === 'active';
-                    }).length;
-
-                    var t = this.filterType;
-                    this.filterType = 1;
-                    this.filterType = t;
-                },
-                filterTodos:function(type){
-                    this.filterType = type;
                 }
+                
             });
             
         </script>

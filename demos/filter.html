@@ -9,9 +9,11 @@
             <p>
                 {{ list => orderBy :'' :'desc' .limitBy:count:0 .filterBy:numFilter .json}}
             </p>
+            limit:<input type="text" x-model="count">
             <p>
                 {{ list2 => orderBy :'name' :'desc' .filterBy:filter:'name' .json}}
             </p>
+            name:<input type="text" x-model="filter">
         </div>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -25,7 +27,7 @@
             //过滤器
             impex.filter('currency',{
                 to:function(sym,decimal){
-                    var pair = this.$value.split('.');
+                    var pair = this.value.split('.');
                     var inte = pair[0].replace(/\s/g,'');
                     var integer = '';
                     for(var i=0;i<inte.length;i++){
@@ -40,15 +42,20 @@
             
 
             //渲染
-            var debug = impex.render(document.getElementById('entry'),new function(){
-                this.number = '4321234.5678';
-                this.list = [2,3,4,1,5,6];
-                this.numFilter = function(item){
-                    return item > 3;
+            var debug = impex.render(document.getElementById('entry'),{
+                data:{
+                    number : '4321234.5678',
+                    list : [2,3,4,1,5,6],
+                    count : 7,
+                    filter : '',
+                    list2 : [{name:'aaaa'},{name:'dcs'},{name:'fke'}]
+                },
+                methods:{
+                    numFilter : function(item){
+                        return item > 3;
+                    }
                 }
-                this.count = 7;
-                this.filter = 'a';
-                this.list2 = [{name:'aaaa'},{name:'dcs'},{name:'fke'}];
+                
             });
             
             

@@ -10,7 +10,7 @@
 	 * @type {String}
 	 */
 	impex.component('x-router-view',{
-		$template:'<span name="x-router-view"></span>'
+		template:'<span name="x-router-view"></span>'
 	});
 
 	var routerMap = {};
@@ -24,7 +24,7 @@
 			return;
 		}
 		var placeholder = router.viewManager.createPlaceholder('-- placeholder --');
-        router.viewManager.insertBefore(placeholder,routerView.$view);
+        router.viewManager.insertBefore(placeholder,routerView.view);
 
         routerView.destroy();
 
@@ -87,12 +87,12 @@
 	    	this.viewManager = viewManager;
 	    	this.componentManager = componentManager;
 
-	    	if(!this.$host.$__id){
+	    	if(!this.host.__id){
 	    		impex.console.warn('service[XRouter] can only be injected into Component or Directive');
 	    		return;
 	    	}
-	    	if(!routerMap[this.$host.$__id]){
-	    		routerMap[this.$host.$__id] = {router:this,comp:this.$host};
+	    	if(!routerMap[this.host.__id]){
+	    		routerMap[this.host.__id] = {router:this,comp:this.host};
 	    	}
 	    }
 	}

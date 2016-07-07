@@ -1,4 +1,15 @@
 # Change Log
+## Version 0.20.0 - 2016/7/7
+### 更新
+* 全新模型接口
+* 性能提升
+* 体积减小
+* 所有demo
+
+### bug修复
+* x-each有时会出错
+
+
 ## Version 0.10.0 - 2016/3/30
 ### 新增
 * x-each的for语法，用来循环数字：[begin] to [end] as k,v....

@@ -2,7 +2,7 @@
  * 提供视图操作
  */
 var ViewManager = new function (){
-	this.$singleton = true;
+	this.singleton = true;
     /**
      * 替换视图，会把目标视图更新为新视图
      * <br/>在DOM中表现为更新元素

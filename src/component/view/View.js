@@ -31,18 +31,18 @@ View.prototype = {
 
 		var nodes = DOMViewProvider.compile(compileStr);
 		if(!nodes || nodes.length < 1){
-			LOGGER.error('invalid template "'+tmpl+'" of component['+component.$name+']');
+			LOGGER.error('invalid template "'+tmpl+'" of component['+component.name+']');
 			return false;
 		}
 		this.__nodes = nodes;
-		if(component.$replace){
+		if(component.replace){
 			this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
 		}else{
 			this.el = this.__target;
 		}
 		
 		if(nodes.length > 1){
-			LOGGER.warn('more than 1 root node of component['+component.$name+']');
+			LOGGER.warn('more than 1 root node of component['+component.name+']');
 		}
 
 		if(propMap)
@@ -70,7 +70,7 @@ View.prototype = {
 			fragment = this.__nodes[0];
 		}
 
-		if(component.$replace){
+		if(component.replace){
 			this.__target.parentNode.replaceChild(fragment,this.__target);
 		}else{
 			this.__target.innerHTML = '';
@@ -111,7 +111,7 @@ View.prototype = {
 		var p = this.__nodes[0].parentNode;
 		if(!p)return;
 		if(hook){
-			this.__target =  document.createComment("-- view suspended of ["+(component.$name||'anonymous')+"] --");
+			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
 			p.insertBefore(this.__target,this.__nodes[0]);
 		}
 

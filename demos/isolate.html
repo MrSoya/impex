@@ -29,21 +29,23 @@
                 logger:imLog
             });
             impex.component('x-xx',{
-                $template:'<div>{{=CONTENT}}</div>',
+                template:'<div>{{=CONTENT}}</div>',
                 o:{a:20,b:20},
-                $isolate : ['o.a']
+                isolate : ['o.a']
             })
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.o = {
-                    a:12,
-                    b:34,
-                    x:[2,3,4],
-                    y:{
-                        a:'45'
+            var debug = impex.render(document.body,{
+                data:{
+                    o : {
+                        a:12,
+                        b:34,
+                        x:[2,3,4],
+                        y:{
+                            a:'45'
+                        }
                     }
-                };
+                }
             });
             
         </script>

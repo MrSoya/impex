@@ -31,34 +31,33 @@
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
-            var model = new function(){
-                this.a = {
-                    b:[
-                        {
-                            x:10
-                        },
-                        {
-                            x:20,
-                            y:[{
-                                z:'x'
-                            }]
-                        }
-                    ],
-                    c:0,
-                    d:'x'
-                }
-
-                this.b = {
-                    c:{
-                        y:10,
-                        x:20
-                    },
-                    d:1
-                }
-            }
-
             //渲染
-            impex.render(document.body,model);
+            impex.render(document.body,{
+                data:{
+                    a:{
+                        b:[
+                            {
+                                x:10
+                            },
+                            {
+                                x:20,
+                                y:[{
+                                    z:'x'
+                                }]
+                            }
+                        ],
+                        c:0,
+                        d:'x'
+                    },
+                    b:{
+                        c:{
+                            y:10,
+                            x:20
+                        },
+                        d:1
+                    }
+                }
+            });
             
         </script>
     </body>

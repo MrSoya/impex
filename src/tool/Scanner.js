@@ -93,11 +93,11 @@ var Scanner = new function() {
 	}
 
 	function getRestrictParent(selfComp){
-		if(selfComp.$restrict)return selfComp;
-		var p = selfComp.$parent;
+		if(selfComp.restrict)return selfComp;
+		var p = selfComp.parent;
 		while(p){
-			if(p.$name && p.$restrict)return p;
-			p = p.$parent;
+			if(p.name && p.restrict)return p;
+			p = p.parent;
 		};
 		return null;
 	}
@@ -150,14 +150,14 @@ var Scanner = new function() {
 				//组件
 				if(ComponentFactory.hasTypeOf(tagName)){
 					var pr = getRestrictParent(component);
-					if(pr && pr.$restrict.children){
-						var children = pr.$restrict.children.split(',');
+					if(pr && pr.restrict.children){
+						var children = pr.restrict.children.split(',');
 						if(children.indexOf(tagName) < 0)return;
 					}
 					var cr = ComponentFactory.getRestrictOf(tagName);
 					if(cr && cr.parents){
 						var parents = cr.parents.split(',');
-						if(parents.indexOf(pr.$name) < 0)return;
+						if(parents.indexOf(pr.name) < 0)return;
 					}
 					component.createSubComponentOf(tagName,node);
 					return;
@@ -250,7 +250,7 @@ var Scanner = new function() {
 		if(Object.keys(exps).length<1)return;
 
 		var expNode = new ExpNode(node,attrName,origin,exps,component,toHTML);
-		component.$__expNodes.push(expNode);
+		component.__expNodes.push(expNode);
 	}
 
 	function parseFilters(expNode,filters,component){

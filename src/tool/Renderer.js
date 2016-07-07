@@ -9,10 +9,10 @@ var Renderer = new function() {
 	 */
 	this.render = function(component){
 		
- 		renderExpNode(component.$__expNodes);
+ 		renderExpNode(component.__expNodes);
 
- 		for(var j=component.$__components.length;j--;){
- 			Renderer.render(component.$__components[j]);
+ 		for(var j=component.children.length;j--;){
+ 			Renderer.render(component.children[j]);
  		}
 	}
 
@@ -114,7 +114,7 @@ var Renderer = new function() {
 						}
 						actParams[i] = v;
 					}
-					c.$value = rs;
+					c.value = rs;
 					rs = c.to.apply(c,actParams);
 				}
 			}
@@ -220,15 +220,27 @@ var Renderer = new function() {
 	 		}
  		}
 
- 		if(watchPath){
- 			//watchPath为空时，使用全路径检测控制域
- 			component = varInCtrlScope(component,watchPath);
+ 		var dataType = varStr[varStr.length-1]===')'?'methods':'data';
+ 		var searchPath = watchPath || fullPath;
+ 		if(dataType === 'data'){
+ 			searchPath = '.data' + searchPath;
  		}else{
- 			component = varInCtrlScope(component,fullPath);
+ 			searchPath = '.' + METHOD_PREFIX + searchPath.substr(1);
  		}
+ 		component = varInCtrlScope(component,searchPath);
 
  		if(isKeyword)return fullPath;
- 		return (component?component.__getPath():'self') + fullPath;
+
+ 		if(component){
+ 			if(dataType === 'data'){
+	 			fullPath = '.data' + fullPath;
+	 		}else{
+	 			fullPath = '.' + METHOD_PREFIX + fullPath.substr(1);
+	 		}
+ 			return component.__getPath() + fullPath;
+ 		}
+
+ 		return 'self' + fullPath;
  	}
 
  	function varInCtrlScope(scope,v){
@@ -237,7 +249,7 @@ var Renderer = new function() {
 			if(getVarByPath(v,findScope.__getPath()) !== undefined){
 				return findScope;
 			}
-			findScope = findScope.$parent;
+			findScope = findScope.parent;
 		}
 	}
 

@@ -22,14 +22,19 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.filterKey = '';
-                this.orderKey = '';
-                this.numFilter = function(item){
-                    return item.p >2;
+            var debug = impex.render(document.body,{
+                methods:{
+                    numFilter:function(item){
+                        return item.p >2;
+                    }
+                },
+                data:{
+                    filterKey : '',
+                    orderKey : '',
+                    list1 : [{p:3},{p:1},{p:2},{p:4}],
+                    list2 : [{name:'impex'},{name:'soya'},{name:'h5stars'}]
                 }
-                this.list1 = [{p:3},{p:1},{p:2},{p:4}];
-                this.list2 = [{name:'impex'},{name:'soya'},{name:'h5stars'}];
+                
             });
             
         </script>

@@ -29,10 +29,10 @@ function Transition (type,component,hook) {
         }
 
         if(max > 0){
-            var v = component.$view;
-            var expNodes = component.$__expNodes;
-            if(expNodes.length<1 && component.$parent){
-                expNodes = component.$parent.$__expNodes;
+            var v = component.view;
+            var expNodes = component.__expNodes;
+            if(expNodes.length<1 && component.parent){
+                expNodes = component.parent.__expNodes;
             }
             for(var i=expNodes.length;i--;){
                 var expNode = expNodes[i];
@@ -41,7 +41,7 @@ function Transition (type,component,hook) {
                 }
             }
             v.addClass(type + '-transition');
-            this.$__longest = max;
+            this.__longest = max;
 
             var te = null;
             for (var t in TRANSITIONS){
@@ -52,60 +52,60 @@ function Transition (type,component,hook) {
             }
             v.el.addEventListener(te,this.__done.bind(this),false);
 
-            this.$__css = true;
+            this.__css = true;
         }
     }else{
-    	this.$__css = false;
+    	this.__css = false;
     }
 
-    this.$__comp = component;
-    this.$__view = v;
-    this.$__hook = hook || {};
-    this.$__type = type;
+    this.__comp = component;
+    this.__view = v;
+    this.__hook = hook || {};
+    this.__type = type;
     
 }
 Transition.prototype = {
 	enter:function(){
-		this.$__start = 'enter';
+		this.__start = 'enter';
 
-		if(this.$__css)
-        	this.$__view.addClass(this.$__type + '-enter');
+		if(this.__css)
+        	this.__view.addClass(this.__type + '-enter');
         //exec...
-        if(this.$__comp.enter){
-        	this.$__comp.enter();
+        if(this.__comp.enter){
+        	this.__comp.enter();
         }
-        if(this.$__hook.enter){
-        	this.$__hook.enter.call(this.$__comp,this.__enterDone.bind(this));
+        if(this.__hook.enter){
+        	this.__hook.enter.call(this.__comp,this.__enterDone.bind(this));
         }
-        if(this.$__css){
-        	this.$__view.el.offsetHeight;
-        	this.$__view.removeClass(this.$__type + '-enter');
+        if(this.__css){
+        	this.__view.el.offsetHeight;
+        	this.__view.removeClass(this.__type + '-enter');
         }
 	},
 	__enterDone:function(){
 		
 	},
 	leave:function(){
-		this.$__start = 'leave';
+		this.__start = 'leave';
 
-		if(this.$__css)
-        	this.$__view.addClass(this.$__type + '-leave');
+		if(this.__css)
+        	this.__view.addClass(this.__type + '-leave');
         //exec...
-        if(this.$__hook.leave){
-        	this.__leaveDone.$__trans = this;
-        	this.$__hook.leave.call(this.$__comp,this.__leaveDone.bind(this));
+        if(this.__hook.leave){
+        	this.__leaveDone.__trans = this;
+        	this.__hook.leave.call(this.__comp,this.__leaveDone.bind(this));
         }
 	},
 	__leaveDone:function(){
-		if(this.$__comp.leave){
-        	this.$__comp.leave();
+		if(this.__comp.leave){
+        	this.__comp.leave();
         }
 	},
 	__done:function(e){
-		if(e.elapsedTime < this.$__longest)return;
-        if(!this.$__start)return;
+		if(e.elapsedTime < this.__longest)return;
+        if(!this.__start)return;
 
-        switch(this.$__start){
+        switch(this.__start){
         	case 'enter':
         		this.__enterDone();
         		break;
@@ -114,7 +114,7 @@ Transition.prototype = {
         		break;
         }
 
-        this.$__start = '';
-        this.$__view.removeClass(this.$__type + '-leave');
+        this.__start = '';
+        this.__view.removeClass(this.__type + '-leave');
 	}
 };

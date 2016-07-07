@@ -1,6 +1,6 @@
 impex.filter('json',{
     to:function(){
-        return JSON.stringify(this.$value);
+        return JSON.stringify(this.value);
     }
 })
 
@@ -9,10 +9,10 @@ impex.filter('json',{
 //filterBy:filter
 .filter('filterBy',{
     to:function(key,inName){
-        var ary = this.$value;
+        var ary = this.value;
         if(!(ary instanceof Array)){
             LOGGER.warn('can only filter array');
-            return this.$value;
+            return this.value;
         }
         var rs = [];
         if(key instanceof Function){
@@ -43,24 +43,24 @@ impex.filter('json',{
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
 .filter('limitBy',{
     to:function(count,start){
-        if(!(this.$value instanceof Array)){
+        if(!(this.value instanceof Array)){
             LOGGER.warn('can only filter array');
-            return this.$value;
+            return this.value;
         }
-        if(!count)return this.$value;
-        return this.$value.splice(start||0,count);
+        if(!count)return this.value;
+        return this.value.splice(start||0,count);
     }
 })
 
 //[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
 .filter('orderBy',{
     to:function(key,dir){
-        if(!key && !dir)return this.$value;
-        if(!(this.$value instanceof Array)){
+        if(!key && !dir)return this.value;
+        if(!(this.value instanceof Array)){
             LOGGER.warn('can only filter array');
-            return this.$value;
+            return this.value;
         }
-        this.$value.sort(function(a,b){
+        this.value.sort(function(a,b){
             var x = key?a[key]:a,
                 y = key?b[key]:b;
 
@@ -73,8 +73,8 @@ impex.filter('json',{
             }
         });
         if(dir === 'desc'){
-            this.$value.reverse();
+            this.value.reverse();
         }
-        return this.$value;
+        return this.value;
     }
 });

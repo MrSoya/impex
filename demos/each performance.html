@@ -52,123 +52,122 @@
                 logger:imLog
             });
             impex.component('a-b',{
-                $template:'<b>123123</b>',
-                onDisplay:function(){
-                    alert(3434)
-                }
+                template:'<b>123123</b>'
             })
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.list = [1,2,3,4];
-                this.addList = function(){
-                    this.list.push(Date.now());
-                    this.list.push(Date.now());
+            var debug = impex.render(document.body,{
+                data:{
+                    list : [1,2,3,4],
+                    addDOMCount : 0,
+                    delDOMCount : 0,
+                    compCount : 0,
+                    mutateDOMCount : 0,
+                },
+                methods:{
+                    addList : function(){
+                        this.d('list').push(Date.now());
+                        this.d('list').push(Date.now());
 
-                    this.getCompCount();
-                }
-                this.delList = function(){
-                    this.list.pop();
-                    this.list.pop();
+                        this.$getCompCount();
+                    },
+                    delList : function(){
+                        this.d('list').pop();
+                        this.d('list').pop();
 
-                    this.getCompCount();
-                }
-                this.changeList = function(){
-                    this.list.push(Date.now());
-                    this.list.pop();
+                        this.$getCompCount();
+                    },
+                    changeList : function(){
+                        this.d('list').push(Date.now());
+                        this.d('list').pop();
 
-                    this.getCompCount();
-                }
-                this.replaceList = function(){
-                    this.list = [1,2,3,4,5,6];
+                        this.$getCompCount();
+                    },
+                    replaceList : function(){
+                        this.d('list',[1,2,3,4,5,6])
+                        // this.list = [1,2,3,4,5,6];
 
-                    this.getCompCount();
-                }
-                this.sortList = function(){
-                    if(this.b2s){
-                        this.list.sort(function(a,b){
-                            return a - b;
-                        });
-                        this.b2s = false;
-                    }else{
-                        this.list.sort(function(a,b){
-                            return b - a;
-                        });
-                        this.b2s = true;
-                    }
-                    
-                }
-                this.getCompCount = function(){
-                    var that = this;
-                    setTimeout(function(){
-                        var newCount = Object.keys(impex.__components).length;
-                        if(that.compCount != newCount){
-                            that.compCount = newCount
-                            that.comhl = 'onchange';
+                        this.$getCompCount();
+                    },
+                    sortList : function(){
+                        if(this.b2s){
+                            this.d('list').sort(function(a,b){
+                                return a - b;
+                            });
+                            this.b2s = false;
+                        }else{
+                            this.d('list').sort(function(a,b){
+                                return b - a;
+                            });
+                            this.b2s = true;
                         }
-                        
-                    },0);
-                }
-                this.addDOMCount = 0;
-                this.delDOMCount = 0;
-                this.compCount = 0;
-                this.mutateDOMCount = 0;
-
-                this.resetStat = function(){
-                    this.addDOMCount = 0;
-                    this.delDOMCount = 0;
-                    this.mutateDOMCount = 0;
-                }
-
-                this.onInit = function(){
-                    var that = this;
-                    this.watch('addhl',function(){
+                    },
+                    getCompCount : function(){
+                        var that = this;
                         setTimeout(function(){
-                            that.addhl = '';
-                        },1000);
-                    })
-                    .watch('delhl',function(){
-                        setTimeout(function(){
-                            that.delhl = '';
-                        },1000);
-                    })
-                    .watch('muhl',function(){
-                        setTimeout(function(){
-                            that.muhl = '';
-                        },1000);
-                    })
-                    .watch('comhl',function(){
-                        setTimeout(function(){
-                            that.comhl = '';
-                        },1000);
-                    });
-                }
-
-                this.onDisplay = function(){
-                    this.getCompCount();
+                            var newCount = Object.keys(impex._cs).length;
+                            if(that.data.compCount != newCount){
+                                that.data.compCount = newCount
+                                that.data.comhl = 'onchange';
+                            }
+                        },0);
+                    },
+                    resetStat : function(){
+                        this.d('addDOMCount',0);
+                        this.d('delDOMCount',0);
+                        this.d('mutateDOMCount',0);
+                    }
+                },
+                lifecycle:{
+                    init : function(){
+                        var that = this;
+                        this.watch('addhl',function(){
+                            setTimeout(function(){
+                                that.d('addhl','');
+                            },1000);
+                        })
+                        .watch('delhl',function(){
+                            setTimeout(function(){
+                                that.d('delhl','');
+                            },1000);
+                        })
+                        .watch('muhl',function(){
+                            setTimeout(function(){
+                                that.d('muhl','');
+                            },1000);
+                        })
+                        .watch('comhl',function(){
+                            setTimeout(function(){
+                                that.d('comhl','');
+                            },1000);
+                        });
+                    },
+                    display : function(){
+                        this.$getCompCount();
+                    }
                 }
             });
 
 
             var target = document.querySelector('#opt');
             var observer = new MutationObserver(function(mutations) {
-                debug.resetStat();
+                debug.$resetStat();
                 mutations.forEach(function(mutation) {
                     if(mutation.type === 'characterData'){
-                        debug.mutateDOMCount++;
-                        debug.muhl = 'onchange';
+                        debug.data.mutateDOMCount++;
+                        debug.d('muhl','onchange');
                         return;
                     }
                     for(var i=mutation.removedNodes.length;i--;){
                         if(mutation.removedNodes[i].nodeType == 1){
-                            debug.delDOMCount ++;
-                            debug.delhl = 'onchange';
+                            debug.data.delDOMCount++;
+                            debug.d('delhl','onchange');
                         }
                     }
                     for(var i=mutation.addedNodes.length;i--;){
                         if(mutation.addedNodes[i].nodeType == 1){
-                            debug.addDOMCount ++;
-                            debug.addhl = 'onchange';
+                            debug.data.addDOMCount++;
+                            debug.d('addhl','onchange');
                         }
                     }
                 });    

@@ -24,19 +24,24 @@
         <script type="text/javascript">
             
             //渲染
-            impex.render(document.body,new function(){
-                this.a = {
-                    b:{
-                        c:{}
-                    }
-                };
-                this.b = 12;
-                this.a.b.c.list = [1,2,3,4];
-                this.onPropChange = function(){
-                    console.log(arguments)
-                }
+            impex.render(document.body,{
+                data:{
+                    a:{
+                        b:{
+                            c:{
+                                list:[1,2,3,4]
+                            }
+                        }
+                    },
+                    b:12,
 
-                this.onCreate = function(){
+                },
+                methods:{
+                    onPropChange : function(){
+                        console.log(arguments)
+                    }
+                },
+                onCreate : function(){
                     this.watch('a.b.x',function(){
                         console.log(1,arguments);
                     });
@@ -52,10 +57,10 @@
 
                     var that = this;
                     setTimeout(function(){
-                        that.a.b.c.list = [2,3,4];
-                        that.b = 'b';
-                        that.a.b.x = 1;
-                        that.x =23;
+                        that.data.a.b.c.list = [2,3,4];
+                        that.data.b = 'b';
+                        that.data.a.b.x = 1;
+                        that.data.x =23;
                     },1000);
                 }
             });

@@ -12,20 +12,19 @@
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
             //渲染
-            impex.render(document.body,new function(){
-                this.events = {
+            impex.render(document.body,{
+                data:{
+                    btns : [
+                        {name:'Button_',click:'showName'},
+                        {name:'Button_',click:'showName'},
+                        {name:'Button_',click:'showName'},
+                    ]
+                },
+                methods:{
                     showName:function(i){
                         return 'Button_'+i;
-                    },
-                    a:{
-
                     }
                 }
-                this.btns = [
-                    {name:'Button_',click:'events.showName'},
-                    {name:'Button_',click:'events.showName'},
-                    {name:'Button_',click:'events.showName'},
-                ]
             });
             
         </script>

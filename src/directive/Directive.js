@@ -16,21 +16,21 @@ function Directive (name,value) {
 	/**
 	 * 指令的字面值
 	 */
-	this.$value = value;
+	this.value = value;
 	/**
 	 * 指令名称
 	 */
-	this.$name = name;
+	this.name = name;
 	/**
 	 * 参数列表
 	 * @type {Array}
 	 */
-	this.$params;
+	this.params;
 	/**
 	 * 过滤函数
 	 * @type {Function}
 	 */
-	this.$filter;
+	this.filter;
 
 	/**
 	 * 是否终结<br/>
@@ -39,7 +39,7 @@ function Directive (name,value) {
 	 * @type {Boolean}
 	 * @default false
 	 */
-	this.$final = false;
+	this.final = false;
 	/**
 	 * 范围结束标记，用来标识一个范围指令的终结属性名<br/>
 	 * 如果设置了该标识，那么从当前指令开始到结束标识结束形成的范围，扫描器都不对内部进行扫描，包括表达式，指令，子组件都不会生成<br/>
@@ -48,12 +48,12 @@ function Directive (name,value) {
 	 * @type {String}
 	 * @default null
 	 */
-	this.$endTag = null;
+	this.endTag = null;
 	/**
 	 * 指令优先级用于定义同类指令的执行顺序。最大999
 	 * @type {Number}
 	 */
-	this.$priority = 0;
+	this.priority = 0;
 	/**
 	 * 当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果
 	 */
@@ -62,32 +62,34 @@ function Directive (name,value) {
 Util.inherits(Directive,Component);
 Util.ext(Directive.prototype,{
 	init:function(){
-		impex.__components[this.$__id] = this;
+		impex._cs[this.__id] = this;
 		//预处理自定义标签中的表达式
 		var exps = {};
 		var that = this;
-		this.$value.replace(REG_EXP,function(a,modelExp){
+		this.value.replace(REG_EXP,function(a,modelExp){
     		var expObj = lexer(modelExp);
 
-    		var val = Renderer.evalExp(that.$parent,expObj);
+    		var val = Renderer.evalExp(that.parent,expObj);
     		
     		//保存表达式
     		exps[modelExp] = {
     			val:val
     		};
     	});
-    	var attrVal = this.$value;
+    	var attrVal = this.value;
     	for(var k in exps){
 			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
 		}
 		
-		this.$value = attrVal;
+		this.value = attrVal;
 
 		LOGGER.log(this,'inited');
 
-		this.onInit && this.onInit();
+		if(this.onInit){
+			rs = this.onInit();
+		}
 
-		this.$__state = Component.state.inited;
+		this.__state = Component.state.inited;
 
 		//do observe
 		if(this.observe){
@@ -98,11 +100,11 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
-				if(this.$parent)
-				Builder.buildExpModel(this.$parent,varObj,aon);
+				if(this.parent)
+				Builder.buildExpModel(this.parent,varObj,aon);
 			}
 			
-			var rs = Renderer.evalExp(this.$parent,expObj);
+			var rs = Renderer.evalExp(this.parent,expObj);
 			this.observe(rs);
 		}
 	}

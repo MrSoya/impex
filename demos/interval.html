@@ -12,11 +12,13 @@
 
             //渲染
             impex.render(document.body,{
-                time : new Date().toTimeString(),
+                data:{
+                    time : new Date().toTimeString()
+                },
                 onDisplay : function(){
                     var that = this;
                     setInterval(function(){
-                        that.time = new Date().toTimeString();
+                        that.data.time = new Date().toTimeString();
                     },1000);
                 }
             });

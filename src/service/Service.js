@@ -10,11 +10,11 @@ function Service () {
 	 * @type {Boolean}
 	 * @default false
 	 */
-	this.$singleton;
+	this.singleton;
 	/**
 	 * 服务被注入到的宿主，可能是组件，指令或者另一个服务
 	 */
-	this.$host;
+	this.host;
 	/**
 	 * 构造函数，在服务被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务

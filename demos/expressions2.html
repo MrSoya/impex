@@ -32,7 +32,6 @@
 
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
-        <script type="text/javascript" src="../ext/impex.ext.directives.js"></script>
         <script type="text/javascript">
 
             var model = new function(){
@@ -58,7 +57,29 @@
             }
 
             //渲染
-            impex.render(document.body,model);
+            impex.render(document.body,{
+                data:{
+                    a:{
+                        b:{
+                            x:20,
+                            y:[{
+                                z:'x'
+                            }],
+                            a:{
+                                z:3000
+                            }
+                        }
+                    },
+                    b : {
+                        d:'x'
+                    }
+                },
+                methods:{
+                    change : function(b){
+                        this.data.a.b = new Function('return '+b)();
+                    }
+                }
+            });
             
         </script>
     </body>

@@ -16,11 +16,11 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-radio',{
-                $template:"<i><input type='radio'>radio</i>"
+                template:"<i><input type='radio'>radio</i>"
             });
 
             impex.component('x-check',{
-                $template:"<i><input type='checkbox'>checkbox</i>"
+                template:"<i><input type='checkbox'>checkbox</i>"
             });
 
             impex.component('x-tab',{
@@ -35,7 +35,7 @@
                 onRoute:function(path){
                     console.log(path);
                 },
-                $template:"<div>{{=CONTENT}}</div>"
+                template:"<div>{{=CONTENT}}</div>"
             },['XRouter']);
 
             

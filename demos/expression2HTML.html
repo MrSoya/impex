@@ -21,20 +21,20 @@
         <script type="text/javascript">
             impex.filter('append',{
                 to:function(){
-                    return this.$value + 'xxx';
+                    return this.value + 'extra';
                 }
             });
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.html1 = "<a href='http://soya2d.com'>{{title1}}</a>1212";
-                this.html2 = "<a href='https://github.com/MrSoya/impex'>{{title2}}</a>";
-                this.html3 = "";
-
-                this.title1 = 'soya2d';
-                this.title2 = 'impex';
-
-                this.list = [1,2,3]
+            var debug = impex.render(document.body,{
+                data:{
+                    html1 : "<a href='http://soya2d.com'>{{title1}}</a>1212",
+                    html2 : "<a href='https://github.com/MrSoya/impex'>{{title2}}</a>",
+                    html3 : "",
+                    title1 : 'soya2d',
+                    title2 : 'impex',
+                    list : [1,2,3]
+                }
             });
         </script>
     </body>

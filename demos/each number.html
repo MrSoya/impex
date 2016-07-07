@@ -11,15 +11,22 @@
             <li x-each="begin() to end as k , v =>orderBy::'desc'" step="5">{{k + ':' +v}}</li>
         </ul>
 
+        1-<input type="text" x-model="end" value="50">
+
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
             var debug = impex.render(document.body,{
-                begin:function(){
-                    return 1;
+                methods:{
+                    begin:function(){
+                        return 1;
+                    }
                 },
-                end:50
+                data:{
+                    end:50
+                }
+                
             });
             
         </script>

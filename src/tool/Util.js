@@ -11,6 +11,7 @@ var Util = new function () {
 	this.inherits = function(child,parent){
         child.prototype = Object.create(parent.prototype);
         child.prototype.constructor = child;
+        child.prototype._super = parent.prototype;
 	}
 
     this.ext = function(to,from){
@@ -18,29 +19,6 @@ var Util = new function () {
         for (var i=keys.length;i--;) {
             var k = keys[i];
             to[k] = from[k];
-        }
-    }
-
-	/**
-     * 扩展属性到对象
-     * @param {Object} to 
-     * @param {Object} from 
-     */
-	this.extProp = function(to,from){
-        var keys = Object.keys(from);
-        for (var i=keys.length;i--;) {
-            var k = keys[i];
-            if(from[k] instanceof Function)continue;
-            if(from[k] !== undefined)to[k] = from[k];
-        }
-    }
-
-    this.extMethod = function(to,from){
-        var keys = Object.keys(from);
-        for (var i=keys.length;i--;) {
-            var k = keys[i];
-            if(from[k] instanceof Function)
-                to[k] = from[k];
         }
     }
 

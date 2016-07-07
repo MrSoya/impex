@@ -17,11 +17,11 @@ function Filter (component) {
 	/**
 	 * 所在组件
 	 */
-	this.$component = component;
+	this.component = component;
 	/**
 	 * 系统自动计算的表达式结果
 	 */
-	this.$value;
+	this.value;
 	/**
 	 * 构造函数，在服务被创建时调用
 	 * 如果指定了注入服务，系统会在创建时传递被注入的服务

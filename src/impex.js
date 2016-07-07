@@ -10,6 +10,8 @@
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 
+	var METHOD_PREFIX = '$';
+
 	var EXP2HTML_EXP_TAG = '#';
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
@@ -25,8 +27,6 @@
 
 	var im_compCache = {};
 	var im_counter = 0;
-
-	var BUILD_IN_PROPS = ['emit','broadcast','data','closest','add','on','off','find','watch','init','display','destroy','suspend'];
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -89,55 +89,52 @@
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object} model 组件模型，用来定义新组件模版。<br/>
-		 * *模型属性是共享的，比如数组是所有实例公用。如果模型中的某些属性不想
-		 * 被表达式访问，只需要在名字前加上"$"符号<br/>
-		 * *模型方法会绑定到组件原型中，以节省内存
+		 * @param  {Object} param 组件参数<br/>
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.component = function(name,model,services){
-			if(!model.$template && !model.$templateURL){
-				LOGGER.error("can not find property '$template' or '$templateURL' of component '"+name+"'");
+		this.component = function(name,param,services){
+			if(!param.template && !param.templateURL){
+				LOGGER.error("can not find property 'template' or 'templateURL' of component '"+name+"'");
 				return;
 			}
-			ComponentFactory.register(name,model,services);
+			ComponentFactory.register(name,param,services);
 			return this;
 		}
 
 		/**
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
-		 * @param  {Object} model 指令模型，用来定义新指令模版
+		 * @param  {Object} param 指令参数
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.directive = function(name,model,services){
-			DirectiveFactory.register(name,model,services);
+		this.directive = function(name,param,services){
+			DirectiveFactory.register(name,param,services);
 			return this;
 		}
 
 		/**
 		 * 定义服务
 		 * @param  {string} name  服务名，注入时必须和创建时名称相同
-		 * @param  {Object} model 服务模型，用来定义新指令模版
+		 * @param  {Object} param 服务参数
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.service = function(name,model,services){
-			ServiceFactory.register(name,model,services);
+		this.service = function(name,param,services){
+			ServiceFactory.register(name,param,services);
 			return this;
 		}
 
 		/**
 		 * 定义过滤器
 		 * @param  {string} name  过滤器名
-		 * @param  {Object} model 过滤器模型，用来定义新过滤器模版
+		 * @param  {Object} param 过滤器参数
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 * @return this
 		 */
-		this.filter = function(name,model,services){
-			FilterFactory.register(name,model,services);
+		this.filter = function(name,param,services){
+			FilterFactory.register(name,param,services);
 			return this;
 		}
 
@@ -162,11 +159,10 @@
 		 * 如果DOM元素本身并不是组件,系统会创建一个虚拟组件，也就是说
 		 * impex总会从渲染一个组件作为一切的开始
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
-		 * @param  {Object} model 模型，用来给组件提供数据支持，如果节点本身已经是组件，
-		 * 该模型所包含参数会附加到模型中 
+		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
-		this.render = function(element,model,services){
+		this.render = function(element,param,services){
 			if(!element){
 				LOGGER.error('invalid element, can not render');
 				return;
@@ -179,7 +175,7 @@
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance(element,null,model);
+				comp = ComponentFactory.newInstance(element,null,param);
 			}
 
 			if(comp.onCreate){
@@ -193,7 +189,7 @@
 					}
 				}
 				svs ? comp.onCreate.apply(comp,svs) : comp.onCreate();
-			}			
+			}
 			
 			comp.init();
 			comp.display();
@@ -211,5 +207,5 @@
 			return false;
 		}
 
-		this.__components = {};
+		this._cs = {};
 	}

@@ -8,22 +8,27 @@
     	<button 
             :mousedown="console.log(3434)"
             :click:mouseup="console.log(root,$event)" 
-            x-on:dblclick="showMe('wow',true);root.tip='!!';root.showMe(root.tip);">点我两下试试！！</button>
+            x-on:dblclick="showMe('wow',true);root.tip='!!';showMe2(root.tip);">点我两下试试！！</button>
     
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render(document.body,new function(){
-                this.showMe = function(wow,x){
-                    alert('show me the impetus! '+wow+x);
-                }
-                this.root = {
-                    tip:'',
-                    showMe:function(tip){
+            impex.render(document.body,{
+                data:{
+                    root:{
+                        tip:''
+                    }
+                },
+                methods:{
+                    showMe : function(wow,x){
+                        alert('show me the impex! '+wow + x);
+                    },
+                    showMe2:function(tip){
                         alert('show me again '+tip);
                     }
-                };
+                }
+                
             });
             
         </script>

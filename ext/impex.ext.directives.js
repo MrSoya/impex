@@ -10,8 +10,8 @@
      */
     impex.directive('mouseleave',{
         onInit : function(){
-        	var currentTarget = this.$view.el;
-            this.$view.on('mouseout',this.$value,function(e,origin){
+        	var currentTarget = this.view.el;
+            this.view.on('mouseout',this.value,function(e,origin){
             	var target = e.target;
 
             	if(!contains(currentTarget,target))return false;
@@ -43,7 +43,7 @@
     impex.directive('mousewheel',{
         onInit : function(){
             var type = document.body.onmousewheel == null?'mousewheel':'DOMMouseScroll';
-            this.$view.on(type,this.$value);
+            this.view.on(type,this.value);
         }
     });
 }(impex);

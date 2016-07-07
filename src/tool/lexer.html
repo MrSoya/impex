@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html >
     <head>
-        <title>Impetus Demo</title>
+        <title>impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
         <script type="text/javascript" src="lexer.js"></script>
         <script type="text/javascript">
-            // lexer('x.a[y.b(d.c[0])]')
+            lexer('x.a[y.b(d.c[0])]')
             // lexer("info[aaa].msg")
 
             // lexer('parseInt(date.split("-")[2])')
-            // lexer("a(row.x[k])")
-            // lexer('a(true)');
+            lexer("a(row.x[k])")
+            lexer('a(true)');
             // lexer('time');
             // lexer("info[x[row[col.name].msg]]")
             // lexer("info[row[col.name]].msg")
             // lexer("a(row[a+b].x).msg")
-            // lexer('tip(x+1).y');
-            // lexer('tip[x+1].y');
+            lexer('tip(x+1).y');
+            lexer('tip[x+1].y');
             // lexer("a(this)")
             // lexer("b.c[a.b[a.c+1]['y'][a.c]['z']]")
             // lexer("a.b[a.c + b.d].x");

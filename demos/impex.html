@@ -6,32 +6,44 @@
     </head>
     <body>
         <div id="entry">
-            {{ 'hello ' + title => cap}}
-            <x-subtitle>
-                {{version}}
-            </x-subtitle>
+            {{a.b.c}}
         </div>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
-            //过滤器
-            impex.filter('cap',{
-                to:function(){
-                    var cap = this.$value[0].toUpperCase();
-                    return cap + this.$value.substr(1);
-                }
-            });
-            //组件
-            impex.component('x-subtitle',{
-                $template:"<sub>{{=CONTENT}}</sub>"
-            });
 
             //渲染
-            var debug= impex.render(document.getElementById('entry'),new function(){
-                this.title = 'impex';
-                this.version = impex.version.toString();
+            var debug= impex.render(document.getElementById('entry'),{
+                data:{//数据对象
+                    ary:[1],
+                    html:'',
+                    num:3,
+                    a:{}
+                },
+                methods:{//函数列表
+                    hi:function(){
+                        this.emit('hello','hug me');
+                    },
+                    num:function(){return 2;}
+                },
+                onInit:function(){
+                    for(var i=10;i--;){
+                        this.data.html += '<div>{{num + b}}</div>';
+                    }
+                    this.s = Date.now();
+                },
+                onDisplay:function(){
+                    console.log(Date.now() - this.s)
+                },
+                onDestory:function(){},
+                events:{//自定义事件
+                    hello:function(target,msg){
+                        this.msg = msg +' from '+target.$name;
+                    }
+                }
             });
-            
+
+
         </script>
     </body>
 </html>

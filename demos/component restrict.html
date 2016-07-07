@@ -16,23 +16,23 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-button',{
-                $restrict:{
+                restrict:{
                     parents:'x-span'
                 },
-                $template:"<button >{{=CONTENT}}</button>"
+                template:"<button >{{=CONTENT}}</button>"
             });       
 
             impex.component('x-div',{
-                $restrict:{
+                restrict:{
                     children:'x-button'
                 },
-                $template:"<div><x-button>Button A</x-button></div>"
+                template:"<div><x-button>Button A</x-button></div>"
             });
             impex.component('x-span',{
-                $restrict:{
+                restrict:{
                     children:'x-button'
                 },
-                $template:"<span><x-button>Button B</x-button></span>"
+                template:"<span><x-button>Button B</x-button></span>"
             });
 
             //渲染

@@ -18,19 +18,21 @@
 	//过滤器
     impex.filter('cap',{
         to:function(){
-            var cap = this.$value[0].toUpperCase();
-            return cap + this.$value.substr(1);
+            var cap = this.value[0].toUpperCase();
+            return cap + this.value.substr(1);
         }
     });
     //组件
     impex.component('x-subtitle',{
-        $template:"<sub>{{=CONTENT}}</sub>"
+        template:"<sub>{{=CONTENT}}</sub>"
     });
 
     //渲染
-    impex.render(document.getElementById('entry'),new function(){
-        this.title = 'impex';
-        this.version = impex.version.toString();
+    impex.render(document.getElementById('entry'),{
+        data:{
+            title:'impex',
+            version:impex.version.toString()
+        }
     });
 
 </script>

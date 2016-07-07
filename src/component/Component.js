@@ -3,8 +3,7 @@
  * 组件也可以有属性。
  * <br/>
  * 组件可以设置事件或者修改视图样式等<br/>
- * 组件实例本身会作为视图的数据源，也就是说，实例上的属性、方法可以在视图中
- * 通过表达式访问，唯一例外的是以$开头的属性，这些属性不会被监控<br/>
+ * 组件实例为组件视图提供了数据和控制
  * 组件可以包含组件，所以子组件视图中的表达式可以访问到父组件模型中的值
  * <p>
  * 	组件生命周期
@@ -21,43 +20,47 @@
  */
 function Component (view) {
 	var id = 'C_' + im_counter++;
-	this.$__id = id;
-	this.$__state = Component.state.created;
+	this.__id = id;
+	this.__state = Component.state.created;
 	/**
 	 * 组件绑定的视图对象，在创建时由系统自动注入
 	 * 在DOM中，视图对象的所有操作都针对自定义标签的顶级元素，而不包括子元素
 	 * @type {View}
 	 */
-	this.$view = view;
+	this.view = view;
 	/**
 	 * 组件名，在创建时由系统自动注入
 	 */
-	this.$name;
+	this.name;
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
 	 */
-	this.$parent;
-	this.$__components = [];
-	this.$__expNodes = [];
-	this.$__expPropRoot = new ExpProp();
-	this.$__watcher;
-	this.$__events = {};
+	this.parent;
+	/**
+	 * 子组件列表
+	 * @type {Array}
+	 */
+	this.children = [];
+	this.__expNodes = [];
+	this.__expPropRoot = new ExpProp();
+	this.__watcher;
+	this.__eventMap = {};
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
 	 */
-	this.$template;
+	this.template;
 	/**
 	 * 组件模板url，动态加载组件模板
 	 */
-	this.$templateURL;
+	this.templateURL;
 	/**
 	 * 是否为替换模式生成组件，如果为false，组件模版会插入组件标签内部
 	 * @default true
 	 * @type {Boolean}
 	 */
-	this.$replace = true;
+	this.replace = true;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -69,30 +72,30 @@ function Component (view) {
 	 * 这些限制可以单个或者同时出现
 	 * @type {Object}
 	 */
-	this.$restrict;
+	this.restrict;
 	/**
 	 * 隔离列表，用于阻止组件属性变更时，自动广播子组件，如['x.y','a']。
 	 * 
 	 * @type {Array}
 	 */
-	this.$isolate;
+	this.isolate;
+
 	/**
-	 * 构造函数，在组件被创建时调用
-	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
+	 * 组件数据
+	 * @type {Object}
 	 */
-	this.onCreate;
+	this.data = {};
+
 	/**
-	 * 组件初始化时调用,如果返回false，该组件中断初始化，并销毁
+	 * 组件方法
+	 * @type {Object}
 	 */
-	this.onInit;
+	this.methods = {};
 	/**
-	 * 组件被显示时调用
+	 * 自定义事件接口
+	 * @type {Object}
 	 */
-	this.onDisplay;
-	/**
-	 * 组件被销毁时调用
-	 */
-	this.onDestroy;
+	this.events = {};
 };
 Component.state = {
 	created : 'created',
@@ -103,7 +106,7 @@ Component.state = {
 function broadcast(comps,type,params){
 	for(var i=0;i<comps.length;i++){
 		var comp = comps[i];
-		var evs = comp.$__events[type];
+		var evs = comp.__eventMap[type];
 		var conti = true;
 		if(evs){
 			conti = false;
@@ -111,12 +114,24 @@ function broadcast(comps,type,params){
 				conti = evs[l].apply(comp,params);
 			}
 		}
-		if(conti && comp.$__components.length>0){
-			broadcast(comp.$__components,type,params);
+		if(conti && comp.children.length>0){
+			broadcast(comp.children,type,params);
 		}
 	}
 }
 Util.ext(Component.prototype,{
+	/**
+	 * 设置或获取组件数据
+	 * *该方法不支持路径查找
+	 * @return {[type]} [description]
+	 */
+	d:function(k,v){
+		if(arguments.length>1){
+			this.data[k] = v;
+			return this;
+		}
+		return this.data[k];
+	},
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
 	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
@@ -125,7 +140,7 @@ Util.ext(Component.prototype,{
 	 * @param  {var} val  值
 	 * @return this
 	 */
-	data:function(path,val){
+	d2:function(path,val){
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
@@ -159,8 +174,8 @@ Util.ext(Component.prototype,{
 	closest:function(path){
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		evalStr.replace(/^impex\.__components\["(C_[0-9]+)"\]/,'');
-		return impex.__components[RegExp.$1];
+		evalStr.replace(/^impex\._cs\["(C_[0-9]+)"\]/,'');
+		return impex._cs[RegExp.$1];
 	},
 	/**
 	 * 绑定自定义事件到组件
@@ -168,9 +183,9 @@ Util.ext(Component.prototype,{
      * @param  {Function} handler   事件处理回调，回调参数[target，arg1,...]
 	 */
 	on:function(type,handler){
-		var evs = this.$__events[type];
+		var evs = this.__eventMap[type];
 		if(!evs){
-			evs = this.$__events[type] = [];
+			evs = this.__eventMap[type] = [];
 		}
 		evs.push(handler);
 	},
@@ -185,10 +200,10 @@ Util.ext(Component.prototype,{
 		for (var i =1 ; i < arguments.length; i++) {
 			params.push(arguments[i]);
 		}
-		var my = this.$parent;
+		var my = this.parent;
 		setTimeout(function(){
 			while(my){
-				var evs = my.$__events[type];
+				var evs = my.__eventMap[type];
 				if(evs){
 					var interrupt = true;
 					for(var i=0;i<evs.length;i++){
@@ -197,7 +212,7 @@ Util.ext(Component.prototype,{
 					if(interrupt)return;
 				}				
 
-				my = my.$parent;
+				my = my.parent;
 			}
 		},0);
 	},
@@ -214,7 +229,7 @@ Util.ext(Component.prototype,{
 		}
 		var my = this;
 		setTimeout(function(){
-			broadcast(my.$__components,type,params);
+			broadcast(my.children,type,params);
 		},0);
 	},
 	/**
@@ -228,9 +243,9 @@ Util.ext(Component.prototype,{
 	find:function(name,conditions,recur){
 		name = name.toLowerCase();
 		var rs = [];
-		for(var i=this.$__components.length;i--;){
-			var comp = this.$__components[i];
-			if(name === '*' || comp.$name === name){
+		for(var i=this.children.length;i--;){
+			var comp = this.children[i];
+			if(name === '*' || comp.name === name){
 				var matchAll = true;
 				if(conditions)
 					for(var k in conditions){
@@ -243,7 +258,7 @@ Util.ext(Component.prototype,{
 					rs.push(comp);
 				}
 			}
-			if(recur && comp.$__components.length>0){
+			if(recur && comp.children.length>0){
 				var tmp = comp.find(name,conditions,true);
 				if(rs)rs = rs.concat(tmp);
 			}
@@ -257,7 +272,7 @@ Util.ext(Component.prototype,{
 	 */
 	watch:function(expPath,cbk){
 		if(expPath === '*'){
-			this.$__watcher = cbk;
+			this.__watcher = cbk;
 		}else{
 			var expObj = lexer(expPath);
 			var keys = Object.keys(expObj.varTree);
@@ -280,8 +295,8 @@ Util.ext(Component.prototype,{
 	 * @param {Component} child 子组件
 	 */
 	add:function(child){
-		this.$__components.push(child);
-		child.$parent = this;
+		this.children.push(child);
+		child.parent = this;
 	},
 	/**
 	 * 创建一个未初始化的子组件
@@ -291,8 +306,8 @@ Util.ext(Component.prototype,{
 	 */
 	createSubComponentOf:function(type,target){
 		var instance = ComponentFactory.newInstanceOf(type,target.__nodes?target.__nodes[0]:target);
-		this.$__components.push(instance);
-		instance.$parent = this;
+		this.children.push(instance);
+		instance.parent = this;
 
 		return instance;
 	},
@@ -304,8 +319,8 @@ Util.ext(Component.prototype,{
 	 */
 	createSubComponent:function(tmpl,target){
 		var instance = ComponentFactory.newInstance(tmpl,target && target.__nodes[0]);
-		this.$__components.push(instance);
-		instance.$parent = this;
+		this.children.push(instance);
+		instance.parent = this;
 
 		return instance;
 	},
@@ -313,57 +328,59 @@ Util.ext(Component.prototype,{
 	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
 	 */
 	init:function(){
-		if(this.$__state !== Component.state.created)return;
-		impex.__components[this.$__id] = this;
+		if(this.__state !== Component.state.created)return;
+		impex._cs[this.__id] = this;
 
-		if(this.$templateURL){
+		if(this.templateURL){
 			var that = this;
-			Util.loadTemplate(this.$templateURL,function(tmplStr){
-				var rs = that.$view.__init(tmplStr,that);
+			Util.loadTemplate(this.templateURL,function(tmplStr){
+				var rs = that.view.__init(tmplStr,that);
 				if(rs === false)return;
 				that.__init(tmplStr);
 				that.display();
 			});
 		}else{
-			if(this.$template){
-				var rs = this.$view.__init(this.$template,this);
+			if(this.template){
+				var rs = this.view.__init(this.template,this);
 				if(rs === false)return;
 			}
-			this.__init(this.$template);
+			this.__init(this.template);
 		}
 		return this;
 	},
 	__init:function(tmplStr){
-		Scanner.scan(this.$view,this);
+		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
 		
 		var rs = null;
-		this.onInit && (rs = this.onInit(tmplStr));
+		if(this.onInit){
+			rs = this.onInit(tmplStr);
+		}
 		if(rs === false){
 			this.destroy();
 			return;
 		}
 
-		this.$__state = Component.state.inited;
+		this.__state = Component.state.inited;
 	},
 	/**
 	 * 显示组件到视图上
 	 */
 	display:function(){
 		if(
-			this.$__state !== Component.state.inited && 
-			this.$__state !== Component.state.suspend
+			this.__state !== Component.state.inited && 
+			this.__state !== Component.state.suspend
 		)return;
 
-		this.$view.__display(this);
+		this.view.__display(this);
 		
-		if(this.$__state !== Component.state.suspend){
+		if(this.__state !== Component.state.suspend){
 			Renderer.render(this);
 			Builder.build(this);
 		}
 
-		this.$__state = Component.state.displayed;
+		this.__state = Component.state.displayed;
 		LOGGER.log(this,'displayed');
 
 		this.onDisplay && this.onDisplay();
@@ -372,60 +389,57 @@ Util.ext(Component.prototype,{
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.$__state === null)return;
+		if(this.__state === null)return;
 
 		LOGGER.log(this,'destroy');
 
-		if(this.$parent){
-			var i = this.$parent.$__components.indexOf(this);
+		if(this.parent){
+			var i = this.parent.children.indexOf(this);
 			if(i > -1){
-				this.$parent.$__components.splice(i,1);
+				this.parent.children.splice(i,1);
 			}
-			this.$parent = null;
+			this.parent = null;
 		}
 		
-		this.$view.__destroy(this);
+		this.view.__destroy(this);
 
-		while(this.$__components.length > 0){
-			this.$__components[0].destroy();
+		while(this.children.length > 0){
+			this.children[0].destroy();
 		}
 
-		this.$view = 
-		this.$__components = 
-		this.$__expNodes = 
-		this.$__expPropRoot = null;
+		this.view = 
+		this.children = 
+		this.__expNodes = 
+		this.__expPropRoot = null;
 
 		this.onDestroy && this.onDestroy();
 
-		if(CACHEABLE && this.$name && !(this instanceof Directive)){
-			var cache = im_compCache[this.$name];
-			if(!cache)cache = im_compCache[this.$name] = [];
+		if(CACHEABLE && this.name && !(this instanceof Directive)){
+			var cache = im_compCache[this.name];
+			if(!cache)cache = im_compCache[this.name] = [];
 
-			this.$__state = Component.state.created;
-			this.$__components = [];
-			this.$__expNodes = [];
-			this.$__expPropRoot = new ExpProp();
+			this.__state = Component.state.created;
+			this.children = [];
+			this.__expNodes = [];
+			this.__expPropRoot = new ExpProp();
 
 			cache.push(this);
 		}else{
-			impex.__components[this.$__id] = null;
-			delete impex.__components[this.$__id];
+			impex._cs[this.__id] = null;
+			delete impex._cs[this.__id];
 
-			this.$__impex__observer = 
-			this.$__impex__propChains = 
-			this.$__state = 
-			this.$__id = 
-			this.$templateURL = 
-			this.$template = 
-			this.$restrict = 
-			this.$isolate = 
-			this.onCreate = 
-			this.onInit = 
-			this.onDisplay = 
-			this.onSuspend = 
-			this.onDestroy = null;
+			this.__impex__observer = 
+			this.__impex__propChains = 
+			this.__state = 
+			this.__id = 
+			this.templateURL = 
+			this.template = 
+			this.restrict = 
+			this.isolate = 
+			this.methods = 
+			this.events = 
+			this.data = null;
 		}
-
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -435,17 +449,17 @@ Util.ext(Component.prototype,{
 	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(!(this instanceof Directive) && this.$__state !== Component.state.displayed)return;
+		if(!(this instanceof Directive) && this.__state !== Component.state.displayed)return;
 
 		LOGGER.log(this,'suspend');
 		
-		this.$view.__suspend(this,hook===false?false:true);
+		this.view.__suspend(this,hook===false?false:true);
 
 		this.onSuspend && this.onSuspend();
 
-		this.$__state = Component.state.suspend;
+		this.__state = Component.state.suspend;
 	},
 	__getPath:function(){
-		return 'impex.__components["'+ this.$__id +'"]';
+		return 'impex._cs["'+ this.__id +'"]';
 	}
 });

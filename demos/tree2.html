@@ -18,54 +18,56 @@
             });
         
         	impex.component('x-tree',{
-        		$template:'<ul>'+
+                onInit:function(){
+                    var theComp = this.closest('a');
+                    console.log(theComp);
+                    var dataSource = this.parent.d2(this.datasource);
+                    this.data.items = dataSource;
+                },
+        		template:'<ul>'+
                                 '<li x-each="items as item">'+
                                     '<a>{{item.name}}</a>'+
                                     '{{# treeItems(this,item.children)}}'+
                                 '</li>'+
                             '</ul>',
-        		treeItems:function(comp,items){
-        			comp['items'] = items;
-        			if(items){
-        				return "<ul><li x-each='items as item'><a>{{item.name}}</a>"+
-        				    "{{# treeItems(this,item.children)}}"+
-        				"</li></ul>"
-        			}
-        		},
-                // closest : null,
-                onInit:function(){
-                    var theComp = this.closest('a');
-                    console.log(theComp);
-                    var dataSource = this.$parent.data(this.datasource);
-                    this.items = dataSource;
+                methods:{
+                    treeItems:function(comp,items){
+                        comp.data['items'] = items;
+                        if(items){
+                            return "<ul><li x-each='items as item'><a>{{item.name}}</a>"+
+                                "{{# treeItems(this,item.children)}}"+
+                            "</li></ul>"
+                        }
+                    }
                 }
+        		
         	});
             //渲染
-            var debug = impex.render(document.getElementById('entry'),new function(){
-                this.onDisplay = function(){
-
-                    this.lists[4].children[2].name = 'n11'
-                }
-                // this.data = null;
-                this.a = null;
-                this.lists = [
-                    {name:'n1',pid:0,id:1},
-                    {name:'n2',pid:0,id:2},
-                    {name:'n3',pid:0,id:3},
-                    {name:'n4',pid:0,id:4},
-                    {name:'n5',pid:0,id:5,children:[
-                        {name:'c1',pid:5},
-                        {name:'c2',pid:5},
-                        {name:'c3',pid:5},
-                        {name:'c4',pid:5,children:[
-                            {name:'cc1',pid:5},
-                            {name:'cc2',pid:5},
-                            {name:'cc3',pid:5},
-                            {name:'cc4',pid:5},
-                            {name:'cc5',pid:5}
+            var debug = impex.render(document.getElementById('entry'),{
+                onDisplay : function(){
+                    this.data.lists[4].children[2].name = 'n11'
+                },
+                data:{
+                    a : null,
+                    lists : [
+                        {name:'n1',pid:0,id:1},
+                        {name:'n2',pid:0,id:2},
+                        {name:'n3',pid:0,id:3},
+                        {name:'n4',pid:0,id:4},
+                        {name:'n5',pid:0,id:5,children:[
+                            {name:'c1',pid:5},
+                            {name:'c2',pid:5},
+                            {name:'c3',pid:5},
+                            {name:'c4',pid:5,children:[
+                                {name:'cc1',pid:5},
+                                {name:'cc2',pid:5},
+                                {name:'cc3',pid:5},
+                                {name:'cc4',pid:5},
+                                {name:'cc5',pid:5}
+                            ]}
                         ]}
-                    ]}
-                ];
+                    ]
+                }
             });
             
         </script>

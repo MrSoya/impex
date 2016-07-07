@@ -23,14 +23,15 @@
         <script type="text/javascript">
 
             //渲染
-            impex.render(document.body,new function(){
-                this.a = 'color';
-                this.color = 'red';
-
-                this.onInit = function(){
+            impex.render(document.body,{
+                data:{
+                    a:'color',
+                    color : 'red'
+                },
+                onInit:function(){
                     var that = this;
                     setTimeout(function(){
-                        that.color = 'green';
+                        that.data.color = 'green';
                     },1000);
                 }
             });

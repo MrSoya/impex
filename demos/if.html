@@ -28,19 +28,18 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.aaa = 10;
-                this.a = {
-                    x:0
-                }
-                this.b = {
-                    y:4
-                }
-                this.fn = function(){
-                    return 1;
-                }
-
-                this.list = [1,2,3,4];
+            var debug = impex.render(document.body,{
+            	data:{
+            		aaa : 10,
+	                a : {
+	                    x:0
+	                },
+	                b : {
+	                    y:4
+	                },
+	                list : [1,2,3,4]
+            	}
+                
             });
             
         </script>

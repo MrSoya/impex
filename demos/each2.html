@@ -17,8 +17,12 @@
         <script type="text/javascript" src="../build/impex.all.js"></script>
         <script type="text/javascript">
 
-            var model = new function(){
-                this.a = {
+            
+
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    a : {
                     b:{
                         rows:[
                             {
@@ -49,9 +53,7 @@
                             }
                         ]
                     }
-                }
-
-                this.info = [
+                },info : [
                     {
                         msg:'1'
                     },
@@ -63,10 +65,8 @@
                     }
                 ]
 
-            }
-
-            //渲染
-            impex.render(document.body,model);
+                }
+            });
             
         </script>
     </body>

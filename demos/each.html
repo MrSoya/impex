@@ -16,20 +16,20 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,new function(){
-                this.list = {
-                    tip:{
-                        info:'info'
-                    },
-                    info:['impex is ','a mvvm framework ','to build webUI ','simpler & stronger ']
-                };
-
-                //组件显示时触发
-                this.onDisplay = function(){
+            var debug = impex.render(document.body,{
+                onDisplay : function(){
                     var that = this;
                     setTimeout(function(){
-                        that.list.info = [1,2];
+                        that.data.list.info = [1,2];
                     },1000);
+                },
+                data:{
+                    list : {
+                        tip:{
+                            info:'info'
+                        },
+                        info:['impex is ','a mvvm framework ','to build webUI ','simpler & stronger ']
+                    }
                 }
             });
             

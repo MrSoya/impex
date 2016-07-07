@@ -19,43 +19,48 @@
             impex.config({
                 logger:imLog
             });
-            
+            var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
             //渲染
-            impex.render(document.body,new function(){
-                this.value = 10;
-                var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
-                this.bindWheel = function(comp){
-                    var that = this;
-                    comp.$view.on(type,null,function(e){
-                        var wd = e.wheelDelta;
-                        var d = e.detail;
-                        var dir;
-                        if(wd !== undefined){
-                            dir = wd>0?-1:1;
-                        }else{
-                            dir = d>0?1:-1;
-                        }
+            impex.render(document.body,{
+                data:{
+                    value:10
+                },
+                lifecycle:{
+                    init : function(){
+                        this.watch('data.value',function(type,newVal,oldVal){
+                            var nv = /^-?[0-9]+$/.test(newVal);
+                            if(!nv){
+                                this.data.value = oldVal||0;
+                            }
+                        });
+                    }
+                },
+                methods:{
+                    unbindWheel : function(comp){
+                        comp.view.off(type,null);
+                    },
+                    bindWheel : function(comp){
+                        var that = this;
+                        comp.view.on(type,null,function(e){
+                            var wd = e.wheelDelta;
+                            var d = e.detail;
+                            var dir;
+                            if(wd !== undefined){
+                                dir = wd>0?-1:1;
+                            }else{
+                                dir = d>0?1:-1;
+                            }
 
 
-                        if(dir>0){
-                            that.value = parseFloat(that.value) + 1;
-                        }else{
-                            that.value = parseFloat(that.value) - 1;
-                        }
+                            if(dir>0){
+                                that.data.value = parseFloat(that.data.value) + 1;
+                            }else{
+                                that.data.value = parseFloat(that.data.value) - 1;
+                            }
 
-                        return false;
-                    });
-                }
-                this.unbindWheel = function(comp){
-                    comp.$view.off(type,null);
-                }
-                this.onInit = function(){
-                    this.watch('value',function(type,newVal,oldVal){
-                        var nv = /^-?[0-9]+$/.test(newVal);
-                        if(!nv){
-                            this.value = oldVal||0;
-                        }
-                    });
+                            return false;
+                        });
+                    }
                 }
             });
             

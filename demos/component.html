@@ -13,15 +13,18 @@
             //自定义组件
             impex.component('x-button',{
                 onInit:function(){
-                    this.$view.on('click','tip()');
+                    this.view.on('click','tip(1)');
                     this.times = 0;
                 },
-                tip : function(){
-                    alert('clicked '+(this.times++)+' times');
+                methods:{
+                    tip : function(x){
+                        alert('clicked '+(this.times++)+' times');
+                    }
                 },
-                $template:"<button style='border:{{border}}' id='{{id}}'>click here</button>"
+                //注意这里，times并不是组件数据，而是一个自定义的组件属性，所以无法在表达式中使用
+                template:"<button style='border:{{border}}' id='{{id}}'>click here {{times}}</button>"
             });
-
+            
             //渲染
             impex.render(document.body);
             

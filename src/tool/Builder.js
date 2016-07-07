@@ -6,8 +6,8 @@ var Builder = new function() {
 	//预链接
 	function prelink(comp){
 		//build expressions
-		for(var i=comp.$__expNodes.length;i--;){
-			var expNode = comp.$__expNodes[i];
+		for(var i=comp.__expNodes.length;i--;){
+			var expNode = comp.__expNodes[i];
 			for(var expStr in expNode.expMap){
 				var lexInfo = expNode.expMap[expStr];
 				var varTree = lexInfo.varTree;
@@ -17,14 +17,14 @@ var Builder = new function() {
 					var varObj = varTree[varStr];
 
 					//监控变量
-					buildExpModel(comp,varObj,expNode);
+					if(!varObj.isFunc)buildExpModel(comp,varObj,expNode);
 				}
 			}
 		}
 
 		//build components
-		for(var i=comp.$__components.length;i--;){
-			var subComp = comp.$__components[i];
+		for(var i=comp.children.length;i--;){
+			var subComp = comp.children[i];
 			if(subComp instanceof Directive)continue;
 
 			//激活组件
@@ -33,8 +33,8 @@ var Builder = new function() {
 		}
 
 		//build directives
-		for(var i=comp.$__components.length;i--;){
-			var subComp = comp.$__components[i];
+		for(var i=comp.children.length;i--;){
+			var subComp = comp.children[i];
 			if(!(subComp instanceof Directive))continue;
 
 			subComp.init();
@@ -47,7 +47,7 @@ var Builder = new function() {
  			buildExpModel(ctrlScope,subVar,expNode);
  		}
 
- 		var prop = walkPropTree(ctrlScope.$__expPropRoot.subProps,varObj.segments[0],expNode);
+ 		var prop = walkPropTree(ctrlScope.__expPropRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
@@ -84,7 +84,7 @@ var Builder = new function() {
 	this.build = function(component){
 		prelink(component);
 		
-		observerProp(component,[],component);
+		observerProp(component.data,[],component);
 	}
 
 	function observerProp(model,propChain,component){
@@ -109,18 +109,18 @@ var Builder = new function() {
         }
 
     	function __observer(changes){
-			if(component.$__state === Component.state.suspend)return;
-			if(component.$__state === null)return;
+			if(component.__state === Component.state.suspend)return;
+			if(component.__state === null)return;
 
 			changeHandler(changes);
 		}
 
-		model.$__impex__observer = __observer;
-		model.$__impex__propChains = {};
+		Object.defineProperty(model,'$__impex__observer',{enumerable: false,writable: true,value:__observer});
+		Object.defineProperty(model,'$__impex__propChains',{enumerable: false,writable: true,value:{}});
         model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
 
 		if(isArray){
-			model.$__impex__oldVal = model.concat();
+			Object.defineProperty(model,'$__impex__oldVal',{enumerable: false,writable: true,value:model.concat()});
 
 			Array_observe(model,__observer);
 		}else if(isObject){
@@ -133,7 +133,6 @@ var Builder = new function() {
 		var ks = Object.keys(model);
 		for(var i=ks.length;i--;){
 			var k = ks[i];
-			if(k.indexOf('$')===0)continue;
 			var pc = propChain.concat();
 			pc.push(k);
 			observerProp(model[k],pc,component);
@@ -203,7 +202,7 @@ var Builder = new function() {
 
 	var sqbExp = /(^\[)|(,\[)/;
 	function rerender(component,propChain,changeType,newVal,oldVal){
-		var props = component.$__expPropRoot.subProps;
+		var props = component.__expPropRoot.subProps;
 		var prop;
 		var hasSqb = false;
 		for(var i=0;i<propChain.length;i++){
@@ -313,7 +312,7 @@ var Builder = new function() {
 			}
 			var prop = undefined;
             try{
-                prop = eval('impex.__components["'+component.$__id+'"]'+__propStr);
+                prop = eval('impex._cs["'+component.$__id+'"]'+__propStr);
             }catch(e){}
             if(!Util.isUndefined(prop)){
             	__lastMatch = component;
@@ -324,10 +323,10 @@ var Builder = new function() {
 		if(toRender){
 			rerender(component,propChain,changeType,newVal,oldVal);
 		}
-		if(component.$isolate){
+		if(component.isolate){
 			var pc0 = propChain[0];
-			for(var i=component.$isolate.length;i--;){
-				var k = component.$isolate[i];
+			for(var i=component.isolate.length;i--;){
+				var k = component.isolate[i];
 				if(k.indexOf('.')>0){
 					var kc = k.split('.');
 					var matchAll = true;
@@ -343,8 +342,8 @@ var Builder = new function() {
 			}
 		}
 
-		for(var j=component.$__components.length;j--;){
-			var subCtrlr = component.$__components[j];
+		for(var j=component.children.length;j--;){
+			var subCtrlr = component.children[j];
  			recurRender(subCtrlr,propChain,changeType,newVal,oldVal,depth+1,topComp);
  		}
 	}

@@ -31,26 +31,26 @@
     var lastComp;
     function stateLog(comp,state){
         var indent = '';
-        var p = comp.$parent;
+        var p = comp.parent;
         while(p){
             indent += '=';
-            p = p.$parent;
+            p = p.parent;
         }
         var info = '';
         if(comp === lastComp){
             info = '↑↑↑ ↑↑↑ ↑↑↑ ';
         }else{
             var props = [];
-            props.push('id:'+comp.$__id);
-            if(comp.$name)
-                props.push('name:'+comp.$name);
-            var viewName = comp.$view?comp.$view.__nodes[0].tagName:'';
+            props.push('id:'+comp.__id);
+            if(comp.name)
+                props.push('name:'+comp.name);
+            var viewName = comp.view?comp.view.__nodes[0].tagName:'';
             props.push('view:'+viewName);
-            if(comp.$parent){
-                props.push('parentId:'+(comp.$parent?comp.$parent.$__id:'null'));
+            if(comp.parent){
+                props.push('parentId:'+(comp.parent?comp.parent.__id:'null'));
             }
 
-            var type = comp.$endTag === null?'Directive':'Component';
+            var type = comp.endTag === null?'Directive':'Component';
 
             info = type+'{'+ props.join(',') +'} ';
         }
