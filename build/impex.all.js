@@ -2916,8 +2916,11 @@ Factory.prototype = {
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 
 		var props = {};
-		Util.ext(props,param);
+		
+		var data = param.data;
+		delete param.data;
 
+		Util.ext(props,param);
 		Util.inherits(clazz,this.baseClass);
 
 		if(param.methods){
@@ -2926,7 +2929,7 @@ Factory.prototype = {
 			}
 		}
 
-		this.types[type] = {clazz:clazz,props:props,services:services};
+		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
 	},
 	/**
 	 * 是否存在指定类型
@@ -3020,6 +3023,10 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			rs = new this.types[type].clazz(this.baseClass);
 			Util.ext(rs,this.types[type].props);
+			var data = this.types[type].data;
+			if(data){
+				Util.ext(rs.data,data);
+			}
 			rs.name = type;
 		}
 
@@ -3032,8 +3039,6 @@ Util.ext(_ComponentFactory.prototype,{
 		}
 
 		this._super.createCbk.call(this,rs,type);
-
-		
 
 		return rs;
 	}
@@ -3248,8 +3253,8 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,10,0],
-	        state:'',
+	        v:[0,20,0],
+	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }

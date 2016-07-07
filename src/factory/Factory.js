@@ -16,8 +16,11 @@ Factory.prototype = {
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 
 		var props = {};
-		Util.ext(props,param);
+		
+		var data = param.data;
+		delete param.data;
 
+		Util.ext(props,param);
 		Util.inherits(clazz,this.baseClass);
 
 		if(param.methods){
@@ -26,7 +29,7 @@ Factory.prototype = {
 			}
 		}
 
-		this.types[type] = {clazz:clazz,props:props,services:services};
+		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
 	},
 	/**
 	 * 是否存在指定类型

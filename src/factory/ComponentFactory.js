@@ -66,6 +66,10 @@ Util.ext(_ComponentFactory.prototype,{
 		}else{
 			rs = new this.types[type].clazz(this.baseClass);
 			Util.ext(rs,this.types[type].props);
+			var data = this.types[type].data;
+			if(data){
+				Util.ext(rs.data,data);
+			}
 			rs.name = type;
 		}
 
@@ -78,8 +82,6 @@ Util.ext(_ComponentFactory.prototype,{
 		}
 
 		this._super.createCbk.call(this,rs,type);
-
-		
 
 		return rs;
 	}
