@@ -489,6 +489,7 @@
 
                 subComp.init();
                 subComp.display();
+                Builder.build(subComp);
                 onDisplay(subComp);
             }
         }

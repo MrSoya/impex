@@ -3414,7 +3414,7 @@ var TransitionFactory = {
 			return false;
 		}
 
-		this._cs = {};
+		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
 	}
 /**
  * 内建服务，提供基础操作接口
@@ -3943,6 +3943,7 @@ impex.service('Transitions',new function(){
 
                 subComp.init();
                 subComp.display();
+                Builder.build(subComp);
                 onDisplay(subComp);
             }
         }

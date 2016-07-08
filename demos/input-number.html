@@ -25,15 +25,13 @@
                 data:{
                     value:10
                 },
-                lifecycle:{
-                    init : function(){
-                        this.watch('data.value',function(type,newVal,oldVal){
-                            var nv = /^-?[0-9]+$/.test(newVal);
-                            if(!nv){
-                                this.data.value = oldVal||0;
-                            }
-                        });
-                    }
+                onInit : function(){
+                    this.watch('value',function(type,newVal,oldVal){
+                        var nv = /^-?[0-9]+$/.test(newVal);
+                        if(!nv){
+                            this.data.value = oldVal||0;
+                        }
+                    });
                 },
                 methods:{
                     unbindWheel : function(comp){

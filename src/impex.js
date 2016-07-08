@@ -207,5 +207,5 @@
 			return false;
 		}
 
-		this._cs = {};
+		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
 	}
