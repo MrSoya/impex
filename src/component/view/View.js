@@ -52,7 +52,7 @@ View.prototype = {
 				k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
 			}
 			var v = propMap[i].value;
-			component[k] = v;
+			component.data[k] = v;
 		}
 
 		this.__comp = component;

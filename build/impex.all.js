@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-07-07
+ * last build: 2016-07-08
  */
 !function (global) {
 	'use strict';
@@ -2141,7 +2141,7 @@ View.prototype = {
 				k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
 			}
 			var v = propMap[i].value;
-			component[k] = v;
+			component.data[k] = v;
 		}
 
 		this.__comp = component;
