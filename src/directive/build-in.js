@@ -37,10 +37,7 @@
 
             var filter = null;
             if(this.filter){
-                var owner = this.closest(this.filter);
-                if(owner){
-                    filter = owner[this.filter];
-                }
+                filter = this.m(this.filter);
             }
 
             if(filter){
@@ -274,12 +271,12 @@
                         parts.push(opt.value);
                     }
                 }            
-                this.parent.d2(this.value,parts);
+                this.parent.d(this.value,parts);
             },
             changeModelCheck : function(e){
                 var t = e.target || e.srcElement;
                 var val = t.value;
-                var parts = this.parent.d2(this.value);
+                var parts = this.parent.d(this.value);
                 if(!(parts instanceof Array)){
                     parts = [parts];
                 }
@@ -291,7 +288,7 @@
                         parts.splice(i,1);
                     }
                 }
-                this.parent.d2(this.value,parts);
+                this.parent.d(this.value,parts);
             },
             changeModel : function(e){
                 if(this.debounce){
@@ -316,7 +313,7 @@
             if(this.toNum !== null){
                 v = parseFloat(v);
             }
-            this.parent.d2(this.value,v);
+            this.parent.d(this.value,v);
         }
     });
 
@@ -379,7 +376,7 @@
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    begin = this.parent.d2(begin);
+                    begin = this.parent.d(begin);
                 }
                 if(isNaN(end)){
                     this.parent.watch(end,function(type,newVal,oldVal){
@@ -387,17 +384,17 @@
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    end = this.parent.d2(end);
+                    end = this.parent.d(end);
                 }
                 begin = parseFloat(begin);
                 end = parseFloat(end);
                 
                 this.ds = getForDs(begin,end,step);
             }else{
-                this.ds = this.parent.d2(this.expInfo.ds);
+                this.ds = this.parent.d(this.expInfo.ds);
                 this.parentComp.watch(this.expInfo.ds,function(type,newVal,oldVal){
                     if(!that.ds){
-                        that.ds = that.parentComp.d2(that.expInfo.ds);
+                        that.ds = that.parentComp.d(that.expInfo.ds);
                         that.lastDS = that.ds;
                         that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;

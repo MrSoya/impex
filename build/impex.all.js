@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-07-08
+ * last build: 2016-07-11
  */
 !function (global) {
 	'use strict';
@@ -1745,18 +1745,6 @@ function broadcast(comps,type,params){
 }
 Util.ext(Component.prototype,{
 	/**
-	 * 设置或获取组件数据
-	 * *该方法不支持路径查找
-	 * @return {[type]} [description]
-	 */
-	d:function(k,v){
-		if(arguments.length>1){
-			this.data[k] = v;
-			return this;
-		}
-		return this.data[k];
-	},
-	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
 	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
 	 * 获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null
@@ -1764,7 +1752,7 @@ Util.ext(Component.prototype,{
 	 * @param  {var} val  值
 	 * @return this
 	 */
-	d2:function(path,val){
+	d:function(path,val){
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
@@ -1791,15 +1779,18 @@ Util.ext(Component.prototype,{
 		}
 	},
 	/**
-	 * 查找拥有指定属性的最近的上级组件
-	 * @param  {String} path 表达式路径
-	 * @return {Component}
+	 * 查找指定的函数<br/>
+	 * 获取函数时，会从当前域向上查找，直到找到匹配函数，如果都没找到返回null
+	 * @param  {String} k 函数名
+	 * @return {[type]}   [description]
 	 */
-	closest:function(path){
-		var expObj = lexer(path);
-		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		evalStr.replace(/^impex\._cs\["(C_[0-9]+)"\]/,'');
-		return impex._cs[RegExp.$1];
+	m:function(k){
+		var comp = this;
+		while(comp){
+			if(comp['$'+k] instanceof Function)return comp['$'+k];
+			comp = comp.parent;
+		}
+		return null;
 	},
 	/**
 	 * 绑定自定义事件到组件
@@ -3491,10 +3482,7 @@ impex.service('Transitions',new function(){
 
             var filter = null;
             if(this.filter){
-                var owner = this.closest(this.filter);
-                if(owner){
-                    filter = owner[this.filter];
-                }
+                filter = this.m(this.filter);
             }
 
             if(filter){
@@ -3728,12 +3716,12 @@ impex.service('Transitions',new function(){
                         parts.push(opt.value);
                     }
                 }            
-                this.parent.d2(this.value,parts);
+                this.parent.d(this.value,parts);
             },
             changeModelCheck : function(e){
                 var t = e.target || e.srcElement;
                 var val = t.value;
-                var parts = this.parent.d2(this.value);
+                var parts = this.parent.d(this.value);
                 if(!(parts instanceof Array)){
                     parts = [parts];
                 }
@@ -3745,7 +3733,7 @@ impex.service('Transitions',new function(){
                         parts.splice(i,1);
                     }
                 }
-                this.parent.d2(this.value,parts);
+                this.parent.d(this.value,parts);
             },
             changeModel : function(e){
                 if(this.debounce){
@@ -3770,7 +3758,7 @@ impex.service('Transitions',new function(){
             if(this.toNum !== null){
                 v = parseFloat(v);
             }
-            this.parent.d2(this.value,v);
+            this.parent.d(this.value,v);
         }
     });
 
@@ -3833,7 +3821,7 @@ impex.service('Transitions',new function(){
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    begin = this.parent.d2(begin);
+                    begin = this.parent.d(begin);
                 }
                 if(isNaN(end)){
                     this.parent.watch(end,function(type,newVal,oldVal){
@@ -3841,17 +3829,17 @@ impex.service('Transitions',new function(){
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    end = this.parent.d2(end);
+                    end = this.parent.d(end);
                 }
                 begin = parseFloat(begin);
                 end = parseFloat(end);
                 
                 this.ds = getForDs(begin,end,step);
             }else{
-                this.ds = this.parent.d2(this.expInfo.ds);
+                this.ds = this.parent.d(this.expInfo.ds);
                 this.parentComp.watch(this.expInfo.ds,function(type,newVal,oldVal){
                     if(!that.ds){
-                        that.ds = that.parentComp.d2(that.expInfo.ds);
+                        that.ds = that.parentComp.d(that.expInfo.ds);
                         that.lastDS = that.ds;
                         that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;
