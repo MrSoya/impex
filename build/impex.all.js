@@ -598,13 +598,13 @@ var lexer = (function(){
         parseWatchPath(varMap);
         
 
-        // console.log('输入',sentence);
-        // console.log('校验',words.join(''));
-        // console.log('分词',JSON.stringify(words));
-        // //input--->a[b.x[c]].d
-        // //a[b.x[c]].d ---> b.x[c]
-        // //b.x[c] ---> c
-        // console.log('变量tree',varMap);
+        console.log('输入',sentence);
+        console.log('校验',words.join(''));
+        console.log('分词',JSON.stringify(words));
+        //input--->a[b.x[c]].d
+        //a[b.x[c]].d ---> b.x[c]
+        //b.x[c] ---> c
+        console.log('变量tree',varMap);
         
         cache[sentence] = {
             words:words,
@@ -1498,8 +1498,8 @@ var Renderer = new function() {
 	}
 
 	function keyWordsMapping(str,component){
-        if(str === 'this'){
-            return component.__getPath();
+        if(str.indexOf('.this')===0){
+        	return str.replace('.this',component.__getPath());
         }
     }
 
@@ -1518,11 +1518,10 @@ var Renderer = new function() {
  		for(var i=0;i<varObj.words.length;i++){
  			var w = varObj.words[i];
  			if(w instanceof Array){
- 				var keywordPath = keyWordsMapping(varObj.segments[0],component);
+ 				var keywordPath = keyWordsMapping(w[0],component);
                 if(keywordPath){
                     isKeyword = true;
-                    var exp = new RegExp('^\\.'+varObj.segments[0]);
-                    fullPath += w[0].replace(exp,keywordPath);
+                    fullPath += keywordPath;
                 }else{
                     fullPath += subVarPath[w[0]] || w[0];
                 }
