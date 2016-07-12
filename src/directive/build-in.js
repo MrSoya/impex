@@ -485,8 +485,9 @@
                 if(ki)subComp.data[ki] = isIntK?k>>0:k;
 
                 subComp.init();
+                var isSuspend = subComp.__state === "suspend"?true:false;
                 subComp.display();
-                Builder.build(subComp);
+                // isSuspend && Builder.build(subComp);
                 onDisplay(subComp);
             }
         }

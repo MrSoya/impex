@@ -17,7 +17,7 @@ var Builder = new function() {
 					var varObj = varTree[varStr];
 
 					//监控变量
-					if(!varObj.isFunc)buildExpModel(comp,varObj,expNode);
+					buildExpModel(comp,varObj,expNode);
 				}
 			}
 		}
@@ -175,8 +175,8 @@ var Builder = new function() {
                     __propStr = null;
                     __lastMatch = undefined;
                     recurRender(component,pc,change.type,newObj,oldVal,0,component);
-                    if(component.$__watcher instanceof Function){
-                    	component.$__watcher(change.type,newObj,oldVal,pc);
+                    if(component.__watcher instanceof Function){
+                    	component.__watcher(change.type,newObj,oldVal,pc);
                     }
                     //reobserve
                     observerProp(newObj,pc,component);
@@ -312,7 +312,7 @@ var Builder = new function() {
 			}
 			var prop = undefined;
             try{
-                prop = eval('impex._cs["'+component.$__id+'"]'+__propStr);
+                prop = eval('impex._cs["'+component.__id+'"]'+__propStr);
             }catch(e){}
             if(!Util.isUndefined(prop)){
             	__lastMatch = component;

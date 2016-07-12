@@ -194,12 +194,17 @@ var Renderer = new function() {
  		for(var i=0;i<varObj.words.length;i++){
  			var w = varObj.words[i];
  			if(w instanceof Array){
- 				var keywordPath = keyWordsMapping(w[0],component);
+ 				if(subVarPath[w[0]]){
+ 					fullPath += subVarPath[w[0]];
+ 					continue;
+ 				}
+
+				var keywordPath = keyWordsMapping(w[0],component);
                 if(keywordPath){
                     isKeyword = true;
                     fullPath += keywordPath;
                 }else{
-                    fullPath += subVarPath[w[0]] || w[0];
+                    fullPath += w[0];
                 }
  			}else{
  				fullPath += w;
@@ -219,6 +224,8 @@ var Renderer = new function() {
 	 		}
  		}
 
+ 		if(isKeyword)return fullPath;
+
  		var dataType = varStr[varStr.length-1]===')'?'methods':'data';
  		var searchPath = watchPath || fullPath;
  		if(dataType === 'data'){
@@ -228,7 +235,7 @@ var Renderer = new function() {
  		}
  		component = varInCtrlScope(component,searchPath);
 
- 		if(isKeyword)return fullPath;
+ 		
 
  		if(component){
  			if(dataType === 'data'){

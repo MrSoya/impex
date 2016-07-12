@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-07-11
+ * last build: 2016-07-12
  */
 !function (global) {
 	'use strict';
@@ -598,13 +598,13 @@ var lexer = (function(){
         parseWatchPath(varMap);
         
 
-        console.log('输入',sentence);
-        console.log('校验',words.join(''));
-        console.log('分词',JSON.stringify(words));
-        //input--->a[b.x[c]].d
-        //a[b.x[c]].d ---> b.x[c]
-        //b.x[c] ---> c
-        console.log('变量tree',varMap);
+        // console.log('输入',sentence);
+        // console.log('校验',words.join(''));
+        // console.log('分词',JSON.stringify(words));
+        // //input--->a[b.x[c]].d
+        // //a[b.x[c]].d ---> b.x[c]
+        // //b.x[c] ---> c
+        // console.log('变量tree',varMap);
         
         cache[sentence] = {
             words:words,
@@ -991,7 +991,7 @@ var Builder = new function() {
 					var varObj = varTree[varStr];
 
 					//监控变量
-					if(!varObj.isFunc)buildExpModel(comp,varObj,expNode);
+					buildExpModel(comp,varObj,expNode);
 				}
 			}
 		}
@@ -1149,8 +1149,8 @@ var Builder = new function() {
                     __propStr = null;
                     __lastMatch = undefined;
                     recurRender(component,pc,change.type,newObj,oldVal,0,component);
-                    if(component.$__watcher instanceof Function){
-                    	component.$__watcher(change.type,newObj,oldVal,pc);
+                    if(component.__watcher instanceof Function){
+                    	component.__watcher(change.type,newObj,oldVal,pc);
                     }
                     //reobserve
                     observerProp(newObj,pc,component);
@@ -1286,7 +1286,7 @@ var Builder = new function() {
 			}
 			var prop = undefined;
             try{
-                prop = eval('impex._cs["'+component.$__id+'"]'+__propStr);
+                prop = eval('impex._cs["'+component.__id+'"]'+__propStr);
             }catch(e){}
             if(!Util.isUndefined(prop)){
             	__lastMatch = component;
@@ -1518,12 +1518,17 @@ var Renderer = new function() {
  		for(var i=0;i<varObj.words.length;i++){
  			var w = varObj.words[i];
  			if(w instanceof Array){
- 				var keywordPath = keyWordsMapping(w[0],component);
+ 				if(subVarPath[w[0]]){
+ 					fullPath += subVarPath[w[0]];
+ 					continue;
+ 				}
+
+				var keywordPath = keyWordsMapping(w[0],component);
                 if(keywordPath){
                     isKeyword = true;
                     fullPath += keywordPath;
                 }else{
-                    fullPath += subVarPath[w[0]] || w[0];
+                    fullPath += w[0];
                 }
  			}else{
  				fullPath += w;
@@ -1543,6 +1548,8 @@ var Renderer = new function() {
 	 		}
  		}
 
+ 		if(isKeyword)return fullPath;
+
  		var dataType = varStr[varStr.length-1]===')'?'methods':'data';
  		var searchPath = watchPath || fullPath;
  		if(dataType === 'data'){
@@ -1552,7 +1559,7 @@ var Renderer = new function() {
  		}
  		component = varInCtrlScope(component,searchPath);
 
- 		if(isKeyword)return fullPath;
+ 		
 
  		if(component){
  			if(dataType === 'data'){
@@ -3929,8 +3936,9 @@ impex.service('Transitions',new function(){
                 if(ki)subComp.data[ki] = isIntK?k>>0:k;
 
                 subComp.init();
+                var isSuspend = subComp.__state === "suspend"?true:false;
                 subComp.display();
-                Builder.build(subComp);
+                // isSuspend && Builder.build(subComp);
                 onDisplay(subComp);
             }
         }
