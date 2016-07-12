@@ -425,8 +425,19 @@
         }
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
+
+            //临时解决方案，不缓存
+            for(var i=this.subComponents.length;i--;){
+                this.subComponents[i].destroy();
+            }
+            this.subComponents = [];
+
+            var addSize = ds.length;
+            while(addSize--){
+                this.createSubComp();
+            }
             
-            var diffSize = ds.length - this.subComponents.length;
+            /*var diffSize = ds.length - this.subComponents.length;
 
             if(diffSize < 0){
                 var tmp = this.subComponents.splice(0,diffSize*-1);
@@ -447,6 +458,8 @@
                         tmp[i].destroy();
                     }
                 }
+
+                return;
             }else if(diffSize > 0){
                 var restSize = diffSize;
                 if(this.cacheable){
@@ -461,7 +474,7 @@
                 while(restSize--){
                     this.createSubComp();
                 }
-            }
+            }*/
 
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
@@ -487,7 +500,7 @@
                 subComp.init();
                 var isSuspend = subComp.__state === "suspend"?true:false;
                 subComp.display();
-                // isSuspend && Builder.build(subComp);
+                isSuspend &&　Builder.build(subComp);
                 onDisplay(subComp);
             }
         }

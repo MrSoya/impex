@@ -353,6 +353,9 @@ Util.ext(Component.prototype,{
 			return;
 		}
 
+		//observe data
+		
+
 		this.__state = Component.state.inited;
 	},
 	/**

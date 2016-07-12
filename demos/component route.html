@@ -30,9 +30,9 @@
                         "/([a-z]+)":function(type){
                             if(type == 'checkbox')return 'x-check';
                         }
-                    }).onRoute(this.onRoute);
+                    }).onRoute(this.cbk);
                 },
-                onRoute:function(path){
+                cbk:function(path){
                     console.log(path);
                 },
                 template:"<div>{{=CONTENT}}</div>"

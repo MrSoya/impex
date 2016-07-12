@@ -20,7 +20,7 @@
 		var compName = compNameOrCbk instanceof Function?compNameOrCbk.apply(router,params):compNameOrCbk;
 		
 		if(!router.componentManager.hasTypeOf(compName)){
-			impex.console.warn('invaild route component['+compName+'] of path "'+url+'"');
+			console.warn('cannot find component['+compName+'] of path "'+url+'"');
 			return;
 		}
 		var placeholder = router.viewManager.createPlaceholder('-- placeholder --');
@@ -88,7 +88,7 @@
 	    	this.componentManager = componentManager;
 
 	    	if(!this.host.__id){
-	    		impex.console.warn('service[XRouter] can only be injected into Component or Directive');
+	    		console.warn('service[XRouter] can only be injected into Component or Directive');
 	    		return;
 	    	}
 	    	if(!routerMap[this.host.__id]){
@@ -106,13 +106,14 @@
 		for(var k in routerMap){
 			var router = routerMap[k].router;
 			var auto = true;
-			url && router.__cbk && (auto = router.__cbk(url));
-			if(auto !== false){
-				var component = routerMap[k].comp;
-				var expMap = router.__expMap;
-				for(var k in expMap){
-					var exp = expMap[k].exp;
-					if(exp.test(url)){
+			
+			var component = routerMap[k].comp;
+			var expMap = router.__expMap;
+			for(var k in expMap){
+				var exp = expMap[k].exp;
+				if(exp.test(url)){
+					url && router.__cbk && (auto = router.__cbk(url));
+					if(auto !== false){
 						var params = [];
 						url.replace(exp,function () {
 							for(var i=1;i<arguments.length-2;i++){
@@ -123,7 +124,7 @@
 						break;
 					}
 				}
-			}
+			}//end for
 		}
 	}
 	window.addEventListener('hashchange',function(e){

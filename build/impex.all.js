@@ -1058,6 +1058,7 @@ var Builder = new function() {
 	this.build = function(component){
 		prelink(component);
 		
+		//这里要改造
 		observerProp(component.data,[],component);
 	}
 
@@ -1982,6 +1983,9 @@ Util.ext(Component.prototype,{
 			this.destroy();
 			return;
 		}
+
+		//observe data
+		
 
 		this.__state = Component.state.inited;
 	},
@@ -3876,8 +3880,19 @@ impex.service('Transitions',new function(){
         }
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
+
+            //临时解决方案，不缓存
+            for(var i=this.subComponents.length;i--;){
+                this.subComponents[i].destroy();
+            }
+            this.subComponents = [];
+
+            var addSize = ds.length;
+            while(addSize--){
+                this.createSubComp();
+            }
             
-            var diffSize = ds.length - this.subComponents.length;
+            /*var diffSize = ds.length - this.subComponents.length;
 
             if(diffSize < 0){
                 var tmp = this.subComponents.splice(0,diffSize*-1);
@@ -3898,6 +3913,8 @@ impex.service('Transitions',new function(){
                         tmp[i].destroy();
                     }
                 }
+
+                return;
             }else if(diffSize > 0){
                 var restSize = diffSize;
                 if(this.cacheable){
@@ -3912,7 +3929,7 @@ impex.service('Transitions',new function(){
                 while(restSize--){
                     this.createSubComp();
                 }
-            }
+            }*/
 
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
@@ -3938,7 +3955,7 @@ impex.service('Transitions',new function(){
                 subComp.init();
                 var isSuspend = subComp.__state === "suspend"?true:false;
                 subComp.display();
-                // isSuspend && Builder.build(subComp);
+                isSuspend &&　Builder.build(subComp);
                 onDisplay(subComp);
             }
         }
