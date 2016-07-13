@@ -26,7 +26,7 @@
                     value:10
                 },
                 onInit : function(){
-                    this.watch('value',function(type,newVal,oldVal){
+                    this.watch('value',function(object,name,type,newVal,oldVal){
                         var nv = /^-?[0-9]+$/.test(newVal);
                         if(!nv){
                             this.data.value = oldVal||0;

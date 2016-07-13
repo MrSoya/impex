@@ -97,7 +97,12 @@
         </section>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.console.js"></script>
         <script type="text/javascript">
+            imLog.level = 3;
+            impex.config({
+                logger:imLog
+            });
             impex.directive('keydown',{
                 onCreate:function(){
                     this.view.on('keydown',this.value);
@@ -117,8 +122,8 @@
                     activeTodos:0,
                 },
                 onInit:function(){
-                    this.watch('todos',function(type,newVal){
-                        this.activeTodos = newVal.filter(function(todo){
+                    this.watch('todos',function(todos,name,type,newVal){
+                        this.activeTodos = todos.filter(function(todo){
                             return todo.type === 'active';
                         }).length;
                     });
@@ -130,6 +135,10 @@
 
                             this.data.todos.push({id:Math.random()+'',val:t.value,type:'active'});
                             t.value = '';
+
+                            this.data.activeTodos = this.data.todos.filter(function(td){
+                                return td.type === 'active';
+                            }).length;
                         }
                     },
                     removeTodo:function(todo){
@@ -142,6 +151,7 @@
                         if(e.target.checked){
                             type = 'completed';
                         }
+                        console.log(todo)
 
                         todo.type = type;
 
@@ -149,9 +159,6 @@
                             return td.type === 'active';
                         }).length;
 
-                        var t = this.filterType;
-                        this.data.filterType = 1;
-                        this.data.filterType = t;
                     },
                     filterTodos:function(type){
                         this.data.filterType = type;

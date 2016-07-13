@@ -371,16 +371,16 @@
                 }
                 step = step || 1;
                 if(isNaN(begin)){
-                    this.parent.watch(begin,function(type,newVal,oldVal){
-                        var ds = getForDs(newVal,end,step);
+                    this.parent.watch(begin,function(object,name,type,newVal,oldVal){
+                        var ds = getForDs(newVal>>0,end,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
                     begin = this.parent.d(begin);
                 }
                 if(isNaN(end)){
-                    this.parent.watch(end,function(type,newVal,oldVal){
-                        var ds = getForDs(begin,newVal,step);
+                    this.parent.watch(end,function(object,name,type,newVal,oldVal){
+                        var ds = getForDs(begin,newVal>>0,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
@@ -392,7 +392,7 @@
                 this.ds = getForDs(begin,end,step);
             }else{
                 this.ds = this.parent.d(this.expInfo.ds);
-                this.parentComp.watch(this.expInfo.ds,function(type,newVal,oldVal){
+                this.parentComp.watch(this.expInfo.ds,function(object,name,type,newVal){
                     if(!that.ds){
                         that.ds = that.parentComp.d(that.expInfo.ds);
                         that.lastDS = that.ds;
@@ -400,8 +400,8 @@
                         return;
                     }
 
-                    that.lastDS = newVal;                    
-                    that.rebuild(newVal,that.expInfo.k,that.expInfo.v);
+                    that.lastDS = Util.isArray(newVal)?newVal:object;
+                    that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                 });
             }
             
@@ -425,19 +425,8 @@
         }
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
-
-            //临时解决方案，不缓存
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].destroy();
-            }
-            this.subComponents = [];
-
-            var addSize = ds.length;
-            while(addSize--){
-                this.createSubComp();
-            }
             
-            /*var diffSize = ds.length - this.subComponents.length;
+            var diffSize = ds.length - this.subComponents.length;
 
             if(diffSize < 0){
                 var tmp = this.subComponents.splice(0,diffSize*-1);
@@ -458,8 +447,6 @@
                         tmp[i].destroy();
                     }
                 }
-
-                return;
             }else if(diffSize > 0){
                 var restSize = diffSize;
                 if(this.cacheable){
@@ -474,7 +461,7 @@
                 while(restSize--){
                     this.createSubComp();
                 }
-            }*/
+            }
 
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
@@ -493,6 +480,19 @@
                     ds[k].$__impex__origin = null;
                     delete ds[k].$__impex__origin;
                 }
+
+                //k,index,each
+                if(typeof v === 'object'){
+                    for(var i=v.__im__extPropChain.length;i--;){
+                        if(v.__im__extPropChain[i][0] === this){
+                            break;
+                        }
+                    }
+                    v.__im__extPropChain.splice(i,1);
+                    v.__im__extPropChain.push([this,vi,index]);
+                }
+                
+
                 subComp.data[vi] = v;
                 subComp.data['$index'] = index++;
                 if(ki)subComp.data[ki] = isIntK?k>>0:k;
@@ -598,14 +598,15 @@
             var index = 0;
             
             ds = this.doFilter(ds);
+            //bind each
+            if(ds.__im__extPropChain)
+                ds.__im__extPropChain.push([this,vi]);
 
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
-                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.createSubComp();
-                // subComp.data = {};
                 
                 //模型
                 var v = ds[k];
@@ -614,6 +615,11 @@
 
                     ds[k].$__impex__origin = null;
                     delete ds[k].$__impex__origin;
+                }
+
+                //k,index,each
+                if(typeof v === 'object'){
+                    v.__im__extPropChain.push([this,vi,index]);
                 }
 
                 subComp.data[vi] = v;
@@ -647,7 +653,7 @@
                     that.filters = filters;
 
                     for(var i in varMap){
-                        that.parent.watch(i,function(type,newVal,oldVal){
+                        that.parent.watch(i,function(){
                             if(that.lastDS)
                             that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                         });

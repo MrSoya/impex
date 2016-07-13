@@ -6,7 +6,7 @@
     </head>
     <body>
     	<ul>
-            <li x-each="list as index => subList" >
+            <li x-each="list as index , subList" >
                {{index}}
                 <ul>
                     <li x-each="subList as v">

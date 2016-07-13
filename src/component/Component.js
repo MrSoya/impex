@@ -129,6 +129,10 @@ Util.ext(Component.prototype,{
 	 * @return this
 	 */
 	d:function(path,val){
+		if(!path){
+			LOGGER.warn('invalid path \''+ path +'\'');
+			return;
+		}
 		var expObj = lexer(path);
 		var evalStr = Renderer.getExpEvalStr(this,expObj);
 		if(arguments.length > 1){
@@ -141,7 +145,7 @@ Util.ext(Component.prototype,{
 			try{
 				eval(evalStr + '= '+ val);
 			}catch(e){
-				LOGGER.debug(e.message + 'eval error on data('+evalStr + '= '+ val +')');
+				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
 			}
 			
 			return this;
@@ -149,7 +153,7 @@ Util.ext(Component.prototype,{
 			try{
 				return eval(evalStr);
 			}catch(e){
-				LOGGER.debug(e.message + 'eval error on data('+evalStr +')');
+				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
 			}
 			
 		}
@@ -259,7 +263,7 @@ Util.ext(Component.prototype,{
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
-	 * @param  {function} cbk      回调函数，[变动类型add/delete/update,新值，旧值]
+	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
 	 */
 	watch:function(expPath,cbk){
 		if(expPath === '*'){
@@ -354,7 +358,7 @@ Util.ext(Component.prototype,{
 		}
 
 		//observe data
-		
+		this.data = Observer.observe(this.data,this);
 
 		this.__state = Component.state.inited;
 	},

@@ -154,7 +154,7 @@ View.prototype = {
 			try{
 				fnOutside(e);
 			}catch(error){
-				LOGGER.debug(error.message + ' on event '+type+'('+tmp +')');
+				LOGGER.debug("error in event '"+type +"'",error);
 			}
 		};
 

@@ -19,9 +19,7 @@
         
         	impex.component('x-tree',{
                 onInit:function(){
-                    var theComp = this.closest('a');
-                    console.log(theComp);
-                    var dataSource = this.parent.d2(this.datasource);
+                    var dataSource = this.parent.d(this.data.datasource);
                     this.data.items = dataSource;
                 },
         		template:'<ul>'+

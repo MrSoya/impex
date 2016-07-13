@@ -5,17 +5,17 @@
 
     g.imLog = new function(){
         this.level = 1;
-        this.warn = function(txt){
+        this.warn = function(txt,error){
             if(this.level < 2)return;
-            console.warn('im warn :: ' + txt);
+            console.warn('im warn :: ' + txt,error);
         }
-        this.error = function(txt){
+        this.error = function(txt,error){
             if(this.level < 1)return;
-            console.error('im error :: ' + txt);
+            console.error('im error :: ' + txt,error);
         }
-        this.debug = function(txt){
+        this.debug = function(txt,error){
             if(this.level < 3)return;
-            console.debug('im debug :: ' + txt);
+            console.debug('im debug :: ' + txt,error);
         }
         this.log = function(txt){
             if(this.level < 4)return;

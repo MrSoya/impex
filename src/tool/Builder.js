@@ -83,125 +83,59 @@ var Builder = new function() {
 	 */
 	this.build = function(component){
 		prelink(component);
-		
-		observerProp(component.data,[],component);
-	}
-
-	function observerProp(model,propChain,component){
-		var isArray = Util.isArray(model),
-			isObject = Util.isObject(model);
-		if(!model || !(isArray || isObject)){
-            return;
-        }
-
-        if(model.$__impex__observer){
-            var k = propChain.join('.');
-            if(model.$__impex__propChains[k]){
-            	var pck = model.$__impex__propChains[k];
-            	for(var i=pck.length;i--;){
-            		if(pck[i][1] === component)return;
-            	}
-                pck.push([propChain,component]);
-                return;
-            }
-            model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
-            return;
-        }
-
-    	function __observer(changes){
-			if(component.__state === Component.state.suspend)return;
-			if(component.__state === null)return;
-
-			changeHandler(changes);
-		}
-
-		Object.defineProperty(model,'$__impex__observer',{enumerable: false,writable: true,value:__observer});
-		Object.defineProperty(model,'$__impex__propChains',{enumerable: false,writable: true,value:{}});
-        model.$__impex__propChains[propChain.join('.')] = [[propChain,component]];
-
-		if(isArray){
-			Object.defineProperty(model,'$__impex__oldVal',{enumerable: false,writable: true,value:model.concat()});
-
-			Array_observe(model,__observer);
-		}else if(isObject){
-			if(Util.isDOM(model))return;
-
-			Object_observe(model,__observer);
-		}
-
-		//recursive
-		var ks = Object.keys(model);
-		for(var i=ks.length;i--;){
-			var k = ks[i];
-			var pc = propChain.concat();
-			pc.push(k);
-			observerProp(model[k],pc,component);
-		}
 	}
 
 	var __propStr = null,
 		__lastMatch = undefined;
-	function changeHandler(changes){
-		if(Util.isString(changes))return;
+	function changeHandler(change){
 
-		for(var i=changes.length;i--;){
-			var change = changes[i];
+		var newVal = change.newVal;
+		var oldVal = change.oldVal;
+		var pc = change.pc;
+		var xpc = change.xpc;
+		var comp = change.comp;
+		var type = change.type;
+		var name = change.name;
+		var object = change.object;
 
-			var propName = change.name;
-			if(propName && propName.indexOf('$')===0 && propName!=='$index')
-				continue;
+		
+		handlePath(newVal,oldVal,comp,type,name,object,pc);
 
-			var newObj = change.object[propName];
-			//recursive
-			var oldVal = change.oldValue;
-			if(Util.isArray(change.object)){
-				newObj = change.object;
-				oldVal = change.object.$__impex__oldVal;
-			}
-			
-			var pcs = change.object.$__impex__propChains;
-            var pks = Object.keys(pcs);
-            for(var pl=pks.length;pl--;){
-                var k = pks[pl];
-                var watchers = pcs[k];
-                for(var wl=watchers.length;wl--;){
-                    var propChain = watchers[wl][0];
-                    var component = watchers[wl][1];
-                    //查询控制域
-                    var pc = propChain.concat();
-                    if(propName && !Util.isArray(change.object))
-                        pc.push(propName);
-
-                    __propStr = null;
-                    __lastMatch = undefined;
-                    recurRender(component,pc,change.type,newObj,oldVal,0,component);
-                    if(component.__watcher instanceof Function){
-                    	component.__watcher(change.type,newObj,oldVal,pc);
-                    }
-                    //reobserve
-                    observerProp(newObj,pc,component);
-                }
-            }
-
-			//unobserve
-			if(!Util.isArray(change.object) && Util.isArray(change.oldValue)){
-				Array_unobserve(change.oldValue,change.oldValue.$__impex__observer);
-			}else if(Util.isArray(change.object)){
-				change.object.$__impex__oldVal = change.object.concat();
-				return;
-			}else if(Util.isObject(change.oldValue)){
-				var observer = change.oldValue.$__impex__observer;
-				if(observer){
-					Object_unobserve(change.oldValue,observer);
-					change.oldValue.$__impex__observer = null;
-					change.oldValue.$__impex__propChains = null;
-				}
-			}
-		}
+		xpc.forEach(function(pc){
+			handlePath(newVal,oldVal,comp,type,name,object,pc);
+		});
 	}
 
+	function handlePath(newVal,oldVal,comp,type,name,object,pc){
+		__propStr = null;
+        __lastMatch = undefined;
+        var chains = [];
+        if(pc[0] instanceof Directive){
+        	var index = pc[2] === undefined?name:pc[2];
+
+	        comp = pc[0].subComponents[parseInt(index)];
+	        chains.push(pc[1]);
+	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
+	        	comp.data[pc[1]] = newVal;
+	        }
+        }else{
+        	chains = pc.concat();
+			if(!Util.isArray(object))
+	        chains.push(name);
+        }
+        
+        if(!comp)return;
+
+        recurRender(object,name,comp,chains,type,newVal,oldVal,0,comp);
+        if(comp.__watcher instanceof Function){
+        	comp.__watcher(type,newVal,oldVal,chains);
+        }
+	}
+
+	this.handleChange = changeHandler;
+
 	var sqbExp = /(^\[)|(,\[)/;
-	function rerender(component,propChain,changeType,newVal,oldVal){
+	function rerender(object,name,component,propChain,changeType,newVal,oldVal){
 		var props = component.__expPropRoot.subProps;
 		var prop;
 		var hasSqb = false;
@@ -231,7 +165,6 @@ var Builder = new function() {
                 }
             }
         }else {
-            // if(i < propChain.length)return;
             matchs.push(prop);
         }
 		
@@ -285,7 +218,7 @@ var Builder = new function() {
 							nv = null;
 						}
 					}
-					watch.cbk && watch.cbk.call(watch.ctrlScope,changeType,nv,ov,propChain);
+					watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,propChain);
 					invokedWatchs.push(watch);
 				}
 			}
@@ -300,7 +233,7 @@ var Builder = new function() {
 			findMatchProps(prop.subProps[k],findLength-1,matchs);
 		}
 	}
-	function recurRender(component,propChain,changeType,newVal,oldVal,depth,topComp){
+	function recurRender(object,name,component,propChain,changeType,newVal,oldVal,depth,topComp){
 		var toRender = true;
 		if(depth > 0){
 			if(!__propStr){
@@ -321,7 +254,7 @@ var Builder = new function() {
             if(__lastMatch && __lastMatch !== topComp)toRender = false;
 		}
 		if(toRender){
-			rerender(component,propChain,changeType,newVal,oldVal);
+			rerender(object,name,component,propChain,changeType,newVal,oldVal);
 		}
 		if(component.isolate){
 			var pc0 = propChain[0];
@@ -344,7 +277,7 @@ var Builder = new function() {
 
 		for(var j=component.children.length;j--;){
 			var subCtrlr = component.children[j];
- 			recurRender(subCtrlr,propChain,changeType,newVal,oldVal,depth+1,topComp);
+ 			recurRender(object,name,subCtrlr,propChain,changeType,newVal,oldVal,depth+1,topComp);
  		}
 	}
 }

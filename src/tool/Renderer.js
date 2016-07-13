@@ -124,7 +124,7 @@ var Renderer = new function() {
 
 		//替换原始串中的表达式
 		for(var k in map){
-			origin = origin.replace(EXP_START_TAG +k+ EXP_END_TAG,map[k]);
+			origin = origin.replace(EXP_START_TAG +k+ EXP_END_TAG,map[k]+'');
 		}
 		return origin;
 	}

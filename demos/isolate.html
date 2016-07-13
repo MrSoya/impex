@@ -5,20 +5,28 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        {{o.a}}
+        <p>
+            parent a: {{o.a}}
+        </p>
+        
+
         <x-xx>
+            child a: {{o.a}}
+
+            isolate scope[
             <i x-each="[1,2,3,4] as i">
                 {{o['a'] + o.b}}
-            </i>
+            </i>]
             <p>
-            {{o.a}}
+            child b: {{o.b}}
             </p>
-            修改子组件：<br/>
+            child ：<br/>
             a:<input type="text" x-model="o.a"><br/>
             b:<input type="text" x-model="o.b">
         </x-xx>
 
-        修改顶级组件：<input type="text" x-model="o.a">
+        parent :<br/>
+        a:<input type="text" x-model="o.a">
 
         <!-- 修改isolate ，观察console输出变化 -->
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -29,8 +37,10 @@
                 logger:imLog
             });
             impex.component('x-xx',{
-                template:'<div>{{=CONTENT}}</div>',
-                o:{a:20,b:20},
+                template:'<p>{{=CONTENT}}</p>',
+                data:{
+                    o:{a:20,b:20}
+                },
                 isolate : ['o.a']
             })
 
