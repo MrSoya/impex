@@ -387,14 +387,13 @@ var Util = new function () {
 		    			var pc = path.concat();
 		    			pc.push(name);
 		    			target.__im__innerProps[name] = observeData(pc,v,comp);
-
-		    			Object.defineProperty(target,name,{
-		    				get:function(){return getter.call(this,name)},
-							set:function(v){setter.call(this,name,v)},
-							enumerable:true,
-							configurable:true
-		    			})
 		    		}
+		    		Object.defineProperty(target,name,{
+	    				get:function(){return getter.call(this,name)},
+						set:function(v){setter.call(this,name,v)},
+						enumerable:true,
+						configurable:true
+	    			})
 		    	}
 
 		    	if(type === 'delete'){
