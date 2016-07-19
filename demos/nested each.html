@@ -20,7 +20,12 @@
         </row>
 
         <script type="text/javascript" src="../build/impex.all.js"></script>
+        <script type="text/javascript" src="../ext/impex.ext.console.js"></script>
         <script type="text/javascript">
+            imLog.level = 4;
+            impex.config({
+                logger:imLog
+            });
 
             //渲染
             impex.render(document.body,{

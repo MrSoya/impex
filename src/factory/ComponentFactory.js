@@ -41,7 +41,8 @@ Util.ext(_ComponentFactory.prototype,{
 
 		if(rs.methods){
 			for(var k in rs.methods){
-				rs[METHOD_PREFIX + k] = rs.methods[k];
+				if(rs.methods[k] instanceof Function)
+					rs[METHOD_PREFIX + k] = rs.methods[k].bind(rs);
 			}
 		}
 

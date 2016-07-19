@@ -187,6 +187,7 @@ var Scanner = new function() {
 	    		var startTag = null,
 	    			nodes = [];
 				for(var i=0,l=node.childNodes.length;i<l;i++){
+					// if(i > node.childNodes.length-1)return;
 					if(startTag){
 						nodes.push(node.childNodes[i]);
 						var endTag = DirectiveFactory.hasEndTag(startTag[0]);

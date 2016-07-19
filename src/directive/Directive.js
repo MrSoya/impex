@@ -62,7 +62,7 @@ function Directive (name,value) {
 Util.inherits(Directive,Component);
 Util.ext(Directive.prototype,{
 	init:function(){
-		impex._cs[this.__id] = this;
+
 		//预处理自定义标签中的表达式
 		var exps = {};
 		var that = this;
@@ -86,14 +86,16 @@ Util.ext(Directive.prototype,{
 		LOGGER.log(this,'inited');
 
 		if(this.onInit){
-			rs = this.onInit();
+			this.onInit();
 		}
 
 		this.__state = Component.state.inited;
-
+	},
+	//component invoke only
+	display:function(){
 		//do observe
 		if(this.observe){
-			var expObj = lexer(attrVal);
+			var expObj = lexer(this.value);
 			for(var varStr in expObj.varTree){
 				var varObj = expObj.varTree[varStr];
 
@@ -107,5 +109,12 @@ Util.ext(Directive.prototype,{
 			var rs = Renderer.evalExp(this.parent,expObj);
 			this.observe(rs);
 		}
+
+		this.onDisplay && this.onDisplay();
+
+		//display children
+		this.children && this.children.forEach(function(child){
+			child.display();
+		});
 	}
 });

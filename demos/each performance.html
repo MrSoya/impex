@@ -40,7 +40,7 @@
             {{k + ':' +v}}
             <a-b></a-b>
             <b x-if="true">111</b>
-            </li>   
+            </li>
         </ul>
         
         <script type="text/javascript" src="../build/impex.all.js"></script>
@@ -91,12 +91,13 @@
                     },
                     sortList : function(){
                         if(this.b2s){
-                            this.d('list').sort(function(a,b){
+                            //对于IE11，如果直接sort会产生错误效果
+                            this.data.list = this.data.list.concat().sort(function(a,b){
                                 return a - b;
                             });
                             this.b2s = false;
                         }else{
-                            this.d('list').sort(function(a,b){
+                            this.data.list = this.data.list.concat().sort(function(a,b){
                                 return b - a;
                             });
                             this.b2s = true;

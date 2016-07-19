@@ -96,6 +96,8 @@ function Component (view) {
 	 * @type {Object}
 	 */
 	this.events = {};
+
+	impex._cs[this.__id] = this;
 };
 Component.state = {
 	created : 'created',
@@ -167,10 +169,39 @@ Util.ext(Component.prototype,{
 	m:function(k){
 		var comp = this;
 		while(comp){
-			if(comp['$'+k] instanceof Function)return comp['$'+k];
+			if(comp['$'+k] instanceof Function){
+				if(!comp.hasOwnProperty('$'+k)){
+					comp['$'+k] = comp['$'+k].bind(comp);
+				}
+				return comp['$'+k];
+			}
 			comp = comp.parent;
 		}
 		return null;
+	},
+	/**
+	 * 查找拥有指定属性的最近的上级组件
+	 * @param  {String} type 查找类型 d / m
+	 * @param  {String} path 表达式路径
+	 * @return {Component}
+	 */
+	closest:function(type,path){
+		if(type === 'd'){
+			var expObj = lexer(path);
+			var evalStr = Renderer.getExpEvalStr(this,expObj);
+			evalStr.replace(/^impex\._cs\["(C_[0-9]+)"\]/,'');
+			return impex._cs[RegExp.$1];
+
+		}else if(type === 'm'){
+			var comp = this;
+			while(comp){
+				if(comp['$'+path] instanceof Function){
+					return comp;
+				}
+				comp = comp.parent;
+			}
+			return null;
+		}
 	},
 	/**
 	 * 绑定自定义事件到组件
@@ -324,7 +355,7 @@ Util.ext(Component.prototype,{
 	 */
 	init:function(){
 		if(this.__state !== Component.state.created)return;
-		impex._cs[this.__id] = this;
+		// impex._cs[this.__id] = this;
 
 		if(this.templateURL){
 			var that = this;
@@ -360,28 +391,45 @@ Util.ext(Component.prototype,{
 		//observe data
 		this.data = Observer.observe(this.data,this);
 
+		Builder.build(this);
+
 		this.__state = Component.state.inited;
+
+		//init children
+		for(var i = this.children.length;i--;){
+			this.children[i].init();
+		}
+
+		
 	},
 	/**
 	 * 显示组件到视图上
 	 */
 	display:function(){
 		if(
-			this.__state !== Component.state.inited && 
-			this.__state !== Component.state.suspend
+			this.__state === Component.state.displayed
 		)return;
 
 		this.view.__display(this);
 		
-		if(this.__state !== Component.state.suspend){
+		// if(this.__state !== Component.state.suspend){
 			Renderer.render(this);
-			Builder.build(this);
-		}
+		// }
 
 		this.__state = Component.state.displayed;
 		LOGGER.log(this,'displayed');
 
+		
+
+		//display children
+		for(var i = 0;i<this.children.length;i++){
+			this.children[i].display();
+		}
+
 		this.onDisplay && this.onDisplay();
+		// this.children && this.children.forEach(function(child){
+		// 	child.display();
+		// });
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
@@ -426,8 +474,6 @@ Util.ext(Component.prototype,{
 			impex._cs[this.__id] = null;
 			delete impex._cs[this.__id];
 
-			this.__impex__observer = 
-			this.__impex__propChains = 
 			this.__state = 
 			this.__id = 
 			this.templateURL = 

@@ -22,23 +22,23 @@ var Builder = new function() {
 			}
 		}
 
-		//build components
-		for(var i=comp.children.length;i--;){
-			var subComp = comp.children[i];
-			if(subComp instanceof Directive)continue;
+		// //build components
+		// for(var i=comp.children.length;i--;){
+		// 	var subComp = comp.children[i];
+		// 	if(subComp instanceof Directive)continue;
 
-			//激活组件
-			subComp.init();
-			subComp.display();
-		}
+		// 	//激活组件
+		// 	subComp.init();
+		// 	// subComp.display();
+		// }
 
-		//build directives
-		for(var i=comp.children.length;i--;){
-			var subComp = comp.children[i];
-			if(!(subComp instanceof Directive))continue;
+		// //build directives
+		// for(var i=comp.children.length;i--;){
+		// 	var subComp = comp.children[i];
+		// 	if(!(subComp instanceof Directive))continue;
 
-			subComp.init();
-		}
+		// 	subComp.init();
+		// }
 	}
 
  	function buildExpModel(ctrlScope,varObj,expNode){
@@ -52,7 +52,6 @@ var Builder = new function() {
  		for(var i=1;i<varObj.segments.length;i++){
  			prop = walkPropTree(prop.subProps,varObj.segments[i],expNode);
  		}
- 		
  	}
 
  	this.buildExpModel = buildExpModel;
@@ -167,6 +166,8 @@ var Builder = new function() {
         }else {
             matchs.push(prop);
         }
+
+
 		
 		var invokedWatchs = [];
 		for(var i=matchs.length;i--;){
@@ -245,8 +246,9 @@ var Builder = new function() {
 			}
 			var prop = undefined;
             try{
-                prop = eval('impex._cs["'+component.__id+'"]'+__propStr);
+                prop = eval('impex._cs["'+component.__id+'"].data'+__propStr);
             }catch(e){}
+
             if(!Util.isUndefined(prop)){
             	__lastMatch = component;
                 toRender = false;

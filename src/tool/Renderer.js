@@ -9,10 +9,11 @@ var Renderer = new function() {
 	 */
 	this.render = function(component){
 		
+		var children = component.children;
  		renderExpNode(component.__expNodes);
 
- 		for(var j=component.children.length;j--;){
- 			Renderer.render(component.children[j]);
+ 		for(var j=children.length;j--;){
+ 			Renderer.render(children[j]);
  		}
 	}
 

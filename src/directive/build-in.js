@@ -182,10 +182,9 @@
         onCreate:function(viewManager){
             this.viewManager = viewManager;
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
-
-            //更新视图
-            this.__init();
-            this.display();
+        },
+        onInit:function(){
+            Scanner.scan(this.view,this);
         },
         observe : function(rs){
             if(this.parent.__state === Component.state.suspend)return;
@@ -212,12 +211,12 @@
             }
             className = className.replace('x-cloak','');
             
-            var that = this;
-            setTimeout(function(){
-                updateCloakAttr(that.parent,that.view.el,className);
-                var curr = that.view.attr('class').replace('x-cloak','');
-                that.view.attr('class',curr);
-            },0);
+            this.__cn = className;
+        },
+        onDisplay:function(){
+            updateCloakAttr(this.parent,this.view.el,this.__cn);
+            var curr = this.view.attr('class').replace('x-cloak','');
+            this.view.attr('class',curr);
         }
     })
 
@@ -358,7 +357,7 @@
             }
         }
         this.onInit = function(){
-            if(this.__state === Component.state.inited)return;
+            // if(this.__state === Component.state.inited)return;
             var that = this;
             //获取数据源
             if(this.forExp.test(this.expInfo.ds)){
@@ -468,7 +467,6 @@
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
-                if(k.indexOf('$__')===0)continue;
 
                 var subComp = this.subComponents[index];
 
@@ -492,15 +490,20 @@
                     v.__im__extPropChain.push([this,vi,index]);
                 }
                 
+                var data = subComp.data.__im__target || subComp.data;
 
-                subComp.data[vi] = v;
-                subComp.data['$index'] = index++;
-                if(ki)subComp.data[ki] = isIntK?k>>0:k;
+                data[vi] = v;
+                data['$index'] = index++;
+                if(ki)data[ki] = isIntK?k>>0:k;
 
-                subComp.init();
-                var isSuspend = subComp.__state === "suspend"?true:false;
+                // var isSuspend = subComp.__state === "suspend"?true:false;
+                if(subComp.__state === Component.state.created){
+                    subComp.init();
+                }
                 subComp.display();
-                isSuspend &&　Builder.build(subComp);
+                Renderer.render(subComp);
+                
+                // isSuspend &&　Builder.build(subComp);
                 onDisplay(subComp);
             }
         }
@@ -622,15 +625,17 @@
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 
-                subComp.data[vi] = v;
-                subComp.data['$index'] = index++;
-                if(ki)subComp.data[ki] = isIntK?k>>0:k;
+                var data = subComp.data.__im__target || subComp.data;
+
+                data[vi] = v;
+                data['$index'] = index++;
+                if(ki)data[ki] = isIntK?k>>0:k;
             }
 
             //初始化组件
             for(var i=this.subComponents.length;i--;){
                 this.subComponents[i].init();
-                this.subComponents[i].display();
+                // this.subComponents[i].display();
             }
         }
         this.parseExp = function(exp){
