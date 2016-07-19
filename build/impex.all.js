@@ -393,13 +393,14 @@ var Util = new function () {
 						set:function(v){setter.call(this,name,v)},
 						enumerable:true,
 						configurable:true
-	    			})
+	    			});
+	    			target[name] = v;//for IE
 		    	}
 
 		    	if(type === 'delete'){
 		    		var obj = snap[name];
 		    		if(typeof obj === 'object'){
-
+		    			clearObserve(obj);
 		    		}
 		    		delete snap[name];
 		    	}
