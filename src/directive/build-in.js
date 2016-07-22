@@ -333,6 +333,7 @@
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.forExp = /^\s*(\d+|[a-zA-Z_$].+?)\s+to\s+(\d+|[a-zA-Z_$].+?)\s*$/;
             this.viewManager = viewManager;
+            this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
             this.parentComp = this.parent;
             this.__view = this.view;
@@ -365,7 +366,7 @@
                     end = RegExp.$2,
                     step = parseFloat(this.step);
                 if(step < 0){
-                    LOGGER.error('step <=0 : '+step);
+                    LOGGER.error('step <= 0 : '+step);
                     return;
                 }
                 step = step || 1;
@@ -408,6 +409,11 @@
             
             this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
             this.viewManager.insertBefore(this.placeholder,this.view);
+
+            this.fragmentPlaceholder = this.viewManager.createPlaceholder('-- fragment placeholder --');
+            
+            this.fragment.appendChild(this.fragmentPlaceholder.__nodes[0]);
+
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
@@ -501,7 +507,8 @@
                     subComp.init();
                 }
                 subComp.display();
-                Renderer.render(subComp);
+                if(subComp.__state === "displayed")
+                    Renderer.recurRender(subComp);
                 
                 // isSuspend &&　Builder.build(subComp);
                 onDisplay(subComp);
@@ -519,10 +526,12 @@
         }
         this.createSubComp = function(){
             var parent = this.parentComp;
-            var target = this.viewManager.createPlaceholder('');
-            this.viewManager.insertBefore(target,this.placeholder);
             //视图
             var copy = this.__view.clone();
+
+            var target = this.viewManager.createPlaceholder('');
+            this.viewManager.insertBefore(target,this.placeholder);
+            
             //创建子组件
             var subComp = parent.createSubComponent(copy,target);
             this.subComponents.push(subComp);
@@ -635,9 +644,30 @@
             //初始化组件
             for(var i=this.subComponents.length;i--;){
                 this.subComponents[i].init();
-                // this.subComponents[i].display();
+                this.subComponents[i].__state = Component.state.displayed;
             }
+
+            var queue = this.subComponents.concat();
+            renderEach(queue);
+
+            //insert DOM
+            // var p = this.__view.el.parentNode;
+            // p.insertBefore(this.fragment,this.placeholder.__nodes[0]);
         }
+        function renderEach(queue){
+            setTimeout(function(){
+                var list = queue.splice(0,50);
+                for(var i=0;i<list.length;i++){
+                    list[i].__state = Component.state.inited;
+                    list[i].display();
+                }
+
+                if(queue.length > 0){
+                    renderEach(queue);
+                }
+            },0);
+        }
+
         this.parseExp = function(exp){
             var ds,k,v;
             var that = this;

@@ -11,6 +11,13 @@ var Renderer = new function() {
 		
 		var children = component.children;
  		renderExpNode(component.__expNodes);
+		
+	}
+
+	this.recurRender = function(component){
+		
+		var children = component.children;
+ 		renderExpNode(component.__expNodes);
 
  		for(var j=children.length;j--;){
  			Renderer.render(children[j]);
@@ -41,6 +48,7 @@ var Renderer = new function() {
 				}
 			}
 			if(val !== null){
+				// console.log('更新DOM');
 				updateDOM(expNode.node,expNode.attrName,val);
 			}
 		}//over for
@@ -236,8 +244,6 @@ var Renderer = new function() {
  		}
  		component = varInCtrlScope(component,searchPath);
 
- 		
-
  		if(component){
  			if(dataType === 'data'){
 	 			fullPath = '.data' + fullPath;
@@ -272,28 +278,31 @@ var Renderer = new function() {
 	function renderHTML(expNode,val,node,component){
 		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
-		var nView = new View(null,null,[node]);
-		if(Util.isUndefined(expNode.__lastVal)){
-
-			var ph = ViewManager.createPlaceholder('-- [html] placeholder --');
-			ViewManager.insertBefore(ph,nView);
+		if(!expNode.__placeholder){
+			var ph = document.createComment('-- [html] placeholder --');
+			node.parentNode.insertBefore(ph,node);
 			expNode.__lastVal = val;
 			expNode.__placeholder = ph;
+			node.parentNode.removeChild(node);
 		}
+
+		var container = document.createElement('span');
+		var nView = new View(null,container,[container]);
 
 		if(expNode.__lastComp){
 			//release
 			expNode.__lastComp.destroy();
-
-			nView = ViewManager.createPlaceholder('');
-			ViewManager.insertAfter(nView,expNode.__placeholder);
 		}
 
 		if(!Util.isDOMStr(val)){
 			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
 		}
 
+		//插入替换DOM
+		expNode.__placeholder.parentNode.insertBefore(container,expNode.__placeholder);
+
 		var subComp = component.createSubComponent(val,nView);
+		subComp.template = val;
 		subComp.init();
 		subComp.display();
 

@@ -28,6 +28,7 @@ var gulp = require('gulp'),
             'src/tool/model.js',
             'src/tool/Scanner.js',
             'src/tool/Builder.js',
+            'src/tool/ChangeHandler.js',
             'src/tool/Renderer.js',
 
             'src/component/Component.js',

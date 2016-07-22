@@ -47,7 +47,7 @@
 	     */
 		this.version = {
 	        v:[0,20,0],
-	        state:'beta',
+	        state:'beta3',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }

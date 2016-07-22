@@ -28,6 +28,8 @@
 		
 		var p = new Proxy(t, handler);
 		Object.defineProperty(p,'__im__target',{enumerable: false,writable: false,value:t});
+		var id = Date.now() + Math.random();
+		Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
 		return p;
 	}
 
@@ -63,7 +65,7 @@
 			    	var xpath = target.__im__extPropChain;
 
 			    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
-			    	Builder.handleChange(changeObj);
+			    	ChangeHandler.handle(changeObj);
 			    	
 			    	return true;
 			    },
@@ -80,7 +82,7 @@
 			    	var xpath = target.__im__extPropChain;
 
 				    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
-			    	Builder.handleChange(changeObj);
+			    	ChangeHandler.handle(changeObj);
 
 				    return true;
 				}
@@ -124,7 +126,7 @@
 		}
 		function setter(k,v){
 			var old = this.__im__innerProps[k];
-
+			clearObserve(old);
 			if(typeof v === 'object'){
 	    		var pcs = this.__im__propChain.concat();
 				pcs.push(k);
@@ -141,10 +143,12 @@
 	    		oldVal:old,
 	    		newVal:v,
 	    		type:'update'
-	    	}]);
+	    	}],true);
 		}
 
 		function observeData(propChains,data,component){
+			if(data && data.__im__propChain)return data;
+			
 			var t = data instanceof Array?[]:{};
 
 			Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
@@ -237,17 +241,20 @@
 		dirtyCheck();
 
 		function clearObserve(obj){
+			var oo = null;
 			for(var i=observedObjects.length;i--;){
-				var oo = observedObjects[i];
+				oo = observedObjects[i];
+				if(oo.id === obj.__im__oid)break;
+			}
+			if(i>-1){
+				observedObjects.splice(i,1);
 				if(typeof oo === 'object'){
 					clearObserve(oo);
 				}
-				if(oo.id === obj.__im__oid)break;
 			}
-			observedObjects.splice(i,1);
 		}
 
-		function handler(changes){
+		function handler(changes,fromSetter){
 			for(var i=changes.length;i--;){
 				var change = changes[i];
 
@@ -265,30 +272,39 @@
 
 		    	if(type === 'add'){
 		    		snap[name] = v;
+		    		target.__im__innerProps[name] = v;
 		    		if(typeof v === 'object'){
 		    			var pc = path.concat();
 		    			pc.push(name);
 		    			target.__im__innerProps[name] = observeData(pc,v,comp);
 		    		}
-		    		Object.defineProperty(target,name,{
-	    				get:function(){return getter.call(this,name)},
-						set:function(v){setter.call(this,name,v)},
-						enumerable:true,
-						configurable:true
-	    			});
-	    			target[name] = v;//for IE
-		    	}
-
+		    		!function(name,target){
+		    			Object.defineProperty(target,name,{
+		    				get:function(){
+		    					return getter.call(this,name)
+		    				},
+							set:function(v){
+								setter.call(this,name,v)
+							},
+							enumerable:true,
+							configurable:true
+		    			});
+		    		}(name,target);
+		    		
+		    	}else 
 		    	if(type === 'delete'){
 		    		var obj = snap[name];
 		    		if(typeof obj === 'object'){
 		    			clearObserve(obj);
 		    		}
 		    		delete snap[name];
+		    	}else if(!fromSetter){
+		    		console.log('无效update')
+		    		continue;
 		    	}
 
 		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
-		    	Builder.handleChange(changeObj);
+		    	ChangeHandler.handle(changeObj);
 		    }
 		}
 	}//end if

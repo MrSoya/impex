@@ -43,16 +43,16 @@
                 },
                 onCreate : function(){
                     this.watch('a.b.x',function(){
-                        console.log(1,arguments);
+                        console.log('a.b.x',arguments);
                     });
                     this.watch('b',function(){
-                        console.log(2,arguments);
+                        console.log('b',arguments);
                     });
                     this.watch('a.b.c.list',function(){
-                        console.log(3,arguments);
+                        console.log('a.b.c.list',arguments);
                     });
                     this.watch('*',function(){
-                        console.log(4,arguments);
+                        console.log('*',arguments);
                     });
 
                     var that = this;

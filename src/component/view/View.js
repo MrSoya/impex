@@ -29,15 +29,17 @@ View.prototype = {
             compileStr = component.onBeforeCompile(compileStr);
         }
 
-		var nodes = DOMViewProvider.compile(compileStr);
+		var nodes = DOMViewProvider.compile(compileStr,this.__target,component.replace);
 		if(!nodes || nodes.length < 1){
 			LOGGER.error('invalid template "'+tmpl+'" of component['+component.name+']');
 			return false;
 		}
-		this.__nodes = nodes;
+		
 		if(component.replace){
+			this.__nodes = nodes;
 			this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
 		}else{
+			this.__nodes = [this.__target];
 			this.el = this.__target;
 		}
 		
@@ -56,6 +58,9 @@ View.prototype = {
 		}
 
 		this.__comp = component;
+
+		//组件已经直接插入DOM中
+		this.__target = null;
 	},
 	__display:function(component){
 		if(!this.__target ||!this.__target.parentNode)return;
