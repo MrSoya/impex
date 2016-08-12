@@ -355,7 +355,6 @@ Util.ext(Component.prototype,{
 	 */
 	init:function(){
 		if(this.__state !== Component.state.created)return;
-		// impex._cs[this.__id] = this;
 
 		if(this.templateURL){
 			var that = this;
@@ -427,9 +426,6 @@ Util.ext(Component.prototype,{
 		}
 
 		this.onDisplay && this.onDisplay();
-		// this.children && this.children.forEach(function(child){
-		// 	child.display();
-		// });
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图

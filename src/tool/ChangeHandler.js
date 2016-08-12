@@ -76,7 +76,7 @@ var ChangeHandler = new function() {
 			        	comp.__watcher(object,name,type,newVal,oldVal,pc);
 			        }
 				});//end for
-			},40);
+			},20);
 		}
 	}
 	

@@ -649,15 +649,12 @@
 
             var queue = this.subComponents.concat();
             renderEach(queue);
-
-            //insert DOM
-            // var p = this.__view.el.parentNode;
-            // p.insertBefore(this.fragment,this.placeholder.__nodes[0]);
         }
         function renderEach(queue){
             setTimeout(function(){
                 var list = queue.splice(0,50);
                 for(var i=0;i<list.length;i++){
+                    if(list[i].__state === Component.state.suspend)continue;
                     list[i].__state = Component.state.inited;
                     list[i].display();
                 }
