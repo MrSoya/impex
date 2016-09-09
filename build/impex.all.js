@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-08-23
+ * last build: 2016-09-09
  */
 !function (global) {
 	'use strict';
@@ -2206,7 +2206,8 @@ Util.ext(Component.prototype,{
 
 		//display children
 		for(var i = 0;i<this.children.length;i++){
-			this.children[i].display();
+			if(!this.children[i].templateURL)
+				this.children[i].display();
 		}
 
 		this.onDisplay && this.onDisplay();

@@ -422,7 +422,8 @@ Util.ext(Component.prototype,{
 
 		//display children
 		for(var i = 0;i<this.children.length;i++){
-			this.children[i].display();
+			if(!this.children[i].templateURL)
+				this.children[i].display();
 		}
 
 		this.onDisplay && this.onDisplay();
