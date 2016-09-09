@@ -89,7 +89,7 @@ var Renderer = new function() {
                 for(var i=ks.length;i--;){
                     var k = ks[i],
                         v = obj[k];
-                    if(k.indexOf('$__impex__')===0)continue;
+                    if(k.indexOf('__im__')===0)continue;
                     rs[k] = typeof obj[k]==='object'? clone(obj[k]): obj[k];
                 }
             }

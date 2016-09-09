@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-08-12
+ * last build: 2016-08-23
  */
 !function (global) {
 	'use strict';
@@ -1557,7 +1557,7 @@ var Renderer = new function() {
                 for(var i=ks.length;i--;){
                     var k = ks[i],
                         v = obj[k];
-                    if(k.indexOf('$__impex__')===0)continue;
+                    if(k.indexOf('__im__')===0)continue;
                     rs[k] = typeof obj[k]==='object'? clone(obj[k]): obj[k];
                 }
             }
@@ -4168,11 +4168,11 @@ impex.service('Transitions',new function(){
 
                 //模型
                 var v = ds[k];
-                if(ds[k] && ds[k].$__impex__origin){
-                    v = ds[k].$__impex__origin;
+                if(ds[k] && ds[k].__im__origin){
+                    v = ds[k].__im__origin;
 
-                    ds[k].$__impex__origin = null;
-                    delete ds[k].$__impex__origin;
+                    ds[k].__im__origin = null;
+                    delete ds[k].__im__origin;
                 }
 
                 //k,index,each
@@ -4256,17 +4256,17 @@ impex.service('Transitions',new function(){
                 rs = {};
                 var ks = Object.keys(obj);
                 if(ks.length>0){
-                    var r = ref ===false ? false : !obj.$__impex__origin;
+                    var r = ref ===false ? false : !obj.__im__origin;
                     for(var i=ks.length;i--;){
                         var k = ks[i],
                             v = obj[k];
-                        if(k.indexOf('$__impex__')===0)continue;
+                        if(k.indexOf('__im__')===0)continue;
                         rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
                     }
                 }
 
-                if(ref !== false && !rs.$__impex__origin)
-                    rs.$__impex__origin = obj;
+                if(ref !== false && !rs.__im__origin)
+                    rs.__im__origin = obj;
             }
             return rs;
         }
@@ -4312,11 +4312,11 @@ impex.service('Transitions',new function(){
                 
                 //模型
                 var v = ds[k];
-                if(ds[k] && ds[k].$__impex__origin){
-                    v = ds[k].$__impex__origin;
+                if(ds[k] && ds[k].__im__origin){
+                    v = ds[k].__im__origin;
 
-                    ds[k].$__impex__origin = null;
-                    delete ds[k].$__impex__origin;
+                    ds[k].__im__origin = null;
+                    delete ds[k].__im__origin;
                 }
 
                 //k,index,each
