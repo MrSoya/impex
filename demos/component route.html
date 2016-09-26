@@ -26,9 +26,9 @@
             impex.component('x-tab',{
                 onCreate:function(router){
                     router.when({
-                        "/radio":'x-radio',
+                        // "/radio":'x-radio',
                         "/([a-z]+)":function(type){
-                            if(type == 'checkbox')return 'x-check';
+                            // if(type == 'checkbox')return 'x-check';
                         }
                     }).onRoute(this.cbk);
                 },

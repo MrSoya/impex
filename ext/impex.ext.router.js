@@ -20,7 +20,7 @@
 		var compName = compNameOrCbk instanceof Function?compNameOrCbk.apply(router,params):compNameOrCbk;
 		
 		if(!router.componentManager.hasTypeOf(compName)){
-			console.warn('cannot find component['+compName+'] of path "'+url+'"');
+			impex.logger.warn('cannot find component['+compName+'] of path "'+url+'"');
 			return;
 		}
 		var placeholder = router.viewManager.createPlaceholder('-- placeholder --');
@@ -88,7 +88,7 @@
 	    	this.componentManager = componentManager;
 
 	    	if(!this.host.__id){
-	    		console.warn('service[XRouter] can only be injected into Component or Directive');
+	    		impex.logger.warn('service[XRouter] can only be injected into Component or Directive');
 	    		return;
 	    	}
 	    	if(!routerMap[this.host.__id]){

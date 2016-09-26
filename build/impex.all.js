@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-09-09
+ * last build: 2016-09-23
  */
 !function (global) {
 	'use strict';
@@ -1268,7 +1268,7 @@ var ChangeHandler = new function() {
 	        comp = pc[0].subComponents[parseInt(index)];
 	        chains.push(pc[1]);
 	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.data[pc[1]] = newVal;
+	        	comp.data.__im__target[pc[1]] = newVal;
 	        }
         }else{
         	chains = pc.concat();
@@ -3491,7 +3491,7 @@ var TransitionFactory = {
 	     */
 		this.version = {
 	        v:[0,20,0],
-	        state:'beta4',
+	        state:'beta5',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -3524,6 +3524,7 @@ var TransitionFactory = {
 			    this.error = function(){}
 			    this.warn = function(){}
 			};
+			this.logger = LOGGER;
 
 			CACHEABLE = cfg.cacheable || false;
 		};
@@ -3652,6 +3653,9 @@ var TransitionFactory = {
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
+
+
+		this.logger = LOGGER;
 	}
 /**
  * 内建服务，提供基础操作接口

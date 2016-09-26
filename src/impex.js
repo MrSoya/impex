@@ -47,7 +47,7 @@
 	     */
 		this.version = {
 	        v:[0,20,0],
-	        state:'beta4',
+	        state:'beta5',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -80,6 +80,7 @@
 			    this.error = function(){}
 			    this.warn = function(){}
 			};
+			this.logger = LOGGER;
 
 			CACHEABLE = cfg.cacheable || false;
 		};
@@ -208,4 +209,7 @@
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
+
+
+		this.logger = LOGGER;
 	}
