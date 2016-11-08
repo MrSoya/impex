@@ -25,41 +25,37 @@ var DOMViewProvider = new function(){
 		return view;
 	}
 
-	this.compile = function(template,target,replace){
-		if(replace){
-			var nodes = [];
-			if(!target.insertAdjacentHTML){
-				var span = document.createElement('span');
-				span.style.display = 'none';
-				target.parentNode.insertBefore(span,target);
-				target.parentNode.removeChild(target);
-				target = span;
-			}
-			target.insertAdjacentHTML('beforebegin', '<!-- c -->');
-			var start = target.previousSibling;
-			target.insertAdjacentHTML('afterend', '<!-- c -->');
-			var end = target.nextSibling;
-			target.insertAdjacentHTML('afterend', template);
-
+	this.compile = function(template,target){
+		var nodes = [];
+		if(!target.insertAdjacentHTML){
+			var span = document.createElement('span');
+			span.style.display = 'none';
+			target.parentNode.insertBefore(span,target);
 			target.parentNode.removeChild(target);
-
-			var next = start.nextSibling;
-			while(next !== end){
-				if(next.nodeType === 3){
-					var v = next.nodeValue.replace(/\s/mg,'');
-					if(v === ''){
-						next = next.nextSibling;
-						continue;
-					}
-				}
-				nodes.push(next);
-				next = next.nextSibling;
-			}
-			start.parentNode.removeChild(start);
-			end.parentNode.removeChild(end);
-		}else{
-			target.innerHTML = template;
+			target = span;
 		}
+		target.insertAdjacentHTML('beforebegin', '<!-- c -->');
+		var start = target.previousSibling;
+		target.insertAdjacentHTML('afterend', '<!-- c -->');
+		var end = target.nextSibling;
+		target.insertAdjacentHTML('afterend', template);
+
+		target.parentNode.removeChild(target);
+
+		var next = start.nextSibling;
+		while(next !== end){
+			if(next.nodeType === 3){
+				var v = next.nodeValue.replace(/\s/mg,'');
+				if(v === ''){
+					next = next.nextSibling;
+					continue;
+				}
+			}
+			nodes.push(next);
+			next = next.nextSibling;
+		}
+		start.parentNode.removeChild(start);
+		end.parentNode.removeChild(end);
 
 		return nodes;
 	}

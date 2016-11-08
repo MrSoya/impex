@@ -23,7 +23,7 @@ Util.ext(_ComponentFactory.prototype,{
 			if(Util.isString(tmpl))
 				view = this.viewProvider.newInstance(tmpl,target);
 			else{
-				view.__target = target;
+				view.__placeholder = view.__target = target;
 			}
 		}else{
 			view = element;
@@ -39,13 +39,6 @@ Util.ext(_ComponentFactory.prototype,{
 			Util.ext(rs,props);
 		}
 
-		if(rs.methods){
-			for(var k in rs.methods){
-				if(rs.methods[k] instanceof Function)
-					rs[METHOD_PREFIX + k] = rs.methods[k].bind(rs);
-			}
-		}
-
 		if(rs.events){
 			for(var k in rs.events){
 				rs.on(k,rs.events[k]);
@@ -56,25 +49,23 @@ Util.ext(_ComponentFactory.prototype,{
 	},
 	/**
 	 * 创建指定类型组件实例
+	 * @param  {String} type       		组件类型
+	 * @param  {HTMLElement} target  	组件应用节点
+	 * @param  {HTMLElement} placeholder 用于替换组件的占位符
+	 * @return {Component}            
 	 */
-	newInstanceOf : function(type,target){
+	newInstanceOf : function(type,target,placeholder){
 		if(!this.types[type])return null;
 
-		var rs = null;
-		var cache = im_compCache[type];
-		if(CACHEABLE && cache && cache.length>0){
-			rs = cache.pop();
-		}else{
-			rs = new this.types[type].clazz(this.baseClass);
-			Util.ext(rs,this.types[type].props);
-			var data = this.types[type].data;
-			if(data){
-				Util.ext(rs.data,data);
-			}
-			rs.name = type;
+		var rs = new this.types[type].clazz(this.baseClass);
+		Util.ext(rs,this.types[type].props);
+		var data = this.types[type].data;
+		if(data){
+			Util.ext(rs.data,data);
 		}
+		rs.name = type;
 
-		rs.view = new View(null,target);
+		rs.view = new View(null,target,null,placeholder);
 
 		if(rs.events){
 			for(var k in rs.events){

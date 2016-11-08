@@ -29,6 +29,27 @@ function Component (view) {
 	 */
 	this.view = view;
 	/**
+	 * 对子组件的引用
+	 * @type {Object}
+	 */
+	this.refs = {};
+	/**
+	 * 组件属性。在组件调用时写在组件上的所有属性,但不包括指令
+	 * <p>
+	 * <x-comp x-if="show" name="'impex'" value="obj" x-each="1 to 10 as i" :click="alert(343)">
+            {{i}}
+        </x-comp>
+	 * </p>
+	 * 上面的组件x-comp会有2个prop，name的值为常量字符串impex，value的值为上级组件的对象obj
+	 * @type {Object}
+	 */
+	this.props = {};
+	/**
+	 * 用于指定属性的类型，如果类型不符会报错
+	 * @type {Object}
+	 */
+	this.propTypes = null;
+	/**
 	 * 组件名，在创建时由系统自动注入
 	 */
 	this.name;
@@ -43,9 +64,17 @@ function Component (view) {
 	 */
 	this.children = [];
 	this.__expNodes = [];
-	this.__expPropRoot = new ExpProp();
-	this.__watcher;
+	this.__expDataRoot = new ExpData();
+	this.__expWithProps = {'*':[]};
+	this.__watchWithProps = {'*':[]};
+	this.__directiveWithProps = {'*':[]};
 	this.__eventMap = {};
+	this.__watchProps = [];
+	/**
+	 * 组件域内的指令列表
+	 * @type {Array}
+	 */
+	this.directives = [];
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -55,12 +84,6 @@ function Component (view) {
 	 * 组件模板url，动态加载组件模板
 	 */
 	this.templateURL;
-	/**
-	 * 是否为替换模式生成组件，如果为false，组件模版会插入组件标签内部
-	 * @default true
-	 * @type {Boolean}
-	 */
-	this.replace = true;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -73,24 +96,12 @@ function Component (view) {
 	 * @type {Object}
 	 */
 	this.restrict;
-	/**
-	 * 隔离列表，用于阻止组件属性变更时，自动广播子组件，如['x.y','a']。
-	 * 
-	 * @type {Array}
-	 */
-	this.isolate;
 
 	/**
 	 * 组件数据
 	 * @type {Object}
 	 */
 	this.data = {};
-
-	/**
-	 * 组件方法
-	 * @type {Object}
-	 */
-	this.methods = {};
 	/**
 	 * 自定义事件接口
 	 * @type {Object}
@@ -125,7 +136,6 @@ Util.ext(Component.prototype,{
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
 	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
-	 * 获取模型值时，会从当前域向上查找，直到找到匹配对象，如果都没找到返回null
 	 * @param  {string} path 表达式路径
 	 * @param  {var} val  值
 	 * @return this
@@ -158,49 +168,6 @@ Util.ext(Component.prototype,{
 				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
 			}
 			
-		}
-	},
-	/**
-	 * 查找指定的函数<br/>
-	 * 获取函数时，会从当前域向上查找，直到找到匹配函数，如果都没找到返回null
-	 * @param  {String} k 函数名
-	 * @return {[type]}   [description]
-	 */
-	m:function(k){
-		var comp = this;
-		while(comp){
-			if(comp['$'+k] instanceof Function){
-				if(!comp.hasOwnProperty('$'+k)){
-					comp['$'+k] = comp['$'+k].bind(comp);
-				}
-				return comp['$'+k];
-			}
-			comp = comp.parent;
-		}
-		return null;
-	},
-	/**
-	 * 查找拥有指定属性的最近的上级组件
-	 * @param  {String} type 查找类型 d / m
-	 * @param  {String} path 表达式路径
-	 * @return {Component}
-	 */
-	closest:function(type,path){
-		if(type === 'd'){
-			var expObj = lexer(path);
-			var evalStr = Renderer.getExpEvalStr(this,expObj);
-			evalStr.replace(/^impex\._cs\["(C_[0-9]+)"\]/,'');
-			return impex._cs[RegExp.$1];
-
-		}else if(type === 'm'){
-			var comp = this;
-			while(comp){
-				if(comp['$'+path] instanceof Function){
-					return comp;
-				}
-				comp = comp.parent;
-			}
-			return null;
 		}
 	},
 	/**
@@ -259,60 +226,23 @@ Util.ext(Component.prototype,{
 		},0);
 	},
 	/**
-	 * 查找子组件，并返回符合条件的所有实例。如果不开启递归查找，
-	 * 该方法只会查询直接子节点集合
-	 * @param  {String} name       组件名，可以使用通配符*
-	 * @param  {Object} conditions 查询条件，JSON对象
-	 * @param {Boolean} recur 是否开启递归查找，默认false
-	 * @return {Array<Component>} 
-	 */
-	find:function(name,conditions,recur){
-		name = name.toLowerCase();
-		var rs = [];
-		for(var i=this.children.length;i--;){
-			var comp = this.children[i];
-			if(name === '*' || comp.name === name){
-				var matchAll = true;
-				if(conditions)
-					for(var k in conditions){
-						if(comp[k] !== conditions[k]){
-							matchAll = false;
-							break;
-						}
-					}
-				if(matchAll){
-					rs.push(comp);
-				}
-			}
-			if(recur && comp.children.length>0){
-				var tmp = comp.find(name,conditions,true);
-				if(rs)rs = rs.concat(tmp);
-			}
-		}
-		return rs;
-	},
-	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
 	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
 	 */
 	watch:function(expPath,cbk){
-		if(expPath === '*'){
-			this.__watcher = cbk;
-		}else{
-			var expObj = lexer(expPath);
-			var keys = Object.keys(expObj.varTree);
-			if(keys.length < 1)return;
-			if(keys.length > 1){
-				LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
-				return;
-			}
-			
-			var varObj = expObj.varTree[keys[0]];
-			var watch = new Watch(cbk,this,varObj.segments);
-			//监控变量
-			Builder.buildExpModel(this,varObj,watch);
+		var expObj = lexer(expPath);
+		var keys = Object.keys(expObj.varTree);
+		if(keys.length < 1)return;
+		if(keys.length > 1){
+			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
+			return;
 		}
+		
+		var varObj = expObj.varTree[keys[0]];
+		var watch = new Watch(cbk,this,varObj.segments);
+		//监控变量
+		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
 	},
@@ -330,8 +260,10 @@ Util.ext(Component.prototype,{
 	 * @param  {View} target 视图
 	 * @return {Component} 子组件
 	 */
-	createSubComponentOf:function(type,target){
-		var instance = ComponentFactory.newInstanceOf(type,target.__nodes?target.__nodes[0]:target);
+	createSubComponentOf:function(type,target,placeholder){
+		var instance = ComponentFactory.newInstanceOf(type,
+			target.__nodes?target.__nodes[0]:target,
+			placeholder && placeholder.__nodes?placeholder.__nodes[0]:placeholder);
 		this.children.push(instance);
 		instance.parent = this;
 
@@ -377,15 +309,6 @@ Util.ext(Component.prototype,{
 		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
-		
-		var rs = null;
-		if(this.onInit){
-			rs = this.onInit(tmplStr);
-		}
-		if(rs === false){
-			this.destroy();
-			return;
-		}
 
 		//observe data
 		this.data = Observer.observe(this.data,this);
@@ -394,11 +317,18 @@ Util.ext(Component.prototype,{
 
 		this.__state = Component.state.inited;
 
+		if(this.onInit){
+			this.onInit(tmplStr);
+		}
+
 		//init children
 		for(var i = this.children.length;i--;){
 			this.children[i].init();
 		}
 
+		for(var i = this.directives.length;i--;){
+			this.directives[i].init();
+		}
 		
 	},
 	/**
@@ -410,14 +340,22 @@ Util.ext(Component.prototype,{
 		)return;
 
 		this.view.__display(this);
+
+		Renderer.render(this);
+
+		//view ref
+		this.view.__nodes.forEach(function(el){
+			if(!el.querySelectorAll)return;
+			var refs = el.querySelectorAll('*['+ATTR_REF_TAG+']');
+			for(var i=refs.length;i--;){
+				var node = refs[i];
+				this.view.refs[node.getAttribute(ATTR_REF_TAG)] = node;
+			}
+		},this);
 		
-		// if(this.__state !== Component.state.suspend){
-			Renderer.render(this);
-		// }
 
 		this.__state = Component.state.displayed;
 		LOGGER.log(this,'displayed');
-
 		
 
 		//display children
@@ -426,7 +364,13 @@ Util.ext(Component.prototype,{
 				this.children[i].display();
 		}
 
+		for(var i = this.directives.length;i--;){
+			this.directives[i].active();
+		}
+
 		this.onDisplay && this.onDisplay();
+
+
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
@@ -435,6 +379,8 @@ Util.ext(Component.prototype,{
 		if(this.__state === null)return;
 
 		LOGGER.log(this,'destroy');
+
+		this.onDestroy && this.onDestroy();
 
 		if(this.parent){
 			var i = this.parent.children.indexOf(this);
@@ -450,37 +396,27 @@ Util.ext(Component.prototype,{
 			this.children[0].destroy();
 		}
 
+		for(var i = this.directives.length;i--;){
+			this.directives[i].destroy();
+		}
+
+
 		this.view = 
 		this.children = 
+		this.directives = 
 		this.__expNodes = 
-		this.__expPropRoot = null;
+		this.__expDataRoot = null;
 
-		this.onDestroy && this.onDestroy();
+		impex._cs[this.__id] = null;
+		delete impex._cs[this.__id];
 
-		if(CACHEABLE && this.name && !(this instanceof Directive)){
-			var cache = im_compCache[this.name];
-			if(!cache)cache = im_compCache[this.name] = [];
-
-			this.__state = Component.state.created;
-			this.children = [];
-			this.__expNodes = [];
-			this.__expPropRoot = new ExpProp();
-
-			cache.push(this);
-		}else{
-			impex._cs[this.__id] = null;
-			delete impex._cs[this.__id];
-
-			this.__state = 
-			this.__id = 
-			this.templateURL = 
-			this.template = 
-			this.restrict = 
-			this.isolate = 
-			this.methods = 
-			this.events = 
-			this.data = null;
-		}
+		this.__state = 
+		this.__id = 
+		this.templateURL = 
+		this.template = 
+		this.restrict = 
+		this.events = 
+		this.data = null;
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -502,5 +438,225 @@ Util.ext(Component.prototype,{
 	},
 	__getPath:function(){
 		return 'impex._cs["'+ this.__id +'"]';
+	},
+	__update:function(changes){
+		var renderable = true;
+		var changeList = [];
+		var expNodes = [];
+		var watchs = [];
+		var attrObserveNodes = [];
+		for(var i=changes.length;i--;){
+			var c = changes[i];
+			var changeParam = {
+				name:c.name,
+				newVal:c.newVal,
+				oldVal:c.oldVal,
+				type:c.type,
+				path:c.path,
+				object:c.object
+			};
+			changeList.push(changeParam);
+			var expProps = c.expProps;
+			for(var k=expProps.length;k--;){
+				var ens = expProps[k].expNodes;
+				for(var j=ens.length;j--;){
+					var en = ens[j];
+					if(expNodes.indexOf(en) < 0)expNodes.push(en);
+				}
+				var aons = expProps[k].attrObserveNodes;
+				for(var j=aons.length;j--;){
+					var aon = aons[j];
+					if(attrObserveNodes.indexOf(aon) < 0)attrObserveNodes.push(aon);
+				}
+				var ws = expProps[k].watchs;
+				for(var j=ws.length;j--;){
+					var w = ws[j];
+					if(watchs.indexOf(w) < 0)watchs.push([w,changeParam]);
+				}
+			}
+		}
+		if(this.onUpdate){
+			renderable = this.onUpdate(changeList);
+		}
+		//render view
+		if(renderable !== false){
+			Renderer.renderExpNodes(expNodes);
+		}
+		
+		this.__updateDirective(attrObserveNodes);
+
+		this.__callWatchs(watchs);
+
+		//update children props
+		this.__updateChildrenProps(changeList);
+	},
+	__updateChildrenProps:function(changes){
+		var matchMap = {};
+		for(var i=changes.length;i--;){
+			var change = changes[i];
+			var path = change.path;
+			this.__watchProps.forEach(function(prop){
+				var isMatch = this.__isVarMatch(prop.segments,path);
+				if(isMatch){
+					if(!matchMap[prop.subComp.__id])
+						matchMap[prop.subComp.__id] = [];
+					var rs = Renderer.evalExp(this,prop.expWords);
+					matchMap[prop.subComp.__id].push({
+						name:prop.name,
+						oldVal:prop.oldVal,
+						newVal:rs
+					});
+					prop.oldVal = rs;
+				}
+			},this);
+		}
+		for(var k in matchMap){
+			var cs = matchMap[k];
+			impex._cs[k].__propChange && impex._cs[k].__propChange(cs);
+		}
+	},
+	__isVarMatch:function(segments,changePath){
+		if(segments.length < changePath.length)return false;
+		for(var k=0;k<segments.length;k++){
+			if(!changePath[k])break;
+
+			if(segments[k][0] !== '[' && 
+				changePath[k][0] !== '[' && 
+				segments[k] !== changePath[k]){
+				return false;
+			}
+		}
+		return true;
+	},
+	__callWatchs:function (watchs){
+		var invokedWatchs = [];
+		for(var i=watchs.length;i--;){
+			var change = watchs[i][1];
+			var watch = watchs[i][0];
+
+			var propChain = change.path;
+			var newVal = change.newVal;
+			var oldVal = change.oldVal;
+			var name = change.name;
+			var object = change.object;
+			var changeType = change.type;
+
+			if(watch.segments.length < propChain.length)continue;
+			if(invokedWatchs.indexOf(watch) > -1)continue;
+
+			//compare segs
+			var canWatch = this.__isVarMatch(watch.segments,propChain);
+
+			if(canWatch){
+				var nv = newVal,
+				ov = oldVal;
+				if(watch.segments.length > propChain.length){
+					var findSegs = watch.segments.slice(k);
+					var findStr = '$var';
+					for(var k=0;k<findSegs.length;k++){
+						var seg = findSegs[k];
+						findStr += seg[0]==='['?seg:'.'+seg;
+					}
+					try{
+						nv = new Function("$var","return "+findStr)(newVal);
+						ov = new Function("$var","return "+findStr)(oldVal);
+					}catch(e){
+						LOGGER.debug('error on parse watch params',e);
+						nv = null;
+					}
+				}
+				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,propChain);
+				invokedWatchs.push(watch);
+			}
+		}
+	},
+	__updateDirective:function (attrObserveNodes){
+		for(var j=attrObserveNodes.length;j--;){
+			var aon = attrObserveNodes[j];
+
+			var rs = Renderer.evalExp(aon.directive.component,aon.expObj);
+			aon.directive.onUpdate(rs);
+		}
+	},
+	__propChange:function(changes){
+		var matchMap = {};
+		//update props
+		for(var i=changes.length;i--;){
+			var c = changes[i];
+			var name = c.name;
+			this.props[name] = c.newVal;
+			//check children which refers to props
+			this.__watchProps.forEach(function(prop){
+				var k = prop.fromPropKey;
+				if(!k)reutnr;
+				if(k[0] === '[' || k === name){
+					if(!matchMap[prop.subComp.__id])
+						matchMap[prop.subComp.__id] = [];
+					var rs = Renderer.evalExp(this,prop.expWords);
+					matchMap[prop.subComp.__id].push({
+						name:prop.name,
+						oldVal:prop.oldVal,
+						newVal:rs
+					});
+					prop.oldVal = rs;
+				}
+			},this);
+		}
+
+		var renderView = true;
+		this.onPropChange && (renderView = this.onPropChange(changes));
+
+		if(renderView !== false){
+			var expNodeList = null;
+			var directiveList = null;
+			var watchList = null;
+			var fuzzyE = false,
+				fuzzyD = false,
+				fuzzyW = false; 
+			
+			for(var i=changes.length;i--;){
+				var c = changes[i];
+				var name = c.name;
+				if(this.__expWithProps[name]){
+					expNodeList = this.__expWithProps[name].concat();
+				}else{
+					fuzzyE = true;
+				}
+
+				if(this.__directiveWithProps[name]){
+					directiveList = this.__directiveWithProps[name].concat();
+				}else{
+					fuzzyD = true;
+				}
+
+				if(this.__watchWithProps[name]){
+					watchList = this.__watchWithProps[name].concat();
+				}else{
+					fuzzyW = true;
+				}
+			}
+
+			//expnodes
+			if(fuzzyE && this.__expWithProps['*'].length > 0){
+				expNodeList = expNodeList.concat(this.__expWithProps['*']);
+			}
+			expNodeList && Renderer.renderExpNodes(expNodeList);
+
+			//directives
+			if(fuzzyD && this.__directiveWithProps['*'].length > 0){
+				directiveList = directiveList.concat(this.__directiveWithProps['*']);
+			}
+			directiveList && this.__updateDirective(directiveList);
+			//watchs
+			if(fuzzyW && this.__watchWithProps['*'].length > 0){
+				watchList = watchList.concat(this.__watchWithProps['*']);
+			}
+			watchList && this.__callWatchs(watchList);
+		}
+
+		for(var k in matchMap){
+			var cs = matchMap[k];
+			impex._cs[k].__propChange && impex._cs[k].__propChange(cs);
+		}
 	}
 });

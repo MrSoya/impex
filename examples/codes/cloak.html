@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .x-cloak{
+                display: none;
+            }
+            .red{
+            	color: red;
+            }
+            .green{
+            	color: #00ee00;
+            }
+        </style>
+    </head>
+    <body>
+        cloak：
+        <span x-cloak class="{{color}} x-cloak">{{a}}</span>
+    
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    a:'color',
+                    color : 'red'
+                },
+                onInit:function(){
+                    var that = this;
+                    setTimeout(function(){
+                        that.data.color = 'green';
+                    },1000);
+                }
+            });
+            
+        </script>
+    </body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impexui - layout</title>
+		<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+		<link rel="stylesheet" type="text/css" href="themes/default.css"/>
+		<link rel="stylesheet" type="text/css" href="lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+		<div class="impex-layout">
+			<header>
+				impexjs Examples 
+			</header>
+			<div class="togglebar">
+				<div class="menubar {{hideSide?'hidden':''}}">
+					{{hideSide?'':'&nbsp;'}} 
+					<i class="fa fa-bars toggler" :click="toggleSide()"></i>
+				</div>
+                <div class="tabbar">
+                	<i class="nav fa fa-angle-left" :click="tabMove(-1)"></i>
+                	<i class="nav right fa fa-angle-right" :click="tabMove(1)"></i>
+                	<div class="slidebox">
+                		<ul >
+							<li x-each="activeTypes as type" class="{{active==type?'active':''}}">
+                                <a href="#!/{{type}}">
+                                {{type}}
+                                </a>
+                                <i class="fa fa-times" :click="this.parent.closeTab(type,$event)"></i>
+                            </li>
+						</ul>
+                	</div>  	
+                </div>
+            </div>
+            <div class="sidebar {{hideSide?'hidden':''}}">
+            	<div class="scrollpane">
+            		<!-- 左侧导航开始 -->
+            		<ul class="menu-items">
+            			<li x-each="sidebar as k,list" props:active="active" >
+            				<a class="cate">{{k}}</a>
+            				<ul>
+            					<li x-each="list as comp" 
+            					props:active="this.props.active"  
+            					x="{{this.props.active}}"
+            					class="{{this.props.active==comp?'active':''}}">
+            						<a class="link" href="#!/{{comp}}">
+		            					{{comp}}
+		            				</a>
+            					</li>
+            				</ul>
+            			</li>
+            		</ul>
+            		<!-- 左侧导航结束 -->
+            	</div>
+            </div>
+			<div class="main {{hideSide?'hidden':''}}">
+				<iframe src="codes/{{v.type}}.html"
+				scrolling="yes" frameborder="0" 
+				onload="changeFrameHeight(this)"
+				x-each="activeComps as v" 
+				props:active="active" 
+				class="panel {{this.props.active==v.type?'active':''}}">
+					
+				</iframe>
+			</div>
+		</div>
+		<script type="text/javascript" src="lib/impex/impex.all.js"></script>
+		<script type="text/javascript" src="lib/impex/impex.ext.router.js"></script>
+		<script type="text/javascript" src="lib/impex/impex.ext.console.js"></script>
+		<script type="text/javascript" src="lib/jq/jquery-3.1.0.min.js"></script>
+		<script type="text/javascript" src="lib/jq/jquery.slimscroll.min.js"></script>
+		<script type="text/javascript">
+
+			function changeFrameHeight(iframe){
+			    iframe.style.height = document.documentElement.clientHeight+'px';
+			}
+
+			imLog.level = 3;
+			impex.config({
+                logger:imLog
+            });
+
+
+            //渲染框架
+            impex.render(document.body, {
+            	onCreate:function(router){
+            		var that = this;
+                    router.when({
+                        "/([a-z]+)":function(type){
+                        	if(that.data.activeTypes.indexOf(type) < 0){
+                        		that.data.activeComps.push({
+                        			tmpl:'<x-'+type+'></x-'+type+'>',
+                        			type:type
+                        		});
+                        		that.data.activeTypes.push(type);
+                        	}
+
+                        	that.data.active = type;
+                        }
+                    });
+                },
+                onInit:function(){
+                	var comps = [];
+                	for(var k in this.data.sidebar){
+                		var cate = this.data.sidebar[k];
+                		comps = cate.concat(comps);
+                	}
+                	this.data.comps = comps;
+                },
+                onDisplay:function(){
+					$('.impex-layout > .sidebar .scrollpane > .menu-items').slimScroll({
+				        height: '100%'
+				    });
+                },
+            	data:{
+            		sidebar:{
+            			'config':[
+            				'delimiters','logger'
+            			],
+            			'component':[
+            				'anonymous','named','expression','html','templateurl','content',
+            				'watch','props','proptypes','propchange',
+            				'restrict','lifecycle','communication','route'
+            			],
+            			'filter':[
+            				'currency','chain'
+            			],
+            			'directive':[
+            				'on','select','expression','form'
+            			],
+            			'directive - each':[
+            				'const','for','object','filterin',
+            				'scope','eachprops','nested','eachcomponent',
+            				'performence','eachover','eachstart','operation'
+            			],
+            			'input':[
+            				'attributes','number','bind'
+            			],
+            			'text':[
+            				'cloak','directive'
+            			],
+            			'directive - if/show':[
+            				'if','ifstart','show','showstart',
+            				'animationwithjs'
+            			],
+            			'demo':[
+            				'calculator','todos','tree'
+            			]
+            		},
+            		comps:[],//所有组件
+            		activeComps:[],//当前打开的组件
+            		activeTypes:[],//当前打开的type
+            		active:'',//当前激活type
+            		hideSide:false
+            	},
+        		//控制tab左右移动
+        		tabMove:function(dir){
+        			document.querySelector('.impex-layout .slidebox').scrollLeft += dir*100;
+        		},
+        		toggleSide:function(){
+        			this.data.hideSide = !this.data.hideSide;
+        		},
+        		closeTab:function(type,ev){
+        			var i = this.data.activeTypes.indexOf(type);
+        			if(i > -1){
+        				this.data.activeTypes.splice(i,1);
+        				this.data.activeComps.splice(i,1);
+        				console.log(this.data.activeTypes,this.data.activeComps)
+        			}
+        			if(this.data.active == type){
+        				var newType = this.data.activeTypes[0];
+        				if(!newType)return;
+        				location.href = '#!/'+newType;
+        				this.data.active = newType;
+
+        			}
+        		}
+            },['XRouter']);
+		</script>
+    </body>
+</html>

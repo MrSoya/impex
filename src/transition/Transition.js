@@ -9,7 +9,7 @@ var TRANSITIONS = {
     "WebkitTransition": "webkitTransitionEnd"
 }
 var TESTNODE;
-function Transition (type,component,hook) {
+function Transition (type,target,hook) {
     if(!TESTNODE){
         TESTNODE = document.createElement('div');
         document.body.appendChild(TESTNODE);
@@ -29,10 +29,18 @@ function Transition (type,component,hook) {
         }
 
         if(max > 0){
-            var v = component.view;
-            var expNodes = component.__expNodes;
-            if(expNodes.length<1 && component.parent){
-                expNodes = component.parent.__expNodes;
+            var v = target.view;
+            var expNodes = null;
+            var comp = null;
+            if(target instanceof Directive){
+                expNodes = target.component.__expNodes;
+                comp = target.component;
+            }else{
+                expNodes = target.__expNodes;
+                comp = target;
+            }
+            if(expNodes.length<1 && comp.parent){
+                expNodes = comp.parent.__expNodes;
             }
             for(var i=expNodes.length;i--;){
                 var expNode = expNodes[i];
@@ -58,7 +66,7 @@ function Transition (type,component,hook) {
     	this.__css = false;
     }
 
-    this.__comp = component;
+    this.__direct = target;
     this.__view = v;
     this.__hook = hook || {};
     this.__type = type;
@@ -71,11 +79,11 @@ Transition.prototype = {
 		if(this.__css)
         	this.__view.addClass(this.__type + '-enter');
         //exec...
-        if(this.__comp.enter){
-        	this.__comp.enter();
+        if(this.__direct.enter){
+        	this.__direct.enter();
         }
         if(this.__hook.enter){
-        	this.__hook.enter.call(this.__comp,this.__enterDone.bind(this));
+        	this.__hook.enter.call(this.__direct,this.__enterDone.bind(this));
         }
         if(this.__css){
         	this.__view.el.offsetHeight;
@@ -93,12 +101,12 @@ Transition.prototype = {
         //exec...
         if(this.__hook.leave){
         	this.__leaveDone.__trans = this;
-        	this.__hook.leave.call(this.__comp,this.__leaveDone.bind(this));
+        	this.__hook.leave.call(this.__direct,this.__leaveDone.bind(this));
         }
 	},
 	__leaveDone:function(){
-		if(this.__comp.leave){
-        	this.__comp.leave();
+		if(this.__direct.leave){
+        	this.__direct.leave();
         }
 	},
 	__done:function(e){

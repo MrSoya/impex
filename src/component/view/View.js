@@ -5,7 +5,7 @@
  * 一个组件或者指令只会拥有一个视图
  * @class
  */
-function View (el,target,nodes) {
+function View (el,target,nodes,placeholder) {
 	/**
 	 * 对可视元素的引用，在DOM中就是HTMLElement，
 	 * 在绝大多数情况下，都不应该直接使用该属性
@@ -16,6 +16,12 @@ function View (el,target,nodes) {
 	this.__nodes = nodes;
 	this.__evMap = {};
 	this.__target = target;
+	this.__placeholder = placeholder || target;
+	/**
+	 * 对视图范围内可视元素的引用，在DOM中就是HTMLElement
+	 * @type {Object}
+	 */
+	this.refs = {};
 }
 View.prototype = {
 	__init:function(tmpl,component){
@@ -29,41 +35,105 @@ View.prototype = {
             compileStr = component.onBeforeCompile(compileStr);
         }
 
-		var nodes = DOMViewProvider.compile(compileStr,this.__target,component.replace);
+		var nodes = DOMViewProvider.compile(compileStr,this.__placeholder);
+
+		this.__nodes = nodes;
+		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+
 		if(!nodes || nodes.length < 1){
 			LOGGER.error('invalid template "'+tmpl+'" of component['+component.name+']');
 			return false;
 		}
-		
-		if(component.replace){
-			this.__nodes = nodes;
-			this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
-		}else{
-			this.__nodes = [this.__target];
-			this.el = this.__target;
-		}
-		
 		if(nodes.length > 1){
 			LOGGER.warn('more than 1 root node of component['+component.name+']');
 		}
 
-		if(propMap)
-		for(var i=propMap.length;i--;){
-			var k = propMap[i].name.toLowerCase();
-			if(k.indexOf('-') > -1){
-				k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+		//check props
+		var requires = {};
+		var propTypes = component.propTypes;
+		if(propTypes){
+			for(var k in propTypes){
+				var type = propTypes[k];
+				if(type.require){
+					requires[k] = type;
+				}
 			}
-			var v = propMap[i].value;
-			component.data[k] = v;
+		}
+
+		if(propMap){
+			//bind props
+			for(var i=propMap.length;i--;){
+				var k = propMap[i].name.toLowerCase();
+				var v = propMap[i].value;
+				if(k == ATTR_REF_TAG){
+					var expNode = Scanner.getExpNode(v,component);
+					var calcVal = expNode && Renderer.calcExpNode(expNode);
+					component.parent.refs[calcVal || v] = component;
+					continue;
+				}
+
+				var instance = null;
+				if(REG_CMD.test(k)){
+					var c = k.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+					//如果有对应的处理器
+					if(DirectiveFactory.hasTypeOf(c)){
+						instance = DirectiveFactory.newInstanceOf(c,this.el,component,k,v);
+					}
+				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
+					instance = DirectiveFactory.newInstanceOf('on',this.el,component,k,v);
+				}else{
+					if(!component.parent)continue;
+					//如果是属性，给props
+					var tmp = lexer(v);
+					var rs = Renderer.evalExp(component.parent,tmp);
+					var keys = Object.keys(tmp.varTree);
+					//watch props
+					keys.forEach(function(key){
+						if(tmp.varTree[key].isFunc)return;
+						
+						var prop = new Prop(component,k,tmp.varTree[key].segments,tmp,rs);
+						component.parent.__watchProps.push(prop);
+					});
+
+					if(propTypes){
+						delete requires[k];
+						this.__checkPropType(k,rs,propTypes,component);
+					}
+
+					component.props[k] = rs;
+				}
+
+				if(instance){
+					instance.init();
+				}
+			}
+		}
+
+		//check requires
+		var ks = Object.keys(requires);
+		if(ks.length > 0){
+			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
+			return;
 		}
 
 		this.__comp = component;
 
 		//组件已经直接插入DOM中
-		this.__target = null;
+		this.__placeholder = null;
+	},
+	__checkPropType:function(k,v,propTypes,component){
+		if(!propTypes[k])return;
+		var checkType = propTypes[k].type;
+		checkType = checkType instanceof Array?checkType:[checkType];
+		var vType = typeof v;
+		if(checkType.indexOf(vType) < 0){
+			LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+		}
 	},
 	__display:function(component){
-		if(!this.__target ||!this.__target.parentNode)return;
+		if(!this.__placeholder ||!this.__placeholder.parentNode)return;
 
 		var fragment = null;
 		if(this.__nodes.length > 1){
@@ -75,14 +145,10 @@ View.prototype = {
 			fragment = this.__nodes[0];
 		}
 
-		if(component.replace){
-			this.__target.parentNode.replaceChild(fragment,this.__target);
-		}else{
-			this.__target.innerHTML = '';
-			this.__target.appendChild(fragment);
-		}
+		this.__placeholder.parentNode.replaceChild(fragment,this.__placeholder);
+
 		fragment = null;
-		this.__target = null;
+		this.__placeholder = null;
 	},
 	__destroy:function(component){
 		for(var k in this.__evMap){
@@ -108,7 +174,8 @@ View.prototype = {
 		}
 
 		if(this.__target){
-			this.__target.parentNode.removeChild(this.__target);
+			if(this.__target.parentNode)
+				this.__target.parentNode.removeChild(this.__target);
 			this.__target = null;
 		}
 	},
@@ -332,19 +399,9 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
 		var attrName = attrName.replace(/\s/mg,'');
 		if(attrName === 'CONTENT'){
-            return bodyHTML;
+            return bodyHTML||'';
         }
-        if(attrName === 'BINDPROPS'){
-            var rs = '';
-            var ks = Object.keys(propMap);
-            for(var i=ks.length;i--;){
-                rs += propMap[ks[i]].nodeName + '="'+propMap[ks[i]].nodeValue+'" ';
-            }
-            return rs;
-        }
-
-		var attrVal = propMap[attrName] && propMap[attrName].nodeValue;
-		return attrVal || '';
+		return '';
 	});
 	return tmpl;
 }

@@ -1,18 +1,18 @@
 /**
- * @classdesc 指令类，继承自组件,表现为一个自定义属性。
+ * @classdesc 指令存在于某个组件域中,表现为一个自定义属性。
+ * 组件的生命周期：
  * <p>
- * 	指令继承自组件，所以生命周期也类似组件
  * 	<ul>
- * 		<li>onCreate：当指令被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
- * 		<li>onInit：当指令初始化时，该事件被触发，系统会监控指令中的所有表达式</li>
- * 		<li>onDestroy：当指令被销毁时，该事件被触发</li>
+ * 		<li>onCreate：当指令被创建时触发</li>
+ * 		<li>onInit：当指令初始化时触发</li>
+ * 		<li>onActive: 当指令激活时触发</li>
+ * 		<li>onUpdate: 当指令条件变更时触发</li>
+ * 		<li>onDestroy：当指令被销毁时触发</li>
  * 	</ul>
  * </p>
- * @extends Component
  * @class 
  */
 function Directive (name,value) {
-	Component.call(this);
 	/**
 	 * 指令的字面值
 	 */
@@ -31,6 +31,14 @@ function Directive (name,value) {
 	 * @type {Function}
 	 */
 	this.filter;
+	/**
+	 * 指令所在的组件
+	 */
+	this.component;
+	/**
+	 * 指令所在的目标视图
+	 */
+	this.view;
 
 	/**
 	 * 是否终结<br/>
@@ -54,34 +62,16 @@ function Directive (name,value) {
 	 * @type {Number}
 	 */
 	this.priority = 0;
-	/**
-	 * 当指令表达式中对应模型的值发生变更时触发，回调参数为表达式计算结果
-	 */
-	this.observe;
 }
-Util.inherits(Directive,Component);
 Util.ext(Directive.prototype,{
 	init:function(){
-
-		//预处理自定义标签中的表达式
-		var exps = {};
-		var that = this;
-		this.value.replace(REG_EXP,function(a,modelExp){
-    		var expObj = lexer(modelExp);
-
-    		var val = Renderer.evalExp(that.parent,expObj);
-    		
-    		//保存表达式
-    		exps[modelExp] = {
-    			val:val
-    		};
-    	});
-    	var attrVal = this.value;
-    	for(var k in exps){
-			attrVal = attrVal.replace(EXP_START_TAG +k+ EXP_END_TAG,exps[k].val);
+		if(this.__state == Component.state.inited){
+			return;
 		}
-		
-		this.value = attrVal;
+		//预处理自定义标签中的表达式
+		var expNode = Scanner.getExpNode(this.value,this.component);
+		var calcVal = expNode && Renderer.calcExpNode(expNode);
+		if(calcVal)this.value = calcVal;
 
 		LOGGER.log(this,'inited');
 
@@ -92,9 +82,9 @@ Util.ext(Directive.prototype,{
 		this.__state = Component.state.inited;
 	},
 	//component invoke only
-	display:function(){
+	active:function(){
 		//do observe
-		if(this.observe){
+		if(this.onUpdate){
 			var expObj = lexer(this.value);
 			for(var varStr in expObj.varTree){
 				var varObj = expObj.varTree[varStr];
@@ -102,19 +92,31 @@ Util.ext(Directive.prototype,{
 				var aon = new AttrObserveNode(this,expObj);
 
 				//监控变量
-				if(this.parent)
-				Builder.buildExpModel(this.parent,varObj,aon);
+				if(this.component)
+				Builder.buildExpModel(this.component,varObj,aon);
 			}
 			
-			var rs = Renderer.evalExp(this.parent,expObj);
-			this.observe(rs);
+			var rs = Renderer.evalExp(this.component,expObj);
+			this.onUpdate(rs);
 		}
 
-		this.onDisplay && this.onDisplay();
+		this.onActive && this.onActive();
 
-		//display children
-		this.children && this.children.forEach(function(child){
-			child.display();
-		});
+	},
+	/**
+	 * 销毁指令
+	 */
+	destroy:function(){
+		LOGGER.log(this,'destroy');
+
+		this.view.__destroy(this);
+
+		this.view = 
+		this.component = 
+		this.params = 
+		this.filter = 
+		this.onUpdate = null;
+
+		this.onDestroy && this.onDestroy();
 	}
 });

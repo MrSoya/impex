@@ -23,12 +23,6 @@ Factory.prototype = {
 		Util.ext(props,param);
 		Util.inherits(clazz,this.baseClass);
 
-		if(param.methods){
-			for(var k in param.methods){
-				clazz.prototype[METHOD_PREFIX + k] = param.methods[k];
-			}
-		}
-
 		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
 	},
 	/**

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen">
+            /* 必需 */
+            .todo-transition {
+                transition: all .5s;
+                font-size: 1.5rem;
+                height: 2rem;
+                padding: .5rem 0;
+                overflow: hidden;
+            }
+
+            .todo-enter, .todo-leave {
+                opacity: 0;
+                height: 0;
+                padding: 0;
+            }
+
+            .todos{
+                background-color: #fff;
+                border: 1px solid #eee;
+                width: 400px;
+                padding: .5rem;
+                margin: 0 auto;
+                font-family: arial;
+            }
+            .todos header input{
+                border: none;
+                width: 100%;
+                font-size: 1.5rem;
+                border-bottom:1px solid #eee; 
+            }
+            .todos header input:focus{
+                outline: none;
+            }
+            .todos .todolist{
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .todos .todolist li{
+                border-bottom:1px solid #eee; 
+            }
+            .todos .todolist li.completed{
+                text-decoration: line-through;
+                color: #aaa;
+            }
+            .todos .todolist li .close{
+                float: right;
+                cursor: default;
+            }
+            .todos .todolist li .close:hover{
+                color: red;
+            }
+            .todos footer{
+                padding-top: 1rem;
+                text-align: center;
+            }
+            .todos footer span{
+                float: left;
+            }
+            .todos .btn{
+                border: 1px solid transparent;
+                padding: .2rem;
+                cursor: default;
+            }
+            .todos .active{
+                border: 1px solid #aaa;
+            }
+        </style>
+    </head>
+    <body>
+        <section class="todos">
+            <header>
+                <input x-keydown="addTodo($event)" placeholder="What needs to be done?">
+            </header>
+            <section>
+                <ul class="todolist">
+                    <li x-each="todos as v => filterBy:filterType:'type' " 
+                        transition="todo" props:done="this.done"
+                        class="{{v.type=='completed'?'completed':''}}"
+                    >
+                        <input type="checkbox" x-checked="v.type=='completed'" :click="this.props.done($event,v)">
+                        {{v.val}} <i :click="this.parent.removeTodo(v)" class="close">&times;</i>
+                    </li>
+                </ul>
+            </section>
+            <footer>
+                <span>{{activeTodos}} item left</span>
+                <a class="btn {{filterType===''?'active':''}}" :click="filterTodos('')">All</a>
+                <a class="btn {{filterType==='active'?'active':''}}" :click="filterTodos('active')">Active</a>
+                <a class="btn {{filterType==='completed'?'active':''}}" :click="filterTodos('completed')">Completed</a>
+            </footer>
+        </section>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
+        <script type="text/javascript">
+            imLog.level = 3;
+            impex.config({
+                logger:imLog
+            });
+            impex.directive('keydown',{
+                onCreate:function(){
+                    this.view.on('keydown',this.value);
+                }
+            })
+            impex.directive('checked',{
+                observe:function(rs){
+                    this.view.el.checked = rs;
+                }
+            })
+
+            //渲染
+            var debug = impex.render(document.body,{
+                data:{
+                    todos:[],
+                    filterType:'',
+                    activeTodos:0,
+                },
+                onInit:function(){
+                    this.watch('todos',function(todos,name,type,newVal){
+                        // this.activeTodos = todos.filter(function(todo){
+                        //     return todo.type === 'active';
+                        // }).length;
+                    });
+                },
+                addTodo:function(e){
+                    var t = e.target;
+                    if(e.keyCode === 13 && t.value.trim()){
+
+                        this.data.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+                        t.value = '';
+
+                        this.data.activeTodos = this.data.todos.filter(function(td){
+                            return td.type === 'active';
+                        }).length;
+                    }
+                },
+                removeTodo:function(todo){
+                    var i = this.data.todos.indexOf(todo);
+                    if(i > -1)
+                    this.data.todos.splice(i,1);
+                },
+                done:function(e,todo){
+                    var type = 'active';
+                    if(e.target.checked){
+                        type = 'completed';
+                    }
+                    console.log(todo)
+
+                    todo.type = type;
+
+                    this.data.activeTodos = this.data.todos.filter(function(td){
+                        return td.type === 'active';
+                    }).length;
+
+                },
+                filterTodos:function(type){
+                    this.data.filterType = type;
+                }
+                
+            });
+            
+        </script>
+    </body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impexui - layout</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+        <div>
+            <p>
+                表达式边界符修改：
+                {{ }} -> {# #}
+            </p>
+
+            <p>
+                修改值：
+                {# x #} -> @
+            </p>
+            
+
+<pre>
+<code>
+impex.config({
+    delimiters:['{#','#}']
+});
+
+//渲染
+impex.render(document.body,{
+    data:{
+        x:'@'
+    }
+});
+</code>
+</pre>
+                
+        </div>
+        </body>
+</html>

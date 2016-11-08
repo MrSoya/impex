@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        watch用来对组件数据的特定表达式进行监控
+        <p>
+            a.b.x：{{a.b.x}}
+        </p>
+        <p>
+            b：{{b}}
+        </p>
+        <p>
+            a.b.c.list：{{a.b.c['list']}}
+        </p>
+        {{# info}}
+
+        <button :click="change()">修改数据</button>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    a:{
+                        b:{
+                            c:{
+                                list:[1,2,3,4]
+                            }
+                        }
+                    },
+                    b:12,
+                    info:''
+                },
+                change:function(){
+                    this.data.a.b.c.list = [2,3,4];
+                    this.data.b = 'b';
+                    this.data.a.b.x = 1;
+                    this.data.x =23;
+                },
+                onCreate : function(){
+                    this.watch('a.b.x',function(){
+                        this.data.info += '<p>a.b.x change:'+JSON.stringify(arguments)+'</p>';
+                    });
+                    this.watch('b',function(){
+                        this.data.info += '<p>b change:'+JSON.stringify(arguments)+'</p>';
+                    });
+                    this.watch('a.b.c.list',function(){
+                        this.data.info += '<p>a.b.c.list change:'+JSON.stringify(arguments)+'</p>';
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

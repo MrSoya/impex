@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impexui - layout</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+        impex可以直接渲染命名组件
+<pre>
+<code>
+    &lt;x-demo id="demo"&gt;&lt;/x-demo&gt;
+    //渲染命名组件
+    impex.render(document.getElementById('demo'));
+</code>
+</pre>
+        <x-demo id="demo"></x-demo>
+    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    <script type="text/javascript">
+        impex.component('x-demo',{
+            template:'<div>name: {{impex}}\
+                        <p>\
+                            <button :click="attach()">click</button>\
+                        </p>\
+                        </div>',
+            attach:function() {
+                this.data.impex += 'x';
+            },
+            data:{
+                impex:'impex'
+            }
+        });
+        impex.render(document.getElementById('demo'));
+    </script>
+    </body>
+</html>

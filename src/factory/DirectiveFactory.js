@@ -25,6 +25,15 @@ Util.ext(_DirectiveFactory.prototype,{
 	priority : function(type){
 		return this.types[type].props.priority;
 	},
+	/**
+	 * 创建一个指令实例，并把实例放入指定的域中
+	 * @param  {String} type      指令类型
+	 * @param  {HTMLElement} node 指令作用的元素对象
+	 * @param  {Component} component 指令所在域
+	 * @param  {String} attrName  完整属性名
+	 * @param  {String} attrValue 指令的字面value
+	 * @return {Directive}  指令实例
+	 */
 	newInstanceOf : function(type,node,component,attrName,attrValue){
 		if(!this.types[type])return null;
 
@@ -64,9 +73,10 @@ Util.ext(_DirectiveFactory.prototype,{
 			rs.filter = filter;
 		}
 
-		rs.view.__comp = rs;
+		rs.view.__comp = component;
 
-		component.add(rs);
+		component.directives.push(rs);
+		rs.component = component;
 
 		if(rs.view){
 			rs.view.__nodes[0].removeAttribute(rs.name);

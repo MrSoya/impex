@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        impex props:
+    	<ul>
+            <li x-each="impex as k , v">{{$index+1}} : {{k + ':' + (v instanceof Function?'function':v) }}</li>
+        </ul>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    impex:impex
+                }
+            });
+            
+        </script>
+    </body>
+</html>

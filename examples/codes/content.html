@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body >
+        <x-button>
+            来自CONTENT的内容
+        </x-button>
+
+        <x-button name="'来自name的内容'">
+        </x-button>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            //自定义组件
+            impex.component('x-button',{
+                template:"<button>{{=CONTENT}} {{this.props.name}}</button>"
+            });
+            
+            //渲染
+            impex.render(document.body);
+            
+        </script>
+    </body>
+</html>

@@ -8,16 +8,13 @@ var Renderer = new function() {
 	 * 渲染组件
 	 */
 	this.render = function(component){
-		
-		var children = component.children;
- 		renderExpNode(component.__expNodes);
-		
+ 		renderExpNodes(component.__expNodes);
 	}
 
 	this.recurRender = function(component){
 		
 		var children = component.children;
- 		renderExpNode(component.__expNodes);
+ 		renderExpNodes(component.__expNodes);
 
  		for(var j=children.length;j--;){
  			Renderer.render(children[j]);
@@ -25,7 +22,7 @@ var Renderer = new function() {
 	}
 
 	//表达式节点渲染
-	function renderExpNode(expNodes){
+	function renderExpNodes(expNodes){
 		var cache = {};
 		for(var i=expNodes.length;i--;){
 			var expNode = expNodes[i];
@@ -34,7 +31,7 @@ var Renderer = new function() {
 			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
 				val = cache[expNode.origin].val;
 			}else{
-				val = calcExp(expNode.component,expNode.origin,expNode.expMap);
+				val = calcExpNode(expNode);
 				cache[expNode.origin] = {
 					comp:expNode.component,
 					val:val
@@ -54,7 +51,7 @@ var Renderer = new function() {
 		}//over for
 		
 	}
-	this.renderExpNode = renderExpNode;
+	this.renderExpNodes = renderExpNodes;
 
 	var propMap = {
 		value:['INPUT']
@@ -98,7 +95,10 @@ var Renderer = new function() {
 	}
 
 	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExp(component,origin,expMap){
+	function calcExpNode(expNode){
+		var component = expNode.component,
+			origin = expNode.origin,
+			expMap = expNode.expMap;
 		//循环获取每个表达式的值
 		var map = {};
 		for(var exp in expMap){
@@ -137,6 +137,8 @@ var Renderer = new function() {
 		}
 		return origin;
 	}
+
+	this.calcExpNode = calcExpNode;
 
 	//计算表达式对象
 	function evalExp(component,expObj){
@@ -233,22 +235,22 @@ var Renderer = new function() {
 	 		}
  		}
 
- 		if(isKeyword)return fullPath;
+ 		if(isKeyword || fullPath.indexOf('impex._cs')===0)return fullPath;
 
- 		var dataType = varStr[varStr.length-1]===')'?'methods':'data';
+ 		var isDataType = varStr[varStr.length-1]===')'?false:true;
  		var searchPath = watchPath || fullPath;
- 		if(dataType === 'data'){
+ 		if(isDataType){
  			searchPath = '.data' + searchPath;
  		}else{
- 			searchPath = '.' + METHOD_PREFIX + searchPath.substr(1);
+ 			searchPath = '.' + searchPath.substr(1);
  		}
- 		component = varInCtrlScope(component,searchPath);
+ 		component = varInComponent(component,searchPath);
 
  		if(component){
- 			if(dataType === 'data'){
+ 			if(isDataType){
 	 			fullPath = '.data' + fullPath;
 	 		}else{
-	 			fullPath = '.' + METHOD_PREFIX + fullPath.substr(1);
+	 			fullPath = '.' + fullPath.substr(1);
 	 		}
  			return component.__getPath() + fullPath;
  		}
@@ -256,14 +258,11 @@ var Renderer = new function() {
  		return 'self' + fullPath;
  	}
 
- 	function varInCtrlScope(scope,v){
-		var findScope = scope;
-		while(findScope){
-			if(getVarByPath(v,findScope.__getPath()) !== undefined){
-				return findScope;
-			}
-			findScope = findScope.parent;
+ 	function varInComponent(comp,v){
+		if(getVarByPath(v,comp.__getPath()) !== undefined){
+			return comp;
 		}
+		return null;
 	}
 
 	function getVarByPath(path,mPath){
@@ -276,6 +275,9 @@ var Renderer = new function() {
 	}
 
 	function renderHTML(expNode,val,node,component){
+		if(!Util.isDOMStr(val)){
+			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
+		}
 		if(expNode.__lastVal === val)return;
 		if(node.nodeType != 3)return;
 		if(!expNode.__placeholder){
@@ -286,28 +288,49 @@ var Renderer = new function() {
 			node.parentNode.removeChild(node);
 		}
 
-		var container = document.createElement('span');
-		var nView = new View(null,container,[container]);
-
-		if(expNode.__lastComp){
+		if(expNode.__lastView){
 			//release
-			expNode.__lastComp.destroy();
+			expNode.__lastView.__destroy();
 		}
 
-		if(!Util.isDOMStr(val)){
-			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
+		var target = document.createComment('-- [html] target --');
+		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
+
+		var nodes = DOMViewProvider.compile(val,target);
+		var el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+
+		var nView = null;
+		if(nodes.length > 0){
+			nView = new View(el,target,nodes);
+			nView.__display();
 		}
 
-		//插入替换DOM
-		expNode.__placeholder.parentNode.insertBefore(container,expNode.__placeholder);
-
-		var subComp = component.createSubComponent(val,nView);
-		subComp.template = val;
-		subComp.init();
-		subComp.display();
-
-		expNode.__lastComp = subComp;
+		expNode.__lastView = nView;
 		expNode.__lastVal = val;
+
+		if(nView)
+			Scanner.scan(nView,component);
+		Builder.build(component);
+		Renderer.render(component);
+
+		//init children
+		for(var i = component.children.length;i--;){
+			component.children[i].init();
+		}
+		for(var i = component.directives.length;i--;){
+			component.directives[i].init();
+		}
+
+		//display children
+		for(var i = 0;i<component.children.length;i++){
+			if(!component.children[i].templateURL)
+				component.children[i].display();
+		}
+
+		for(var i = component.directives.length;i--;){
+			component.directives[i].active();
+		}
+
 
 		return true;
 	}

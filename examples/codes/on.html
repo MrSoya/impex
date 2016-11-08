@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	<button 
+            :mousedown="console.log(3434)"
+            :click:mouseup="console.log(root,$event)" 
+            x-on:dblclick="showMe('wow',true);root.tip='!!';showMe2(root.tip);">点我两下试试！！</button>
+    
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    root:{
+                        tip:''
+                    }
+                },
+                showMe : function(wow,x){
+                    alert('show me the impex! '+wow + x);
+                },
+                showMe2:function(tip){
+                    alert('show me again '+tip);
+                }
+                
+            });
+            
+        </script>
+    </body>
+</html>

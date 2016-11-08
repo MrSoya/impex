@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .x-cloak{
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+    <!-- 
+    因为if跑到了each的组件中，导致无法获取size参数
+    方案1:
+    1. 传递size 参数给each的匿名组件 props:xx="msg"
+    2. 在组件视图中使用this.props.xx
+    3. 当父组件的msg变更时，会通知子组件的this.props.xx发生变更：触发onPropChange
+    4. 如果回调没有返回false，则使用this.props.xx的地方也会进行视图更新
+    -->
+        <div x-if-start="this.props.size>0" props:size="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
+            line 1
+        </div>
+        <p x-if-end x-each-end >_____________________</p>
+        <div x-if-start="size>1" x-cloak class="x-cloak">
+            line 2
+        </div>
+        <p x-if-end >_____________________</p>
+        <div x-if-start="size>2" x-cloak class="x-cloak">
+            line 3
+        </div>
+        <p x-if-end >_____________________</p>
+    
+
+        size:<input type="text" x-model="size" value="{{size}}">
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            var debug = impex.render(document.body,{
+                data:{
+                    size : 1
+                }
+            });
+            
+        </script>
+    </body>
+</html>

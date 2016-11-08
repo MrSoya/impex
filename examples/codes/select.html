@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	<select x-change="show($selected)">
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+        </select>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+        
+            impex.directive('change',{
+                onCreate : function(){
+                    this.view.on('change',this.value,function(e,exp){
+                        return exp.replace('$selected',e.target.options[e.target.selectedIndex].value);
+                    });
+                }
+            });
+
+            
+            //渲染
+            impex.render(document.body,{
+                   show : function(opt){
+                        alert(opt);
+                    }
+            });
+            
+        </script>
+    </body>
+</html>

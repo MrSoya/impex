@@ -47,6 +47,13 @@
 * android4.0+
 * IOS7.1+
 
+## Local Examples
+
+```
+1. npm install http-server -g
+2. http-server ./examples/ -p30760 -o
+```
+
 ## License
 
 Impex基于 [MIT](http://opensource.org/licenses/MIT) 协议发布。请查阅LICENSE文件

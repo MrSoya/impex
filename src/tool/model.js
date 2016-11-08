@@ -1,12 +1,25 @@
 /**
  * 表达式映射
  */
-function ExpProp (propName) {
+function ExpData (propName) {
 	this.propName = propName;
 	this.subProps = {};
 	this.expNodes = [];
 	this.attrObserveNodes = [];
 	this.watchs = [];
+}
+
+/**
+ * 变更信息
+ */
+function Change(name,newVal,oldVal,path,type,object){
+	this.name = name;
+	this.newVal = newVal;
+	this.oldVal = oldVal;
+	this.path = path;
+	this.type = type;
+	this.object = object;
+	this.expProps = [];
 }
 
 /**
@@ -19,6 +32,7 @@ function ExpNode (node,attrName,origin,expMap,component,toHTML) {
 	this.expMap = expMap;
 	this.component = component;	
 	this.toHTML = toHTML;
+	this.id = Math.random();
 }
 
 /**
@@ -36,4 +50,16 @@ function Watch (cbk,ctrlScope,segments) {
 	this.cbk = cbk;
 	this.ctrlScope = ctrlScope;	
 	this.segments = segments;
+}
+
+/**
+ * 参数信息
+ */
+function Prop (subComp,name,segments,expWords,oldVal,fromPropKey) {
+	this.subComp = subComp;
+	this.name = name;
+	this.segments = segments;
+	this.expWords = expWords;
+	this.oldVal = oldVal;
+	this.fromPropKey = fromPropKey;//参数来自上级组件的参数
 }

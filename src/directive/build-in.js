@@ -23,6 +23,15 @@
         }
     })
     /**
+     * 文本指令，用于防止表达式被渲染前出现在页面上的边界符
+     * <br/>使用方式1：<span x-text="msg"></span>
+     */
+    .directive('text',{
+        onUpdate:function(rs){
+            this.view.el.innerText = rs;
+        }
+    })
+    /**
      * 绑定视图属性，并用表达式的值设置属性
      * <br/>使用方式：<img x-bind:src="exp">
      */
@@ -32,12 +41,12 @@
                 LOGGER.warn('at least one attribute be binded');
             }
         },
-        observe : function(rs){
+        onUpdate : function(rs){
             if(!this.params || this.params.length < 1)return;
 
             var filter = null;
             if(this.filter){
-                filter = this.m(this.filter);
+                filter = this.component[this.filter];
             }
 
             if(filter){
@@ -67,8 +76,8 @@
             this.lastRs = false;
             this.exec(false);
         },
-        observe : function(rs){
-            if(this.parent.__state === Component.state.suspend)return;
+        onUpdate : function(rs){
+            if(this.component.__state === Component.state.suspend)return;
             if(rs === this.lastRs)return;
             this.lastRs = rs;
 
@@ -103,13 +112,12 @@
      */
     .directive('show-start',{
         endTag : 'show-end',
-        onCreate:function(){
+        onInit:function(){
             //更新视图
-            this.__init();
-            this.display();
+            Scanner.scan(this.view,this.component);
         },
-        observe : function(rs){
-            if(this.parent.__state === Component.state.suspend)return;
+        onUpdate : function(rs){
+            if(this.component.__state === Component.state.suspend)return;
             var nodes = this.view.__nodes;
             if(rs){
                 //显示
@@ -140,8 +148,8 @@
             this.lastRs = false;
             this.exec(false);
         },
-        observe : function(rs){
-            if(this.parent.__state === Component.state.suspend)return;
+        onUpdate : function(rs){
+            if(this.component.__state === Component.state.suspend)return;
             if(rs === this.lastRs && !this.view.el.parentNode)return;
             this.lastRs = rs;
 
@@ -184,10 +192,10 @@
             this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
         },
         onInit:function(){
-            Scanner.scan(this.view,this);
+            Scanner.scan(this.view,this.component);
         },
-        observe : function(rs){
-            if(this.parent.__state === Component.state.suspend)return;
+        onUpdate : function(rs){
+            if(this.component.__state === Component.state.suspend)return;
             if(rs){
                 if(this.view.__nodes[0].parentNode)return;
                 //添加
@@ -213,8 +221,8 @@
             
             this.__cn = className;
         },
-        onDisplay:function(){
-            updateCloakAttr(this.parent,this.view.el,this.__cn);
+        onActive:function(){
+            updateCloakAttr(this.component,this.view.el,this.__cn);
             var curr = this.view.attr('class').replace('x-cloak','');
             this.view.attr('class',curr);
         }
@@ -237,82 +245,80 @@
                     var type = this.view.attr('type');
                     switch(type){
                         case 'radio':
-                            this.view.on('click','changeModel($event)');
+                            this.view.on('click',null,this.changeModel.bind(this));
                             break;
                         case 'checkbox':
-                            this.view.on('click','changeModelCheck($event)');
+                            this.view.on('click',null,this.changeModelCheck.bind(this));
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.view.on(hack,'changeModel($event)');
+                            this.view.on(hack,null,this.changeModel.bind(this));
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.view.on('change','changeModelSelect($event)');
+                        this.view.on('change',null,this.changeModelSelect.bind(this));
                     }else{
-                        this.view.on('change','changeModel($event)');
+                        this.view.on('change',null,this.changeModel.bind(this));
                     }
                     
                     break;
             }
         },
-        methods:{
-            changeModelSelect : function(e){
-                var t = e.target || e.srcElement;
-                var val = t.value;
-                var parts = [];
-                for(var i=t.options.length;i--;){
-                    var opt = t.options[i];
-                    if(opt.selected){
-                        parts.push(opt.value);
-                    }
-                }            
-                this.parent.d(this.value,parts);
-            },
-            changeModelCheck : function(e){
-                var t = e.target || e.srcElement;
-                var val = t.value;
-                var parts = this.parent.d(this.value);
-                if(!(parts instanceof Array)){
-                    parts = [parts];
+        changeModelSelect : function(e){
+            var t = e.target || e.srcElement;
+            var val = t.value;
+            var parts = [];
+            for(var i=t.options.length;i--;){
+                var opt = t.options[i];
+                if(opt.selected){
+                    parts.push(opt.value);
                 }
-                if(t.checked){
-                    parts.push(val);
-                }else{
-                    var i = parts.indexOf(val);
-                    if(i > -1){
-                        parts.splice(i,1);
-                    }
+            }            
+            this.component.d(this.value,parts);
+        },
+        changeModelCheck : function(e){
+            var t = e.target || e.srcElement;
+            var val = t.value;
+            var parts = this.component.d(this.value);
+            if(!(parts instanceof Array)){
+                parts = [parts];
+            }
+            if(t.checked){
+                parts.push(val);
+            }else{
+                var i = parts.indexOf(val);
+                if(i > -1){
+                    parts.splice(i,1);
                 }
-                this.parent.d(this.value,parts);
-            },
-            changeModel : function(e){
-                if(this.debounce){
-                    if(this.debounceTimer){
-                        clearTimeout(this.debounceTimer);
-                        this.debounceTimer = null;
-                    }
-                    var that = this;
-                    this.debounceTimer = setTimeout(function(){
-                        clearTimeout(that.debounceTimer);
-                        that.debounceTimer = null;
-                        
-                        that.setVal(e);
-                    },this.debounce);
-                }else{
-                    this.setVal(e);
+            }
+            this.component.d(this.value,parts);
+        },
+        changeModel : function(e){
+            if(this.debounce){
+                if(this.debounceTimer){
+                    clearTimeout(this.debounceTimer);
+                    this.debounceTimer = null;
                 }
-            },
+                var that = this;
+                this.debounceTimer = setTimeout(function(){
+                    clearTimeout(that.debounceTimer);
+                    that.debounceTimer = null;
+                    
+                    that.setVal(e);
+                },this.debounce);
+            }else{
+                this.setVal(e);
+            }
         },
         setVal:function(e){
             var v = (e.target || e.srcElement).value;
             if(this.toNum !== null){
                 v = parseFloat(v);
             }
-            this.parent.d(this.value,v);
+            this.component.d(this.value,v);
         }
     });
 
@@ -331,15 +337,17 @@
     function eachModel(){
         this.onCreate = function(viewManager,ts){
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
-            this.forExp = /^\s*(\d+|[a-zA-Z_$].+?)\s+to\s+(\d+|[a-zA-Z_$].+?)\s*$/;
+            this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
             this.viewManager = viewManager;
             this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
-            this.parentComp = this.parent;
             this.__view = this.view;
             this.cache = [];
+            this.__comp = this.component;
 
             if(this.view.el){
+                this.__tagName = this.view.el.tagName.toLowerCase();
+                this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
                 this.cacheable = this.view.attr('cache')==='false'?false:true;
             }else{
                 this.cacheable = this.view.__nodes[0].getAttribute('cache')==='false'?false:true;
@@ -351,6 +359,8 @@
 
             this.step = this.view.el?this.view.attr('step'):this.view.__nodes[0].getAttribute('step');
 
+            this.over = this.view.el?this.view.attr('over'):this.view.__nodes[0].getAttribute('over');
+
             var transition = this.view.el?this.view.attr('transition'):this.view.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
@@ -358,12 +368,11 @@
             }
         }
         this.onInit = function(){
-            // if(this.__state === Component.state.inited)return;
             var that = this;
             //获取数据源
             if(this.forExp.test(this.expInfo.ds)){
                 var begin = RegExp.$1,
-                    end = RegExp.$2,
+                    end = RegExp.$3,
                     step = parseFloat(this.step);
                 if(step < 0){
                     LOGGER.error('step <= 0 : '+step);
@@ -371,30 +380,30 @@
                 }
                 step = step || 1;
                 if(isNaN(begin)){
-                    this.parent.watch(begin,function(object,name,type,newVal,oldVal){
+                    this.component.watch(begin,function(object,name,type,newVal,oldVal){
                         var ds = getForDs(newVal>>0,end,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    begin = this.parent.d(begin);
+                    begin = this.component.d(begin);
                 }
                 if(isNaN(end)){
-                    this.parent.watch(end,function(object,name,type,newVal,oldVal){
+                    this.component.watch(end,function(object,name,type,newVal,oldVal){
                         var ds = getForDs(begin,newVal>>0,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
                     });
-                    end = this.parent.d(end);
+                    end = this.component.d(end);
                 }
                 begin = parseFloat(begin);
                 end = parseFloat(end);
                 
                 this.ds = getForDs(begin,end,step);
             }else{
-                this.ds = this.parent.d(this.expInfo.ds);
-                this.parentComp.watch(this.expInfo.ds,function(object,name,type,newVal){
+                this.ds = this.component.d(this.expInfo.ds);
+                this.component.watch(this.expInfo.ds,function(object,name,type,newVal){
                     if(!that.ds){
-                        that.ds = that.parentComp.d(that.expInfo.ds);
+                        that.ds = that.component.d(that.expInfo.ds);
                         that.lastDS = that.ds;
                         that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;
@@ -404,6 +413,12 @@
                     that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                 });
             }
+
+            if(this.over){
+                var tmp = lexer(this.over);
+                var rs = Renderer.evalExp(this.__comp,tmp);
+                this.over = rs;
+            }            
             
             this.lastDS = this.ds;
             
@@ -414,12 +429,32 @@
             
             this.fragment.appendChild(this.fragmentPlaceholder.__nodes[0]);
 
+            //parse props
+            this.__props = parseProps(this.__view,this.component);
+
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
             this.destroy();
         }
-        
+        function parseProps(view,comp){
+            var props = {};
+            var el = view.__nodes[0];
+            for(var i=el.attributes.length;i--;){
+                var attr = el.attributes[i];
+                var k = attr.nodeName;
+                var v = attr.nodeValue;
+                if(k.indexOf(ATTR_ANONY_COMP_PROP_PREFIX)===0){
+                    var propName = k.replace(ATTR_ANONY_COMP_PROP_PREFIX,'');
+                    var tmp = lexer(v);
+                    var rs = Renderer.evalExp(comp,tmp);
+                    var keys = Object.keys(tmp.varTree);
+
+                    props[propName] = [tmp,rs,keys];
+                }
+            }
+            return props;
+        }
         function getForDs(begin,end,step){
             var dir = end - begin < 0?-1:1;
             var ds = [];
@@ -525,16 +560,42 @@
             }
         }
         this.createSubComp = function(){
-            var parent = this.parentComp;
+            var comp = this.__comp;
+            var subComp = null;
+            var target = this.viewManager.createPlaceholder('');
+            this.viewManager.insertBefore(target,this.placeholder);
             //视图
             var copy = this.__view.clone();
 
-            var target = this.viewManager.createPlaceholder('');
-            this.viewManager.insertBefore(target,this.placeholder);
-            
             //创建子组件
-            var subComp = parent.createSubComponent(copy,target);
+            if(this.__isComp){
+                subComp = comp.createSubComponentOf(this.__tagName,copy,target);
+            }else{
+                subComp = comp.createSubComponent(copy,target);
+            }
             this.subComponents.push(subComp);
+
+            //bind props
+            for(var n in this.__props){
+                var prop = this.__props[n];
+                var tmp = prop[0];
+                var rs = prop[1];
+                var keys = prop[2];
+                //watch props
+                keys.forEach(function(key){
+                    if(tmp.varTree[key].isFunc)return;
+                    var fromPropKey = false;
+                    if(key.indexOf('.this.props')===0){
+                        fromPropKey = key.replace(/^\.this\.props\.?/,'');
+                    }
+
+                    
+                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
+                    comp.__watchProps.push(prop);
+                });
+                subComp.props[n] = rs;
+            }
+            
             if(this.trans){
                 var that = this;
                 
@@ -595,7 +656,7 @@
                     for(var i=params.length;i--;){
                         var v = params[i];
                         if(v.varTree && v.words){
-                            v = Renderer.evalExp(this.parentComp,v);
+                            v = Renderer.evalExp(this.__comp,v);
                         }
                         actParams[i] = v;
                     }
@@ -648,9 +709,9 @@
             }
 
             var queue = this.subComponents.concat();
-            renderEach(queue);
+            renderEach(queue,this);
         }
-        function renderEach(queue){
+        function renderEach(queue,eachObj){
             setTimeout(function(){
                 var list = queue.splice(0,50);
                 for(var i=0;i<list.length;i++){
@@ -660,11 +721,16 @@
                 }
 
                 if(queue.length > 0){
-                    renderEach(queue);
+                    renderEach(queue,eachObj);
+                }else{
+                    //complete callback
+                    eachObj.over();
                 }
             },0);
         }
-
+        this.over = function(){
+            alert('sdfdsf')
+        }
         this.parseExp = function(exp){
             var ds,k,v;
             var that = this;
@@ -685,7 +751,7 @@
                     that.filters = filters;
 
                     for(var i in varMap){
-                        that.parent.watch(i,function(){
+                        that.component.watch(i,function(){
                             if(that.lastDS)
                             that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                         });

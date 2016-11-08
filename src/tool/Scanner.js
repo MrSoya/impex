@@ -114,6 +114,7 @@ var Scanner = new function() {
 					var tmp = node.attributes[i];
 					atts.push([tmp.name,tmp.value]);
 				}
+
 				var scopeDirs = [];
 				//检测是否有子域属性，比如each
 				for(var i=atts.length;i--;){
@@ -146,8 +147,7 @@ var Scanner = new function() {
 					}
 				}
 
-
-				//组件
+				//解析组件
 				if(ComponentFactory.hasTypeOf(tagName)){
 					var pr = getRestrictParent(component);
 					if(pr && pr.restrict.children){
@@ -159,9 +159,11 @@ var Scanner = new function() {
 						var parents = cr.parents.split(',');
 						if(parents.indexOf(pr.name) < 0)return;
 					}
-					component.createSubComponentOf(tagName,node);
+					var instance = component.createSubComponentOf(tagName,node);
+
 					return;
 				}
+				
 
 				//others
 				for(var i=atts.length;i--;){
@@ -178,7 +180,7 @@ var Scanner = new function() {
 					}else if(attName[0] === ':'){
 						DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
-				    	recordExpNode(attVal,node,component,attName);
+				    	recordExpNode(attVal,component,node,attName);
 					}
 				}
 			}
@@ -212,13 +214,20 @@ var Scanner = new function() {
 		}else if(node.nodeType === 3){
 			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
 			//文本节点处理
-			recordExpNode(node.nodeValue,node,component);
+			recordExpNode(node.nodeValue,component,node);
 		}
 	}
 
 	//表达式解析
-	function recordExpNode(origin,node,component,attrName){
+	function recordExpNode(origin,component,node,attrName){
 		//origin可能包括非表达式，所以需要记录原始value
+		var expNode = getExpNode(origin,component,node,attrName);
+		expNode && component.__expNodes.push(expNode);
+
+		return expNode;
+	}
+
+	function getExpNode(origin,component,node,attrName){
 		var exps = {};
 		var toHTML = !attrName && origin.replace(/\s*/mg,'').indexOf(EXP_START_TAG + EXP2HTML_EXP_TAG)===0;
 		if(toHTML){
@@ -250,9 +259,10 @@ var Scanner = new function() {
     	});
 		if(Object.keys(exps).length<1)return;
 
-		var expNode = new ExpNode(node,attrName,origin,exps,component,toHTML);
-		component.__expNodes.push(expNode);
+		return new ExpNode(node,attrName,origin,exps,component,toHTML);
 	}
+
+	this.getExpNode = getExpNode;
 
 	function parseFilters(expNode,filters,component){
 		var currParams = [],

@@ -9,8 +9,8 @@
 	var REG_EXP = /\{\{#?(.*?)\}\}/img,
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
-
-	var METHOD_PREFIX = '$';
+	var ATTR_REF_TAG = 'ref';
+	var ATTR_ANONY_COMP_PROP_PREFIX = 'props:';
 
 	var EXP2HTML_EXP_TAG = '#';
 	var EXP2HTML_START_EXP = /^\s*#/;
@@ -23,9 +23,6 @@
 	    warn : function(){}
 	};
 
-	var CACHEABLE = false;
-
-	var im_compCache = {};
 	var im_counter = 0;
 
 	/**
@@ -46,8 +43,8 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,20,0],
-	        state:'beta5',
+	        v:[0,30,0],
+	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -63,7 +60,6 @@
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param {Boolean} cfg.cacheable 是否缓存组件，如果开启该配置，所有被destroy的组件不会被释放，而是被缓存起来
 		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口
 		 */
 		this.config = function(cfg){
@@ -81,8 +77,6 @@
 			    this.warn = function(){}
 			};
 			this.logger = LOGGER;
-
-			CACHEABLE = cfg.cacheable || false;
 		};
 
 		/**

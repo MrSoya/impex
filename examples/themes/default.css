@@ -1,0 +1,168 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-size: 16px !important;
+  line-height: 1;
+  background: #fafafa;
+  font-family: "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif; }
+
+code {
+  padding: .2rem .4rem;
+  font-size: 90%;
+  color: #bd4147;
+  background-color: #f7f7f9;
+  border-radius: .25rem;
+  line-height: 1.5; }
+
+iframe {
+  width: 100%;
+  height: 100%; }
+
+ul, ol {
+  list-style: none;
+  margin: 0;
+  padding: 0px; }
+
+.impex-layout {
+  height: 100%;
+  width: 100%;
+  display: block;
+  overflow: hidden; }
+  .impex-layout header {
+    position: fixed;
+    right: 0;
+    left: 0;
+    z-index: 9;
+    font-size: 2rem;
+    background-color: #000;
+    color: #fff;
+    padding: 1rem; }
+  .impex-layout .sidebar {
+    white-space: nowrap;
+    width: 15rem;
+    position: fixed;
+    border-right: 1px solid #ddd;
+    float: left;
+    height: 100%;
+    overflow: hidden;
+    transition: all .2s; }
+    .impex-layout .sidebar .scrollpane {
+      width: 100%;
+      height: calc(100% - 6rem);
+      padding-top: 6rem;
+      padding-bottom: 0;
+      overflow: hidden;
+      position: relative;
+      background-color: #eee; }
+      .impex-layout .sidebar .scrollpane .menu-items {
+        margin-left: .5rem; }
+        .impex-layout .sidebar .scrollpane .menu-items li.active a {
+          background: #d2d7dc;
+          color: #fff !important; }
+        .impex-layout .sidebar .scrollpane .menu-items a {
+          color: #666;
+          padding: .2rem 1rem;
+          display: block;
+          text-decoration: none;
+          line-height: 1.5; }
+          .impex-layout .sidebar .scrollpane .menu-items a.cate {
+            outline: none;
+            width: 80%;
+            padding: .5rem 2rem .5rem 1rem;
+            position: relative;
+            display: inline-block;
+            margin: .5rem 0;
+            overflow: hidden;
+            background: #718a90;
+            color: #fff; }
+          .impex-layout .sidebar .scrollpane .menu-items a.link:hover {
+            background: #fafafa;
+            text-decoration: underline;
+            color: #666 !important; }
+  .impex-layout .sidebar.hidden {
+    width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: none; }
+  .impex-layout .togglebar {
+    position: fixed;
+    display: flex;
+    flex-direction: row;
+    top: 4rem;
+    width: 100%;
+    background-color: #ddd;
+    z-index: 9;
+    border: 1px solid #ddd;
+    border-width: 1px 0 1px 0; }
+    .impex-layout .togglebar .menubar {
+      width: 15rem;
+      position: relative;
+      line-height: 1.5;
+      transition: width .2s; }
+      .impex-layout .togglebar .menubar .toggler {
+        position: absolute;
+        right: .5rem;
+        line-height: 1.6;
+        border: 1px solid transparent;
+        padding: 0 .5rem; }
+        .impex-layout .togglebar .menubar .toggler:hover {
+          border: 1px solid #ddd; }
+    .impex-layout .togglebar .menubar.hidden {
+      width: 2rem;
+      white-space: nowrap;
+      overflow: hidden; }
+    .impex-layout .togglebar .tabbar {
+      bottom: -1px;
+      height: 85%;
+      flex: 1;
+      overflow: hidden;
+      position: relative; }
+      .impex-layout .togglebar .tabbar .nav {
+        padding: 5px .2rem;
+        position: absolute;
+        left: 0rem;
+        margin-top: 1px; }
+      .impex-layout .togglebar .tabbar .nav.right {
+        left: auto;
+        right: 1rem; }
+      .impex-layout .togglebar .tabbar .nav:hover {
+        border: 1px solid #ddd; }
+      .impex-layout .togglebar .tabbar .slidebox {
+        overflow: hidden;
+        height: 100%;
+        margin: 0 2rem 0 1rem; }
+      .impex-layout .togglebar .tabbar ul {
+        margin: 0;
+        height: 100%;
+        white-space: nowrap;
+        width: 100%; }
+        .impex-layout .togglebar .tabbar ul li {
+          display: inline-block;
+          height: 100%;
+          margin-top: 1px;
+          margin-right: .5rem;
+          border: 1px solid #ddd; }
+          .impex-layout .togglebar .tabbar ul li a {
+            text-decoration: none;
+            padding: 0 1rem;
+            display: inline-block;
+            line-height: 1.5; }
+          .impex-layout .togglebar .tabbar ul li i.fa {
+            margin-right: .5rem; }
+            .impex-layout .togglebar .tabbar ul li i.fa:hover {
+              color: red; }
+          .impex-layout .togglebar .tabbar ul li.active {
+            border-bottom: 1px solid #fff; }
+  .impex-layout .main {
+    margin-left: 15rem;
+    padding: 7.5rem 1rem 2rem 1rem;
+    transition: all .3s; }
+    .impex-layout .main .panel {
+      display: none; }
+    .impex-layout .main .panel.active {
+      display: block; }
+    .impex-layout .main.hidden {
+      margin-left: 0; }
+
+/*# sourceMappingURL=default.css.map */

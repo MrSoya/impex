@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        impex支持标准js的调用表达式，但是不支持定义表达式
+    	<p>
+           a.b[b.d].x + b.c['y'] + fn(3) ： {{a.b[b.d].x + b.c['y'] + fn(3)}}
+        </p>
+        <p>
+           a.b[a.c + b.d].x + b.c[a.d] ： {{a.b[a.c + b.d].x + b.c[a.d]}}
+        </p>
+        <p>
+           a.c + b.c.x ： {{a.c + b.c.x}}
+        </p>
+        <p>
+           b.c[a.b[a.c+1]['y'][a.c]['z']] ： {{b.c[a.b[a.c+1]['y'][a.c]['z']]}}
+        </p>
+        <p>
+            b.c['y'] <input x-model="b.c['y']" >
+        </p>
+        <p>
+            b.c['x'] <input x-model="b.c['x']" >
+        </p>
+        <p>
+            a.b[1].y[a.c].z <input x-model="a.b[1].y[a.c].z" placeholder="x/y">
+        </p>
+        尽量避免使用中括号语法，可以提升整体性能
+
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            //渲染
+            var debug = impex.render(document.body,{
+                fn:function(ratio) {
+                    return ratio * 10;
+                },
+                data:{
+                    a:{
+                        b:[
+                            {
+                                x:10
+                            },
+                            {
+                                x:20,
+                                y:[{
+                                    z:'x'
+                                }]
+                            }
+                        ],
+                        c:0,
+                        d:'x'
+                    },
+                    b:{
+                        c:{
+                            y:10,
+                            x:20
+                        },
+                        d:1
+                    }
+                }
+            });
+            
+        </script>
+    </body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body >
+        <p>
+            在属性变更回调中如果返回false，系统不会自动更新视图
+        </p>
+
+        <x-comp content="msg">
+        </x-comp>
+
+        
+
+        修改组件参数:<input type="text" x-model="msg">
+        
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+        
+            //自定义组件
+            impex.component('x-comp',{
+                data:{
+                    auto:true
+                },
+                onPropChange:function() {
+                    return new Function('return '+this.data.auto)();
+                },
+                template:'是否自动更新：\
+                        <input type="radio" name="auto" x-model="auto" value="false">否\
+                        <input type="radio" name="auto" checked x-model="auto" value="true">是\
+                        <p style="border:1px solid red">{{this.props.content}}</p>'
+            });
+
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    msg:'这是参数'
+                }
+            });
+            
+        </script>
+    </body>
+</html>

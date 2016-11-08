@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impexui - layout</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+        impex 始终从一个组件开始，无论这个组件是否被注册。下面的代码就是渲染一个匿名组件，
+        组件的视图就是<code>document.body</code>。
+        匿名组件和命名组件相同，都负责管理自身视图中的数据更新
+<pre>
+<code>
+//渲染匿名组件
+impex.render(document.body,{
+    data:{
+        name:'impex'
+    }
+});
+</code>
+</pre>
+    <div id="demo">
+        name: {{impex}}
+        <p>
+            <button :click="attach()">click</button>
+        </p>
+    </div>
+    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    <script type="text/javascript">
+        impex.render(document.getElementById('demo'), {
+            data:{
+                impex:'impex'
+            },
+            attach:function() {
+                this.data.impex += 'x';
+            }
+        });
+    </script>
+    </body>
+</html>

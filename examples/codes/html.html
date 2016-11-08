@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+    	这是一个嵌套的{{# html1 }} 
+        <p >
+            title1:<input type="text" x-model="title1" placeholder="可输入HTML表达式"> 修改html中的变量值不会导致性能降低
+        </p>
+        这是一个独立的{{# html2}}
+        <p>
+            html2:<input type="text" x-model="html2" placeholder="可输入HTML表达式"> 
+            频繁修改html内容，会导致性能降低
+        </p>
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            impex.filter('append',{
+                to:function(){
+                    return this.value + 'extra';
+                }
+            });
+
+            //渲染
+            var debug = impex.render(document.body,{
+                data:{
+                    html1 : "<a href='http://soya2d.com'>{{# title1}}</a>",
+                    html2 : "HTML表达式",
+                    title1 : 'HTML表达式'
+                }
+            });
+        </script>
+    </body>
+</html>

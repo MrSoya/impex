@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body >
+        <p>
+            组件参数可以设置类型和是否必须，如果不满足条件会报错
+        </p>
+
+        <x-comp content="s">
+        </x-comp>
+
+        按F12打开控制台，会看到error信息
+        
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
+        <script type="text/javascript">
+            imLog.level = 3;
+            impex.config({
+                logger:imLog
+            });
+        
+            //自定义组件
+            impex.component('x-comp',{
+                propTypes:{
+                    n:{
+                        type:'number',
+                        require:true
+                    },
+                    content:{
+                        type:['boolean']
+                    }
+                },
+                template:"<p style='border:1px solid red'>{{this.props.content}}</p>"
+            });
+
+            //渲染
+            impex.render(document.body,{
+                data:{
+                    n:123456,
+                    s:'string'
+                }
+            });
+            
+        </script>
+    </body>
+</html>
