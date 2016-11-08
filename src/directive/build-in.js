@@ -724,6 +724,7 @@
                     renderEach(queue,eachObj);
                 }else{
                     //complete callback
+                    if(eachObj.over)
                     eachObj.over();
                 }
             },0);

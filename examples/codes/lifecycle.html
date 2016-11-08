@@ -28,20 +28,23 @@
                 },
                 onUpdate:function(){
                     this.props.logger.call(this.parent,'update...');
+                    // return false;
                 },
-                onPropChange:function(){
+                onPropChange:function(arg){
                     this.props.logger.call(this.parent,'propChange...');
+                    console.log(arg)
+                    return false;
                 },
                 onDestroy:function(){
                     this.props.logger.call(this.parent,'destroy...');
                 },
                 data:{
                     i:0
-                },  
+                },
                 update:function(){
                     this.data.i++;
                 },
-                template:"<button :click='update()'>被点了{{i}}次</button>"
+                template:"<button :click='update()'>被点了{{i}}次,参数{{this.props.p}}</button>"
             });
 
             //渲染
