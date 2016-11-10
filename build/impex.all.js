@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-08
+ * last build: 2016-11-09
  */
 !function (global) {
 	'use strict';
@@ -2327,7 +2327,7 @@ Util.ext(Component.prototype,{
 		}
 
 		var renderView = true;
-		this.onPropChange && (renderView = this.onPropChange(changes));
+		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
 
 		if(renderView !== false){
 			var expNodeList = null;

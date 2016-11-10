@@ -604,7 +604,7 @@ Util.ext(Component.prototype,{
 		}
 
 		var renderView = true;
-		this.onPropChange && (renderView = this.onPropChange(changes));
+		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
 
 		if(renderView !== false){
 			var expNodeList = null;

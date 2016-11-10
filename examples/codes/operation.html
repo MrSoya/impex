@@ -28,12 +28,12 @@
         <button :click="changeList()">增加1元素删除1元素</button>
         <button :click="replaceList()">替换数组</button>
         <button :click="sortList()">数组排序</button>
-        <!-- <p class="stat">
+        <p class="stat">
             DOM节点增加:<span class="{{addhl}}">{{addDOMCount}}</span>
             DOM节点删除:<span class="{{delhl}}">{{delDOMCount}}</span>
             DOM节点内容变更:<span class="{{muhl}}">{{mutateDOMCount}}</span>
             组件数量:<span class="{{comhl}}">{{compCount}}</span>
-        </p> -->
+        </p>
         
     	<ul id="opt">
             <li x-each="list as k , v">
@@ -67,11 +67,12 @@
                 },
                 addList : function(){
                     this.d('list').push(Date.now());
+                    this.d('list').push(Date.now());
                     var t = Math.random()*4;
                     if(t < 2)t='a';
                     else if(t < 3)t='c';
                     else if(t < 1)t='b';
-                    this.d('list').push({xxx:'x<a-'+t+'></a-'+t+'>x'});
+                    // this.d('list').push({xxx:'x<a-'+t+'></a-'+t+'>x'});
 
                     // this.$getCompCount();
                 },

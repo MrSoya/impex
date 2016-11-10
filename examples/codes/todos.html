@@ -80,7 +80,7 @@
             <section>
                 <ul class="todolist">
                     <li x-each="todos as v => filterBy:filterType:'type' " 
-                        transition="todo" props:done="this.done"
+                        transition="todo" props:done="this.done.bind(this)"
                         class="{{v.type=='completed'?'completed':''}}"
                     >
                         <input type="checkbox" x-checked="v.type=='completed'" :click="this.props.done($event,v)">
