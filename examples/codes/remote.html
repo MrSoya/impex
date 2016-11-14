@@ -23,20 +23,7 @@
         <script type="text/javascript">
         
             //自定义组件
-            impex.component('x-button',{
-                onInit:function(){
-                    this.view.on('click','tip()');
-                },
-                data:{
-                    times:0,
-                    color:'#000',
-                    $$date:{}
-                },
-                tip : function(n){
-                    alert('clicked '+(this.data.times++)+' times');
-                },
-                templateURL:"x-button.html"
-            });
+            impex.component('x-button','x-button.html');
 
             //渲染
             impex.render(document.body);

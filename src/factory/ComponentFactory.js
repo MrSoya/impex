@@ -44,6 +44,7 @@ Util.ext(_ComponentFactory.prototype,{
 				rs.on(k,rs.events[k]);
 			}
 		}
+		rs.view.__comp = rs;
 		
 		return rs;
 	},
@@ -64,6 +65,7 @@ Util.ext(_ComponentFactory.prototype,{
 		if(typeof data == 'string'){
 			rs.__url = data;
 		}
+		rs.view.__comp = rs;
 
 		this._super.createCbk.call(this,rs,type);
 

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-08
+ * last build: 2016-11-14
  */
 !function (global) {
 	'use strict';
@@ -90,17 +90,30 @@ var Util = new function () {
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
-            if(!cache[this.url])cache[this.url] = this.responseText;
-            this.cbk && this.cbk(this.responseText);
+            var txt = this.responseText;
+            compiler.innerHTML = txt;
+            var tmpl = compiler.querySelector('template').innerHTML;
+            var comp = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
+
+            var cbks = requirements[this.url];
+            cbks.forEach(function(cbk){
+                var data = window.eval(comp);
+                cbk([tmpl,data]);
+            });
+            requirements[this.url] = null;
         }
     }
 
-    var cache = {};
-    this.loadTemplate = function(url,cbk,timeout){
-        if(cache[url]){
-            cbk && cbk(cache[url]);
+    var requirements = {};
+    this.loadComponent = function(url,cbk,timeout){
+        if(!requirements[url]){
+            requirements[url] = [];
+            requirements[url].push(cbk);
+        }else{
+            requirements[url].push(cbk);
             return;
-        }
+        }        
+
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
         xhr.timeout = timeout || 5000;
@@ -111,7 +124,7 @@ var Util = new function () {
         }else{
             xhr.onreadystatechange = onload;
         }
-        xhr.cbk = cbk;
+        // xhr.cbk = cbk;
         xhr.url = url;
         xhr.send(null);
     }
@@ -1803,10 +1816,9 @@ function Component (view) {
 	 * @type {string}
 	 */
 	this.template;
-	/**
-	 * 组件模板url，动态加载组件模板
-	 */
-	this.templateURL;
+
+	//组件url
+	this.__url;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -1926,7 +1938,7 @@ Util.ext(Component.prototype,{
 						interrupt = !evs[i].apply(my,params);
 					}
 					if(interrupt)return;
-				}				
+				}
 
 				my = my.parent;
 			}
@@ -2011,14 +2023,22 @@ Util.ext(Component.prototype,{
 	init:function(){
 		if(this.__state !== Component.state.created)return;
 
-		if(this.templateURL){
+		if(this.__url){
 			var that = this;
-			Util.loadTemplate(this.templateURL,function(tmplStr){
-				var rs = that.view.__init(tmplStr,that);
-				if(rs === false)return;
-				that.__init(tmplStr);
+			Util.loadComponent(this.__url,function(data){
+				var tmpl = data[0];
+
+				//cache
+				ComponentFactory.register(that.name,data[1]);
+				that.template = tmpl;
+
+				//init
+				that.view.__init(tmpl,that);
+				that.__url = null;
+				that.__init(tmpl);
 				that.display();
 			});
+			
 		}else{
 			if(this.template){
 				var rs = this.view.__init(this.template,this);
@@ -2032,6 +2052,8 @@ Util.ext(Component.prototype,{
 		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
+
+		ComponentFactory.initInstanceOf(this);
 
 		//observe data
 		this.data = Observer.observe(this.data,this);
@@ -2058,9 +2080,8 @@ Util.ext(Component.prototype,{
 	 * 显示组件到视图上
 	 */
 	display:function(){
-		if(
-			this.__state === Component.state.displayed
-		)return;
+		if(this.__state === Component.state.displayed)return;
+		if(this.__state === Component.state.created)return;
 
 		this.view.__display(this);
 
@@ -2092,8 +2113,6 @@ Util.ext(Component.prototype,{
 		}
 
 		this.onDisplay && this.onDisplay();
-
-
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
@@ -2327,7 +2346,7 @@ Util.ext(Component.prototype,{
 		}
 
 		var renderView = true;
-		this.onPropChange && (renderView = this.onPropChange(changes));
+		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
 
 		if(renderView !== false){
 			var expNodeList = null;
@@ -2502,8 +2521,6 @@ View.prototype = {
 			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
 			return;
 		}
-
-		this.__comp = component;
 
 		//组件已经直接插入DOM中
 		this.__placeholder = null;
@@ -3307,14 +3324,24 @@ Factory.prototype = {
 	register : function(type,param,services){
 		type = type.toLowerCase();
 
-		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
-
-		var props = {};
-		
 		var data = param.data;
 		delete param.data;
 
-		Util.ext(props,param);
+		var props = {};
+		
+		if(typeof param == 'string'){
+			data = param;
+		}else{
+			Util.ext(props,param);
+		}
+
+		//re register
+		if(this.types[type]){
+			this.types[type].data = data;
+			this.types[type].props = props;
+			return;
+		}
+		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 		Util.inherits(clazz,this.baseClass);
 
 		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
@@ -3389,6 +3416,7 @@ Util.ext(_ComponentFactory.prototype,{
 				rs.on(k,rs.events[k]);
 			}
 		}
+		rs.view.__comp = rs;
 		
 		return rs;
 	},
@@ -3403,24 +3431,33 @@ Util.ext(_ComponentFactory.prototype,{
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass);
-		Util.ext(rs,this.types[type].props);
-		var data = this.types[type].data;
-		if(data){
-			Util.ext(rs.data,data);
-		}
 		rs.name = type;
-
 		rs.view = new View(null,target,null,placeholder);
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
+		var data = this.types[type].data;
+		if(typeof data == 'string'){
+			rs.__url = data;
 		}
+		rs.view.__comp = rs;
 
 		this._super.createCbk.call(this,rs,type);
 
 		return rs;
+	},
+	initInstanceOf : function(ins){
+		var type = ins.name;
+		if(!this.types[type])return null;
+		
+		Util.ext(ins,this.types[type].props);
+		var data = this.types[type].data;
+		if(data){
+			Util.ext(ins.data,data);
+		}
+
+		if(ins.events){
+			for(var k in ins.events){
+				ins.on(k,ins.events[k]);
+			}
+		}
 	}
 });
 
@@ -3641,7 +3678,7 @@ var TransitionFactory = {
 	     */
 		this.version = {
 	        v:[0,30,0],
-	        state:'beta',
+	        state:'beta2',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -3686,7 +3723,7 @@ var TransitionFactory = {
 		 * @return this
 		 */
 		this.component = function(name,param,services){
-			if(!param.template && !param.templateURL){
+			if(typeof(param)!='string' && !param.template && !param.templateURL){
 				LOGGER.error("can not find property 'template' or 'templateURL' of component '"+name+"'");
 				return;
 			}
@@ -3739,6 +3776,21 @@ var TransitionFactory = {
 		this.transition = function(name,hook){
 			TransitionFactory.register(name,hook);
 			return this;
+		}
+
+		/**
+		 * 对单个组件进行测试渲染
+		 * @param  {String} viewId template id
+		 */
+		this.unitTest = function(viewId){
+			window.onload = function(){
+	            'use strict';
+	            var model = document.querySelector('script[type="javascript/impex-component"]');
+	            model = window.eval(model.innerText);
+	            var test = document.getElementById(viewId);
+	            document.body.innerHTML += test.innerHTML;
+	            impex.render(document.body,model);
+	        }
 		}
 
 		/**

@@ -118,8 +118,6 @@ View.prototype = {
 			return;
 		}
 
-		this.__comp = component;
-
 		//组件已经直接插入DOM中
 		this.__placeholder = null;
 	},

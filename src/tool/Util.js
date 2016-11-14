@@ -80,13 +80,27 @@ var Util = new function () {
             var txt = this.responseText;
             compiler.innerHTML = txt;
             var tmpl = compiler.querySelector('template').innerHTML;
-            var data = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
-            data = window.eval(data);
-            this.cbk([tmpl,data]);
+            var comp = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
+
+            var cbks = requirements[this.url];
+            cbks.forEach(function(cbk){
+                var data = window.eval(comp);
+                cbk([tmpl,data]);
+            });
+            requirements[this.url] = null;
         }
     }
 
+    var requirements = {};
     this.loadComponent = function(url,cbk,timeout){
+        if(!requirements[url]){
+            requirements[url] = [];
+            requirements[url].push(cbk);
+        }else{
+            requirements[url].push(cbk);
+            return;
+        }        
+
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
         xhr.timeout = timeout || 5000;
@@ -97,7 +111,7 @@ var Util = new function () {
         }else{
             xhr.onreadystatechange = onload;
         }
-        xhr.cbk = cbk;
+        // xhr.cbk = cbk;
         xhr.url = url;
         xhr.send(null);
     }
