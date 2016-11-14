@@ -1,0 +1,27 @@
+    <!-- 视图  -->
+    <template id="unitTest">
+        <div>name: {{impex}}
+            <p>
+                <button :click="attach()">{{=CONTENT}}</button>
+            </p>
+        </div>
+    </template>
+    <!-- 组件  -->
+    <script type="javascript/impex-component">
+        (function(){
+            return {
+                attach:function() {
+                    this.data.impex += 'x';
+                },
+                data:{
+                    impex:'impex'
+                }
+            }
+        })();
+    </script>
+    <!-- 单元测试部分  -->
+    <script type="text/javascript" src="build/impex.all.js"></script>
+    <script type="text/javascript">
+        impex.unitTest('unitTest');
+    </script>
+    

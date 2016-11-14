@@ -77,17 +77,16 @@ var Util = new function () {
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
-            if(!cache[this.url])cache[this.url] = this.responseText;
-            this.cbk && this.cbk(this.responseText);
+            var txt = this.responseText;
+            compiler.innerHTML = txt;
+            var tmpl = compiler.querySelector('template').innerHTML;
+            var data = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
+            data = window.eval(data);
+            this.cbk([tmpl,data]);
         }
     }
 
-    var cache = {};
-    this.loadTemplate = function(url,cbk,timeout){
-        if(cache[url]){
-            cbk && cbk(cache[url]);
-            return;
-        }
+    this.loadComponent = function(url,cbk,timeout){
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
         xhr.timeout = timeout || 5000;

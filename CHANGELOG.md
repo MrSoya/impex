@@ -1,4 +1,12 @@
 # Change Log
+## Version 0.30.0 beta2 - 2016/11/14
+### 新增
+* impex.component(name,url);
+* impex.unitTest(viewId);
+
+### 移除
+* Component.templateURL
+
 ## Version 0.30.0 beta - 2016/11/8
 ### 新增
 * 可以组件each

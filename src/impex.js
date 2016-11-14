@@ -44,7 +44,7 @@
 	     */
 		this.version = {
 	        v:[0,30,0],
-	        state:'beta',
+	        state:'beta2',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -89,7 +89,7 @@
 		 * @return this
 		 */
 		this.component = function(name,param,services){
-			if(!param.template && !param.templateURL){
+			if(typeof(param)!='string' && !param.template && !param.templateURL){
 				LOGGER.error("can not find property 'template' or 'templateURL' of component '"+name+"'");
 				return;
 			}
@@ -142,6 +142,21 @@
 		this.transition = function(name,hook){
 			TransitionFactory.register(name,hook);
 			return this;
+		}
+
+		/**
+		 * 对单个组件进行测试渲染
+		 * @param  {String} viewId template id
+		 */
+		this.unitTest = function(viewId){
+			window.onload = function(){
+	            'use strict';
+	            var model = document.querySelector('script[type="javascript/impex-component"]');
+	            model = window.eval(model.innerText);
+	            var test = document.getElementById(viewId);
+	            document.body.innerHTML += test.innerHTML;
+	            impex.render(document.body,model);
+	        }
 		}
 
 		/**

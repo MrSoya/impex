@@ -58,24 +58,32 @@ Util.ext(_ComponentFactory.prototype,{
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass);
-		Util.ext(rs,this.types[type].props);
-		var data = this.types[type].data;
-		if(data){
-			Util.ext(rs.data,data);
-		}
 		rs.name = type;
-
 		rs.view = new View(null,target,null,placeholder);
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
+		var data = this.types[type].data;
+		if(typeof data == 'string'){
+			rs.__url = data;
 		}
 
 		this._super.createCbk.call(this,rs,type);
 
 		return rs;
+	},
+	initInstanceOf : function(ins){
+		var type = ins.name;
+		if(!this.types[type])return null;
+		
+		Util.ext(ins,this.types[type].props);
+		var data = this.types[type].data;
+		if(data){
+			Util.ext(ins.data,data);
+		}
+
+		if(ins.events){
+			for(var k in ins.events){
+				ins.on(k,ins.events[k]);
+			}
+		}
 	}
 });
 

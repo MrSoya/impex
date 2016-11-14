@@ -80,10 +80,9 @@ function Component (view) {
 	 * @type {string}
 	 */
 	this.template;
-	/**
-	 * 组件模板url，动态加载组件模板
-	 */
-	this.templateURL;
+
+	//组件url
+	this.__url;
 	/**
 	 * 组件约束，用于定义组件的使用范围包括上级组件限制
 	 * <p>
@@ -203,7 +202,7 @@ Util.ext(Component.prototype,{
 						interrupt = !evs[i].apply(my,params);
 					}
 					if(interrupt)return;
-				}				
+				}
 
 				my = my.parent;
 			}
@@ -288,14 +287,22 @@ Util.ext(Component.prototype,{
 	init:function(){
 		if(this.__state !== Component.state.created)return;
 
-		if(this.templateURL){
+		if(this.__url){
 			var that = this;
-			Util.loadTemplate(this.templateURL,function(tmplStr){
-				var rs = that.view.__init(tmplStr,that);
-				if(rs === false)return;
-				that.__init(tmplStr);
+			Util.loadComponent(this.__url,function(data){
+				var tmpl = data[0];
+
+				//cache
+				ComponentFactory.register(that.name,data[1]);
+				that.template = tmpl;
+
+				//init
+				that.view.__init(tmpl,that);
+				that.__url = null;
+				that.__init(tmpl);
 				that.display();
 			});
+			
 		}else{
 			if(this.template){
 				var rs = this.view.__init(this.template,this);
@@ -309,6 +316,8 @@ Util.ext(Component.prototype,{
 		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
+
+		ComponentFactory.initInstanceOf(this);
 
 		//observe data
 		this.data = Observer.observe(this.data,this);
@@ -335,9 +344,8 @@ Util.ext(Component.prototype,{
 	 * 显示组件到视图上
 	 */
 	display:function(){
-		if(
-			this.__state === Component.state.displayed
-		)return;
+		if(this.__state === Component.state.displayed)return;
+		if(this.__state === Component.state.created)return;
 
 		this.view.__display(this);
 
@@ -369,8 +377,6 @@ Util.ext(Component.prototype,{
 		}
 
 		this.onDisplay && this.onDisplay();
-
-
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
