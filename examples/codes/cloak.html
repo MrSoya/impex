@@ -24,14 +24,14 @@
 
             //渲染
             impex.render(document.body,{
-                data:{
+                state:{
                     a:'color',
                     color : 'red'
                 },
                 onInit:function(){
                     var that = this;
                     setTimeout(function(){
-                        that.data.color = 'green';
+                        that.state.color = 'green';
                     },1000);
                 }
             });

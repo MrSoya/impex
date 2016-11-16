@@ -100,7 +100,7 @@ function Component (view) {
 	 * 组件数据
 	 * @type {Object}
 	 */
-	this.data = {};
+	this.state = {};
 	/**
 	 * 自定义事件接口
 	 * @type {Object}
@@ -319,8 +319,8 @@ Util.ext(Component.prototype,{
 
 		ComponentFactory.initInstanceOf(this);
 
-		//observe data
-		this.data = Observer.observe(this.data,this);
+		//observe state
+		this.state = Observer.observe(this.state,this);
 
 		Builder.build(this);
 
@@ -422,7 +422,7 @@ Util.ext(Component.prototype,{
 		this.template = 
 		this.restrict = 
 		this.events = 
-		this.data = null;
+		this.state = null;
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，

@@ -74,7 +74,7 @@
 
             //渲染
             impex.render(document.body,{
-                data:{
+                state:{
                     buttons:[
                         '1','2','3','+',
                         '4','5','6','-',
@@ -85,7 +85,7 @@
                     exp:'0',
                 },
                 clear:function () {
-                    this.data.exp = '0';
+                    this.state.exp = '0';
                 },
                 addExp:function(v){
                     switch(v){
@@ -93,15 +93,15 @@
                             this.clear();
                             return;
                         case '←':
-                            if(this.data.exp.length>1)
-                                this.data.exp = this.data.exp.substring(0,this.data.exp.length-1);
+                            if(this.state.exp.length>1)
+                                this.state.exp = this.state.exp.substring(0,this.state.exp.length-1);
                             return;
                         case '=':
-                            var v = eval(this.data.exp.replace(/^0/,''));
-                            this.data.exp = v+'';
+                            var v = eval(this.state.exp.replace(/^0/,''));
+                            this.state.exp = v+'';
                             return;
                         default:
-                            this.data.exp += v;
+                            this.state.exp += v;
                     }
                 }
             });

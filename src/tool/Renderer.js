@@ -240,7 +240,7 @@ var Renderer = new function() {
  		var isDataType = varStr[varStr.length-1]===')'?false:true;
  		var searchPath = watchPath || fullPath;
  		if(isDataType){
- 			searchPath = '.data' + searchPath;
+ 			searchPath = '.state' + searchPath;
  		}else{
  			searchPath = '.' + searchPath.substr(1);
  		}
@@ -248,7 +248,7 @@ var Renderer = new function() {
 
  		if(component){
  			if(isDataType){
-	 			fullPath = '.data' + fullPath;
+	 			fullPath = '.state' + fullPath;
 	 		}else{
 	 			fullPath = '.' + fullPath.substr(1);
 	 		}

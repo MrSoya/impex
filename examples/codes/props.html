@@ -3,29 +3,58 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
     </head>
     <body >
         <p>
-            组件可以接收上级组件传递的参数，并且参数变更时也会自动更新视图
+            组件可以接收上级组件传递的参数，包括三种类型：
+            <ul>
+                <li><code>param</code>:字符串参数，直接绑定到子组件的state中，不可变更，不区分类型</li>
+                <li><code>.param</code>:类型参数，直接绑定到子组件的state中，不可变更，区分类型</li>
+                <li><code>.param:sync</code>:同步类型参数，绑定到子组件的props中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新视图</li>
+            </ul>
+            <p>
+                示例：<br/>
+                <code>
+                &lt;x-comp .content="msg" date="Date.now()" .time:sync="time"&gt;
+                &lt;/x-comp&gt;
+            </code>
+            </p>
         </p>
-
-        <x-comp content="msg">
-        </x-comp>
-
-        修改组件参数:<input type="text" x-model="msg">
+        <p>
+            父组件:
+            <p>content:{{msg}}</p>
+            修改组件参数:<input type="text" x-model="msg">
+            <p style="text-indent: 2rem;">
+                子组件：
+                <x-comp .content="msg" date="Date.now()" .time:sync="time">
+                </x-comp>
+            </p>
+        </p>
+        
         
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
         
             //自定义组件
             impex.component('x-comp',{
-                template:"<p style='border:1px solid red'>{{this.props.content}}</p>"
+                template:"<p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
+                <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
+                <p>time:{{this.props.time}}   ——同步类型参数，回触发更新</p>"
             });
 
             //渲染
             impex.render(document.body,{
-                data:{
-                    msg:'这是参数'
+                state:{
+                    msg:'这是参数',
+                    time:new Date().getTime()
+                },
+                onDisplay:function() {
+                    var that = this;
+                    setInterval(function(){
+                        that.state.time = new Date().getTime();
+                    },1000);
                 }
             });
             

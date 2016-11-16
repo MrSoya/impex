@@ -438,19 +438,34 @@
             this.destroy();
         }
         function parseProps(view,comp){
-            var props = {};
+            var props = {
+                str:{},
+                type:{},
+                sync:{}
+            };
+            var ks = ['cache','over','step','transition'];
             var el = view.__nodes[0];
             for(var i=el.attributes.length;i--;){
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
+                if(ks.indexOf(k) > -1)continue;
+
                 var v = attr.nodeValue;
-                if(k.indexOf(ATTR_ANONY_COMP_PROP_PREFIX)===0){
-                    var propName = k.replace(ATTR_ANONY_COMP_PROP_PREFIX,'');
+
+                if(k[0] === PROP_TYPE_PRIFX){
                     var tmp = lexer(v);
                     var rs = Renderer.evalExp(comp,tmp);
-                    var keys = Object.keys(tmp.varTree);
-
-                    props[propName] = [tmp,rs,keys];
+                    var n = k.substr(1);
+                    
+                    if(PROP_SYNC_SUFX_EXP.test(n)){
+                        var keys = Object.keys(tmp.varTree);
+                        var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
+                        props.sync[propName] = [tmp,rs,keys];
+                    }else{
+                        props.type[n] = Util.immutable(rs);
+                    }
+                }else{
+                    props.str[k] = v;
                 }
             }
             return props;
@@ -531,7 +546,7 @@
                     v.__im__extPropChain.push([this,vi,index]);
                 }
                 
-                var data = subComp.data.__im__target || subComp.data;
+                var data = subComp.state.__im__target || subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;
@@ -576,8 +591,8 @@
             this.subComponents.push(subComp);
 
             //bind props
-            for(var n in this.__props){
-                var prop = this.__props[n];
+            for(var n in this.__props.sync){
+                var prop = this.__props.sync[n];
                 var tmp = prop[0];
                 var rs = prop[1];
                 var keys = prop[2];
@@ -588,12 +603,24 @@
                     if(key.indexOf('.this.props')===0){
                         fromPropKey = key.replace(/^\.this\.props\.?/,'');
                     }
-
                     
                     var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
                     comp.__watchProps.push(prop);
                 });
                 subComp.props[n] = rs;
+            }
+            //bind state
+            for(var n in this.__props.str){
+                subComp.state[n] = this.__props.str[n];
+            }
+            for(var n in this.__props.type){
+                var v = this.__props.type[n];
+                if(v instanceof Function){
+                    subComp[n] = v;
+                }else{
+                    subComp.state[n] = v;
+                }
+                
             }
             
             if(this.trans){
@@ -695,7 +722,7 @@
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 
-                var data = subComp.data.__im__target || subComp.data;
+                var data = subComp.state.__im__target || subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;

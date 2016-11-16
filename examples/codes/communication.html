@@ -27,19 +27,19 @@
                 template:"<div><button :click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
             });
             impex.component('x-b',{
-                data:{
+                state:{
                     msg:""
                 },
                 events:{
                     hello:function(target,msg){
-                        this.data.msg = msg +' from '+target.name;
-                        if(this.data.name === 'child1')return true;
+                        this.state.msg = msg +' from '+target.name;
+                        if(this.state.name === 'child1')return true;
                     }
                 },
                 template:"<div>i'm {{=name}} {{msg}} {{=CONTENT}}</div>"
             });
             impex.component('x-c',{
-                data:{
+                state:{
                     msg:""
                 },
                 hi:function(){
@@ -47,7 +47,7 @@
                 },
                 events:{
                     hello:function(target,msg){
-                        this.data.msg = msg +' from '+target.name;
+                        this.state.msg = msg +' from '+target.name;
                     }
                 },
                 template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button :click='hi()'>wanted a hug</button></div>"

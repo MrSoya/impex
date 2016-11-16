@@ -22,9 +22,9 @@
                     this.view.on('click','tip()');
                 },
                 tip : function(){
-                    alert('clicked '+(this.data.times++)+' times');
+                    alert('clicked '+(this.state.times++)+' times');
                 },
-                data:{
+                state:{
                     times:0
                 }
             }

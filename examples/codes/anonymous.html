@@ -15,7 +15,7 @@
 <code>
 //渲染匿名组件
 impex.render(document.body,{
-    data:{
+    state:{
         name:'impex'
     }
 });
@@ -30,11 +30,11 @@ impex.render(document.body,{
     <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     <script type="text/javascript">
         impex.render(document.getElementById('demo'), {
-            data:{
+            state:{
                 impex:'impex'
             },
             attach:function() {
-                this.data.impex += 'x';
+                this.state.impex += 'x';
             }
         });
     </script>

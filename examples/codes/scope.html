@@ -11,20 +11,20 @@
         each会生成匿名组件，所以无法直接访问上级组件属性
 <pre>
 <code>
-&lt;div x-each="1 to 3 as i" props:d="d"&gt;
-    { {$index} } : { {i} } : { {ext} } : { {this.props.d} }
+&lt;div x-each="1 to 3 as i" .d="d"&gt;
+    { {$index} } : { {i} } : { {ext} } : { {d} }
 &lt;/div&gt;
 </code>
 </pre>
-        <div x-each="1 to 3 as i" props:d="d">
-            {{$index}} : {{i}} : {{ext}} : {{this.props.d}}
+        <div x-each="1 to 3 as i" .d="d">
+            {{$index}} : {{i}} : {{ext}} : {{d}}
         </div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             //渲染
             var debug = impex.render(document.body,{
-                data:{
+                state:{
                     ext:'ext',
                     d:'data'
                 }

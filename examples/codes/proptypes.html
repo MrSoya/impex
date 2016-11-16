@@ -9,7 +9,7 @@
             组件参数可以设置类型和是否必须，如果不满足条件会报错
         </p>
 
-        <x-comp content="s">
+        <x-comp .content="s">
         </x-comp>
 
         按F12打开控制台，会看到error信息
@@ -33,12 +33,12 @@
                         type:['boolean','number']
                     }
                 },
-                template:"<p style='border:1px solid red'>{{this.props.content}}</p>"
+                template:"<p style='border:1px solid red'>{{content}}</p>"
             });
 
             //渲染
             impex.render(document.body,{
-                data:{
+                state:{
                     n:123456,
                     s:'string'
                 }

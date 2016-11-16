@@ -24,7 +24,7 @@
             
             //渲染
             impex.render(document.body,{
-                data:{
+                state:{
                     a:{
                         b:{
                             c:{
@@ -36,20 +36,20 @@
                     info:''
                 },
                 change:function(){
-                    this.data.a.b.c.list = [2,3,4];
-                    this.data.b = 'b';
-                    this.data.a.b.x = 1;
-                    this.data.x =23;
+                    this.state.a.b.c.list = [2,3,4];
+                    this.state.b = 'b';
+                    this.state.a.b.x = 1;
+                    this.state.x =23;
                 },
                 onCreate : function(){
                     this.watch('a.b.x',function(){
-                        this.data.info += '<p>a.b.x change:'+JSON.stringify(arguments)+'</p>';
+                        this.state.info += '<p>a.b.x change:'+JSON.stringify(arguments)+'</p>';
                     });
                     this.watch('b',function(){
-                        this.data.info += '<p>b change:'+JSON.stringify(arguments)+'</p>';
+                        this.state.info += '<p>b change:'+JSON.stringify(arguments)+'</p>';
                     });
                     this.watch('a.b.c.list',function(){
-                        this.data.info += '<p>a.b.c.list change:'+JSON.stringify(arguments)+'</p>';
+                        this.state.info += '<p>a.b.c.list change:'+JSON.stringify(arguments)+'</p>';
                     });
                 }
             });

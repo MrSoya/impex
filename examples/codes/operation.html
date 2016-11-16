@@ -58,7 +58,7 @@
 
             //渲染
             var debug = impex.render(document.body,{
-                data:{
+                state:{
                     list : [1,2,3,4],
                     addDOMCount : 0,
                     delDOMCount : 0,
@@ -97,12 +97,12 @@
                 sortList : function(){
                     if(this.b2s){
                         //对于IE11，如果直接sort会产生错误效果
-                        this.data.list = this.data.list.concat().sort(function(a,b){
+                        this.state.list = this.state.list.concat().sort(function(a,b){
                             return a - b;
                         });
                         this.b2s = false;
                     }else{
-                        this.data.list = this.data.list.concat().sort(function(a,b){
+                        this.state.list = this.state.list.concat().sort(function(a,b){
                             return b - a;
                         });
                         this.b2s = true;
@@ -112,9 +112,9 @@
                     var that = this;
                     setTimeout(function(){
                         var newCount = Object.keys(impex._cs).length;
-                        if(that.data.compCount != newCount){
-                            that.data.compCount = newCount
-                            that.data.comhl = 'onchange';
+                        if(that.state.compCount != newCount){
+                            that.state.compCount = newCount
+                            that.state.comhl = 'onchange';
                         }
                     },0);
                 },
@@ -157,26 +157,26 @@
                 debug.resetStat();
                 mutations.forEach(function(mutation) {
                     if(mutation.type === 'characterData'){
-                        debug.data.mutateDOMCount++;
+                        debug.state.mutateDOMCount++;
                         debug.d('muhl','onchange');
                         return;
                     }
                     for(var i=mutation.removedNodes.length;i--;){
                         if(mutation.removedNodes[i].nodeType == 1){
-                            debug.data.delDOMCount++;
+                            debug.state.delDOMCount++;
                             debug.d('delhl','onchange');
                         }
                     }
                     for(var i=mutation.addedNodes.length;i--;){
                         if(mutation.addedNodes[i].nodeType == 1){
-                            debug.data.addDOMCount++;
+                            debug.state.addDOMCount++;
                             debug.d('addhl','onchange');
                         }
                     }
                 });    
             });
 
-            var config = {childList: true, characterData: true ,subtree:true};
+            var config = {childList: true, characterstate: true ,subtree:true};
             observer.observe(target, config);
         </script>
     </body>

@@ -6,10 +6,10 @@
     </head>
     <body>
     	<table border="1">
-    		<tr x-each="a.b.rows as i , row" props:info="info">
-    			<td x-each="this.parent.data.a.b.cols as col" 
-                    props:i="i" props:info="this.props.info" props:row="row">
-    				{{this.props.i}} : {{JSON.stringify(this.props.row[col['name']])}} : {{this.props.info[this.props.row[col.name]].msg}}
+    		<tr x-each="a.b.rows as i , row" .info="info">
+    			<td x-each="this.parent.state.a.b.cols as col" 
+                    .i="i" .info="info" .row="row">
+    				{{i}} : {{JSON.stringify(row[col['name']])}} : {{info[row[col.name]].msg}}
     			</td>
     		</tr>
     	</table>
@@ -21,7 +21,7 @@
 
             //渲染
             impex.render(document.body,{
-                data:{
+                state:{
                     a : {
                         b:{
                             rows:[

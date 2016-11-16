@@ -80,10 +80,10 @@
             <section>
                 <ul class="todolist">
                     <li x-each="todos as v => filterBy:filterType:'type' " 
-                        transition="todo" props:done="this.done.bind(this)"
+                        transition="todo" .done="this.done.bind(this)"
                         class="{{v.type=='completed'?'completed':''}}"
                     >
-                        <input type="checkbox" x-checked="v.type=='completed'" :click="this.props.done($event,v)">
+                        <input type="checkbox" x-checked="v.type=='completed'" :click="done($event,v)">
                         {{v.val}} <i :click="this.parent.removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
@@ -116,7 +116,7 @@
 
             //渲染
             var debug = impex.render(document.body,{
-                data:{
+                state:{
                     todos:[],
                     filterType:'',
                     activeTodos:0,
@@ -132,18 +132,18 @@
                     var t = e.target;
                     if(e.keyCode === 13 && t.value.trim()){
 
-                        this.data.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+                        this.state.todos.push({id:Math.random()+'',val:t.value,type:'active'});
                         t.value = '';
 
-                        this.data.activeTodos = this.data.todos.filter(function(td){
+                        this.state.activeTodos = this.state.todos.filter(function(td){
                             return td.type === 'active';
                         }).length;
                     }
                 },
                 removeTodo:function(todo){
-                    var i = this.data.todos.indexOf(todo);
+                    var i = this.state.todos.indexOf(todo);
                     if(i > -1)
-                    this.data.todos.splice(i,1);
+                    this.state.todos.splice(i,1);
                 },
                 done:function(e,todo){
                     var type = 'active';
@@ -154,13 +154,13 @@
 
                     todo.type = type;
 
-                    this.data.activeTodos = this.data.todos.filter(function(td){
+                    this.state.activeTodos = this.state.todos.filter(function(td){
                         return td.type === 'active';
                     }).length;
 
                 },
                 filterTodos:function(type){
-                    this.data.filterType = type;
+                    this.state.filterType = type;
                 }
                 
             });

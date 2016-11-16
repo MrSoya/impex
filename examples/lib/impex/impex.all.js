@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-14
+ * last build: 2016-11-16
  */
 !function (global) {
 	'use strict';
@@ -127,6 +127,14 @@ var Util = new function () {
         // xhr.cbk = cbk;
         xhr.url = url;
         xhr.send(null);
+    }
+
+    this.immutable = function(v){
+        if(typeof v === 'object'){
+            var o = JSON.parse(JSON.stringify(v));
+            return o;
+        }
+        return v;
     }
 }
 	var Observer = null;
@@ -831,6 +839,7 @@ function Prop (subComp,name,segments,expWords,oldVal,fromPropKey) {
 var Scanner = new function() {
 	//预扫描
 	function prescan(node){
+		if(!node)return;
 		var textNodeAry = [];
 		var replacements = [];
 		queryAllTextNode(node,textNodeAry);
@@ -1319,7 +1328,7 @@ var ChangeHandler = new function() {
 	        comp = pc[0].subComponents[parseInt(index)];
 	        chains.push(pc[1]);
 	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.data.__im__target[pc[1]] = newVal;
+	        	comp.state.__im__target[pc[1]] = newVal;
 	        }
         }else{
         	chains = pc.concat();
@@ -1637,7 +1646,7 @@ var Renderer = new function() {
  		var isDataType = varStr[varStr.length-1]===')'?false:true;
  		var searchPath = watchPath || fullPath;
  		if(isDataType){
- 			searchPath = '.data' + searchPath;
+ 			searchPath = '.state' + searchPath;
  		}else{
  			searchPath = '.' + searchPath.substr(1);
  		}
@@ -1645,7 +1654,7 @@ var Renderer = new function() {
 
  		if(component){
  			if(isDataType){
-	 			fullPath = '.data' + fullPath;
+	 			fullPath = '.state' + fullPath;
 	 		}else{
 	 			fullPath = '.' + fullPath.substr(1);
 	 		}
@@ -1836,7 +1845,7 @@ function Component (view) {
 	 * 组件数据
 	 * @type {Object}
 	 */
-	this.data = {};
+	this.state = {};
 	/**
 	 * 自定义事件接口
 	 * @type {Object}
@@ -2055,8 +2064,8 @@ Util.ext(Component.prototype,{
 
 		ComponentFactory.initInstanceOf(this);
 
-		//observe data
-		this.data = Observer.observe(this.data,this);
+		//observe state
+		this.state = Observer.observe(this.state,this);
 
 		Builder.build(this);
 
@@ -2158,7 +2167,7 @@ Util.ext(Component.prototype,{
 		this.template = 
 		this.restrict = 
 		this.events = 
-		this.data = null;
+		this.state = null;
 	},
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -2489,24 +2498,8 @@ View.prototype = {
 					instance = DirectiveFactory.newInstanceOf('on',this.el,component,k,v);
 				}else{
 					if(!component.parent)continue;
-					//如果是属性，给props
-					var tmp = lexer(v);
-					var rs = Renderer.evalExp(component.parent,tmp);
-					var keys = Object.keys(tmp.varTree);
-					//watch props
-					keys.forEach(function(key){
-						if(tmp.varTree[key].isFunc)return;
-						
-						var prop = new Prop(component,k,tmp.varTree[key].segments,tmp,rs);
-						component.parent.__watchProps.push(prop);
-					});
 
-					if(propTypes){
-						delete requires[k];
-						this.__checkPropType(k,rs,propTypes,component);
-					}
-
-					component.props[k] = rs;
+					handleProps(k,v,requires,propTypes,component);
 				}
 
 				if(instance){
@@ -2524,15 +2517,6 @@ View.prototype = {
 
 		//组件已经直接插入DOM中
 		this.__placeholder = null;
-	},
-	__checkPropType:function(k,v,propTypes,component){
-		if(!propTypes[k])return;
-		var checkType = propTypes[k].type;
-		checkType = checkType instanceof Array?checkType:[checkType];
-		var vType = typeof v;
-		if(checkType.indexOf(vType) < 0){
-			LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
-		}
 	},
 	__display:function(component){
 		if(!this.__placeholder ||!this.__placeholder.parentNode)return;
@@ -2807,6 +2791,68 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 	});
 	return tmpl;
 }
+
+function checkPropType(k,v,propTypes,component){
+	if(!propTypes[k])return;
+	var checkType = propTypes[k].type;
+	checkType = checkType instanceof Array?checkType:[checkType];
+	var vType = typeof v;
+	if(checkType.indexOf(vType) < 0){
+		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+	}
+}
+
+function handleProps(k,v,requires,propTypes,component){
+	// .xxxx
+	if(k[0] !== PROP_TYPE_PRIFX){
+		if(propTypes){
+			delete requires[k];
+			checkPropType(k,v,propTypes,component);
+		}
+		component.state[k] = v;
+		return;
+	}
+
+	// xxxx
+	var n = k.substr(1);
+	var tmp = lexer(v);
+	var rs = Renderer.evalExp(component.parent,tmp);
+
+	//check sync
+	if(PROP_SYNC_SUFX_EXP.test(n)){
+		n = n.replace(PROP_SYNC_SUFX_EXP,'');
+
+		var keys = Object.keys(tmp.varTree);
+		//watch props
+		keys.forEach(function(key){
+			if(tmp.varTree[key].isFunc)return;
+			
+			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
+			component.parent.__watchProps.push(prop);
+		});
+
+		if(propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,component);
+		}
+
+		component.props[n] = rs;
+	}else{
+		if(propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,component);
+		}
+		if(rs instanceof Function){
+			component[n] = rs;
+			return;
+		}
+		//immutable
+		var obj = Util.immutable(rs);
+		component.state[n] = obj;
+	}
+}
+
+
 /**
  * DOM视图构建器
  */
@@ -3324,27 +3370,27 @@ Factory.prototype = {
 	register : function(type,param,services){
 		type = type.toLowerCase();
 
-		var data = param.data;
-		delete param.data;
+		var state = param.state;
+		delete param.state;
 
 		var props = {};
 		
 		if(typeof param == 'string'){
-			data = param;
+			state = param;
 		}else{
 			Util.ext(props,param);
 		}
 
 		//re register
 		if(this.types[type]){
-			this.types[type].data = data;
+			this.types[type].state = state;
 			this.types[type].props = props;
 			return;
 		}
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 		Util.inherits(clazz,this.baseClass);
 
-		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
+		this.types[type] = {clazz:clazz,props:props,services:services,state:state};
 	},
 	/**
 	 * 是否存在指定类型
@@ -3425,7 +3471,7 @@ Util.ext(_ComponentFactory.prototype,{
 	 * @param  {String} type       		组件类型
 	 * @param  {HTMLElement} target  	组件应用节点
 	 * @param  {HTMLElement} placeholder 用于替换组件的占位符
-	 * @return {Component}            
+	 * @return {Component}
 	 */
 	newInstanceOf : function(type,target,placeholder){
 		if(!this.types[type])return null;
@@ -3433,11 +3479,14 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
 		rs.view = new View(null,target,null,placeholder);
-		var data = this.types[type].data;
-		if(typeof data == 'string'){
-			rs.__url = data;
+		var state = this.types[type].state;
+		if(typeof state == 'string'){
+			rs.__url = state;
 		}
+		
 		rs.view.__comp = rs;
+
+		Util.ext(rs,this.types[type].props);
 
 		this._super.createCbk.call(this,rs,type);
 
@@ -3448,9 +3497,9 @@ Util.ext(_ComponentFactory.prototype,{
 		if(!this.types[type])return null;
 		
 		Util.ext(ins,this.types[type].props);
-		var data = this.types[type].data;
-		if(data){
-			Util.ext(ins.data,data);
+		var state = this.types[type].state;
+		if(state){
+			Util.ext(ins.state,state);
 		}
 
 		if(ins.events){
@@ -3644,7 +3693,9 @@ var TransitionFactory = {
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
-	var ATTR_ANONY_COMP_PROP_PREFIX = 'props:';
+	var PROP_TYPE_PRIFX = '.';
+	var PROP_SYNC_SUFX = ':sync';
+	var PROP_SYNC_SUFX_EXP = /:sync$/;
 
 	var EXP2HTML_EXP_TAG = '#';
 	var EXP2HTML_START_EXP = /^\s*#/;
@@ -3678,7 +3729,7 @@ var TransitionFactory = {
 	     */
 		this.version = {
 	        v:[0,30,0],
-	        state:'beta2',
+	        state:'beta3',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -4332,19 +4383,34 @@ impex.service('Transitions',new function(){
             this.destroy();
         }
         function parseProps(view,comp){
-            var props = {};
+            var props = {
+                str:{},
+                type:{},
+                sync:{}
+            };
+            var ks = ['cache','over','step','transition'];
             var el = view.__nodes[0];
             for(var i=el.attributes.length;i--;){
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
+                if(ks.indexOf(k) > -1)continue;
+
                 var v = attr.nodeValue;
-                if(k.indexOf(ATTR_ANONY_COMP_PROP_PREFIX)===0){
-                    var propName = k.replace(ATTR_ANONY_COMP_PROP_PREFIX,'');
+
+                if(k[0] === PROP_TYPE_PRIFX){
                     var tmp = lexer(v);
                     var rs = Renderer.evalExp(comp,tmp);
-                    var keys = Object.keys(tmp.varTree);
-
-                    props[propName] = [tmp,rs,keys];
+                    var n = k.substr(1);
+                    
+                    if(PROP_SYNC_SUFX_EXP.test(n)){
+                        var keys = Object.keys(tmp.varTree);
+                        var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
+                        props.sync[propName] = [tmp,rs,keys];
+                    }else{
+                        props.type[n] = Util.immutable(rs);
+                    }
+                }else{
+                    props.str[k] = v;
                 }
             }
             return props;
@@ -4425,7 +4491,7 @@ impex.service('Transitions',new function(){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
                 
-                var data = subComp.data.__im__target || subComp.data;
+                var data = subComp.state.__im__target || subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;
@@ -4470,8 +4536,8 @@ impex.service('Transitions',new function(){
             this.subComponents.push(subComp);
 
             //bind props
-            for(var n in this.__props){
-                var prop = this.__props[n];
+            for(var n in this.__props.sync){
+                var prop = this.__props.sync[n];
                 var tmp = prop[0];
                 var rs = prop[1];
                 var keys = prop[2];
@@ -4482,12 +4548,24 @@ impex.service('Transitions',new function(){
                     if(key.indexOf('.this.props')===0){
                         fromPropKey = key.replace(/^\.this\.props\.?/,'');
                     }
-
                     
                     var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
                     comp.__watchProps.push(prop);
                 });
                 subComp.props[n] = rs;
+            }
+            //bind state
+            for(var n in this.__props.str){
+                subComp.state[n] = this.__props.str[n];
+            }
+            for(var n in this.__props.type){
+                var v = this.__props.type[n];
+                if(v instanceof Function){
+                    subComp[n] = v;
+                }else{
+                    subComp.state[n] = v;
+                }
+                
             }
             
             if(this.trans){
@@ -4589,7 +4667,7 @@ impex.service('Transitions',new function(){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 
-                var data = subComp.data.__im__target || subComp.data;
+                var data = subComp.state.__im__target || subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;

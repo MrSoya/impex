@@ -18,7 +18,7 @@
         <script type="text/javascript">
             impex.component('x-a',{
                 template:'<p><a ref="xa">{{= CONTENT}}</a></p>',
-                data:{
+                state:{
                     msg:111,
                     v:true
                 },
@@ -35,14 +35,14 @@
                     console.log('onPropChange: ',changes)
                 },
                 changeV:function(){
-                    this.data.v = !this.data.v;
+                    this.state.v = !this.state.v;
                 },
                 func:function(){
                     return 12;
                 },
                 onInit:function(){
                     // console.log('onInit: ',this.props);
-                    this.data.v = this.props.value;
+                    this.state.v = this.props.value;
                 },
                 onDisplay:function(){
                     // console.log('onDisplay: ',this.props)
@@ -65,7 +65,7 @@
                 onDisplay : function(){
                     var that = this;
                     setTimeout(function(){
-                        that.data.list.info = [1,2];
+                        that.state.list.info = [1,2];
                     },1000);
 
                     this.watch('show',function(){
@@ -76,13 +76,13 @@
                     console.log('onUpdate: ',changes)
                 },
                 changeShow:function(){
-                    this.data.x.show = true;
+                    this.state.x.show = true;
                 },
 
                 fn:function(){
                     return 3;
                 },
-                data:{
+                state:{
                     show:true,
                     x:{
                         show:false

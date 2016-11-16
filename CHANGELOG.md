@@ -1,4 +1,16 @@
 # Change Log
+## Version 0.30.0 beta3 - 2016/11/16
+### 更新
+* Component.data --> Component.state
+* 组件属性提供三种传递方式: 
+param 字符串传递
+.param 类型传递
+.param:sync 同步传递
+* 一些bug
+* each指令的参数传递和组件相同
+
+
+
 ## Version 0.30.0 beta2 - 2016/11/14
 ### 新增
 * impex.component(name,url);

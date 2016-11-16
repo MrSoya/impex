@@ -10,7 +10,9 @@
 		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
-	var ATTR_ANONY_COMP_PROP_PREFIX = 'props:';
+	var PROP_TYPE_PRIFX = '.';
+	var PROP_SYNC_SUFX = ':sync';
+	var PROP_SYNC_SUFX_EXP = /:sync$/;
 
 	var EXP2HTML_EXP_TAG = '#';
 	var EXP2HTML_START_EXP = /^\s*#/;
@@ -44,7 +46,7 @@
 	     */
 		this.version = {
 	        v:[0,30,0],
-	        state:'beta2',
+	        state:'beta3',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }

@@ -7,14 +7,14 @@
         </style>
     </head>
     <body>
-        <div x-each="1 to 10000 as i">{{i / this.parent.data.x}}</div>
+        <div x-each="1 to 10000 as i">{{i / this.parent.state.x}}</div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
         var s = Date.now();
 
             impex.render(document.body,{
-                data:{
+                state:{
                     x:2
                 }
             });

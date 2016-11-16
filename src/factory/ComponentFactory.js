@@ -53,7 +53,7 @@ Util.ext(_ComponentFactory.prototype,{
 	 * @param  {String} type       		组件类型
 	 * @param  {HTMLElement} target  	组件应用节点
 	 * @param  {HTMLElement} placeholder 用于替换组件的占位符
-	 * @return {Component}            
+	 * @return {Component}
 	 */
 	newInstanceOf : function(type,target,placeholder){
 		if(!this.types[type])return null;
@@ -61,11 +61,14 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
 		rs.view = new View(null,target,null,placeholder);
-		var data = this.types[type].data;
-		if(typeof data == 'string'){
-			rs.__url = data;
+		var state = this.types[type].state;
+		if(typeof state == 'string'){
+			rs.__url = state;
 		}
+		
 		rs.view.__comp = rs;
+
+		Util.ext(rs,this.types[type].props);
 
 		this._super.createCbk.call(this,rs,type);
 
@@ -76,9 +79,9 @@ Util.ext(_ComponentFactory.prototype,{
 		if(!this.types[type])return null;
 		
 		Util.ext(ins,this.types[type].props);
-		var data = this.types[type].data;
-		if(data){
-			Util.ext(ins.data,data);
+		var state = this.types[type].state;
+		if(state){
+			Util.ext(ins.state,state);
 		}
 
 		if(ins.events){

@@ -13,27 +13,27 @@ Factory.prototype = {
 	register : function(type,param,services){
 		type = type.toLowerCase();
 
-		var data = param.data;
-		delete param.data;
+		var state = param.state;
+		delete param.state;
 
 		var props = {};
 		
 		if(typeof param == 'string'){
-			data = param;
+			state = param;
 		}else{
 			Util.ext(props,param);
 		}
 
 		//re register
 		if(this.types[type]){
-			this.types[type].data = data;
+			this.types[type].state = state;
 			this.types[type].props = props;
 			return;
 		}
 		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
 		Util.inherits(clazz,this.baseClass);
 
-		this.types[type] = {clazz:clazz,props:props,services:services,data:data};
+		this.types[type] = {clazz:clazz,props:props,services:services,state:state};
 	},
 	/**
 	 * 是否存在指定类型

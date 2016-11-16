@@ -85,24 +85,8 @@ View.prototype = {
 					instance = DirectiveFactory.newInstanceOf('on',this.el,component,k,v);
 				}else{
 					if(!component.parent)continue;
-					//如果是属性，给props
-					var tmp = lexer(v);
-					var rs = Renderer.evalExp(component.parent,tmp);
-					var keys = Object.keys(tmp.varTree);
-					//watch props
-					keys.forEach(function(key){
-						if(tmp.varTree[key].isFunc)return;
-						
-						var prop = new Prop(component,k,tmp.varTree[key].segments,tmp,rs);
-						component.parent.__watchProps.push(prop);
-					});
 
-					if(propTypes){
-						delete requires[k];
-						this.__checkPropType(k,rs,propTypes,component);
-					}
-
-					component.props[k] = rs;
+					handleProps(k,v,requires,propTypes,component);
 				}
 
 				if(instance){
@@ -120,15 +104,6 @@ View.prototype = {
 
 		//组件已经直接插入DOM中
 		this.__placeholder = null;
-	},
-	__checkPropType:function(k,v,propTypes,component){
-		if(!propTypes[k])return;
-		var checkType = propTypes[k].type;
-		checkType = checkType instanceof Array?checkType:[checkType];
-		var vType = typeof v;
-		if(checkType.indexOf(vType) < 0){
-			LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
-		}
 	},
 	__display:function(component){
 		if(!this.__placeholder ||!this.__placeholder.parentNode)return;
@@ -403,3 +378,64 @@ function tmplExpFilter(tmpl,bodyHTML,propMap){
 	});
 	return tmpl;
 }
+
+function checkPropType(k,v,propTypes,component){
+	if(!propTypes[k])return;
+	var checkType = propTypes[k].type;
+	checkType = checkType instanceof Array?checkType:[checkType];
+	var vType = typeof v;
+	if(checkType.indexOf(vType) < 0){
+		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+	}
+}
+
+function handleProps(k,v,requires,propTypes,component){
+	// .xxxx
+	if(k[0] !== PROP_TYPE_PRIFX){
+		if(propTypes){
+			delete requires[k];
+			checkPropType(k,v,propTypes,component);
+		}
+		component.state[k] = v;
+		return;
+	}
+
+	// xxxx
+	var n = k.substr(1);
+	var tmp = lexer(v);
+	var rs = Renderer.evalExp(component.parent,tmp);
+
+	//check sync
+	if(PROP_SYNC_SUFX_EXP.test(n)){
+		n = n.replace(PROP_SYNC_SUFX_EXP,'');
+
+		var keys = Object.keys(tmp.varTree);
+		//watch props
+		keys.forEach(function(key){
+			if(tmp.varTree[key].isFunc)return;
+			
+			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
+			component.parent.__watchProps.push(prop);
+		});
+
+		if(propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,component);
+		}
+
+		component.props[n] = rs;
+	}else{
+		if(propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,component);
+		}
+		if(rs instanceof Function){
+			component[n] = rs;
+			return;
+		}
+		//immutable
+		var obj = Util.immutable(rs);
+		component.state[n] = obj;
+	}
+}
+

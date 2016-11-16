@@ -16,7 +16,7 @@
     impex.render(document.getElementById('demo'));
 </code>
 </pre>
-        <x-demo id="demo"></x-demo>
+        <x-demo id="demo" x-if="show"></x-demo>
     <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     <script type="text/javascript">
         impex.component('x-demo',{
@@ -26,10 +26,11 @@
                         </p>\
                         </div>',
             attach:function() {
-                this.data.impex += 'x';
+                this.state.impex += 'x';
             },
-            data:{
-                impex:'impex'
+            state:{
+                impex:'impex',
+                show:false
             }
         });
         impex.render(document.getElementById('demo'));

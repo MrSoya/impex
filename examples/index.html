@@ -36,11 +36,11 @@
             	<div class="scrollpane">
             		<!-- 左侧导航开始 -->
             		<ul class="menu-items">
-            			<li x-each="sidebar as k,list" props:active="active" >
+            			<li x-each="sidebar as k,list" .active:sync="active" >
             				<a class="cate">{{k}}</a>
             				<ul>
             					<li x-each="list as comp" 
-            					props:active="this.props.active"  
+            					.active:sync="this.props.active"  
             					x="{{this.props.active}}"
             					class="{{this.props.active==comp?'active':''}}">
             						<a class="link" href="#!/{{comp}}">
@@ -58,7 +58,7 @@
 				scrolling="yes" frameborder="0" 
 				onload="changeFrameHeight(this)"
 				x-each="activeComps as v" 
-				props:active="active" 
+				.active:sync="active" 
 				class="panel {{this.props.active==v.type?'active':''}}">
 					
 				</iframe>
@@ -87,32 +87,32 @@
             		var that = this;
                     router.when({
                         "/([a-z]+)":function(type){
-                        	if(that.data.activeTypes.indexOf(type) < 0){
-                        		that.data.activeComps.push({
+                        	if(that.state.activeTypes.indexOf(type) < 0){
+                        		that.state.activeComps.push({
                         			tmpl:'<x-'+type+'></x-'+type+'>',
                         			type:type
                         		});
-                        		that.data.activeTypes.push(type);
+                        		that.state.activeTypes.push(type);
                         	}
 
-                        	that.data.active = type;
+                        	that.state.active = type;
                         }
                     });
                 },
                 onInit:function(){
                 	var comps = [];
-                	for(var k in this.data.sidebar){
-                		var cate = this.data.sidebar[k];
+                	for(var k in this.state.sidebar){
+                		var cate = this.state.sidebar[k];
                 		comps = cate.concat(comps);
                 	}
-                	this.data.comps = comps;
+                	this.state.comps = comps;
                 },
                 onDisplay:function(){
 					$('.impex-layout > .sidebar .scrollpane > .menu-items').slimScroll({
 				        height: '100%'
 				    });
                 },
-            	data:{
+            	state:{
             		sidebar:{
             			'config':[
             				'delimiters','logger'
@@ -158,20 +158,20 @@
         			document.querySelector('.impex-layout .slidebox').scrollLeft += dir*100;
         		},
         		toggleSide:function(){
-        			this.data.hideSide = !this.data.hideSide;
+        			this.state.hideSide = !this.state.hideSide;
         		},
         		closeTab:function(type,ev){
-        			var i = this.data.activeTypes.indexOf(type);
+        			var i = this.state.activeTypes.indexOf(type);
         			if(i > -1){
-        				this.data.activeTypes.splice(i,1);
-        				this.data.activeComps.splice(i,1);
-        				console.log(this.data.activeTypes,this.data.activeComps)
+        				this.state.activeTypes.splice(i,1);
+        				this.state.activeComps.splice(i,1);
+        				console.log(this.state.activeTypes,this.state.activeComps)
         			}
-        			if(this.data.active == type){
-        				var newType = this.data.activeTypes[0];
+        			if(this.state.active == type){
+        				var newType = this.state.activeTypes[0];
         				if(!newType)return;
         				location.href = '#!/'+newType;
-        				this.data.active = newType;
+        				this.state.active = newType;
 
         			}
         		}

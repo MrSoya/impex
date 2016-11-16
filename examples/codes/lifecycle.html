@@ -21,49 +21,48 @@
                     console.log('create...');
                 },
                 onInit:function(){
-                    this.props.logger.call(this.parent,'init...');
+                    this.logger('init...');
                 },
                 onDisplay:function(){
-                    this.props.logger.call(this.parent,'display...');
+                    this.logger('display...');
                 },
                 onUpdate:function(){
-                    this.props.logger.call(this.parent,'update...');
+                    this.logger('update...');
                     // return false;
                 },
-                onPropChange:function(arg){
-                    this.props.logger.call(this.parent,'propChange...');
-                    console.log(arg)
-                    return false;
+                onPropUpdate:function(arg){
+                    this.logger('propChange...');
+                    // return false;
                 },
                 onDestroy:function(){
-                    this.props.logger.call(this.parent,'destroy...');
+                    this.logger('destroy...');
                 },
-                data:{
+                state:{
                     i:0
                 },
                 update:function(){
-                    this.data.i++;
+                    this.state.i++;
                 },
-                template:"<button :click='update()'>被点了{{i}}次,参数{{this.props.p}}</button>"
+                template:"<button :click='update()'>被点了{{i}}次,可变参数{{this.props.p}}</button>"
             });
 
             //渲染
             impex.render(document.body,{
                 load:function(e) {
                     e.target.style.display = 'none';
-                    this.data.info += '<p>loading...</p>';
-                    this.data.comp = '<x-comp logger="this.record" p="x"></x-comp>';
+                    this.state.info += '<p>loading...</p>';
+                    this.state.comp = '<x-comp .logger="this.record.bind(this)" .p:sync="x"></x-comp>';
                 },
                 record:function(msg){
-                    this.data.info += '<p>'+msg+'</p>';
+                    this.state.info += '<p>'+msg+'</p>';
                 },
                 changeX:function(){
-                    this.data.x += 1;
+                    this.state.x += 1;
                 },
                 destroyComp:function(){
                     this.children[0].destroy();
                 },
-                data:{
+                state:{
                     info:'',
                     x:10
                 }

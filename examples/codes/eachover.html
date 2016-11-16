@@ -7,12 +7,12 @@
         </style>
     </head>
     <body>
-        <div x-each="1 to 2000 as i" over="this.over">{{i / this.parent.data.x}}</div>
+        <div x-each="1 to 2000 as i" over="this.over">{{i / this.parent.state.x}}</div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             impex.render(document.body,{
-                data:{
+                state:{
                     x:0.5
                 },
                 over:function(argument) {

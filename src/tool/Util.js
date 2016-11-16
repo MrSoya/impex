@@ -115,4 +115,12 @@ var Util = new function () {
         xhr.url = url;
         xhr.send(null);
     }
+
+    this.immutable = function(v){
+        if(typeof v === 'object'){
+            var o = JSON.parse(JSON.stringify(v));
+            return o;
+        }
+        return v;
+    }
 }

@@ -58,6 +58,7 @@ var gulp = require('gulp'),
         .pipe(concat('impex.all.js'))
         .pipe(header(banner))
         .pipe(gulp.dest('build'))
+        .pipe(gulp.dest('examples/lib/impex'))
         .pipe(rename({suffix: '.min'}))
         .pipe(uglify())
         .pipe(header(banner))

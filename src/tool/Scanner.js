@@ -5,6 +5,7 @@
 var Scanner = new function() {
 	//预扫描
 	function prescan(node){
+		if(!node)return;
 		var textNodeAry = [];
 		var replacements = [];
 		queryAllTextNode(node,textNodeAry);
