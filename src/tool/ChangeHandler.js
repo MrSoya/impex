@@ -50,9 +50,9 @@ var ChangeHandler = new function() {
 					});
 
 				});//end for
-
-				for(var k in changeMap){
-					changeMap[k].comp.__update(changeMap[k].changes);
+				var tmp = changeMap;
+				for(var k in tmp){
+					tmp[k].comp.__update(tmp[k].changes);
 				}
 			},20);
 		}

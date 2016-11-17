@@ -1195,34 +1195,6 @@ var Builder = new function() {
  			buildExpModel(comp,subVar,expNode);
  		}
 
- 		//build parent props
- 		if(varObj.segments[0]==='this' && varObj.segments[1]==='props'){
- 			var k = varObj.segments[2];
- 			if(!k)return;
- 			if(k[0]==='['){
- 				if(expNode instanceof ExpNode){
- 					comp.__expWithProps['*'].push(expNode);
-		 		}else if(expNode instanceof AttrObserveNode){
-		 			comp.__directiveWithProps['*'].push(expNode);
-		 		}else if(expNode instanceof Watch){
- 					comp.__watchWithProps['*'].push(expNode);
- 				}
- 			}else{
- 				if(expNode instanceof ExpNode){
- 					if(!comp.__expWithProps[k])comp.__expWithProps[k] = [];
- 					comp.__expWithProps[k].push(expNode);
-		 		}else if(expNode instanceof AttrObserveNode){
-		 			if(!comp.__directiveWithProps[k])comp.__directiveWithProps[k] = [];
- 					comp.__directiveWithProps[k].push(expNode);
-		 		}else if(expNode instanceof Watch){
- 					if(!comp.__watchWithProps[k])comp.__watchWithProps[k] = [];
- 					comp.__watchWithProps[k].push(expNode);
- 				}
- 				
- 			}
- 			return;
- 		}
-
  		var prop = walkDataTree(comp.__expDataRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){
@@ -1312,9 +1284,9 @@ var ChangeHandler = new function() {
 					});
 
 				});//end for
-
-				for(var k in changeMap){
-					changeMap[k].comp.__update(changeMap[k].changes);
+				var tmp = changeMap;
+				for(var k in tmp){
+					tmp[k].comp.__update(tmp[k].changes);
 				}
 			},20);
 		}
@@ -1779,17 +1751,6 @@ function Component (view) {
 	 */
 	this.refs = {};
 	/**
-	 * 组件属性。在组件调用时写在组件上的所有属性,但不包括指令
-	 * <p>
-	 * <x-comp x-if="show" name="'impex'" value="obj" x-each="1 to 10 as i" :click="alert(343)">
-            {{i}}
-        </x-comp>
-	 * </p>
-	 * 上面的组件x-comp会有2个prop，name的值为常量字符串impex，value的值为上级组件的对象obj
-	 * @type {Object}
-	 */
-	this.props = {};
-	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
 	 */
@@ -1810,11 +1771,9 @@ function Component (view) {
 	this.children = [];
 	this.__expNodes = [];
 	this.__expDataRoot = new ExpData();
-	this.__expWithProps = {'*':[]};
-	this.__watchWithProps = {'*':[]};
-	this.__directiveWithProps = {'*':[]};
 	this.__eventMap = {};
 	this.__watchProps = [];
+	this.__props = {};
 	/**
 	 * 组件域内的指令列表
 	 * @type {Array}
@@ -2041,6 +2000,8 @@ Util.ext(Component.prototype,{
 				ComponentFactory.register(that.name,data[1]);
 				that.template = tmpl;
 
+				ComponentFactory.initInstanceOf(that.name,that);
+
 				//init
 				that.view.__init(tmpl,that);
 				that.__url = null;
@@ -2061,8 +2022,6 @@ Util.ext(Component.prototype,{
 		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
-
-		ComponentFactory.initInstanceOf(this);
 
 		//observe state
 		this.state = Observer.observe(this.state,this);
@@ -2331,15 +2290,17 @@ Util.ext(Component.prototype,{
 	},
 	__propChange:function(changes){
 		var matchMap = {};
+		var stateMap = {};
 		//update props
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
-			this.props[name] = c.newVal;
+			this.__props[name] = c.newVal;
+			stateMap[name] = c.newVal;
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
 				var k = prop.fromPropKey;
-				if(!k)reutnr;
+				if(!k)return;
 				if(k[0] === '[' || k === name){
 					if(!matchMap[prop.subComp.__id])
 						matchMap[prop.subComp.__id] = [];
@@ -2358,51 +2319,9 @@ Util.ext(Component.prototype,{
 		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
 
 		if(renderView !== false){
-			var expNodeList = null;
-			var directiveList = null;
-			var watchList = null;
-			var fuzzyE = false,
-				fuzzyD = false,
-				fuzzyW = false; 
-			
-			for(var i=changes.length;i--;){
-				var c = changes[i];
-				var name = c.name;
-				if(this.__expWithProps[name]){
-					expNodeList = this.__expWithProps[name].concat();
-				}else{
-					fuzzyE = true;
-				}
-
-				if(this.__directiveWithProps[name]){
-					directiveList = this.__directiveWithProps[name].concat();
-				}else{
-					fuzzyD = true;
-				}
-
-				if(this.__watchWithProps[name]){
-					watchList = this.__watchWithProps[name].concat();
-				}else{
-					fuzzyW = true;
-				}
+			for(var k in stateMap){
+				this.state[k] = stateMap[k];
 			}
-
-			//expnodes
-			if(fuzzyE && this.__expWithProps['*'].length > 0){
-				expNodeList = expNodeList.concat(this.__expWithProps['*']);
-			}
-			expNodeList && Renderer.renderExpNodes(expNodeList);
-
-			//directives
-			if(fuzzyD && this.__directiveWithProps['*'].length > 0){
-				directiveList = directiveList.concat(this.__directiveWithProps['*']);
-			}
-			directiveList && this.__updateDirective(directiveList);
-			//watchs
-			if(fuzzyW && this.__watchWithProps['*'].length > 0){
-				watchList = watchList.concat(this.__watchWithProps['*']);
-			}
-			watchList && this.__callWatchs(watchList);
 		}
 
 		for(var k in matchMap){
@@ -2830,26 +2749,18 @@ function handleProps(k,v,requires,propTypes,component){
 			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
 			component.parent.__watchProps.push(prop);
 		});
-
-		if(propTypes){
-			delete requires[n];
-			checkPropType(n,rs,propTypes,component);
-		}
-
-		component.props[n] = rs;
-	}else{
-		if(propTypes){
-			delete requires[n];
-			checkPropType(n,rs,propTypes,component);
-		}
-		if(rs instanceof Function){
-			component[n] = rs;
-			return;
-		}
-		//immutable
-		var obj = Util.immutable(rs);
-		component.state[n] = obj;
 	}
+	if(propTypes){
+		delete requires[n];
+		checkPropType(n,rs,propTypes,component);
+	}
+	if(rs instanceof Function){
+		component[n] = rs;
+		return;
+	}
+	//immutable
+	var obj = Util.immutable(rs);
+	component.state[n] = obj;
 }
 
 
@@ -3482,18 +3393,17 @@ Util.ext(_ComponentFactory.prototype,{
 		var state = this.types[type].state;
 		if(typeof state == 'string'){
 			rs.__url = state;
+		}else{
+			this.initInstanceOf(type,rs);
 		}
 		
 		rs.view.__comp = rs;
-
-		Util.ext(rs,this.types[type].props);
 
 		this._super.createCbk.call(this,rs,type);
 
 		return rs;
 	},
-	initInstanceOf : function(ins){
-		var type = ins.name;
+	initInstanceOf : function(type,ins){
 		if(!this.types[type])return null;
 		
 		Util.ext(ins,this.types[type].props);
@@ -4552,7 +4462,7 @@ impex.service('Transitions',new function(){
                     var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
                     comp.__watchProps.push(prop);
                 });
-                subComp.props[n] = rs;
+                subComp.state[n] = rs;
             }
             //bind state
             for(var n in this.__props.str){

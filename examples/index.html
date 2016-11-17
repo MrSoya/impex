@@ -40,9 +40,9 @@
             				<a class="cate">{{k}}</a>
             				<ul>
             					<li x-each="list as comp" 
-            					.active:sync="this.props.active"  
-            					x="{{this.props.active}}"
-            					class="{{this.props.active==comp?'active':''}}">
+            					.active:sync="active" 
+            					x="{{active}}"
+            					class="{{active==comp?'active':''}}">
             						<a class="link" href="#!/{{comp}}">
 		            					{{comp}}
 		            				</a>
@@ -59,7 +59,7 @@
 				onload="changeFrameHeight(this)"
 				x-each="activeComps as v" 
 				.active:sync="active" 
-				class="panel {{this.props.active==v.type?'active':''}}">
+				class="panel {{active==v.type?'active':''}}">
 					
 				</iframe>
 			</div>

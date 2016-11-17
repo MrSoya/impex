@@ -417,25 +417,17 @@ function handleProps(k,v,requires,propTypes,component){
 			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
 			component.parent.__watchProps.push(prop);
 		});
-
-		if(propTypes){
-			delete requires[n];
-			checkPropType(n,rs,propTypes,component);
-		}
-
-		component.props[n] = rs;
-	}else{
-		if(propTypes){
-			delete requires[n];
-			checkPropType(n,rs,propTypes,component);
-		}
-		if(rs instanceof Function){
-			component[n] = rs;
-			return;
-		}
-		//immutable
-		var obj = Util.immutable(rs);
-		component.state[n] = obj;
 	}
+	if(propTypes){
+		delete requires[n];
+		checkPropType(n,rs,propTypes,component);
+	}
+	if(rs instanceof Function){
+		component[n] = rs;
+		return;
+	}
+	//immutable
+	var obj = Util.immutable(rs);
+	component.state[n] = obj;
 }
 

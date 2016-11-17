@@ -29,34 +29,6 @@ var Builder = new function() {
  			buildExpModel(comp,subVar,expNode);
  		}
 
- 		//build parent props
- 		if(varObj.segments[0]==='this' && varObj.segments[1]==='props'){
- 			var k = varObj.segments[2];
- 			if(!k)return;
- 			if(k[0]==='['){
- 				if(expNode instanceof ExpNode){
- 					comp.__expWithProps['*'].push(expNode);
-		 		}else if(expNode instanceof AttrObserveNode){
-		 			comp.__directiveWithProps['*'].push(expNode);
-		 		}else if(expNode instanceof Watch){
- 					comp.__watchWithProps['*'].push(expNode);
- 				}
- 			}else{
- 				if(expNode instanceof ExpNode){
- 					if(!comp.__expWithProps[k])comp.__expWithProps[k] = [];
- 					comp.__expWithProps[k].push(expNode);
-		 		}else if(expNode instanceof AttrObserveNode){
-		 			if(!comp.__directiveWithProps[k])comp.__directiveWithProps[k] = [];
- 					comp.__directiveWithProps[k].push(expNode);
-		 		}else if(expNode instanceof Watch){
- 					if(!comp.__watchWithProps[k])comp.__watchWithProps[k] = [];
- 					comp.__watchWithProps[k].push(expNode);
- 				}
- 				
- 			}
- 			return;
- 		}
-
  		var prop = walkDataTree(comp.__expDataRoot.subProps,varObj.segments[0],expNode);
  		
  		for(var i=1;i<varObj.segments.length;i++){

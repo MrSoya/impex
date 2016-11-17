@@ -10,12 +10,12 @@
         <pre>
             <code>
                 &lt;div x-each="list as i" .r:sync="ratio" step="2"&gt;
-                    { {i * this.props.r} }
+                    { {i * r} }
                 &lt;/div&gt;
             </code>
         </pre>
         <div x-each="list as i" .r:sync="ratio" step="2">
-            {{i * this.props.r}}
+            {{i * r}}
         </div>
 
         <button :click="changeR()">ratio += 0.1</button>

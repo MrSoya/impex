@@ -31,21 +31,14 @@
                         type:['boolean','string']
                     }
                 },
-                onPropChange:function(changes){
-                    console.log('onPropChange: ',changes)
+                onPropUpdate:function(changes){
+                    console.log('onPropUpdate: ',changes)
                 },
                 changeV:function(){
                     this.state.v = !this.state.v;
                 },
                 func:function(){
                     return 12;
-                },
-                onInit:function(){
-                    // console.log('onInit: ',this.props);
-                    this.state.v = this.props.value;
-                },
-                onDisplay:function(){
-                    // console.log('onDisplay: ',this.props)
                 }
             });
             imLog.level = 3;

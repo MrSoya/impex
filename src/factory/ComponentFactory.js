@@ -64,18 +64,17 @@ Util.ext(_ComponentFactory.prototype,{
 		var state = this.types[type].state;
 		if(typeof state == 'string'){
 			rs.__url = state;
+		}else{
+			this.initInstanceOf(type,rs);
 		}
 		
 		rs.view.__comp = rs;
-
-		Util.ext(rs,this.types[type].props);
 
 		this._super.createCbk.call(this,rs,type);
 
 		return rs;
 	},
-	initInstanceOf : function(ins){
-		var type = ins.name;
+	initInstanceOf : function(type,ins){
 		if(!this.types[type])return null;
 		
 		Util.ext(ins,this.types[type].props);

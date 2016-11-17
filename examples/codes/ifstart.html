@@ -10,15 +10,7 @@
         </style>
     </head>
     <body>
-    <!-- 
-    因为if跑到了each的组件中，导致无法获取size参数
-    方案1:
-    1. 传递size 参数给each的匿名组件 props:xx="msg"
-    2. 在组件视图中使用this.props.xx
-    3. 当父组件的msg变更时，会通知子组件的this.props.xx发生变更：触发onPropChange
-    4. 如果回调没有返回false，则使用this.props.xx的地方也会进行视图更新
-    -->
-        <div x-if-start="this.props.size>0" .size:sync="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
+        <div x-if-start="size>0" .size:sync="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
             line 1
         </div>
         <p x-if-end x-each-end >_____________________</p>

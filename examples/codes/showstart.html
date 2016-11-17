@@ -11,7 +11,7 @@
     </head>
     <body>
 
-        <div x-show-start="this.props.size>0" .size:sync="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
+        <div x-show-start="size>0" .size:sync="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
             line 1
         </div>
         <p x-show-end x-each-end >_____________________</p>

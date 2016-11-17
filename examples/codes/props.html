@@ -12,7 +12,7 @@
             <ul>
                 <li><code>param</code>:字符串参数，直接绑定到子组件的state中，不可变更，不区分类型</li>
                 <li><code>.param</code>:类型参数，直接绑定到子组件的state中，不可变更，区分类型</li>
-                <li><code>.param:sync</code>:同步类型参数，绑定到子组件的props中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新视图</li>
+                <li><code>.param:sync</code>:同步类型参数，直接绑定到子组件的state中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新state。除非onPropUpdate返回false</li>
             </ul>
             <p>
                 示例：<br/>
@@ -41,7 +41,10 @@
             impex.component('x-comp',{
                 template:"<p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
                 <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
-                <p>time:{{this.props.time}}   ——同步类型参数，回触发更新</p>"
+                <p>time:{{time}}   ——同步类型参数，回触发更新</p>",
+                onPropUpdate:function(changes){
+                    console.log(changes)
+                }
             });
 
             //渲染

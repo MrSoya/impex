@@ -607,7 +607,7 @@
                     var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
                     comp.__watchProps.push(prop);
                 });
-                subComp.props[n] = rs;
+                subComp.state[n] = rs;
             }
             //bind state
             for(var n in this.__props.str){

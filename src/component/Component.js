@@ -34,17 +34,6 @@ function Component (view) {
 	 */
 	this.refs = {};
 	/**
-	 * 组件属性。在组件调用时写在组件上的所有属性,但不包括指令
-	 * <p>
-	 * <x-comp x-if="show" name="'impex'" value="obj" x-each="1 to 10 as i" :click="alert(343)">
-            {{i}}
-        </x-comp>
-	 * </p>
-	 * 上面的组件x-comp会有2个prop，name的值为常量字符串impex，value的值为上级组件的对象obj
-	 * @type {Object}
-	 */
-	this.props = {};
-	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
 	 */
@@ -65,11 +54,9 @@ function Component (view) {
 	this.children = [];
 	this.__expNodes = [];
 	this.__expDataRoot = new ExpData();
-	this.__expWithProps = {'*':[]};
-	this.__watchWithProps = {'*':[]};
-	this.__directiveWithProps = {'*':[]};
 	this.__eventMap = {};
 	this.__watchProps = [];
+	this.__props = {};
 	/**
 	 * 组件域内的指令列表
 	 * @type {Array}
@@ -296,6 +283,8 @@ Util.ext(Component.prototype,{
 				ComponentFactory.register(that.name,data[1]);
 				that.template = tmpl;
 
+				ComponentFactory.initInstanceOf(that.name,that);
+
 				//init
 				that.view.__init(tmpl,that);
 				that.__url = null;
@@ -316,8 +305,6 @@ Util.ext(Component.prototype,{
 		Scanner.scan(this.view,this);
 
 		LOGGER.log(this,'inited');
-
-		ComponentFactory.initInstanceOf(this);
 
 		//observe state
 		this.state = Observer.observe(this.state,this);
@@ -586,15 +573,17 @@ Util.ext(Component.prototype,{
 	},
 	__propChange:function(changes){
 		var matchMap = {};
+		var stateMap = {};
 		//update props
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
-			this.props[name] = c.newVal;
+			this.__props[name] = c.newVal;
+			stateMap[name] = c.newVal;
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
 				var k = prop.fromPropKey;
-				if(!k)reutnr;
+				if(!k)return;
 				if(k[0] === '[' || k === name){
 					if(!matchMap[prop.subComp.__id])
 						matchMap[prop.subComp.__id] = [];
@@ -613,51 +602,9 @@ Util.ext(Component.prototype,{
 		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
 
 		if(renderView !== false){
-			var expNodeList = null;
-			var directiveList = null;
-			var watchList = null;
-			var fuzzyE = false,
-				fuzzyD = false,
-				fuzzyW = false; 
-			
-			for(var i=changes.length;i--;){
-				var c = changes[i];
-				var name = c.name;
-				if(this.__expWithProps[name]){
-					expNodeList = this.__expWithProps[name].concat();
-				}else{
-					fuzzyE = true;
-				}
-
-				if(this.__directiveWithProps[name]){
-					directiveList = this.__directiveWithProps[name].concat();
-				}else{
-					fuzzyD = true;
-				}
-
-				if(this.__watchWithProps[name]){
-					watchList = this.__watchWithProps[name].concat();
-				}else{
-					fuzzyW = true;
-				}
+			for(var k in stateMap){
+				this.state[k] = stateMap[k];
 			}
-
-			//expnodes
-			if(fuzzyE && this.__expWithProps['*'].length > 0){
-				expNodeList = expNodeList.concat(this.__expWithProps['*']);
-			}
-			expNodeList && Renderer.renderExpNodes(expNodeList);
-
-			//directives
-			if(fuzzyD && this.__directiveWithProps['*'].length > 0){
-				directiveList = directiveList.concat(this.__directiveWithProps['*']);
-			}
-			directiveList && this.__updateDirective(directiveList);
-			//watchs
-			if(fuzzyW && this.__watchWithProps['*'].length > 0){
-				watchList = watchList.concat(this.__watchWithProps['*']);
-			}
-			watchList && this.__callWatchs(watchList);
 		}
 
 		for(var k in matchMap){
