@@ -29,7 +29,7 @@
 
     //渲染
     impex.render(document.getElementById('entry'),{
-        data:{
+        state:{
             title:'impex',
             version:impex.version.toString()
         }
