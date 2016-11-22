@@ -29,13 +29,15 @@ Util.ext(_ComponentFactory.prototype,{
 			this.types[component.name].parseCache = compileStr;
 
 			//attach style
-			var target = document.head.children[0];
-			if(target){
-				var nodes = DOMHelper.compile(cssStr);
-				DOMHelper.insertBefore(nodes,target);
-			}else{
-				document.head.innerHTML = cssStr;
-			}
+			if(cssStr.trim().length>0){
+				var target = document.head.children[0];
+				if(target){
+					var nodes = DOMHelper.compile(cssStr);
+					DOMHelper.insertBefore(nodes,target);
+				}else{
+					document.head.innerHTML = cssStr;
+				}
+			}			
 		}else{
 			compileStr = this.types[component.name].parseCache;
 		}

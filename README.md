@@ -24,7 +24,7 @@
     });
     //组件
     impex.component('x-subtitle',{
-        template:"<sub>{{=CONTENT}}</sub>"
+        template:"<sub><slot></slot></sub>"
     });
 
     //渲染

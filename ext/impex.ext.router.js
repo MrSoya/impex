@@ -10,7 +10,7 @@
 	 * @type {String}
 	 */
 	impex.component('x-router-view',{
-		template:'<span name="x-router-view"></span>'
+		template:'<!-- impex router -->'
 	});
 
 	var routerMap = {};
@@ -23,13 +23,15 @@
 			impex.logger.warn('cannot find component['+compName+'] of path "'+url+'"');
 			return;
 		}
-		var placeholder = router.viewManager.createPlaceholder('-- placeholder --');
-        router.viewManager.insertBefore(placeholder,routerView.view);
+		var placeholder = document.createComment('-- placeholder --');
+        router.DOMHelper.insertBefore([placeholder],routerView.el);
 
         routerView.destroy();
 
         //create new
-        var subComp = component.createSubComponentOf(compName,placeholder);
+        var node = document.createElement(compName);
+        placeholder.parentNode.replaceChild(node,placeholder);
+        var subComp = component.createSubComponentOf(node);
         subComp.init().display();
 
         router.lastComp = subComp;
@@ -83,8 +85,8 @@
 			this.__cbk = cbk;
 			return this;
 		},
-		onCreate:function(viewManager,componentManager){
-	    	this.viewManager = viewManager;
+		onCreate:function(DOMHelper,componentManager){
+	    	this.DOMHelper = DOMHelper;
 	    	this.componentManager = componentManager;
 
 	    	if(!this.host.__id){
@@ -131,7 +133,7 @@
 		onhashchange(e);
 	},false);
 
-	impex.service('XRouter',XRouter,['ViewManager','ComponentManager']);
+	impex.service('XRouter',XRouter,['DOMHelper','ComponentManager']);
 
 
 }(impex);
