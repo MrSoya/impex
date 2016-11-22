@@ -288,28 +288,23 @@ var Renderer = new function() {
 			node.parentNode.removeChild(node);
 		}
 
-		if(expNode.__lastView){
+		if(expNode.__lastNodes){
 			//release
-			expNode.__lastView.__destroy();
+			DOMHelper.detach(expNode.__lastNodes);
 		}
 
 		var target = document.createComment('-- [html] target --');
 		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
 
-		var nodes = DOMViewProvider.compile(val,target);
-		var el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		var nodes = DOMHelper.compile(val);
+		if(nodes.length<1)return;
+		DOMHelper.replace(target,nodes);
 
-		var nView = null;
-		if(nodes.length > 0){
-			nView = new View(el,target,nodes);
-			nView.__display();
-		}
-
-		expNode.__lastView = nView;
+		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
-		if(nView)
-			Scanner.scan(nView,component);
+		if(nodes)
+			Scanner.scan(nodes,component);
 		Builder.build(component);
 		Renderer.render(component);
 
@@ -323,7 +318,7 @@ var Renderer = new function() {
 
 		//display children
 		for(var i = 0;i<component.children.length;i++){
-			if(!component.children[i].templateURL)
+			if(!component.children[i].__url)
 				component.children[i].display();
 		}
 

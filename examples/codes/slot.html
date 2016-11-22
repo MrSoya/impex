@@ -5,18 +5,22 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <x-button>
-            来自CONTENT的内容
-        </x-button>
+        <x-button1>
+            来自slot的内容
+        </x-button1>
 
-        <x-button name="来自name的内容">
-        </x-button>
+        <x-button2 name="来自name的内容">
+        </x-button2>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             //自定义组件
-            impex.component('x-button',{
-                template:"<button>{{=CONTENT}} {{name}}</button>"
+            impex.component('x-button1',{
+                template:"<button><slot></slot></button>"
+            });
+
+            impex.component('x-button2',{
+                template:"<button>{{name}}</button>"
             });
             
             //渲染

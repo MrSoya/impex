@@ -11,40 +11,108 @@ Util.ext(_ComponentFactory.prototype,{
 	getRestrictOf : function(type){
 		return this.types[type].props['restrict'];
 	},
+	//parse component
+	parse:function(tmpl,component){
+		//解析属性
+		var propMap = component.el.attributes;
+		var innerHTML = component.el.innerHTML;
+
+		var compileStr = slotHandler(tmpl,innerHTML);
+
+		var cssStr = null;
+		if(!this.types[component.name].parseCache){
+			var tmp = peelCSS(compileStr);
+			compileStr = tmp[1];
+			cssStr = tmp[0];
+			cssStr = cssHandler(component.name,cssStr);
+
+			this.types[component.name].parseCache = compileStr;
+
+			//attach style
+			var target = document.head.children[0];
+			if(target){
+				var nodes = DOMHelper.compile(cssStr);
+				DOMHelper.insertBefore(nodes,target);
+			}else{
+				document.head.innerHTML = cssStr;
+			}
+		}else{
+			compileStr = this.types[component.name].parseCache;
+		}
+
+		var nodes = DOMHelper.compile(compileStr);
+		component.__nodes = nodes;
+
+		//check props
+		var requires = {};
+		var propTypes = component.propTypes;
+		if(propTypes){
+			for(var k in propTypes){
+				var type = propTypes[k];
+				if(type.require){
+					requires[k] = type;
+				}
+			}
+		}
+
+		if(propMap){
+			//bind props
+			for(var i=propMap.length;i--;){
+				var k = propMap[i].name.toLowerCase();
+				var v = propMap[i].value;
+				if(k == ATTR_REF_TAG){
+					var expNode = Scanner.getExpNode(v,component);
+					var calcVal = expNode && Renderer.calcExpNode(expNode);
+					component.parent.refs[calcVal || v] = component;
+					continue;
+				}
+
+				var instance = null;
+				if(REG_CMD.test(k)){
+					var c = k.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+					//如果有对应的处理器
+					if(DirectiveFactory.hasTypeOf(c)){
+						instance = DirectiveFactory.newInstanceOf(c,component.el,component,k,v);
+					}
+				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
+					instance = DirectiveFactory.newInstanceOf('on',component.el,component,k,v);
+				}else{
+					if(!component.parent)continue;
+
+					handleProps(k,v,requires,propTypes,component);
+				}
+
+				if(instance){
+					instance.init();
+				}
+			}
+		}
+
+		//check requires
+		var ks = Object.keys(requires);
+		if(ks.length > 0){
+			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
+			return;
+		}
+	},
 	/**
 	 * 创建指定基类实例
 	 */
-	newInstance : function(element){
-		var view = null;
-		if(arguments.length === 2){
-			var tmpl = arguments[0];
-			var target = arguments[1];
-			view = tmpl;
-			if(Util.isString(tmpl))
-				view = this.viewProvider.newInstance(tmpl,target);
-			else{
-				view.__placeholder = view.__target = target;
-			}
-		}else{
-			view = element;
-			if(Util.isDOM(element)){
-				view = new View(element,null,[element]);
-			}
+	newInstance : function(els,param){
+		var el = null;
+		if(els.length===1){
+			el = els[0];
 		}
 		
-		var rs = new this.baseClass(view);
+		var rs = new this.baseClass();
+		rs.el = el;
+		rs.__nodes = els;
 
-		var props = arguments[2];
-		if(props){
-			Util.ext(rs,props);
+		if(param){
+			Util.ext(rs,param);
 		}
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
-		}
-		rs.view.__comp = rs;
 		
 		return rs;
 	},
@@ -52,23 +120,21 @@ Util.ext(_ComponentFactory.prototype,{
 	 * 创建指定类型组件实例
 	 * @param  {String} type       		组件类型
 	 * @param  {HTMLElement} target  	组件应用节点
-	 * @param  {HTMLElement} placeholder 用于替换组件的占位符
 	 * @return {Component}
 	 */
-	newInstanceOf : function(type,target,placeholder){
+	newInstanceOf : function(type,target){
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
-		rs.view = new View(null,target,null,placeholder);
+		rs.el = target;
+
 		var state = this.types[type].state;
 		if(typeof state == 'string'){
 			rs.__url = state;
 		}else{
 			this.initInstanceOf(type,rs);
 		}
-		
-		rs.view.__comp = rs;
 
 		this._super.createCbk.call(this,rs,type);
 
@@ -82,13 +148,113 @@ Util.ext(_ComponentFactory.prototype,{
 		if(state){
 			Util.ext(ins.state,state);
 		}
-
-		if(ins.events){
-			for(var k in ins.events){
-				ins.on(k,ins.events[k]);
-			}
-		}
 	}
 });
 
-var ComponentFactory = new _ComponentFactory(DOMViewProvider);
+var ComponentFactory = new _ComponentFactory(DOMHelper);
+
+function slotHandler(tmpl,innerHTML){
+	var slotMap = {};
+    innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)\s+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?\1(?:\s+)?>/img,function(str,b,name){
+        slotMap[name] = str;
+    });
+
+    if(innerHTML.trim().length>0)
+    tmpl = tmpl.replace(/<(?:\s+)?slot(?:\s+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str){
+    	return innerHTML;
+    });
+
+    tmpl = tmpl.replace(/<(?:\s+)?slot\s+name(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str,name){
+    	return slotMap[name] || str;
+    });
+
+    return tmpl;
+}
+
+function peelCSS(tmpl){
+	var rs = '';
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
+        rs += str;
+        return '';
+    });
+
+    return [rs,tmpl];
+}
+
+function cssHandler(name,tmpl){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
+        return '<style>'+filterStyle(name,style)+'</style>';
+    });
+    return tmpl;
+}
+
+function filterStyle(host,style){
+	style = style.replace(/\n/img,'').trim();
+	style = style.replace(/(^|})(?:\s+)?[a-z:_$](?:[^{]+)?\{/img,function(name){
+		var rs = name.trim();
+		if(!/(^|}|((?:\s+)?,))(?:\s+)?:host/.test(rs)){
+			if(rs[0]==='}'){
+				rs = rs.substr(1);
+				rs = '}'+host + ' ' +rs;
+			}else{
+				rs = host + ' ' +rs;
+			}
+			
+		}
+		rs = rs.replace(/:host/img,host);
+		return rs;
+	});
+	return style;
+}
+
+function checkPropType(k,v,propTypes,component){
+	if(!propTypes[k])return;
+	var checkType = propTypes[k].type;
+	checkType = checkType instanceof Array?checkType:[checkType];
+	var vType = typeof v;
+	if(checkType.indexOf(vType) < 0){
+		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+	}
+}
+
+function handleProps(k,v,requires,propTypes,component){
+	// .xxxx
+	if(k[0] !== PROP_TYPE_PRIFX){
+		if(propTypes){
+			delete requires[k];
+			checkPropType(k,v,propTypes,component);
+		}
+		component.state[k] = v;
+		return;
+	}
+
+	// xxxx
+	var n = k.substr(1);
+	var tmp = lexer(v);
+	var rs = Renderer.evalExp(component.parent,tmp);
+
+	//check sync
+	if(PROP_SYNC_SUFX_EXP.test(n)){
+		n = n.replace(PROP_SYNC_SUFX_EXP,'');
+
+		var keys = Object.keys(tmp.varTree);
+		//watch props
+		keys.forEach(function(key){
+			if(tmp.varTree[key].isFunc)return;
+			
+			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
+			component.parent.__watchProps.push(prop);
+		});
+	}
+	if(propTypes){
+		delete requires[n];
+		checkPropType(n,rs,propTypes,component);
+	}
+	if(rs instanceof Function){
+		component[n] = rs;
+		return;
+	}
+	//immutable
+	var obj = Util.immutable(rs);
+	component.state[n] = obj;
+}

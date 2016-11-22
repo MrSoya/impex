@@ -29,7 +29,7 @@ function Transition (type,target,hook) {
         }
 
         if(max > 0){
-            var v = target.view;
+            var v = target;
             var expNodes = null;
             var comp = null;
             if(target instanceof Directive){

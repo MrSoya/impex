@@ -17,7 +17,7 @@
         <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
         <script type="text/javascript">
             impex.component('x-a',{
-                template:'<p><a ref="xa">{{= CONTENT}}</a></p>',
+                template:'<p><a ref="xa"><slot></slot></a></p>',
                 state:{
                     msg:111,
                     v:true

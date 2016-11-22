@@ -18,7 +18,7 @@
     .directive('on',{
         onInit:function(){
             for(var i=this.params.length;i--;){
-                this.view.on(this.params[i],this.value);
+                this.on(this.params[i],this.value);
             }
         }
     })
@@ -28,7 +28,7 @@
      */
     .directive('text',{
         onUpdate:function(rs){
-            this.view.el.innerText = rs;
+            this.el.innerText = rs;
         }
     })
     /**
@@ -58,7 +58,7 @@
 
             for(var i=this.params.length;i--;){
                 var p = this.params[i];
-                this.view.attr(p,rs);
+                this.attr(p,rs);
             }
             
         }
@@ -69,7 +69,7 @@
      */
     .directive('show',{
         onCreate:function(ts){
-            var transition = this.view.attr('transition');
+            var transition = this.attr('transition');
             if(transition !== null){
                 this.transition = ts.get(transition,this);
             }
@@ -100,10 +100,10 @@
         exec:function(rs){
             if(rs){
                 //显示
-                this.view.show();
+                this.show();
             }else{
                 // 隐藏
-                this.view.hide();
+                this.hide();
             }
         }
     },['Transitions'])
@@ -114,11 +114,11 @@
         endTag : 'show-end',
         onInit:function(){
             //更新视图
-            Scanner.scan(this.view,this.component);
+            Scanner.scan(this.__nodes,this.component);
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
-            var nodes = this.view.__nodes;
+            var nodes = this.__nodes;
             if(rs){
                 //显示
                 for(var i=nodes.length;i--;){
@@ -137,11 +137,11 @@
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate:function(viewManager,ts){
-            this.viewManager = viewManager;
-            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+        onCreate:function(DOMHelper,ts){
+            this.DOMHelper = DOMHelper;
+            this.placeholder = document.createComment('-- directive [if] placeholder --');
 
-            var transition = this.view.attr('transition');
+            var transition = this.attr('transition');
             if(transition !== null){
                 this.transition = ts.get(transition,this);
             }
@@ -150,7 +150,7 @@
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
-            if(rs === this.lastRs && !this.view.el.parentNode)return;
+            if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
             if(this.transition){
@@ -171,50 +171,52 @@
         },
         exec:function(rs){
             if(rs){
-                if(this.view.el.parentNode)return;
+                if(this.el.parentNode)return;
                 //添加
-                this.viewManager.replace(this.view,this.placeholder);
+                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
             }else{
-                if(!this.view.el.parentNode)return;
+                if(!this.el.parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.view);
+                this.el.parentNode.replaceChild(this.placeholder,this.el);
             }
         }
-    },['ViewManager','Transitions'])
+    },['DOMHelper','Transitions'])
     /**
      * x-if的范围版本
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
      */
     .directive('if-start',{
         endTag : 'if-end',
-        onCreate:function(viewManager){
-            this.viewManager = viewManager;
-            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+        onCreate:function(DOMHelper){
+            this.DOMHelper = DOMHelper;
+            this.placeholder = document.createComment('-- directive [if] placeholder --');
         },
         onInit:function(){
-            Scanner.scan(this.view,this.component);
+            Scanner.scan(this.__nodes,this.component);
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
             if(rs){
-                if(this.view.__nodes[0].parentNode)return;
+                if(this.__nodes[0].parentNode)return;
                 //添加
-                this.viewManager.replace(this.view,this.placeholder);
+                this.DOMHelper.replace(this.placeholder,this.__nodes);
             }else{
-                if(!this.view.__nodes[0].parentNode)return;
+                if(!this.__nodes[0].parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.view);
+                var p = this.__nodes[0].parentNode;
+                p.insertBefore(this.placeholder,this.__nodes[0]);
+                this.DOMHelper.detach(this.__nodes);
             }
         }
-    },['ViewManager'])
+    },['DOMHelper'])
     /**
      * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
      */
     .directive('cloak',{
         onCreate:function(){
-            var className = this.view.attr('class');
+            var className = this.attr('class');
             if(!className){
-                LOGGER.warn("can not find attribute[class] of element["+this.view.name+"] which directive[cloak] on");
+                LOGGER.warn("can not find attribute[class] of element["+this.el.tagName+"] which directive[cloak] on");
                 return;
             }
             className = className.replace('x-cloak','');
@@ -222,9 +224,9 @@
             this.__cn = className;
         },
         onActive:function(){
-            updateCloakAttr(this.component,this.view.el,this.__cn);
-            var curr = this.view.attr('class').replace('x-cloak','');
-            this.view.attr('class',curr);
+            updateCloakAttr(this.component,this.el,this.__cn);
+            var curr = this.attr('class').replace('x-cloak','');
+            this.attr('class',curr);
         }
     })
 
@@ -235,33 +237,33 @@
      */
     .directive('model',{
         onCreate:function(){
-            var el = this.view.el;
+            var el = this.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
 
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
-                    var type = this.view.attr('type');
+                    var type = this.attr('type');
                     switch(type){
                         case 'radio':
-                            this.view.on('click',null,this.changeModel.bind(this));
+                            this.on('click',null,this.changeModel.bind(this));
                             break;
                         case 'checkbox':
-                            this.view.on('click',null,this.changeModelCheck.bind(this));
+                            this.on('click',null,this.changeModelCheck.bind(this));
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.view.on(hack,null,this.changeModel.bind(this));
+                            this.on(hack,null,this.changeModel.bind(this));
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.view.on('change',null,this.changeModelSelect.bind(this));
+                        this.on('change',null,this.changeModelSelect.bind(this));
                     }else{
-                        this.view.on('change',null,this.changeModel.bind(this));
+                        this.on('change',null,this.changeModel.bind(this));
                     }
                     
                     break;
@@ -335,33 +337,33 @@
         }
     }
     function eachModel(){
-        this.onCreate = function(viewManager,ts){
+        this.onCreate = function(DOMHelper,ts){
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
-            this.viewManager = viewManager;
+            this.DOMHelper = DOMHelper;
             this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
-            this.__view = this.view;
+            // this.__view = this.view;
             this.cache = [];
             this.__comp = this.component;
 
-            if(this.view.el){
-                this.__tagName = this.view.el.tagName.toLowerCase();
+            if(this.el){
+                this.__tagName = this.el.tagName.toLowerCase();
                 this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
-                this.cacheable = this.view.attr('cache')==='false'?false:true;
+                this.cacheable = this.attr('cache')==='false'?false:true;
             }else{
-                this.cacheable = this.view.__nodes[0].getAttribute('cache')==='false'?false:true;
+                this.cacheable = this.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
             this.subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.cacheSize = 20;
 
-            this.step = this.view.el?this.view.attr('step'):this.view.__nodes[0].getAttribute('step');
+            this.step = this.el?this.attr('step'):this.__nodes[0].getAttribute('step');
 
-            this.over = this.view.el?this.view.attr('over'):this.view.__nodes[0].getAttribute('over');
+            this.over = this.el?this.attr('over'):this.__nodes[0].getAttribute('over');
 
-            var transition = this.view.el?this.view.attr('transition'):this.view.__nodes[0].getAttribute('transition');
+            var transition = this.el?this.attr('transition'):this.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
                 this.ts = ts;
@@ -422,29 +424,29 @@
             
             this.lastDS = this.ds;
             
-            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
-            this.viewManager.insertBefore(this.placeholder,this.view);
+            this.placeholder = document.createComment('-- directive [each] placeholder --');
+            this.DOMHelper.insertBefore([this.placeholder],this.__nodes[0]);
 
-            this.fragmentPlaceholder = this.viewManager.createPlaceholder('-- fragment placeholder --');
+            this.fragmentPlaceholder = document.createComment('-- fragment placeholder --');
             
-            this.fragment.appendChild(this.fragmentPlaceholder.__nodes[0]);
+            this.fragment.appendChild(this.fragmentPlaceholder);
 
             //parse props
-            this.__props = parseProps(this.__view,this.component);
+            this.__props = parseProps(this.__nodes,this.component);
 
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
             this.destroy();
         }
-        function parseProps(view,comp){
+        function parseProps(nodes,comp){
             var props = {
                 str:{},
                 type:{},
                 sync:{}
             };
             var ks = ['cache','over','step','transition'];
-            var el = view.__nodes[0];
+            var el = nodes[0];
             for(var i=el.attributes.length;i--;){
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
@@ -508,7 +510,7 @@
                     var tmp = this.cache.splice(0,diffSize);
                     for(var i=0;i<tmp.length;i++){
                         this.subComponents.push(tmp[i]);
-                        this.viewManager.insertBefore(tmp[i].view,this.placeholder);
+                        this.DOMHelper.insertBefore(tmp[i].__nodes,this.placeholder);
                     }
                     var restSize = diffSize - tmp.length;
                 }
@@ -576,18 +578,23 @@
         }
         this.createSubComp = function(){
             var comp = this.__comp;
-            var subComp = null;
-            var target = this.viewManager.createPlaceholder('');
-            this.viewManager.insertBefore(target,this.placeholder);
+            var subComp = null;            
             //视图
-            var copy = this.__view.clone();
+            var copyNodes = [];
+            for(var i=this.__nodes.length;i--;){
+                var c = this.__nodes[i].cloneNode(true);
+                copyNodes.unshift(c);
+            }
 
             //创建子组件
             if(this.__isComp){
-                subComp = comp.createSubComponentOf(this.__tagName,copy,target);
+                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                subComp = comp.createSubComponentOf(copyNodes[0]);
             }else{
-                subComp = comp.createSubComponent(copy,target);
+                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                subComp = comp.createSubComponent(copyNodes);
             }
+            subComp.suspend(true);
             this.subComponents.push(subComp);
 
             //bind props
@@ -599,12 +606,8 @@
                 //watch props
                 keys.forEach(function(key){
                     if(tmp.varTree[key].isFunc)return;
-                    var fromPropKey = false;
-                    if(key.indexOf('.this.props')===0){
-                        fromPropKey = key.replace(/^\.this\.props\.?/,'');
-                    }
-                    
-                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
+
+                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs);
                     comp.__watchProps.push(prop);
                 });
                 subComp.state[n] = rs;
@@ -811,7 +814,7 @@
      * 
      * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
      */
-    impex.directive('each',each,['ViewManager','Transitions']);
+    impex.directive('each',each,['DOMHelper','Transitions']);
 
 
     var eachStart = new eachModel();
@@ -825,5 +828,5 @@
      * 
      * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
      */
-    impex.directive('each-start',eachStart,['ViewManager']);
+    impex.directive('each-start',eachStart,['DOMHelper']);
 }(impex);

@@ -18,21 +18,22 @@
  * 
  * @class 
  */
-function Component (view) {
+function Component () {
 	var id = 'C_' + im_counter++;
 	this.__id = id;
 	this.__state = Component.state.created;
-	/**
-	 * 组件绑定的视图对象，在创建时由系统自动注入
-	 * 在DOM中，视图对象的所有操作都针对自定义标签的顶级元素，而不包括子元素
-	 * @type {View}
-	 */
-	this.view = view;
+
+	View.call(this);
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
 	 */
-	this.refs = {};
+	this.comps = {};
+	/**
+	 * 对组件内视图元素的引用
+	 * @type {Object}
+	 */
+	this.els = {};
 	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
@@ -88,11 +89,6 @@ function Component (view) {
 	 * @type {Object}
 	 */
 	this.state = {};
-	/**
-	 * 自定义事件接口
-	 * @type {Object}
-	 */
-	this.events = {};
 
 	impex._cs[this.__id] = this;
 };
@@ -102,22 +98,7 @@ Component.state = {
 	displayed : 'displayed',
 	suspend : 'suspend'
 };
-function broadcast(comps,type,params){
-	for(var i=0;i<comps.length;i++){
-		var comp = comps[i];
-		var evs = comp.__eventMap[type];
-		var conti = true;
-		if(evs){
-			conti = false;
-			for(var l=0;l<evs.length;l++){
-				conti = evs[l].apply(comp,params);
-			}
-		}
-		if(conti && comp.children.length>0){
-			broadcast(comp.children,type,params);
-		}
-	}
-}
+Util.inherits(Component,View);
 Util.ext(Component.prototype,{
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
@@ -157,61 +138,6 @@ Util.ext(Component.prototype,{
 		}
 	},
 	/**
-	 * 绑定自定义事件到组件
-	 * @param  {String} type 自定义事件名
-     * @param  {Function} handler   事件处理回调，回调参数[target，arg1,...]
-	 */
-	on:function(type,handler){
-		var evs = this.__eventMap[type];
-		if(!evs){
-			evs = this.__eventMap[type] = [];
-		}
-		evs.push(handler);
-	},
-	/**
-	 * 触发组件自定义事件，进行冒泡
-	 * @param  {String} type 自定义事件名
-	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
-	 */
-	emit:function(){
-		var type = arguments[0];
-		var params = [this];
-		for (var i =1 ; i < arguments.length; i++) {
-			params.push(arguments[i]);
-		}
-		var my = this.parent;
-		setTimeout(function(){
-			while(my){
-				var evs = my.__eventMap[type];
-				if(evs){
-					var interrupt = true;
-					for(var i=0;i<evs.length;i++){
-						interrupt = !evs[i].apply(my,params);
-					}
-					if(interrupt)return;
-				}
-
-				my = my.parent;
-			}
-		},0);
-	},
-	/**
-	 * 触发组件自定义事件，进行广播
-	 * @param  {String} type 自定义事件名
-	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
-	 */
-	broadcast:function(){
-		var type = arguments[0];
-		var params = [this];
-		for (var i =1 ; i < arguments.length; i++) {
-			params.push(arguments[i]);
-		}
-		var my = this;
-		setTimeout(function(){
-			broadcast(my.children,type,params);
-		},0);
-	},
-	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
 	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
@@ -242,14 +168,11 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个未初始化的子组件
-	 * @param  {string} type 组件名
-	 * @param  {View} target 视图
+	 * @param  {HTMLElement} el 视图
 	 * @return {Component} 子组件
 	 */
-	createSubComponentOf:function(type,target,placeholder){
-		var instance = ComponentFactory.newInstanceOf(type,
-			target.__nodes?target.__nodes[0]:target,
-			placeholder && placeholder.__nodes?placeholder.__nodes[0]:placeholder);
+	createSubComponentOf:function(el){
+		var instance = ComponentFactory.newInstanceOf(el.tagName.toLowerCase(),el);
 		this.children.push(instance);
 		instance.parent = this;
 
@@ -257,12 +180,11 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个匿名子组件
-	 * @param  {string | View} tmpl HTML模版字符串或视图对象
-	 * @param  {View} target 视图
+	 * @param  {HTMLElement} els 视图
 	 * @return {Component} 子组件
 	 */
-	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target && target.__nodes[0]);
+	createSubComponent:function(els){
+		var instance = ComponentFactory.newInstance(els);
 		this.children.push(instance);
 		instance.parent = this;
 
@@ -286,7 +208,7 @@ Util.ext(Component.prototype,{
 				ComponentFactory.initInstanceOf(that.name,that);
 
 				//init
-				that.view.__init(tmpl,that);
+				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
 				that.__init(tmpl);
 				that.display();
@@ -294,15 +216,14 @@ Util.ext(Component.prototype,{
 			
 		}else{
 			if(this.template){
-				var rs = this.view.__init(this.template,this);
-				if(rs === false)return;
+				ComponentFactory.parse(this.template,this);
 			}
 			this.__init(this.template);
 		}
 		return this;
 	},
 	__init:function(tmplStr){
-		Scanner.scan(this.view,this);
+		Scanner.scan(this.__nodes,this);
 
 		LOGGER.log(this,'inited');
 
@@ -334,20 +255,22 @@ Util.ext(Component.prototype,{
 		if(this.__state === Component.state.displayed)return;
 		if(this.__state === Component.state.created)return;
 
-		this.view.__display(this);
+		if(this.name){
+			this.el.innerHTML = '';
+			DOMHelper.attach(this.el,this.__nodes);
+		}
 
 		Renderer.render(this);
 
-		//view ref
-		this.view.__nodes.forEach(function(el){
+		//els
+		this.__nodes.forEach(function(el){
 			if(!el.querySelectorAll)return;
-			var refs = el.querySelectorAll('*['+ATTR_REF_TAG+']');
-			for(var i=refs.length;i--;){
-				var node = refs[i];
-				this.view.refs[node.getAttribute(ATTR_REF_TAG)] = node;
+			var els = el.querySelectorAll('*['+ATTR_REF_TAG+']');
+			for(var i=els.length;i--;){
+				var node = els[i];
+				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
 			}
 		},this);
-		
 
 		this.__state = Component.state.displayed;
 		LOGGER.log(this,'displayed');
@@ -383,7 +306,7 @@ Util.ext(Component.prototype,{
 			this.parent = null;
 		}
 		
-		this.view.__destroy(this);
+		this.__destroy(this);
 
 		while(this.children.length > 0){
 			this.children[0].destroy();
@@ -394,7 +317,6 @@ Util.ext(Component.prototype,{
 		}
 
 
-		this.view = 
 		this.children = 
 		this.directives = 
 		this.__expNodes = 
@@ -405,7 +327,7 @@ Util.ext(Component.prototype,{
 
 		this.__state = 
 		this.__id = 
-		this.templateURL = 
+		this.__url = 
 		this.template = 
 		this.restrict = 
 		this.events = 
@@ -416,14 +338,13 @@ Util.ext(Component.prototype,{
 	 * 但数据都不会销毁
 	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
-	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(!(this instanceof Directive) && this.__state !== Component.state.displayed)return;
+		if(this.__state !== Component.state.displayed)return;
 
 		LOGGER.log(this,'suspend');
 		
-		this.view.__suspend(this,hook===false?false:true);
+		this.__suspend(this,hook===false?false:true);
 
 		this.onSuspend && this.onSuspend();
 

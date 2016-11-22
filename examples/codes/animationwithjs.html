@@ -29,16 +29,16 @@
             //手动动画
             impex.transition('show',{
                 enter:function(done){
-                    this.view.addClass('x-enter')
-                    this.view.el.offsetHeight;
-                    this.view.removeClass('x-enter');
+                    this.addClass('x-enter')
+                    this.el.offsetHeight;
+                    this.removeClass('x-enter');
                     done();
                 },
                 leave:function(done){
-                    this.view.addClass('x-leave');
+                    this.addClass('x-leave');
                     var that = this;
                     setTimeout(function(){
-                        that.view.removeClass('x-leave');
+                        that.removeClass('x-leave');
                         done();
                     },300);
                 },

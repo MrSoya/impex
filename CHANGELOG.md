@@ -1,4 +1,23 @@
 # Change Log
+## Version 0.31.0 beta - 2016/11/22
+### 新增
+* 局部样式
+* slot标签
+* Component.els
+* Component.comps
+* Component.el 
+* ...
+
+### 更新
+* 组件和指令继承View
+* 所有命名组件的顶级节点只有一个，就是组件标签自身
+* ...
+
+### 移除
+* Component.view
+* Component.on/emit/broadcast
+* ...
+
 ## Version 0.30.0 beta3 - 2016/11/16
 ### 更新
 * Component.data --> Component.state
@@ -8,8 +27,6 @@ param 字符串传递
 .param:sync 同步传递
 * 一些bug
 * each指令的参数传递和组件相同
-
-
 
 ## Version 0.30.0 beta2 - 2016/11/14
 ### 新增

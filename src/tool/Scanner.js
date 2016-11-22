@@ -63,9 +63,7 @@ var Scanner = new function() {
 	/**
 	 * 扫描DOM节点
 	 */
-	this.scan = function(view,component){
-		var scanNodes = view.__nodes?view.__nodes:[view.el];
-
+	this.scan = function(scanNodes,component){
         var startTag = null,
             nodes = [];
         
@@ -160,7 +158,7 @@ var Scanner = new function() {
 						var parents = cr.parents.split(',');
 						if(parents.indexOf(pr.name) < 0)return;
 					}
-					var instance = component.createSubComponentOf(tagName,node);
+					var instance = component.createSubComponentOf(node);
 
 					return;
 				}

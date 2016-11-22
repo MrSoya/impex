@@ -61,5 +61,4 @@ function Prop (subComp,name,segments,expWords,oldVal,fromPropKey) {
 	this.segments = segments;
 	this.expWords = expWords;
 	this.oldVal = oldVal;
-	this.fromPropKey = fromPropKey;//参数来自上级组件的参数
 }

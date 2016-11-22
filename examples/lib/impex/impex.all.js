@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-16
+ * last build: 2016-11-22
  */
 !function (global) {
 	'use strict';
@@ -830,7 +830,6 @@ function Prop (subComp,name,segments,expWords,oldVal,fromPropKey) {
 	this.segments = segments;
 	this.expWords = expWords;
 	this.oldVal = oldVal;
-	this.fromPropKey = fromPropKey;//参数来自上级组件的参数
 }
 /**
  * 扫描器
@@ -897,9 +896,7 @@ var Scanner = new function() {
 	/**
 	 * 扫描DOM节点
 	 */
-	this.scan = function(view,component){
-		var scanNodes = view.__nodes?view.__nodes:[view.el];
-
+	this.scan = function(scanNodes,component){
         var startTag = null,
             nodes = [];
         
@@ -994,7 +991,7 @@ var Scanner = new function() {
 						var parents = cr.parents.split(',');
 						if(parents.indexOf(pr.name) < 0)return;
 					}
-					var instance = component.createSubComponentOf(tagName,node);
+					var instance = component.createSubComponentOf(node);
 
 					return;
 				}
@@ -1666,28 +1663,23 @@ var Renderer = new function() {
 			node.parentNode.removeChild(node);
 		}
 
-		if(expNode.__lastView){
+		if(expNode.__lastNodes){
 			//release
-			expNode.__lastView.__destroy();
+			DOMHelper.detach(expNode.__lastNodes);
 		}
 
 		var target = document.createComment('-- [html] target --');
 		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
 
-		var nodes = DOMViewProvider.compile(val,target);
-		var el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
+		var nodes = DOMHelper.compile(val);
+		if(nodes.length<1)return;
+		DOMHelper.replace(target,nodes);
 
-		var nView = null;
-		if(nodes.length > 0){
-			nView = new View(el,target,nodes);
-			nView.__display();
-		}
-
-		expNode.__lastView = nView;
+		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
-		if(nView)
-			Scanner.scan(nView,component);
+		if(nodes)
+			Scanner.scan(nodes,component);
 		Builder.build(component);
 		Renderer.render(component);
 
@@ -1701,7 +1693,7 @@ var Renderer = new function() {
 
 		//display children
 		for(var i = 0;i<component.children.length;i++){
-			if(!component.children[i].templateURL)
+			if(!component.children[i].__url)
 				component.children[i].display();
 		}
 
@@ -1714,6 +1706,234 @@ var Renderer = new function() {
 	}
 }
 
+
+/**
+ * @classdesc 视图接口，提供视图相关操作。组件和指令实现此接口
+ * @class
+ */
+function View () {
+	this.__evMap = {};
+	/**
+	 * 对视图节点的引用。如果组件/指令拥有多个顶级节点，该属性为null
+	 * @type {HTMLElement | null}
+	 */
+	this.el = null;
+}
+View.prototype = {
+	__destroy:function(){
+		for(var k in this.__evMap){
+			var events = this.__evMap[k];
+	        for(var i=events.length;i--;){
+	            var pair = events[i];
+	            var evHandler = pair[1];
+
+	            this.el.removeEventListener(k,evHandler,false);
+	        }
+		}
+
+		DOMHelper.detach(this.__nodes);
+	},
+	__suspend:function(component,hook){
+		var p = this.__nodes[0].parentNode;
+		if(!p)return;
+		if(hook){
+			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
+			p.insertBefore(this.__target,this.__nodes[0]);
+		}
+
+		for(var i=this.__nodes.length;i--;){
+			if(this.__nodes[i].parentNode)
+				p.removeChild(this.__nodes[i]);
+		}
+	},
+	/**
+	 * 绑定事件到视图
+	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
+     * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
+     * @param  {function} handler   事件处理回调，回调参数e
+	 */
+	on:function(type,exp,handler){
+		if(!this.el)return;
+
+		var originExp = exp;
+		var comp = this instanceof Component?this:this.component;
+		var tmpExpOutside = '';
+		var fnOutside = null;
+		var evHandler = function(e){
+			var tmpExp = originExp;
+
+			if(handler instanceof Function){
+				tmpExp = handler.call(comp,e,originExp);
+			}
+			if(!tmpExp)return;
+			if(tmpExpOutside != tmpExp){
+				var expObj = lexer(tmpExp);
+
+				var evalStr = Renderer.getExpEvalStr(comp,expObj);
+
+				var tmp = evalStr.replace('self.$event','$event');
+				fnOutside = new Function('$event',tmp);
+
+				tmpExpOutside = tmpExp;
+			}
+			
+			try{
+				fnOutside(e);
+			}catch(error){
+				LOGGER.debug("error in event '"+type +"'",error);
+			}
+		};
+
+        this.el.addEventListener(type,evHandler,false);
+		
+		if(!this.__evMap[type]){
+			this.__evMap[type] = [];
+		}
+		this.__evMap[type].push([exp,evHandler]);
+	},
+	/**
+	 * 从视图解绑事件
+	 * @param  {string} type 事件名
+     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
+	 */
+	off:function(type,exp){
+		if(!this.el)return;
+
+		var events = this.__evMap[type];
+        for(var i=events.length;i--;){
+            var pair = events[i];
+            var evExp = pair[0];
+            var evHandler = pair[1];
+            if(evExp == exp){
+	            this.el.removeEventListener(type,evHandler,false);
+            }
+        }
+	},
+	/**
+	 * 显示视图
+	 */
+	show:function(){
+		this.el.style.display = '';
+
+		return this;
+	},
+	/**
+	 * 隐藏视图
+	 */
+	hide:function(){
+		this.el.style.display = 'none';
+
+		return this;
+	},
+	/**
+	 * 获取或设置视图的样式
+	 * @param  {String} name  样式名，如width/height
+	 * @param  {var} value 样式值
+	 */
+	style:function(name,value){
+		if(arguments.length > 1){
+			this.el.style[name] = value;
+
+			return this;
+		}else{
+			return this.el.style[name];
+		}
+	},
+	/**
+	 * 获取或设置视图的属性值
+	 * @param  {String} name  属性名
+	 * @param  {String} value 属性值
+	 */
+	attr:function(name,value){
+		if(arguments.length > 1){
+			this.el.setAttribute(name,value);
+
+			return this;
+		}else{
+			return this.el.getAttribute(name);
+		}
+	},
+	/**
+	 * 删除视图属性
+	 * @param  {String} name  属性名
+	 */
+	removeAttr:function(name){
+		this.el.removeAttribute(name);
+		
+		return this;
+	},
+	/**
+	 * 视图是否包含指定样式
+	 * @param  {String} name  样式名
+	 */
+	hasClass:function(name){
+		return this.el.className.indexOf(name) > -1;
+	},
+	/**
+	 * 添加样式到视图
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	addClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+
+		names = names.split(' ');
+		var cls = this.el.className.split(' ');
+		var rs = '';
+		for(var n=names.length;n--;){
+			if(cls.indexOf(names[n]) < 0){
+				rs += names[n]+' ';
+			}
+		}
+		this.el.className += ' '+rs;
+		
+		return this;
+	},
+	/**
+	 * 从视图删除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	removeClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+		var clss = names.split(' ');
+		var clsName = this.el.className;
+		if(clsName){
+			for(var ci=clss.length;ci--;){
+				var cname = clss[ci];
+
+				var exp = new RegExp('^'+cname+'\\s+|\\s+'+cname+'$|\\s+'+cname+'\\s+','img');
+				clsName = clsName.replace(exp,'');
+			}
+
+			this.el.className = clsName;
+		}
+		
+		return this;
+	},
+	/**
+	 * 从视图添加或移除指定样式
+	 * @param  {String} names  空格分隔多个样式名
+	 */
+	toggleClass:function(names){
+		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
+
+		var clss = names.split(' ');
+		var add = false;
+		var clsName = this.el.className;
+		for(var ci=clss.length;ci--;){
+			var cname = clss[ci];
+
+			if(clsName.indexOf(cname) < 0){
+				add = true;
+				break;
+			}
+		}
+		if(add){
+			this.addClass(names);
+		}else{
+			this.removeClass(names);
+		}
+	}//fn over
+}
 
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
@@ -1735,21 +1955,22 @@ var Renderer = new function() {
  * 
  * @class 
  */
-function Component (view) {
+function Component () {
 	var id = 'C_' + im_counter++;
 	this.__id = id;
 	this.__state = Component.state.created;
-	/**
-	 * 组件绑定的视图对象，在创建时由系统自动注入
-	 * 在DOM中，视图对象的所有操作都针对自定义标签的顶级元素，而不包括子元素
-	 * @type {View}
-	 */
-	this.view = view;
+
+	View.call(this);
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
 	 */
-	this.refs = {};
+	this.comps = {};
+	/**
+	 * 对组件内视图元素的引用
+	 * @type {Object}
+	 */
+	this.els = {};
 	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
@@ -1805,11 +2026,6 @@ function Component (view) {
 	 * @type {Object}
 	 */
 	this.state = {};
-	/**
-	 * 自定义事件接口
-	 * @type {Object}
-	 */
-	this.events = {};
 
 	impex._cs[this.__id] = this;
 };
@@ -1819,22 +2035,7 @@ Component.state = {
 	displayed : 'displayed',
 	suspend : 'suspend'
 };
-function broadcast(comps,type,params){
-	for(var i=0;i<comps.length;i++){
-		var comp = comps[i];
-		var evs = comp.__eventMap[type];
-		var conti = true;
-		if(evs){
-			conti = false;
-			for(var l=0;l<evs.length;l++){
-				conti = evs[l].apply(comp,params);
-			}
-		}
-		if(conti && comp.children.length>0){
-			broadcast(comp.children,type,params);
-		}
-	}
-}
+Util.inherits(Component,View);
 Util.ext(Component.prototype,{
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
@@ -1874,61 +2075,6 @@ Util.ext(Component.prototype,{
 		}
 	},
 	/**
-	 * 绑定自定义事件到组件
-	 * @param  {String} type 自定义事件名
-     * @param  {Function} handler   事件处理回调，回调参数[target，arg1,...]
-	 */
-	on:function(type,handler){
-		var evs = this.__eventMap[type];
-		if(!evs){
-			evs = this.__eventMap[type] = [];
-		}
-		evs.push(handler);
-	},
-	/**
-	 * 触发组件自定义事件，进行冒泡
-	 * @param  {String} type 自定义事件名
-	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
-	 */
-	emit:function(){
-		var type = arguments[0];
-		var params = [this];
-		for (var i =1 ; i < arguments.length; i++) {
-			params.push(arguments[i]);
-		}
-		var my = this.parent;
-		setTimeout(function(){
-			while(my){
-				var evs = my.__eventMap[type];
-				if(evs){
-					var interrupt = true;
-					for(var i=0;i<evs.length;i++){
-						interrupt = !evs[i].apply(my,params);
-					}
-					if(interrupt)return;
-				}
-
-				my = my.parent;
-			}
-		},0);
-	},
-	/**
-	 * 触发组件自定义事件，进行广播
-	 * @param  {String} type 自定义事件名
-	 * @param  {...Object} [data...] 回调参数，可以是0-N个  
-	 */
-	broadcast:function(){
-		var type = arguments[0];
-		var params = [this];
-		for (var i =1 ; i < arguments.length; i++) {
-			params.push(arguments[i]);
-		}
-		var my = this;
-		setTimeout(function(){
-			broadcast(my.children,type,params);
-		},0);
-	},
-	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {string} expPath 属性路径，比如a.b.c
 	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
@@ -1959,14 +2105,11 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个未初始化的子组件
-	 * @param  {string} type 组件名
-	 * @param  {View} target 视图
+	 * @param  {HTMLElement} el 视图
 	 * @return {Component} 子组件
 	 */
-	createSubComponentOf:function(type,target,placeholder){
-		var instance = ComponentFactory.newInstanceOf(type,
-			target.__nodes?target.__nodes[0]:target,
-			placeholder && placeholder.__nodes?placeholder.__nodes[0]:placeholder);
+	createSubComponentOf:function(el){
+		var instance = ComponentFactory.newInstanceOf(el.tagName.toLowerCase(),el);
 		this.children.push(instance);
 		instance.parent = this;
 
@@ -1974,12 +2117,11 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个匿名子组件
-	 * @param  {string | View} tmpl HTML模版字符串或视图对象
-	 * @param  {View} target 视图
+	 * @param  {HTMLElement} els 视图
 	 * @return {Component} 子组件
 	 */
-	createSubComponent:function(tmpl,target){
-		var instance = ComponentFactory.newInstance(tmpl,target && target.__nodes[0]);
+	createSubComponent:function(els){
+		var instance = ComponentFactory.newInstance(els);
 		this.children.push(instance);
 		instance.parent = this;
 
@@ -2003,7 +2145,7 @@ Util.ext(Component.prototype,{
 				ComponentFactory.initInstanceOf(that.name,that);
 
 				//init
-				that.view.__init(tmpl,that);
+				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
 				that.__init(tmpl);
 				that.display();
@@ -2011,15 +2153,14 @@ Util.ext(Component.prototype,{
 			
 		}else{
 			if(this.template){
-				var rs = this.view.__init(this.template,this);
-				if(rs === false)return;
+				ComponentFactory.parse(this.template,this);
 			}
 			this.__init(this.template);
 		}
 		return this;
 	},
 	__init:function(tmplStr){
-		Scanner.scan(this.view,this);
+		Scanner.scan(this.__nodes,this);
 
 		LOGGER.log(this,'inited');
 
@@ -2051,20 +2192,22 @@ Util.ext(Component.prototype,{
 		if(this.__state === Component.state.displayed)return;
 		if(this.__state === Component.state.created)return;
 
-		this.view.__display(this);
+		if(this.name){
+			this.el.innerHTML = '';
+			DOMHelper.attach(this.el,this.__nodes);
+		}
 
 		Renderer.render(this);
 
-		//view ref
-		this.view.__nodes.forEach(function(el){
+		//els
+		this.__nodes.forEach(function(el){
 			if(!el.querySelectorAll)return;
-			var refs = el.querySelectorAll('*['+ATTR_REF_TAG+']');
-			for(var i=refs.length;i--;){
-				var node = refs[i];
-				this.view.refs[node.getAttribute(ATTR_REF_TAG)] = node;
+			var els = el.querySelectorAll('*['+ATTR_REF_TAG+']');
+			for(var i=els.length;i--;){
+				var node = els[i];
+				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
 			}
 		},this);
-		
 
 		this.__state = Component.state.displayed;
 		LOGGER.log(this,'displayed');
@@ -2100,7 +2243,7 @@ Util.ext(Component.prototype,{
 			this.parent = null;
 		}
 		
-		this.view.__destroy(this);
+		this.__destroy(this);
 
 		while(this.children.length > 0){
 			this.children[0].destroy();
@@ -2111,7 +2254,6 @@ Util.ext(Component.prototype,{
 		}
 
 
-		this.view = 
 		this.children = 
 		this.directives = 
 		this.__expNodes = 
@@ -2122,7 +2264,7 @@ Util.ext(Component.prototype,{
 
 		this.__state = 
 		this.__id = 
-		this.templateURL = 
+		this.__url = 
 		this.template = 
 		this.restrict = 
 		this.events = 
@@ -2133,14 +2275,13 @@ Util.ext(Component.prototype,{
 	 * 但数据都不会销毁
 	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
-	 * @see ViewManager
 	 */
 	suspend:function(hook){
-		if(!(this instanceof Directive) && this.__state !== Component.state.displayed)return;
+		if(this.__state !== Component.state.displayed)return;
 
 		LOGGER.log(this,'suspend');
 		
-		this.view.__suspend(this,hook===false?false:true);
+		this.__suspend(this,hook===false?false:true);
 
 		this.onSuspend && this.onSuspend();
 
@@ -2331,626 +2472,76 @@ Util.ext(Component.prototype,{
 	}
 });
 /**
- * @classdesc 视图类，提供视图相关操作。所有影响显示效果的都属于视图操作，
- * 比如show/hide/css/animate等等
- * 无法直接创建实例，会被自动注入到组件或者指令中
- * 一个组件或者指令只会拥有一个视图
- * @class
+ * DOM助手
  */
-function View (el,target,nodes,placeholder) {
-	/**
-	 * 对可视元素的引用，在DOM中就是HTMLElement，
-	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * @type {Object}
-	 */
-	this.el = el;
-
-	this.__nodes = nodes;
-	this.__evMap = {};
-	this.__target = target;
-	this.__placeholder = placeholder || target;
-	/**
-	 * 对视图范围内可视元素的引用，在DOM中就是HTMLElement
-	 * @type {Object}
-	 */
-	this.refs = {};
-}
-View.prototype = {
-	__init:function(tmpl,component){
-		//解析属性
-		var propMap = this.__target.attributes;
-		var innerHTML = this.__target.innerHTML;
-
-		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-
-		if(component.onBeforeCompile){
-            compileStr = component.onBeforeCompile(compileStr);
-        }
-
-		var nodes = DOMViewProvider.compile(compileStr,this.__placeholder);
-
-		this.__nodes = nodes;
-		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
-
-		if(!nodes || nodes.length < 1){
-			LOGGER.error('invalid template "'+tmpl+'" of component['+component.name+']');
-			return false;
-		}
-		if(nodes.length > 1){
-			LOGGER.warn('more than 1 root node of component['+component.name+']');
-		}
-
-		//check props
-		var requires = {};
-		var propTypes = component.propTypes;
-		if(propTypes){
-			for(var k in propTypes){
-				var type = propTypes[k];
-				if(type.require){
-					requires[k] = type;
-				}
-			}
-		}
-
-		if(propMap){
-			//bind props
-			for(var i=propMap.length;i--;){
-				var k = propMap[i].name.toLowerCase();
-				var v = propMap[i].value;
-				if(k == ATTR_REF_TAG){
-					var expNode = Scanner.getExpNode(v,component);
-					var calcVal = expNode && Renderer.calcExpNode(expNode);
-					component.parent.refs[calcVal || v] = component;
-					continue;
-				}
-
-				var instance = null;
-				if(REG_CMD.test(k)){
-					var c = k.replace(CMD_PREFIX,'');
-					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-					if(CPDI > -1)c = c.substring(0,CPDI);
-					//如果有对应的处理器
-					if(DirectiveFactory.hasTypeOf(c)){
-						instance = DirectiveFactory.newInstanceOf(c,this.el,component,k,v);
-					}
-				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
-					instance = DirectiveFactory.newInstanceOf('on',this.el,component,k,v);
-				}else{
-					if(!component.parent)continue;
-
-					handleProps(k,v,requires,propTypes,component);
-				}
-
-				if(instance){
-					instance.init();
-				}
-			}
-		}
-
-		//check requires
-		var ks = Object.keys(requires);
-		if(ks.length > 0){
-			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
-			return;
-		}
-
-		//组件已经直接插入DOM中
-		this.__placeholder = null;
-	},
-	__display:function(component){
-		if(!this.__placeholder ||!this.__placeholder.parentNode)return;
-
-		var fragment = null;
-		if(this.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<this.__nodes.length;i++){
-				fragment.appendChild(this.__nodes[i]);
-			}
-		}else{
-			fragment = this.__nodes[0];
-		}
-
-		this.__placeholder.parentNode.replaceChild(fragment,this.__placeholder);
-
-		fragment = null;
-		this.__placeholder = null;
-	},
-	__destroy:function(component){
-		for(var k in this.__evMap){
-			var events = this.__evMap[k];
-	        for(var i=events.length;i--;){
-	            var pair = events[i];
-	            var evHandler = pair[1];
-
-	            for(var j=this.__nodes.length;j--;){
-	            	if(this.__nodes[j].nodeType !== 1)continue;
-	            	this.__nodes[j].removeEventListener(k,evHandler,false);
-	            }
-	        }
-		}
-
-		var p = this.__nodes[0].parentNode;
-		if(p){
-			if(this.__nodes[0].__impex__view)
-				this.__nodes[0].__impex__view = null;
-			for(var i=this.__nodes.length;i--;){
-				this.__nodes[i].parentNode && p.removeChild(this.__nodes[i]);
-			}
-		}
-
-		if(this.__target){
-			if(this.__target.parentNode)
-				this.__target.parentNode.removeChild(this.__target);
-			this.__target = null;
-		}
-	},
-	__suspend:function(component,hook){
-		var p = this.__nodes[0].parentNode;
-		if(!p)return;
-		if(hook){
-			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
-			p.insertBefore(this.__target,this.__nodes[0]);
-		}
-
-		for(var i=this.__nodes.length;i--;){
-			if(this.__nodes[i].parentNode)
-				p.removeChild(this.__nodes[i]);
-		}
-	},
-	/**
-	 * 绑定事件到视图
-	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
-     * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
-     * @param  {function} handler   事件处理回调，回调参数e
-	 */
-	on:function(type,exp,handler){
-		if(!this.el)return;
-
-		var originExp = exp;
-		var comp = this.__comp;
-		var tmpExpOutside = '';
-		var fnOutside = null;
-		var evHandler = function(e){
-			var tmpExp = originExp;
-
-			if(handler instanceof Function){
-				tmpExp = handler.call(comp,e,originExp);
-			}
-			if(!tmpExp)return;
-			if(tmpExpOutside != tmpExp){
-				var expObj = lexer(tmpExp);
-
-				var evalStr = Renderer.getExpEvalStr(comp,expObj);
-
-				var tmp = evalStr.replace('self.$event','$event');
-				fnOutside = new Function('$event',tmp);
-
-				tmpExpOutside = tmpExp;
-			}
-			
-			try{
-				fnOutside(e);
-			}catch(error){
-				LOGGER.debug("error in event '"+type +"'",error);
-			}
-		};
-
-        this.el.addEventListener(type,evHandler,false);
-		
-		if(!this.__evMap[type]){
-			this.__evMap[type] = [];
-		}
-		this.__evMap[type].push([exp,evHandler]);
-	},
-	/**
-	 * 从视图解绑事件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
-	 */
-	off:function(type,exp){
-		if(!this.el)return;
-
-		var events = this.__evMap[type];
-        for(var i=events.length;i--;){
-            var pair = events[i];
-            var evExp = pair[0];
-            var evHandler = pair[1];
-            if(evExp == exp){
-	            this.el.removeEventListener(type,evHandler,false);
-            }
-        }
-	},
-	/**
-	 * 复制当前视图
-	 * @return {View}
-	 */
-	clone:function(){
-		var tmp = [];
-		for(var i=this.__nodes.length;i--;){
-			var c = this.__nodes[i].cloneNode(true);
-			tmp.unshift(c);
-		}
-		
-		var copy = new View(tmp.length===1&&tmp[0].nodeType===1?tmp[0]:null,null,tmp);
-		return copy;
-	},
-	/**
-	 * 显示视图
-	 */
-	show:function(){
-		this.el.style.display = '';
-
-		return this;
-	},
-	/**
-	 * 隐藏视图
-	 */
-	hide:function(){
-		this.el.style.display = 'none';
-
-		return this;
-	},
-	/**
-	 * 获取或设置视图的样式
-	 * @param  {String} name  样式名，如width/height
-	 * @param  {var} value 样式值
-	 */
-	style:function(name,value){
-		if(arguments.length > 1){
-			this.el.style[name] = value;
-
-			return this;
-		}else{
-			return this.el.style[name];
-		}
-	},
-	/**
-	 * 获取或设置视图的属性值
-	 * @param  {String} name  属性名
-	 * @param  {String} value 属性值
-	 */
-	attr:function(name,value){
-		if(arguments.length > 1){
-			this.el.setAttribute(name,value);
-
-			return this;
-		}else{
-			return this.el.getAttribute(name);
-		}
-	},
-	/**
-	 * 删除视图属性
-	 * @param  {String} name  属性名
-	 */
-	removeAttr:function(name){
-		this.el.removeAttribute(name);
-		
-		return this;
-	},
-	/**
-	 * 视图是否包含指定样式
-	 * @param  {String} name  样式名
-	 */
-	hasClass:function(name){
-		return this.el.className.indexOf(name) > -1;
-	},
-	/**
-	 * 添加样式到视图
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	addClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-
-		names = names.split(' ');
-		var cls = this.el.className.split(' ');
-		var rs = '';
-		for(var n=names.length;n--;){
-			if(cls.indexOf(names[n]) < 0){
-				rs += names[n]+' ';
-			}
-		}
-		this.el.className += ' '+rs;
-		
-		return this;
-	},
-	/**
-	 * 从视图删除指定样式
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	removeClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-		var clss = names.split(' ');
-		var clsName = this.el.className;
-		if(clsName){
-			for(var ci=clss.length;ci--;){
-				var cname = clss[ci];
-
-				var exp = new RegExp('^'+cname+'\\s+|\\s+'+cname+'$|\\s+'+cname+'\\s+','img');
-				clsName = clsName.replace(exp,'');
-			}
-
-			this.el.className = clsName;
-		}
-		
-		return this;
-	},
-	/**
-	 * 从视图添加或移除指定样式
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	toggleClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-
-		var clss = names.split(' ');
-		var add = false;
-		var clsName = this.el.className;
-		for(var ci=clss.length;ci--;){
-			var cname = clss[ci];
-
-			if(clsName.indexOf(cname) < 0){
-				add = true;
-				break;
-			}
-		}
-		if(add){
-			this.addClass(names);
-		}else{
-			this.removeClass(names);
-		}
-	}//fn over
-}
-
-function tmplExpFilter(tmpl,bodyHTML,propMap){
-	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
-		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName === 'CONTENT'){
-            return bodyHTML||'';
-        }
-		return '';
-	});
-	return tmpl;
-}
-
-function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k])return;
-	var checkType = propTypes[k].type;
-	checkType = checkType instanceof Array?checkType:[checkType];
-	var vType = typeof v;
-	if(checkType.indexOf(vType) < 0){
-		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
-	}
-}
-
-function handleProps(k,v,requires,propTypes,component){
-	// .xxxx
-	if(k[0] !== PROP_TYPE_PRIFX){
-		if(propTypes){
-			delete requires[k];
-			checkPropType(k,v,propTypes,component);
-		}
-		component.state[k] = v;
-		return;
-	}
-
-	// xxxx
-	var n = k.substr(1);
-	var tmp = lexer(v);
-	var rs = Renderer.evalExp(component.parent,tmp);
-
-	//check sync
-	if(PROP_SYNC_SUFX_EXP.test(n)){
-		n = n.replace(PROP_SYNC_SUFX_EXP,'');
-
-		var keys = Object.keys(tmp.varTree);
-		//watch props
-		keys.forEach(function(key){
-			if(tmp.varTree[key].isFunc)return;
-			
-			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
-			component.parent.__watchProps.push(prop);
-		});
-	}
-	if(propTypes){
-		delete requires[n];
-		checkPropType(n,rs,propTypes,component);
-	}
-	if(rs instanceof Function){
-		component[n] = rs;
-		return;
-	}
-	//immutable
-	var obj = Util.immutable(rs);
-	component.state[n] = obj;
-}
-
-
-/**
- * DOM视图构建器
- */
-var DOMViewProvider = new function(){
+var DOMHelper = new function(){
+	this.singleton = true;
 	var compiler = document.createElement('div');
-		
-	/**
-	 * 构造一个视图实例
-	 * @return this
-	 */
-	this.newInstance = function(template,target){
-		if(template === ''){
-			return new View(null,target,[document.createTextNode('')]);
-		}
-		compiler.innerHTML = template;
-		if(!compiler.childNodes[0])return null;
+
+	this.compile = function(template){
 		var nodes = [];
+		compiler.innerHTML = template;
+
 		while(compiler.childNodes.length>0){
 			var tmp = compiler.removeChild(compiler.childNodes[0]);
 			nodes.push(tmp);
 		}
 
-		var view = new View(null,target,nodes);
-
-		return view;
-	}
-
-	this.compile = function(template,target){
-		var nodes = [];
-		if(!target.insertAdjacentHTML){
-			var span = document.createElement('span');
-			span.style.display = 'none';
-			target.parentNode.insertBefore(span,target);
-			target.parentNode.removeChild(target);
-			target = span;
-		}
-		target.insertAdjacentHTML('beforebegin', '<!-- c -->');
-		var start = target.previousSibling;
-		target.insertAdjacentHTML('afterend', '<!-- c -->');
-		var end = target.nextSibling;
-		target.insertAdjacentHTML('afterend', template);
-
-		target.parentNode.removeChild(target);
-
-		var next = start.nextSibling;
-		while(next !== end){
-			if(next.nodeType === 3){
-				var v = next.nodeValue.replace(/\s/mg,'');
-				if(v === ''){
-					next = next.nextSibling;
-					continue;
-				}
-			}
-			nodes.push(next);
-			next = next.nextSibling;
-		}
-		start.parentNode.removeChild(start);
-		end.parentNode.removeChild(end);
-
 		return nodes;
 	}
-}
-/**
- * 提供视图操作
- */
-var ViewManager = new function (){
-	this.singleton = true;
-    /**
-     * 替换视图，会把目标视图更新为新视图
-     * <br/>在DOM中表现为更新元素
-     * @param  {View} newView 新视图
-     * @param  {View} targetView 目标视图
-     */
-	this.replace = function(newView,targetView){
-		var targetV = targetView.__nodes[0],
-			newV = newView.__nodes[0],
-			p = targetView.__nodes[0].parentNode;
-		var fragment = newV;
-		if(newView.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.__nodes.length;i++){
-				fragment.appendChild(newView.__nodes[i]);
+
+	this.detach = function(nodes){
+		var p = nodes[0].parentNode;
+		if(p){
+			if(nodes[0].__impex__view)
+				nodes[0].__impex__view = null;
+			for(var i=nodes.length;i--;){
+				nodes[i].parentNode && p.removeChild(nodes[i]);
 			}
 		}
-		if(targetView.__nodes.length > 1){
-			p.insertBefore(fragment,targetV);
-			
-			for(var i=targetView.__nodes.length;i--;){
-				p.removeChild(targetView.__nodes[i]);
+	}
+
+	this.attach = function(target,nodes){
+		var fragment = null;
+		if(nodes.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<nodes.length;i++){
+				fragment.appendChild(nodes[i]);
 			}
 		}else{
-			p.replaceChild(fragment,targetV);
+			fragment = nodes[0];
 		}
 		
+		target.appendChild(fragment);
+		fragment = null;
 	}
-	/**
-	 * 在指定视图前插入视图
-	 * @param  {View} newView 新视图
-	 * @param  {View} targetView 目标视图
-	 */
-	this.insertBefore = function(newView,targetView){
-		var targetV = targetView.__nodes[0],
-			newV = newView.__nodes[0],
-			p = targetView.__nodes[0].parentNode;
-		var fragment = newV;
-		if(newView.__nodes.length > 1){
+
+	this.replace = function(target,nodes){
+		var fragment = null;
+		if(nodes.length > 1){
 			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.__nodes.length;i++){
-				fragment.appendChild(newView.__nodes[i]);
+			for(var i=0;i<nodes.length;i++){
+				fragment.appendChild(nodes[i]);
+			}
+		}else{
+			fragment = nodes[0];
+		}
+		
+		target.parentNode.replaceChild(fragment,target);
+		fragment = null;
+	}
+
+	this.insertBefore = function(nodes,target){
+		var p = target.parentNode;
+		var fragment = nodes[0];
+		if(nodes.length > 1){
+			fragment = document.createDocumentFragment();
+			for(var i=0;i<nodes.length;i++){
+				fragment.appendChild(nodes[i]);
 			}
 		}
 		if(p)
-		p.insertBefore(fragment,targetV);
-	}
-
-	/**
-	 * 在指定视图后插入视图
-	 * @param  {View} newView 新视图
-	 * @param  {View} targetView 目标视图
-	 */
-	this.insertAfter = function(newView,targetView){
-		var targetV = targetView.__nodes[0],
-			newV = newView.__nodes[0],
-			p = targetView.__nodes[0].parentNode;
-		var last = p.lastChild;
-		var fragment = newV;
-		if(newView.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.__nodes.length;i++){
-				fragment.appendChild(newView.__nodes[i]);
-			}
-		}
-
-		if(last == targetV){
-			p.appendChild(fragment);
-		}else{
-			var next = targetView.__nodes[targetView.__nodes.length-1].nextSibling;
-			p.insertBefore(fragment,next);
-		}
-	}
-
-	/**
-	 * 在指定视图内插入视图，并插入到最后位置
-	 * @param  {View} newView 新视图
-	 * @param  {View} targetView 目标视图
-	 */
-	this.append = function(newView,targetView){
-		var newV = newView.__nodes[0],
-			p = targetView.__nodes[0];
-		var fragment = newV;
-		if(newView.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.__nodes.length;i++){
-				fragment.appendChild(newView.__nodes[i]);
-			}
-		}
-
-		p.appendChild(fragment);
-	}
-
-	/**
-	 * 在指定视图内插入视图，并插入到最前位置
-	 * @param  {View} newView 新视图
-	 * @param  {View} targetView 目标视图
-	 */
-	this.prepend = function(newView,targetView){
-		var newV = newView.__nodes[0],
-			p = targetView.__nodes[0];
-		var fragment = newV;
-		if(newView.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<newView.__nodes.length;i++){
-				fragment.appendChild(newView.__nodes[i]);
-			}
-		}
-
-		p.insertBefore(fragment,p.firstChild);
-	}
-
-	/**
-	 * 创建一个占位视图
-	 * <br/>在DOM中表现为注释元素
-	 * @param  {string} content 占位内容
-	 * @return {View} 新视图
-	 */
-	this.createPlaceholder = function(content){
-		return new View(null,null,[document.createComment(content)]);
+		p.insertBefore(fragment,target);
 	}
 }
 /**
@@ -2968,6 +2559,7 @@ var ViewManager = new function (){
  * @class 
  */
 function Directive (name,value) {
+	View.call(this);
 	/**
 	 * 指令的字面值
 	 */
@@ -2990,10 +2582,6 @@ function Directive (name,value) {
 	 * 指令所在的组件
 	 */
 	this.component;
-	/**
-	 * 指令所在的目标视图
-	 */
-	this.view;
 
 	/**
 	 * 是否终结<br/>
@@ -3018,6 +2606,7 @@ function Directive (name,value) {
 	 */
 	this.priority = 0;
 }
+Util.inherits(Directive,View);
 Util.ext(Directive.prototype,{
 	init:function(){
 		if(this.__state == Component.state.inited){
@@ -3064,9 +2653,8 @@ Util.ext(Directive.prototype,{
 	destroy:function(){
 		LOGGER.log(this,'destroy');
 
-		this.view.__destroy(this);
+		this.__destroy(this);
 
-		this.view = 
 		this.component = 
 		this.params = 
 		this.filter = 
@@ -3169,7 +2757,7 @@ function Transition (type,target,hook) {
         }
 
         if(max > 0){
-            var v = target.view;
+            var v = target;
             var expNodes = null;
             var comp = null;
             if(target instanceof Directive){
@@ -3340,40 +2928,108 @@ Util.ext(_ComponentFactory.prototype,{
 	getRestrictOf : function(type){
 		return this.types[type].props['restrict'];
 	},
+	//parse component
+	parse:function(tmpl,component){
+		//解析属性
+		var propMap = component.el.attributes;
+		var innerHTML = component.el.innerHTML;
+
+		var compileStr = slotHandler(tmpl,innerHTML);
+
+		var cssStr = null;
+		if(!this.types[component.name].parseCache){
+			var tmp = peelCSS(compileStr);
+			compileStr = tmp[1];
+			cssStr = tmp[0];
+			cssStr = cssHandler(component.name,cssStr);
+
+			this.types[component.name].parseCache = compileStr;
+
+			//attach style
+			var target = document.head.children[0];
+			if(target){
+				var nodes = DOMHelper.compile(cssStr);
+				DOMHelper.insertBefore(nodes,target);
+			}else{
+				document.head.innerHTML = cssStr;
+			}
+		}else{
+			compileStr = this.types[component.name].parseCache;
+		}
+
+		var nodes = DOMHelper.compile(compileStr);
+		component.__nodes = nodes;
+
+		//check props
+		var requires = {};
+		var propTypes = component.propTypes;
+		if(propTypes){
+			for(var k in propTypes){
+				var type = propTypes[k];
+				if(type.require){
+					requires[k] = type;
+				}
+			}
+		}
+
+		if(propMap){
+			//bind props
+			for(var i=propMap.length;i--;){
+				var k = propMap[i].name.toLowerCase();
+				var v = propMap[i].value;
+				if(k == ATTR_REF_TAG){
+					var expNode = Scanner.getExpNode(v,component);
+					var calcVal = expNode && Renderer.calcExpNode(expNode);
+					component.parent.refs[calcVal || v] = component;
+					continue;
+				}
+
+				var instance = null;
+				if(REG_CMD.test(k)){
+					var c = k.replace(CMD_PREFIX,'');
+					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+					if(CPDI > -1)c = c.substring(0,CPDI);
+					//如果有对应的处理器
+					if(DirectiveFactory.hasTypeOf(c)){
+						instance = DirectiveFactory.newInstanceOf(c,component.el,component,k,v);
+					}
+				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
+					instance = DirectiveFactory.newInstanceOf('on',component.el,component,k,v);
+				}else{
+					if(!component.parent)continue;
+
+					handleProps(k,v,requires,propTypes,component);
+				}
+
+				if(instance){
+					instance.init();
+				}
+			}
+		}
+
+		//check requires
+		var ks = Object.keys(requires);
+		if(ks.length > 0){
+			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
+			return;
+		}
+	},
 	/**
 	 * 创建指定基类实例
 	 */
-	newInstance : function(element){
-		var view = null;
-		if(arguments.length === 2){
-			var tmpl = arguments[0];
-			var target = arguments[1];
-			view = tmpl;
-			if(Util.isString(tmpl))
-				view = this.viewProvider.newInstance(tmpl,target);
-			else{
-				view.__placeholder = view.__target = target;
-			}
-		}else{
-			view = element;
-			if(Util.isDOM(element)){
-				view = new View(element,null,[element]);
-			}
+	newInstance : function(els,param){
+		var el = null;
+		if(els.length===1){
+			el = els[0];
 		}
 		
-		var rs = new this.baseClass(view);
+		var rs = new this.baseClass();
+		rs.el = el;
+		rs.__nodes = els;
 
-		var props = arguments[2];
-		if(props){
-			Util.ext(rs,props);
+		if(param){
+			Util.ext(rs,param);
 		}
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
-		}
-		rs.view.__comp = rs;
 		
 		return rs;
 	},
@@ -3381,23 +3037,21 @@ Util.ext(_ComponentFactory.prototype,{
 	 * 创建指定类型组件实例
 	 * @param  {String} type       		组件类型
 	 * @param  {HTMLElement} target  	组件应用节点
-	 * @param  {HTMLElement} placeholder 用于替换组件的占位符
 	 * @return {Component}
 	 */
-	newInstanceOf : function(type,target,placeholder){
+	newInstanceOf : function(type,target){
 		if(!this.types[type])return null;
 
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
-		rs.view = new View(null,target,null,placeholder);
+		rs.el = target;
+
 		var state = this.types[type].state;
 		if(typeof state == 'string'){
 			rs.__url = state;
 		}else{
 			this.initInstanceOf(type,rs);
 		}
-		
-		rs.view.__comp = rs;
 
 		this._super.createCbk.call(this,rs,type);
 
@@ -3411,16 +3065,116 @@ Util.ext(_ComponentFactory.prototype,{
 		if(state){
 			Util.ext(ins.state,state);
 		}
-
-		if(ins.events){
-			for(var k in ins.events){
-				ins.on(k,ins.events[k]);
-			}
-		}
 	}
 });
 
-var ComponentFactory = new _ComponentFactory(DOMViewProvider);
+var ComponentFactory = new _ComponentFactory(DOMHelper);
+
+function slotHandler(tmpl,innerHTML){
+	var slotMap = {};
+    innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)\s+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?\1(?:\s+)?>/img,function(str,b,name){
+        slotMap[name] = str;
+    });
+
+    if(innerHTML.trim().length>0)
+    tmpl = tmpl.replace(/<(?:\s+)?slot(?:\s+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str){
+    	return innerHTML;
+    });
+
+    tmpl = tmpl.replace(/<(?:\s+)?slot\s+name(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str,name){
+    	return slotMap[name] || str;
+    });
+
+    return tmpl;
+}
+
+function peelCSS(tmpl){
+	var rs = '';
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
+        rs += str;
+        return '';
+    });
+
+    return [rs,tmpl];
+}
+
+function cssHandler(name,tmpl){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
+        return '<style>'+filterStyle(name,style)+'</style>';
+    });
+    return tmpl;
+}
+
+function filterStyle(host,style){
+	style = style.replace(/\n/img,'').trim();
+	style = style.replace(/(^|})(?:\s+)?[a-z:_$](?:[^{]+)?\{/img,function(name){
+		var rs = name.trim();
+		if(!/(^|}|((?:\s+)?,))(?:\s+)?:host/.test(rs)){
+			if(rs[0]==='}'){
+				rs = rs.substr(1);
+				rs = '}'+host + ' ' +rs;
+			}else{
+				rs = host + ' ' +rs;
+			}
+			
+		}
+		rs = rs.replace(/:host/img,host);
+		return rs;
+	});
+	return style;
+}
+
+function checkPropType(k,v,propTypes,component){
+	if(!propTypes[k])return;
+	var checkType = propTypes[k].type;
+	checkType = checkType instanceof Array?checkType:[checkType];
+	var vType = typeof v;
+	if(checkType.indexOf(vType) < 0){
+		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+	}
+}
+
+function handleProps(k,v,requires,propTypes,component){
+	// .xxxx
+	if(k[0] !== PROP_TYPE_PRIFX){
+		if(propTypes){
+			delete requires[k];
+			checkPropType(k,v,propTypes,component);
+		}
+		component.state[k] = v;
+		return;
+	}
+
+	// xxxx
+	var n = k.substr(1);
+	var tmp = lexer(v);
+	var rs = Renderer.evalExp(component.parent,tmp);
+
+	//check sync
+	if(PROP_SYNC_SUFX_EXP.test(n)){
+		n = n.replace(PROP_SYNC_SUFX_EXP,'');
+
+		var keys = Object.keys(tmp.varTree);
+		//watch props
+		keys.forEach(function(key){
+			if(tmp.varTree[key].isFunc)return;
+			
+			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
+			component.parent.__watchProps.push(prop);
+		});
+	}
+	if(propTypes){
+		delete requires[n];
+		checkPropType(n,rs,propTypes,component);
+	}
+	if(rs instanceof Function){
+		component[n] = rs;
+		return;
+	}
+	//immutable
+	var obj = Util.immutable(rs);
+	component.state[n] = obj;
+}
 /**
  * 指令工厂
  */
@@ -3478,15 +3232,18 @@ Util.ext(_DirectiveFactory.prototype,{
 		Util.ext(rs,this.types[type].props);
 
 		if(node.__impex__view){
-			rs.view = node.__impex__view;
+			var tmp = node.__impex__view;
+			rs.el = tmp[0];
+			rs.__nodes = tmp[1];
 		}else{
 			var el = node,nodes = [node];
 			if(Util.isArray(node)){
 				nodes = node;
 				el = node.length>1?null:node[0];
 			}
-			rs.view = new View(el,null,nodes);
-			node.__impex__view = rs.view;
+			rs.el = el;
+			rs.__nodes = nodes;
+			node.__impex__view = [el,nodes];
 		}
 
 		if(params){
@@ -3496,24 +3253,14 @@ Util.ext(_DirectiveFactory.prototype,{
 			rs.filter = filter;
 		}
 
-		rs.view.__comp = component;
-
 		component.directives.push(rs);
 		rs.component = component;
 
-		if(rs.view){
-			rs.view.__nodes[0].removeAttribute(rs.name);
-			if(rs.endTag){
-                var lastNode = rs.view.__nodes[rs.view.__nodes.length-1];
-                lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
-            }
-		}
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
-		}
+		rs.__nodes[0].removeAttribute(rs.name);
+		if(rs.endTag){
+            var lastNode = rs.__nodes[rs.__nodes.length-1];
+            lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
+        }
 		
 		this._super.createCbk.call(this,rs,type);
 
@@ -3600,7 +3347,6 @@ var TransitionFactory = {
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
 	var REG_EXP = /\{\{#?(.*?)\}\}/img,
-		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
 	var PROP_TYPE_PRIFX = '.';
@@ -3638,8 +3384,8 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,30,0],
-	        state:'beta3',
+	        v:[0,31,0],
+	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -3663,7 +3409,6 @@ var TransitionFactory = {
 			EXP_END_TAG = delimiters[1] || '}}';
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
-			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
 			LOGGER = cfg.logger || new function(){
 			    this.log = function(){}
@@ -3684,8 +3429,8 @@ var TransitionFactory = {
 		 * @return this
 		 */
 		this.component = function(name,param,services){
-			if(typeof(param)!='string' && !param.template && !param.templateURL){
-				LOGGER.error("can not find property 'template' or 'templateURL' of component '"+name+"'");
+			if(typeof(param)!='string' && !param.template){
+				LOGGER.error("can not find property 'template' of component '"+name+"'");
 				return;
 			}
 			ComponentFactory.register(name,param,services);
@@ -3741,16 +3486,18 @@ var TransitionFactory = {
 
 		/**
 		 * 对单个组件进行测试渲染
-		 * @param  {String} viewId template id
 		 */
-		this.unitTest = function(viewId){
+		this.unitTest = function(compName,entry){
 			window.onload = function(){
 	            'use strict';
-	            var model = document.querySelector('script[type="javascript/impex-component"]');
-	            model = window.eval(model.innerText);
-	            var test = document.getElementById(viewId);
-	            document.body.innerHTML += test.innerHTML;
-	            impex.render(document.body,model);
+	            
+	            var path = location.href.substr(location.href.lastIndexOf('/'));
+	            //register
+	            impex.component(compName,'.'+path);
+	            // var tmpl = document.querySelector('template');
+	            // document.body.innerHTML += tmpl.innerHTML;
+	            //render
+	            impex.render(document.querySelector(entry));
 	        }
 		}
 
@@ -3761,7 +3508,7 @@ var TransitionFactory = {
 		 * 	...
 		 * 	impex.render(document.getElementById('entry')...)
 		 * </pre>
-		 * 如果DOM元素本身并不是组件,系统会创建一个虚拟组件，也就是说
+		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
 		 * impex总会从渲染一个组件作为一切的开始
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
 		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
@@ -3780,7 +3527,7 @@ var TransitionFactory = {
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance(element,null,param);
+				comp = ComponentFactory.newInstance([element],param);
 			}
 
 			if(comp.onCreate){
@@ -3825,7 +3572,7 @@ var TransitionFactory = {
  * 视图管理服务提供额外的视图操作，可以用在指令或组件中。
  * 使用该服务，只需要注入即可
  */
-impex.service('ViewManager',ViewManager);
+impex.service('DOMHelper',DOMHelper);
 
 
 /**
@@ -3873,7 +3620,7 @@ impex.service('Transitions',new function(){
     .directive('on',{
         onInit:function(){
             for(var i=this.params.length;i--;){
-                this.view.on(this.params[i],this.value);
+                this.on(this.params[i],this.value);
             }
         }
     })
@@ -3883,7 +3630,7 @@ impex.service('Transitions',new function(){
      */
     .directive('text',{
         onUpdate:function(rs){
-            this.view.el.innerText = rs;
+            this.el.innerText = rs;
         }
     })
     /**
@@ -3913,7 +3660,7 @@ impex.service('Transitions',new function(){
 
             for(var i=this.params.length;i--;){
                 var p = this.params[i];
-                this.view.attr(p,rs);
+                this.attr(p,rs);
             }
             
         }
@@ -3924,7 +3671,7 @@ impex.service('Transitions',new function(){
      */
     .directive('show',{
         onCreate:function(ts){
-            var transition = this.view.attr('transition');
+            var transition = this.attr('transition');
             if(transition !== null){
                 this.transition = ts.get(transition,this);
             }
@@ -3955,10 +3702,10 @@ impex.service('Transitions',new function(){
         exec:function(rs){
             if(rs){
                 //显示
-                this.view.show();
+                this.show();
             }else{
                 // 隐藏
-                this.view.hide();
+                this.hide();
             }
         }
     },['Transitions'])
@@ -3969,11 +3716,11 @@ impex.service('Transitions',new function(){
         endTag : 'show-end',
         onInit:function(){
             //更新视图
-            Scanner.scan(this.view,this.component);
+            Scanner.scan(this.__nodes,this.component);
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
-            var nodes = this.view.__nodes;
+            var nodes = this.__nodes;
             if(rs){
                 //显示
                 for(var i=nodes.length;i--;){
@@ -3992,11 +3739,11 @@ impex.service('Transitions',new function(){
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate:function(viewManager,ts){
-            this.viewManager = viewManager;
-            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+        onCreate:function(DOMHelper,ts){
+            this.DOMHelper = DOMHelper;
+            this.placeholder = document.createComment('-- directive [if] placeholder --');
 
-            var transition = this.view.attr('transition');
+            var transition = this.attr('transition');
             if(transition !== null){
                 this.transition = ts.get(transition,this);
             }
@@ -4005,7 +3752,7 @@ impex.service('Transitions',new function(){
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
-            if(rs === this.lastRs && !this.view.el.parentNode)return;
+            if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
             if(this.transition){
@@ -4026,50 +3773,52 @@ impex.service('Transitions',new function(){
         },
         exec:function(rs){
             if(rs){
-                if(this.view.el.parentNode)return;
+                if(this.el.parentNode)return;
                 //添加
-                this.viewManager.replace(this.view,this.placeholder);
+                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
             }else{
-                if(!this.view.el.parentNode)return;
+                if(!this.el.parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.view);
+                this.el.parentNode.replaceChild(this.placeholder,this.el);
             }
         }
-    },['ViewManager','Transitions'])
+    },['DOMHelper','Transitions'])
     /**
      * x-if的范围版本
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
      */
     .directive('if-start',{
         endTag : 'if-end',
-        onCreate:function(viewManager){
-            this.viewManager = viewManager;
-            this.placeholder = viewManager.createPlaceholder('-- directive [if] placeholder --');
+        onCreate:function(DOMHelper){
+            this.DOMHelper = DOMHelper;
+            this.placeholder = document.createComment('-- directive [if] placeholder --');
         },
         onInit:function(){
-            Scanner.scan(this.view,this.component);
+            Scanner.scan(this.__nodes,this.component);
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
             if(rs){
-                if(this.view.__nodes[0].parentNode)return;
+                if(this.__nodes[0].parentNode)return;
                 //添加
-                this.viewManager.replace(this.view,this.placeholder);
+                this.DOMHelper.replace(this.placeholder,this.__nodes);
             }else{
-                if(!this.view.__nodes[0].parentNode)return;
+                if(!this.__nodes[0].parentNode)return;
                 //删除
-                this.viewManager.replace(this.placeholder,this.view);
+                var p = this.__nodes[0].parentNode;
+                p.insertBefore(this.placeholder,this.__nodes[0]);
+                this.DOMHelper.detach(this.__nodes);
             }
         }
-    },['ViewManager'])
+    },['DOMHelper'])
     /**
      * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
      */
     .directive('cloak',{
         onCreate:function(){
-            var className = this.view.attr('class');
+            var className = this.attr('class');
             if(!className){
-                LOGGER.warn("can not find attribute[class] of element["+this.view.name+"] which directive[cloak] on");
+                LOGGER.warn("can not find attribute[class] of element["+this.el.tagName+"] which directive[cloak] on");
                 return;
             }
             className = className.replace('x-cloak','');
@@ -4077,9 +3826,9 @@ impex.service('Transitions',new function(){
             this.__cn = className;
         },
         onActive:function(){
-            updateCloakAttr(this.component,this.view.el,this.__cn);
-            var curr = this.view.attr('class').replace('x-cloak','');
-            this.view.attr('class',curr);
+            updateCloakAttr(this.component,this.el,this.__cn);
+            var curr = this.attr('class').replace('x-cloak','');
+            this.attr('class',curr);
         }
     })
 
@@ -4090,33 +3839,33 @@ impex.service('Transitions',new function(){
      */
     .directive('model',{
         onCreate:function(){
-            var el = this.view.el;
+            var el = this.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
 
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
-                    var type = this.view.attr('type');
+                    var type = this.attr('type');
                     switch(type){
                         case 'radio':
-                            this.view.on('click',null,this.changeModel.bind(this));
+                            this.on('click',null,this.changeModel.bind(this));
                             break;
                         case 'checkbox':
-                            this.view.on('click',null,this.changeModelCheck.bind(this));
+                            this.on('click',null,this.changeModelCheck.bind(this));
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.view.on(hack,null,this.changeModel.bind(this));
+                            this.on(hack,null,this.changeModel.bind(this));
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.view.on('change',null,this.changeModelSelect.bind(this));
+                        this.on('change',null,this.changeModelSelect.bind(this));
                     }else{
-                        this.view.on('change',null,this.changeModel.bind(this));
+                        this.on('change',null,this.changeModel.bind(this));
                     }
                     
                     break;
@@ -4190,33 +3939,33 @@ impex.service('Transitions',new function(){
         }
     }
     function eachModel(){
-        this.onCreate = function(viewManager,ts){
+        this.onCreate = function(DOMHelper,ts){
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
-            this.viewManager = viewManager;
+            this.DOMHelper = DOMHelper;
             this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
-            this.__view = this.view;
+            // this.__view = this.view;
             this.cache = [];
             this.__comp = this.component;
 
-            if(this.view.el){
-                this.__tagName = this.view.el.tagName.toLowerCase();
+            if(this.el){
+                this.__tagName = this.el.tagName.toLowerCase();
                 this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
-                this.cacheable = this.view.attr('cache')==='false'?false:true;
+                this.cacheable = this.attr('cache')==='false'?false:true;
             }else{
-                this.cacheable = this.view.__nodes[0].getAttribute('cache')==='false'?false:true;
+                this.cacheable = this.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
             this.subComponents = [];//子组件，用于快速更新each视图，提高性能
 
             this.cacheSize = 20;
 
-            this.step = this.view.el?this.view.attr('step'):this.view.__nodes[0].getAttribute('step');
+            this.step = this.el?this.attr('step'):this.__nodes[0].getAttribute('step');
 
-            this.over = this.view.el?this.view.attr('over'):this.view.__nodes[0].getAttribute('over');
+            this.over = this.el?this.attr('over'):this.__nodes[0].getAttribute('over');
 
-            var transition = this.view.el?this.view.attr('transition'):this.view.__nodes[0].getAttribute('transition');
+            var transition = this.el?this.attr('transition'):this.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
                 this.ts = ts;
@@ -4277,29 +4026,29 @@ impex.service('Transitions',new function(){
             
             this.lastDS = this.ds;
             
-            this.placeholder = this.viewManager.createPlaceholder('-- directive [each] placeholder --');
-            this.viewManager.insertBefore(this.placeholder,this.view);
+            this.placeholder = document.createComment('-- directive [each] placeholder --');
+            this.DOMHelper.insertBefore([this.placeholder],this.__nodes[0]);
 
-            this.fragmentPlaceholder = this.viewManager.createPlaceholder('-- fragment placeholder --');
+            this.fragmentPlaceholder = document.createComment('-- fragment placeholder --');
             
-            this.fragment.appendChild(this.fragmentPlaceholder.__nodes[0]);
+            this.fragment.appendChild(this.fragmentPlaceholder);
 
             //parse props
-            this.__props = parseProps(this.__view,this.component);
+            this.__props = parseProps(this.__nodes,this.component);
 
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
             this.destroy();
         }
-        function parseProps(view,comp){
+        function parseProps(nodes,comp){
             var props = {
                 str:{},
                 type:{},
                 sync:{}
             };
             var ks = ['cache','over','step','transition'];
-            var el = view.__nodes[0];
+            var el = nodes[0];
             for(var i=el.attributes.length;i--;){
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
@@ -4363,7 +4112,7 @@ impex.service('Transitions',new function(){
                     var tmp = this.cache.splice(0,diffSize);
                     for(var i=0;i<tmp.length;i++){
                         this.subComponents.push(tmp[i]);
-                        this.viewManager.insertBefore(tmp[i].view,this.placeholder);
+                        this.DOMHelper.insertBefore(tmp[i].__nodes,this.placeholder);
                     }
                     var restSize = diffSize - tmp.length;
                 }
@@ -4431,18 +4180,23 @@ impex.service('Transitions',new function(){
         }
         this.createSubComp = function(){
             var comp = this.__comp;
-            var subComp = null;
-            var target = this.viewManager.createPlaceholder('');
-            this.viewManager.insertBefore(target,this.placeholder);
+            var subComp = null;            
             //视图
-            var copy = this.__view.clone();
+            var copyNodes = [];
+            for(var i=this.__nodes.length;i--;){
+                var c = this.__nodes[i].cloneNode(true);
+                copyNodes.unshift(c);
+            }
 
             //创建子组件
             if(this.__isComp){
-                subComp = comp.createSubComponentOf(this.__tagName,copy,target);
+                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                subComp = comp.createSubComponentOf(copyNodes[0]);
             }else{
-                subComp = comp.createSubComponent(copy,target);
+                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                subComp = comp.createSubComponent(copyNodes);
             }
+            subComp.suspend(true);
             this.subComponents.push(subComp);
 
             //bind props
@@ -4454,12 +4208,8 @@ impex.service('Transitions',new function(){
                 //watch props
                 keys.forEach(function(key){
                     if(tmp.varTree[key].isFunc)return;
-                    var fromPropKey = false;
-                    if(key.indexOf('.this.props')===0){
-                        fromPropKey = key.replace(/^\.this\.props\.?/,'');
-                    }
-                    
-                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs,fromPropKey);
+
+                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs);
                     comp.__watchProps.push(prop);
                 });
                 subComp.state[n] = rs;
@@ -4666,7 +4416,7 @@ impex.service('Transitions',new function(){
      * 
      * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
      */
-    impex.directive('each',each,['ViewManager','Transitions']);
+    impex.directive('each',each,['DOMHelper','Transitions']);
 
 
     var eachStart = new eachModel();
@@ -4680,7 +4430,7 @@ impex.service('Transitions',new function(){
      * 
      * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
      */
-    impex.directive('each-start',eachStart,['ViewManager']);
+    impex.directive('each-start',eachStart,['DOMHelper']);
 }(impex);
 impex.filter('json',{
     to:function(){

@@ -19,7 +19,7 @@
                 restrict:{
                     parents:'x-span'
                 },
-                template:"<button >{{=CONTENT}}</button>"
+                template:"<button ><slot></slot></button>"
             });       
 
             impex.component('x-div',{

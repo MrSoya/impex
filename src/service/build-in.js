@@ -6,7 +6,7 @@
  * 视图管理服务提供额外的视图操作，可以用在指令或组件中。
  * 使用该服务，只需要注入即可
  */
-impex.service('ViewManager',ViewManager);
+impex.service('DOMHelper',DOMHelper);
 
 
 /**

@@ -1,156 +1,28 @@
 /**
- * @classdesc 视图类，提供视图相关操作。所有影响显示效果的都属于视图操作，
- * 比如show/hide/css/animate等等
- * 无法直接创建实例，会被自动注入到组件或者指令中
- * 一个组件或者指令只会拥有一个视图
+ * @classdesc 视图接口，提供视图相关操作。组件和指令实现此接口
  * @class
  */
-function View (el,target,nodes,placeholder) {
-	/**
-	 * 对可视元素的引用，在DOM中就是HTMLElement，
-	 * 在绝大多数情况下，都不应该直接使用该属性
-	 * @type {Object}
-	 */
-	this.el = el;
-
-	this.__nodes = nodes;
+function View () {
 	this.__evMap = {};
-	this.__target = target;
-	this.__placeholder = placeholder || target;
 	/**
-	 * 对视图范围内可视元素的引用，在DOM中就是HTMLElement
-	 * @type {Object}
+	 * 对视图节点的引用。如果组件/指令拥有多个顶级节点，该属性为null
+	 * @type {HTMLElement | null}
 	 */
-	this.refs = {};
+	this.el = null;
 }
 View.prototype = {
-	__init:function(tmpl,component){
-		//解析属性
-		var propMap = this.__target.attributes;
-		var innerHTML = this.__target.innerHTML;
-
-		var compileStr = tmplExpFilter(tmpl,innerHTML,propMap);
-
-		if(component.onBeforeCompile){
-            compileStr = component.onBeforeCompile(compileStr);
-        }
-
-		var nodes = DOMViewProvider.compile(compileStr,this.__placeholder);
-
-		this.__nodes = nodes;
-		this.el = nodes.length===1 && nodes[0].nodeType===1?nodes[0]:null;
-
-		if(!nodes || nodes.length < 1){
-			LOGGER.error('invalid template "'+tmpl+'" of component['+component.name+']');
-			return false;
-		}
-		if(nodes.length > 1){
-			LOGGER.warn('more than 1 root node of component['+component.name+']');
-		}
-
-		//check props
-		var requires = {};
-		var propTypes = component.propTypes;
-		if(propTypes){
-			for(var k in propTypes){
-				var type = propTypes[k];
-				if(type.require){
-					requires[k] = type;
-				}
-			}
-		}
-
-		if(propMap){
-			//bind props
-			for(var i=propMap.length;i--;){
-				var k = propMap[i].name.toLowerCase();
-				var v = propMap[i].value;
-				if(k == ATTR_REF_TAG){
-					var expNode = Scanner.getExpNode(v,component);
-					var calcVal = expNode && Renderer.calcExpNode(expNode);
-					component.parent.refs[calcVal || v] = component;
-					continue;
-				}
-
-				var instance = null;
-				if(REG_CMD.test(k)){
-					var c = k.replace(CMD_PREFIX,'');
-					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-					if(CPDI > -1)c = c.substring(0,CPDI);
-					//如果有对应的处理器
-					if(DirectiveFactory.hasTypeOf(c)){
-						instance = DirectiveFactory.newInstanceOf(c,this.el,component,k,v);
-					}
-				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
-					instance = DirectiveFactory.newInstanceOf('on',this.el,component,k,v);
-				}else{
-					if(!component.parent)continue;
-
-					handleProps(k,v,requires,propTypes,component);
-				}
-
-				if(instance){
-					instance.init();
-				}
-			}
-		}
-
-		//check requires
-		var ks = Object.keys(requires);
-		if(ks.length > 0){
-			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
-			return;
-		}
-
-		//组件已经直接插入DOM中
-		this.__placeholder = null;
-	},
-	__display:function(component){
-		if(!this.__placeholder ||!this.__placeholder.parentNode)return;
-
-		var fragment = null;
-		if(this.__nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<this.__nodes.length;i++){
-				fragment.appendChild(this.__nodes[i]);
-			}
-		}else{
-			fragment = this.__nodes[0];
-		}
-
-		this.__placeholder.parentNode.replaceChild(fragment,this.__placeholder);
-
-		fragment = null;
-		this.__placeholder = null;
-	},
-	__destroy:function(component){
+	__destroy:function(){
 		for(var k in this.__evMap){
 			var events = this.__evMap[k];
 	        for(var i=events.length;i--;){
 	            var pair = events[i];
 	            var evHandler = pair[1];
 
-	            for(var j=this.__nodes.length;j--;){
-	            	if(this.__nodes[j].nodeType !== 1)continue;
-	            	this.__nodes[j].removeEventListener(k,evHandler,false);
-	            }
+	            this.el.removeEventListener(k,evHandler,false);
 	        }
 		}
 
-		var p = this.__nodes[0].parentNode;
-		if(p){
-			if(this.__nodes[0].__impex__view)
-				this.__nodes[0].__impex__view = null;
-			for(var i=this.__nodes.length;i--;){
-				this.__nodes[i].parentNode && p.removeChild(this.__nodes[i]);
-			}
-		}
-
-		if(this.__target){
-			if(this.__target.parentNode)
-				this.__target.parentNode.removeChild(this.__target);
-			this.__target = null;
-		}
+		DOMHelper.detach(this.__nodes);
 	},
 	__suspend:function(component,hook){
 		var p = this.__nodes[0].parentNode;
@@ -175,7 +47,7 @@ View.prototype = {
 		if(!this.el)return;
 
 		var originExp = exp;
-		var comp = this.__comp;
+		var comp = this instanceof Component?this:this.component;
 		var tmpExpOutside = '';
 		var fnOutside = null;
 		var evHandler = function(e){
@@ -227,20 +99,6 @@ View.prototype = {
 	            this.el.removeEventListener(type,evHandler,false);
             }
         }
-	},
-	/**
-	 * 复制当前视图
-	 * @return {View}
-	 */
-	clone:function(){
-		var tmp = [];
-		for(var i=this.__nodes.length;i--;){
-			var c = this.__nodes[i].cloneNode(true);
-			tmp.unshift(c);
-		}
-		
-		var copy = new View(tmp.length===1&&tmp[0].nodeType===1?tmp[0]:null,null,tmp);
-		return copy;
 	},
 	/**
 	 * 显示视图
@@ -367,67 +225,3 @@ View.prototype = {
 		}
 	}//fn over
 }
-
-function tmplExpFilter(tmpl,bodyHTML,propMap){
-	tmpl = tmpl.replace(REG_TMPL_EXP,function(a,attrName){
-		var attrName = attrName.replace(/\s/mg,'');
-		if(attrName === 'CONTENT'){
-            return bodyHTML||'';
-        }
-		return '';
-	});
-	return tmpl;
-}
-
-function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k])return;
-	var checkType = propTypes[k].type;
-	checkType = checkType instanceof Array?checkType:[checkType];
-	var vType = typeof v;
-	if(checkType.indexOf(vType) < 0){
-		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
-	}
-}
-
-function handleProps(k,v,requires,propTypes,component){
-	// .xxxx
-	if(k[0] !== PROP_TYPE_PRIFX){
-		if(propTypes){
-			delete requires[k];
-			checkPropType(k,v,propTypes,component);
-		}
-		component.state[k] = v;
-		return;
-	}
-
-	// xxxx
-	var n = k.substr(1);
-	var tmp = lexer(v);
-	var rs = Renderer.evalExp(component.parent,tmp);
-
-	//check sync
-	if(PROP_SYNC_SUFX_EXP.test(n)){
-		n = n.replace(PROP_SYNC_SUFX_EXP,'');
-
-		var keys = Object.keys(tmp.varTree);
-		//watch props
-		keys.forEach(function(key){
-			if(tmp.varTree[key].isFunc)return;
-			
-			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
-			component.parent.__watchProps.push(prop);
-		});
-	}
-	if(propTypes){
-		delete requires[n];
-		checkPropType(n,rs,propTypes,component);
-	}
-	if(rs instanceof Function){
-		component[n] = rs;
-		return;
-	}
-	//immutable
-	var obj = Util.immutable(rs);
-	component.state[n] = obj;
-}
-

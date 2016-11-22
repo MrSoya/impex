@@ -105,12 +105,12 @@
             });
             impex.directive('keydown',{
                 onCreate:function(){
-                    this.view.on('keydown',this.value);
+                    this.on('keydown',this.value);
                 }
             })
             impex.directive('checked',{
                 observe:function(rs){
-                    this.view.el.checked = rs;
+                    this.el.checked = rs;
                 }
             })
 

@@ -55,15 +55,18 @@ Util.ext(_DirectiveFactory.prototype,{
 		Util.ext(rs,this.types[type].props);
 
 		if(node.__impex__view){
-			rs.view = node.__impex__view;
+			var tmp = node.__impex__view;
+			rs.el = tmp[0];
+			rs.__nodes = tmp[1];
 		}else{
 			var el = node,nodes = [node];
 			if(Util.isArray(node)){
 				nodes = node;
 				el = node.length>1?null:node[0];
 			}
-			rs.view = new View(el,null,nodes);
-			node.__impex__view = rs.view;
+			rs.el = el;
+			rs.__nodes = nodes;
+			node.__impex__view = [el,nodes];
 		}
 
 		if(params){
@@ -73,24 +76,14 @@ Util.ext(_DirectiveFactory.prototype,{
 			rs.filter = filter;
 		}
 
-		rs.view.__comp = component;
-
 		component.directives.push(rs);
 		rs.component = component;
 
-		if(rs.view){
-			rs.view.__nodes[0].removeAttribute(rs.name);
-			if(rs.endTag){
-                var lastNode = rs.view.__nodes[rs.view.__nodes.length-1];
-                lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
-            }
-		}
-
-		if(rs.events){
-			for(var k in rs.events){
-				rs.on(k,rs.events[k]);
-			}
-		}
+		rs.__nodes[0].removeAttribute(rs.name);
+		if(rs.endTag){
+            var lastNode = rs.__nodes[rs.__nodes.length-1];
+            lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
+        }
 		
 		this._super.createCbk.call(this,rs,type);
 

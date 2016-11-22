@@ -7,7 +7,6 @@
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
 	var REG_EXP = /\{\{#?(.*?)\}\}/img,
-		REG_TMPL_EXP = /\{\{=(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
 	var PROP_TYPE_PRIFX = '.';
@@ -45,8 +44,8 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,30,0],
-	        state:'beta3',
+	        v:[0,31,0],
+	        state:'beta',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -70,7 +69,6 @@
 			EXP_END_TAG = delimiters[1] || '}}';
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
-			REG_TMPL_EXP = new RegExp(EXP_START_TAG+'=(.*?)'+EXP_END_TAG,'img');
 
 			LOGGER = cfg.logger || new function(){
 			    this.log = function(){}
@@ -91,8 +89,8 @@
 		 * @return this
 		 */
 		this.component = function(name,param,services){
-			if(typeof(param)!='string' && !param.template && !param.templateURL){
-				LOGGER.error("can not find property 'template' or 'templateURL' of component '"+name+"'");
+			if(typeof(param)!='string' && !param.template){
+				LOGGER.error("can not find property 'template' of component '"+name+"'");
 				return;
 			}
 			ComponentFactory.register(name,param,services);
@@ -148,16 +146,18 @@
 
 		/**
 		 * 对单个组件进行测试渲染
-		 * @param  {String} viewId template id
 		 */
-		this.unitTest = function(viewId){
+		this.unitTest = function(compName,entry){
 			window.onload = function(){
 	            'use strict';
-	            var model = document.querySelector('script[type="javascript/impex-component"]');
-	            model = window.eval(model.innerText);
-	            var test = document.getElementById(viewId);
-	            document.body.innerHTML += test.innerHTML;
-	            impex.render(document.body,model);
+	            
+	            var path = location.href.substr(location.href.lastIndexOf('/'));
+	            //register
+	            impex.component(compName,'.'+path);
+	            // var tmpl = document.querySelector('template');
+	            // document.body.innerHTML += tmpl.innerHTML;
+	            //render
+	            impex.render(document.querySelector(entry));
 	        }
 		}
 
@@ -168,7 +168,7 @@
 		 * 	...
 		 * 	impex.render(document.getElementById('entry')...)
 		 * </pre>
-		 * 如果DOM元素本身并不是组件,系统会创建一个虚拟组件，也就是说
+		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
 		 * impex总会从渲染一个组件作为一切的开始
 		 * @param  {HTMLElement} element DOM节点，可以是组件节点
 		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
@@ -187,7 +187,7 @@
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance(element,null,param);
+				comp = ComponentFactory.newInstance([element],param);
 			}
 
 			if(comp.onCreate){

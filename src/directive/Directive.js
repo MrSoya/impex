@@ -13,6 +13,7 @@
  * @class 
  */
 function Directive (name,value) {
+	View.call(this);
 	/**
 	 * 指令的字面值
 	 */
@@ -35,10 +36,6 @@ function Directive (name,value) {
 	 * 指令所在的组件
 	 */
 	this.component;
-	/**
-	 * 指令所在的目标视图
-	 */
-	this.view;
 
 	/**
 	 * 是否终结<br/>
@@ -63,6 +60,7 @@ function Directive (name,value) {
 	 */
 	this.priority = 0;
 }
+Util.inherits(Directive,View);
 Util.ext(Directive.prototype,{
 	init:function(){
 		if(this.__state == Component.state.inited){
@@ -109,9 +107,8 @@ Util.ext(Directive.prototype,{
 	destroy:function(){
 		LOGGER.log(this,'destroy');
 
-		this.view.__destroy(this);
+		this.__destroy(this);
 
-		this.view = 
 		this.component = 
 		this.params = 
 		this.filter = 
