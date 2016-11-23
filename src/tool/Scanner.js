@@ -147,7 +147,7 @@ var Scanner = new function() {
 				}
 
 				//解析组件
-				if(ComponentFactory.hasTypeOf(tagName)){
+				if(component.name!==tagName && ComponentFactory.hasTypeOf(tagName)){
 					var pr = getRestrictParent(component);
 					if(pr && pr.restrict.children){
 						var children = pr.restrict.children.split(',');

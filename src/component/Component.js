@@ -210,7 +210,7 @@ Util.ext(Component.prototype,{
 				//init
 				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
-				that.__init(tmpl);
+				that.__init();
 				that.display();
 			});
 			
@@ -218,11 +218,11 @@ Util.ext(Component.prototype,{
 			if(this.template){
 				ComponentFactory.parse(this.template,this);
 			}
-			this.__init(this.template);
+			this.__init();
 		}
 		return this;
 	},
-	__init:function(tmplStr){
+	__init:function(){
 		Scanner.scan(this.__nodes,this);
 
 		LOGGER.log(this,'inited');
@@ -235,7 +235,9 @@ Util.ext(Component.prototype,{
 		this.__state = Component.state.inited;
 
 		if(this.onInit){
-			this.onInit(tmplStr);
+			var services = ComponentFactory.getServices(this,this.name);
+			
+			services ? this.onInit.apply(this,services) : this.onInit();
 		}
 
 		//init children
@@ -254,11 +256,6 @@ Util.ext(Component.prototype,{
 	display:function(){
 		if(this.__state === Component.state.displayed)return;
 		if(this.__state === Component.state.created)return;
-
-		if(this.name){
-			this.el.innerHTML = '';
-			DOMHelper.attach(this.el,this.__nodes);
-		}
 
 		Renderer.render(this);
 

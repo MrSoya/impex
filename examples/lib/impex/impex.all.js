@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-22
+ * last build: 2016-11-23
  */
 !function (global) {
 	'use strict';
@@ -980,7 +980,7 @@ var Scanner = new function() {
 				}
 
 				//解析组件
-				if(ComponentFactory.hasTypeOf(tagName)){
+				if(component.name!==tagName && ComponentFactory.hasTypeOf(tagName)){
 					var pr = getRestrictParent(component);
 					if(pr && pr.restrict.children){
 						var children = pr.restrict.children.split(',');
@@ -2147,7 +2147,7 @@ Util.ext(Component.prototype,{
 				//init
 				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
-				that.__init(tmpl);
+				that.__init();
 				that.display();
 			});
 			
@@ -2155,11 +2155,11 @@ Util.ext(Component.prototype,{
 			if(this.template){
 				ComponentFactory.parse(this.template,this);
 			}
-			this.__init(this.template);
+			this.__init();
 		}
 		return this;
 	},
-	__init:function(tmplStr){
+	__init:function(){
 		Scanner.scan(this.__nodes,this);
 
 		LOGGER.log(this,'inited');
@@ -2172,7 +2172,9 @@ Util.ext(Component.prototype,{
 		this.__state = Component.state.inited;
 
 		if(this.onInit){
-			this.onInit(tmplStr);
+			var services = ComponentFactory.getServices(this,this.name);
+			
+			services ? this.onInit.apply(this,services) : this.onInit();
 		}
 
 		//init children
@@ -2191,11 +2193,6 @@ Util.ext(Component.prototype,{
 	display:function(){
 		if(this.__state === Component.state.displayed)return;
 		if(this.__state === Component.state.created)return;
-
-		if(this.name){
-			this.el.innerHTML = '';
-			DOMHelper.attach(this.el,this.__nodes);
-		}
 
 		Renderer.render(this);
 
@@ -2898,18 +2895,23 @@ Factory.prototype = {
 	hasTypeOf : function(type){
 		return type in this.types;
 	},
+	getServices : function(comp,type){
+		var services = null;
+		if(this.types[type] && this.types[type].services){
+			services = [];
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
+				services.push(serv);
+			}
+		}
+
+		return services;
+	},
 	//子类调用
 	createCbk : function(comp,type){
 		if(comp.onCreate){
 			//inject
-			var services = null;
-			if(this.types[type].services){
-				services = [];
-				for(var i=0;i<this.types[type].services.length;i++){
-					var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
-					services.push(serv);
-				}
-			}
+			var services = this.getServices(comp,type);
 			
 			services ? comp.onCreate.apply(comp,services) : comp.onCreate();
 		}
@@ -2930,21 +2932,20 @@ Util.ext(_ComponentFactory.prototype,{
 	},
 	//parse component
 	parse:function(tmpl,component){
+		var el = component.el;
 		//解析属性
-		var propMap = component.el.attributes;
-		var innerHTML = component.el.innerHTML;
+		var propMap = el.attributes;
+		var innerHTML = el.innerHTML;
 
-		var compileStr = slotHandler(tmpl,innerHTML);
-
-		var cssStr = null;
-		if(!this.types[component.name].parseCache){
-			var tmp = peelCSS(compileStr);
+		var cssStr = null,compileStr = null;
+		if(!this.types[component.name].tmplCache){
+			var tmp = peelCSS(tmpl);
 			compileStr = tmp[1];
 			cssStr = tmp[0];
 			cssStr = cssHandler(component.name,cssStr);
 
-			this.types[component.name].parseCache = compileStr;
-
+			this.types[component.name].tmplCache = compileStr;
+			
 			//attach style
 			if(cssStr.trim().length>0){
 				var target = document.head.children[0];
@@ -2956,11 +2957,13 @@ Util.ext(_ComponentFactory.prototype,{
 				}
 			}			
 		}else{
-			compileStr = this.types[component.name].parseCache;
+			compileStr = this.types[component.name].tmplCache;
 		}
-
+		compileStr = slotHandler(compileStr,innerHTML);
 		var nodes = DOMHelper.compile(compileStr);
-		component.__nodes = nodes;
+
+		el.innerHTML = '';
+		DOMHelper.attach(el,nodes);
 
 		//check props
 		var requires = {};
@@ -3047,6 +3050,7 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
 		rs.el = target;
+		rs.__nodes = [target];
 
 		var state = this.types[type].state;
 		if(typeof state == 'string'){
@@ -3432,8 +3436,7 @@ var TransitionFactory = {
 		 */
 		this.component = function(name,param,services){
 			if(typeof(param)!='string' && !param.template){
-				LOGGER.error("can not find property 'template' of component '"+name+"'");
-				return;
+				LOGGER.warn("can not find property 'template' of component '"+name+"'");
 			}
 			ComponentFactory.register(name,param,services);
 			return this;
@@ -3601,6 +3604,35 @@ impex.service('Transitions',new function(){
 		type = type||'x';
 		return TransitionFactory.get(type,component);
 	}
+});
+
+impex.service('Msg',new function(){
+	var messageMap = {};
+    //发送消息
+    this.pub = function(){
+        var channel = arguments[0];
+        var params = [this.host];
+        for (var i =1 ; i < arguments.length; i++) {
+            params.push(arguments[i]);
+        }
+        setTimeout(function(){
+            if(messageMap[channel]){
+                var mq = messageMap[channel];
+                if(mq)
+                for(var i=0;i<mq.length;i++){
+                    var suber = mq[i];
+                    suber[1].apply(suber[0],params);
+                }
+            }
+        },0);
+    }
+    //订阅消息
+    this.sub = function(channel,handler){
+        if(!messageMap[channel]){
+            messageMap[channel] = [];
+        }
+        messageMap[channel].push([this.host,handler]);
+    }
 });
 /**
  * 内建指令

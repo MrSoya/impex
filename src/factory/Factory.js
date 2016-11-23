@@ -42,18 +42,23 @@ Factory.prototype = {
 	hasTypeOf : function(type){
 		return type in this.types;
 	},
+	getServices : function(comp,type){
+		var services = null;
+		if(this.types[type] && this.types[type].services){
+			services = [];
+			for(var i=0;i<this.types[type].services.length;i++){
+				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
+				services.push(serv);
+			}
+		}
+
+		return services;
+	},
 	//子类调用
 	createCbk : function(comp,type){
 		if(comp.onCreate){
 			//inject
-			var services = null;
-			if(this.types[type].services){
-				services = [];
-				for(var i=0;i<this.types[type].services.length;i++){
-					var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
-					services.push(serv);
-				}
-			}
+			var services = this.getServices(comp,type);
 			
 			services ? comp.onCreate.apply(comp,services) : comp.onCreate();
 		}

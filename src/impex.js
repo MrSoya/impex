@@ -90,8 +90,7 @@
 		 */
 		this.component = function(name,param,services){
 			if(typeof(param)!='string' && !param.template){
-				LOGGER.error("can not find property 'template' of component '"+name+"'");
-				return;
+				LOGGER.warn("can not find property 'template' of component '"+name+"'");
 			}
 			ComponentFactory.register(name,param,services);
 			return this;

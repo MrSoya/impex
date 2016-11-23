@@ -9,25 +9,32 @@
             异步加载的远程组件
         </p>
 
-        <x-button id="'xbtn'">
+        <x-button id="xbtn">
         </x-button>
 
         <p>
-            <x-button id="'xbtn2'">
+            <x-button id="xbtn2">
                 按钮2{{times}}
             </x-button>
         </p>
-        
 
         <!-- 需要服务器环境 -->
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.services.js"></script>
         <script type="text/javascript">
         
             //自定义组件
-            impex.component('x-button','x-button.html');
+            impex.component('x-button','x-button.html',['Msg']);
 
             //渲染
-            impex.render(document.body);
+            var debug = impex.render(document.body,{
+                onCreate:function(imsg) {
+                    setTimeout(function(){
+                        imsg.pub('test',1,2,3,4)
+                    },1000);
+                    
+                }
+            },['Msg']);
             
         </script>
     </body>

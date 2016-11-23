@@ -13,21 +13,20 @@ Util.ext(_ComponentFactory.prototype,{
 	},
 	//parse component
 	parse:function(tmpl,component){
+		var el = component.el;
 		//解析属性
-		var propMap = component.el.attributes;
-		var innerHTML = component.el.innerHTML;
+		var propMap = el.attributes;
+		var innerHTML = el.innerHTML;
 
-		var compileStr = slotHandler(tmpl,innerHTML);
-
-		var cssStr = null;
-		if(!this.types[component.name].parseCache){
-			var tmp = peelCSS(compileStr);
+		var cssStr = null,compileStr = null;
+		if(!this.types[component.name].tmplCache){
+			var tmp = peelCSS(tmpl);
 			compileStr = tmp[1];
 			cssStr = tmp[0];
 			cssStr = cssHandler(component.name,cssStr);
 
-			this.types[component.name].parseCache = compileStr;
-
+			this.types[component.name].tmplCache = compileStr;
+			
 			//attach style
 			if(cssStr.trim().length>0){
 				var target = document.head.children[0];
@@ -39,11 +38,13 @@ Util.ext(_ComponentFactory.prototype,{
 				}
 			}			
 		}else{
-			compileStr = this.types[component.name].parseCache;
+			compileStr = this.types[component.name].tmplCache;
 		}
-
+		compileStr = slotHandler(compileStr,innerHTML);
 		var nodes = DOMHelper.compile(compileStr);
-		component.__nodes = nodes;
+
+		el.innerHTML = '';
+		DOMHelper.attach(el,nodes);
 
 		//check props
 		var requires = {};
@@ -130,6 +131,7 @@ Util.ext(_ComponentFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass);
 		rs.name = type;
 		rs.el = target;
+		rs.__nodes = [target];
 
 		var state = this.types[type].state;
 		if(typeof state == 'string'){

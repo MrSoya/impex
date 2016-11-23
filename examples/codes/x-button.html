@@ -7,7 +7,8 @@
                 border-bottom: 3px solid #1463F3;
                 display: inline-block;
             }
-            button{
+            a{
+                display:inline-block;
                 color: #fff;
                 padding: 1em 3em;
                 background-color: transparent;
@@ -15,19 +16,22 @@
             }
         </style>
         <style type="text/css">
-            button{
+            a{
                 border-right: 1px solid red;
             }
         </style>
-        <button id="{{id}}">
-            <slot >按钮{{times}}</slot>
-        </button>
+        <a>
+            <slot name="txt">按钮{{times}}</slot>
+        </a>
     </template>
     <!-- 模型  -->
     <script type="javascript/impex-component">
         (function(){
             return {
-                onInit:function(){
+                onInit:function(msg){
+                    msg.sub('test',function(){
+                        console.log(arguments)
+                    })
                     this.on('click','tip()');
                 },
                 tip : function(){
@@ -36,7 +40,7 @@
                 state:{
                     times:0
                 }
-            }
+            };
         })();
     </script>
     <!-- 单元测试  -->

@@ -20,38 +20,40 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-a',{
-                replace:false,
-                hi:function(){
-                    this.broadcast('hello','hi...boys');
+                onCreate:function(msg){
+                    this.msg = msg;
                 },
-                template:"<div><button :click='hi()'>say hi...</button><br>{{=CONTENT}}</div>"
-            });
+                hi:function(){
+                    this.msg.pub('hello','hi...boys');
+                },
+                template:"<div><button :click='hi()'>say hi...</button><br><slot></slot></div>"
+            },['Msg']);
             impex.component('x-b',{
                 state:{
                     msg:""
                 },
-                events:{
-                    hello:function(target,msg){
+                onCreate:function(msg){
+                    msg.sub('hello',function(target,msg){
                         this.state.msg = msg +' from '+target.name;
-                        if(this.state.name === 'child1')return true;
-                    }
+                    });
                 },
-                template:"<div>i'm {{=name}} {{msg}} {{=CONTENT}}</div>"
-            });
+                template:"<div>i'm {{name}} {{msg}} <slot></slot></div>"
+            },['Msg']);
             impex.component('x-c',{
                 state:{
                     msg:""
                 },
-                hi:function(){
-                    this.emit('hello','hug me');
-                },
-                events:{
-                    hello:function(target,msg){
+                onCreate:function(msg){
+                    this.msg = msg;
+                    this.msg.sub('hello',function(target,msg){
                         this.state.msg = msg +' from '+target.name;
-                    }
+                    });
+                },
+                hi:function(){
+                    this.msg.pub('hello','hug me');
                 },
                 template:"<div>&nbsp;&nbsp;i'm grandson {{msg}} <button :click='hi()'>wanted a hug</button></div>"
-            });
+            },['Msg']);
 
             //渲染
             impex.render(document.body);
