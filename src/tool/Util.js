@@ -80,11 +80,25 @@ var Util = new function () {
             var txt = this.responseText;
             compiler.innerHTML = txt;
             var tmpl = compiler.querySelector('template').innerHTML;
-            var comp = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
+            var comp = compiler.querySelector('script#impex').innerHTML;
+            var links = compiler.querySelectorAll('link[rel="impex"]');
+
+            //register requires
+            for(var i=links.length;i--;){
+                var lk = links[i];
+                var type = lk.getAttribute('type');
+                var href = lk.getAttribute('href');
+                impex.component(type,href);
+            }
 
             var cbks = requirements[this.url];
+            var url = this.url;
             cbks.forEach(function(cbk){
-                var data = window.eval(comp);
+                var component = null;
+                eval('component = '+comp);//scope call
+                if(!component)
+                    LOGGER.error('can not find component defination of : '+url);
+                var data = component();
                 cbk([tmpl,data]);
             });
             requirements[this.url] = null;

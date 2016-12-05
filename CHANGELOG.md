@@ -1,4 +1,16 @@
 # Change Log
+## Version 0.31.1 - 2016/12/5
+### 新增
+* x-else 指令
+* 支持连接方式加载依赖组件
+&lt;link href="component.html" type="x-comp" rel="impex" /&gt;
+
+### 更新
+* Transition的bug
+* Transition新的回调 enter/postEnter,leave/postLeave
+* 表达式包含\时的bug
+
+
 ## Version 0.31.0 beta - 2016/11/22
 ### 新增
 * 局部样式

@@ -44,8 +44,8 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,31,0],
-	        state:'beta',
+	        v:[0,31,1],
+	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -146,17 +146,27 @@
 		/**
 		 * 对单个组件进行测试渲染
 		 */
-		this.unitTest = function(compName,entry){
+		this.unitTest = function(compName,entry,model){
 			window.onload = function(){
 	            'use strict';
 	            
-	            var path = location.href.substr(location.href.lastIndexOf('/'));
+                var subModel = component();
+                var tmpl = document.querySelector('template');
+                subModel.template = tmpl.innerHTML;
 	            //register
-	            impex.component(compName,'.'+path);
-	            // var tmpl = document.querySelector('template');
-	            // document.body.innerHTML += tmpl.innerHTML;
+	            impex.component(compName,subModel);
+
+	            //register requires
+	            var links = document.querySelectorAll('link[rel="impex"]');
+	            for(var i=links.length;i--;){
+	                var lk = links[i];
+	                var type = lk.getAttribute('type');
+	                var href = lk.getAttribute('href');
+	                impex.component(type,href);
+	            }
+
 	            //render
-	            impex.render(document.querySelector(entry));
+	            impex.render(document.querySelector(entry),model);
 	        }
 		}
 

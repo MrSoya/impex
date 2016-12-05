@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-11-23
+ * last build: 2016-12-05
  */
 !function (global) {
 	'use strict';
@@ -93,11 +93,25 @@ var Util = new function () {
             var txt = this.responseText;
             compiler.innerHTML = txt;
             var tmpl = compiler.querySelector('template').innerHTML;
-            var comp = compiler.querySelector('script[type="javascript/impex-component"]').innerHTML;
+            var comp = compiler.querySelector('script#impex').innerHTML;
+            var links = compiler.querySelectorAll('link[rel="impex"]');
+
+            //register requires
+            for(var i=links.length;i--;){
+                var lk = links[i];
+                var type = lk.getAttribute('type');
+                var href = lk.getAttribute('href');
+                impex.component(type,href);
+            }
 
             var cbks = requirements[this.url];
+            var url = this.url;
             cbks.forEach(function(cbk){
-                var data = window.eval(comp);
+                var component = null;
+                eval('component = '+comp);//scope call
+                if(!component)
+                    LOGGER.error('can not find component defination of : '+url);
+                var data = component();
                 cbk([tmpl,data]);
             });
             requirements[this.url] = null;
@@ -2056,7 +2070,7 @@ Util.ext(Component.prototype,{
 				val = JSON.stringify(val);
 			}else 
 			if(Util.isString(val)){
-				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+				val = '"'+val.replace(/\\/mg,'\\\\').replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
 			}
 			try{
 				eval(evalStr + '= '+ val);
@@ -2137,11 +2151,11 @@ Util.ext(Component.prototype,{
 			var that = this;
 			Util.loadComponent(this.__url,function(data){
 				var tmpl = data[0];
-
-				//cache
-				ComponentFactory.register(that.name,data[1]);
 				that.template = tmpl;
-
+				var model = data[1];
+				model.template = tmpl;
+				//cache
+				ComponentFactory.register(that.name,model);
 				ComponentFactory.initInstanceOf(that.name,that);
 
 				//init
@@ -2801,6 +2815,8 @@ Transition.prototype = {
 	enter:function(){
 		this.__start = 'enter';
 
+        this.__view.removeClass(this.__type + '-leave');
+
 		if(this.__css)
         	this.__view.addClass(this.__type + '-enter');
         //exec...
@@ -2808,34 +2824,53 @@ Transition.prototype = {
         	this.__direct.enter();
         }
         if(this.__hook.enter){
-        	this.__hook.enter.call(this.__direct,this.__enterDone.bind(this));
+        	this.__hook.enter.call(this.__direct);
         }
+
         if(this.__css){
-        	this.__view.el.offsetHeight;
-        	this.__view.removeClass(this.__type + '-enter');
+            this.__view.el.offsetHeight;
+            this.__view.removeClass(this.__type + '-enter');
         }
+        
 	},
 	__enterDone:function(){
-		
+		if(this.__direct.postEnter){
+            this.__direct.postEnter();
+        }
+        if(this.__hook.postEnter){
+            this.__hook.postEnter.call(this.__direct);
+        }
 	},
 	leave:function(){
 		this.__start = 'leave';
 
+        this.__view.removeClass(this.__type + '-leave');
+
 		if(this.__css)
         	this.__view.addClass(this.__type + '-leave');
         //exec...
-        if(this.__hook.leave){
-        	this.__leaveDone.__trans = this;
-        	this.__hook.leave.call(this.__direct,this.__leaveDone.bind(this));
+        if(this.__direct.leave){
+            this.__direct.leave();
         }
+        if(this.__hook.leave){
+        	this.__hook.leave.call(this.__direct);
+        }
+        
 	},
 	__leaveDone:function(){
-		if(this.__direct.leave){
-        	this.__direct.leave();
+		if(this.__direct.postLeave){
+            this.__direct.postLeave();
+        }
+        if(this.__hook.postLeave){
+            this.__hook.postLeave.call(this.__direct);
+        }
+        if(this.__css){
+            this.__view.el.offsetHeight;
+            this.__view.removeClass(this.__type + '-leave');
         }
 	},
 	__done:function(e){
-		if(e.elapsedTime < this.__longest)return;
+		if(e && e.elapsedTime < this.__longest)return;
         if(!this.__start)return;
 
         switch(this.__start){
@@ -2848,7 +2883,6 @@ Transition.prototype = {
         }
 
         this.__start = '';
-        this.__view.removeClass(this.__type + '-leave');
 	}
 };
 /**
@@ -2960,6 +2994,10 @@ Util.ext(_ComponentFactory.prototype,{
 			compileStr = this.types[component.name].tmplCache;
 		}
 		compileStr = slotHandler(compileStr,innerHTML);
+
+		if(component.onBeforeCompile)
+            compileStr = component.onBeforeCompile(compileStr);
+
 		var nodes = DOMHelper.compile(compileStr);
 
 		el.innerHTML = '';
@@ -2985,7 +3023,7 @@ Util.ext(_ComponentFactory.prototype,{
 				if(k == ATTR_REF_TAG){
 					var expNode = Scanner.getExpNode(v,component);
 					var calcVal = expNode && Renderer.calcExpNode(expNode);
-					component.parent.refs[calcVal || v] = component;
+					component.parent.comps[calcVal || v] = component;
 					continue;
 				}
 
@@ -3096,7 +3134,7 @@ function slotHandler(tmpl,innerHTML){
 
 function peelCSS(tmpl){
 	var rs = '';
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
         rs += str;
         return '';
     });
@@ -3105,7 +3143,7 @@ function peelCSS(tmpl){
 }
 
 function cssHandler(name,tmpl){
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
         return '<style>'+filterStyle(name,style)+'</style>';
     });
     return tmpl;
@@ -3135,7 +3173,7 @@ function checkPropType(k,v,propTypes,component){
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
-	if(checkType.indexOf(vType) < 0){
+	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
 		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
 	}
 }
@@ -3492,17 +3530,27 @@ var TransitionFactory = {
 		/**
 		 * 对单个组件进行测试渲染
 		 */
-		this.unitTest = function(compName,entry){
+		this.unitTest = function(compName,entry,model){
 			window.onload = function(){
 	            'use strict';
 	            
-	            var path = location.href.substr(location.href.lastIndexOf('/'));
+                var subModel = component();
+                var tmpl = document.querySelector('template');
+                subModel.template = tmpl.innerHTML;
 	            //register
-	            impex.component(compName,'.'+path);
-	            // var tmpl = document.querySelector('template');
-	            // document.body.innerHTML += tmpl.innerHTML;
+	            impex.component(compName,subModel);
+
+	            //register requires
+	            var links = document.querySelectorAll('link[rel="impex"]');
+	            for(var i=links.length;i--;){
+	                var lk = links[i];
+	                var type = lk.getAttribute('type');
+	                var href = lk.getAttribute('href');
+	                impex.component(type,href);
+	            }
+
 	            //render
-	            impex.render(document.querySelector(entry));
+	            impex.render(document.querySelector(entry),model);
 	        }
 		}
 
@@ -3730,7 +3778,7 @@ impex.service('Msg',new function(){
         enter:function(){
             this.exec(this.lastRs);
         },
-        leave:function(){
+        postLeave:function(){
             this.exec(this.lastRs);
         },
         exec:function(rs){
@@ -3773,8 +3821,7 @@ impex.service('Msg',new function(){
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate:function(DOMHelper,ts){
-            this.DOMHelper = DOMHelper;
+        onCreate:function(ts){
             this.placeholder = document.createComment('-- directive [if] placeholder --');
 
             var transition = this.attr('transition');
@@ -3785,6 +3832,69 @@ impex.service('Msg',new function(){
             this.exec(false);
         },
         onUpdate : function(rs){
+            if(this.elseD){
+                this.elseD.doUpdate(!rs);
+            }
+            if(this.component.__state === Component.state.suspend)return;
+            if(rs === this.lastRs && !this.el.parentNode)return;
+            this.lastRs = rs;
+
+            if(this.transition){
+                if(rs){
+                    this.transition.enter();
+                }else{
+                    this.transition.leave();
+                }
+            }else{
+                this.exec(rs);
+            }
+
+
+
+        },
+        enter:function(){
+            this.exec(this.lastRs);
+        },
+        postLeave:function(){
+            this.exec(this.lastRs);
+        },
+        exec:function(rs){
+            if(rs){
+                if(this.el.parentNode)return;
+                //添加
+                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
+            }else{
+                if(!this.el.parentNode)return;
+                //删除
+                this.el.parentNode.replaceChild(this.placeholder,this.el);
+            }
+        }
+    },['Transitions'])
+    /**
+     * 和x-if成对出现，单独出现无效。并且只匹配前一个if
+     * <br/>使用方式：<div x-if="exp"></div><div x-else></div>
+     */
+    .directive('else',{
+        onCreate:function(ts){
+            this.placeholder = document.createComment('-- directive [else] placeholder --');
+
+            //find if
+            var xif = this.component.directives[this.component.directives.length-2];
+            if(xif.name !== 'x-if'){
+                LOGGER.warn("can not find directive[x-if] to make a pair");
+                return;
+            }
+
+            xif.elseD = this;
+
+            var transition = this.attr('transition');
+            if(transition !== null){
+                this.transition = ts.get(transition,this);
+            }
+            this.lastRs = true;
+            this.exec(true);
+        },
+        doUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
@@ -3802,7 +3912,7 @@ impex.service('Msg',new function(){
         enter:function(){
             this.exec(this.lastRs);
         },
-        leave:function(){
+        postLeave:function(){
             this.exec(this.lastRs);
         },
         exec:function(rs){
@@ -3816,7 +3926,7 @@ impex.service('Msg',new function(){
                 this.el.parentNode.replaceChild(this.placeholder,this.el);
             }
         }
-    },['DOMHelper','Transitions'])
+    },['Transitions'])
     /**
      * x-if的范围版本
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
@@ -3872,7 +3982,7 @@ impex.service('Msg',new function(){
      * <br/>使用方式：<input x-model="model.prop">
      */
     .directive('model',{
-        onCreate:function(){
+        onActive:function(){
             var el = this.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
@@ -4184,7 +4294,7 @@ impex.service('Msg',new function(){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
                 
-                var data = subComp.state.__im__target || subComp.state;
+                var data = subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;
@@ -4195,10 +4305,11 @@ impex.service('Msg',new function(){
                     subComp.init();
                 }
                 subComp.display();
-                if(subComp.__state === "displayed")
+                if(subComp.__state === "displayed"){
                     Renderer.recurRender(subComp);
+                }
                 
-                // isSuspend &&　Builder.build(subComp);
+                
                 onDisplay(subComp);
             }
         }
@@ -4273,7 +4384,7 @@ impex.service('Msg',new function(){
                 subComp.onDisplay = function(){
                     this.transition.enter();
                 };
-                subComp.leave = function(){
+                subComp.postLeave = function(){
                     this.suspend(false);
                     this.__leaving = false;
                 }

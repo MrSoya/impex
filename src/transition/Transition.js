@@ -76,6 +76,8 @@ Transition.prototype = {
 	enter:function(){
 		this.__start = 'enter';
 
+        this.__view.removeClass(this.__type + '-leave');
+
 		if(this.__css)
         	this.__view.addClass(this.__type + '-enter');
         //exec...
@@ -83,34 +85,53 @@ Transition.prototype = {
         	this.__direct.enter();
         }
         if(this.__hook.enter){
-        	this.__hook.enter.call(this.__direct,this.__enterDone.bind(this));
+        	this.__hook.enter.call(this.__direct);
         }
+
         if(this.__css){
-        	this.__view.el.offsetHeight;
-        	this.__view.removeClass(this.__type + '-enter');
+            this.__view.el.offsetHeight;
+            this.__view.removeClass(this.__type + '-enter');
         }
+        
 	},
 	__enterDone:function(){
-		
+		if(this.__direct.postEnter){
+            this.__direct.postEnter();
+        }
+        if(this.__hook.postEnter){
+            this.__hook.postEnter.call(this.__direct);
+        }
 	},
 	leave:function(){
 		this.__start = 'leave';
 
+        this.__view.removeClass(this.__type + '-leave');
+
 		if(this.__css)
         	this.__view.addClass(this.__type + '-leave');
         //exec...
-        if(this.__hook.leave){
-        	this.__leaveDone.__trans = this;
-        	this.__hook.leave.call(this.__direct,this.__leaveDone.bind(this));
+        if(this.__direct.leave){
+            this.__direct.leave();
         }
+        if(this.__hook.leave){
+        	this.__hook.leave.call(this.__direct);
+        }
+        
 	},
 	__leaveDone:function(){
-		if(this.__direct.leave){
-        	this.__direct.leave();
+		if(this.__direct.postLeave){
+            this.__direct.postLeave();
+        }
+        if(this.__hook.postLeave){
+            this.__hook.postLeave.call(this.__direct);
+        }
+        if(this.__css){
+            this.__view.el.offsetHeight;
+            this.__view.removeClass(this.__type + '-leave');
         }
 	},
 	__done:function(e){
-		if(e.elapsedTime < this.__longest)return;
+		if(e && e.elapsedTime < this.__longest)return;
         if(!this.__start)return;
 
         switch(this.__start){
@@ -123,6 +144,5 @@ Transition.prototype = {
         }
 
         this.__start = '';
-        this.__view.removeClass(this.__type + '-leave');
 	}
 };

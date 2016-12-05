@@ -119,7 +119,7 @@ Util.ext(Component.prototype,{
 				val = JSON.stringify(val);
 			}else 
 			if(Util.isString(val)){
-				val = '"'+val.replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
+				val = '"'+val.replace(/\\/mg,'\\\\').replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
 			}
 			try{
 				eval(evalStr + '= '+ val);
@@ -200,11 +200,11 @@ Util.ext(Component.prototype,{
 			var that = this;
 			Util.loadComponent(this.__url,function(data){
 				var tmpl = data[0];
-
-				//cache
-				ComponentFactory.register(that.name,data[1]);
 				that.template = tmpl;
-
+				var model = data[1];
+				model.template = tmpl;
+				//cache
+				ComponentFactory.register(that.name,model);
 				ComponentFactory.initInstanceOf(that.name,that);
 
 				//init

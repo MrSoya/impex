@@ -41,6 +41,10 @@ Util.ext(_ComponentFactory.prototype,{
 			compileStr = this.types[component.name].tmplCache;
 		}
 		compileStr = slotHandler(compileStr,innerHTML);
+
+		if(component.onBeforeCompile)
+            compileStr = component.onBeforeCompile(compileStr);
+
 		var nodes = DOMHelper.compile(compileStr);
 
 		el.innerHTML = '';
@@ -66,7 +70,7 @@ Util.ext(_ComponentFactory.prototype,{
 				if(k == ATTR_REF_TAG){
 					var expNode = Scanner.getExpNode(v,component);
 					var calcVal = expNode && Renderer.calcExpNode(expNode);
-					component.parent.refs[calcVal || v] = component;
+					component.parent.comps[calcVal || v] = component;
 					continue;
 				}
 
@@ -177,7 +181,7 @@ function slotHandler(tmpl,innerHTML){
 
 function peelCSS(tmpl){
 	var rs = '';
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
         rs += str;
         return '';
     });
@@ -186,7 +190,7 @@ function peelCSS(tmpl){
 }
 
 function cssHandler(name,tmpl){
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<>]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
+	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
         return '<style>'+filterStyle(name,style)+'</style>';
     });
     return tmpl;
@@ -216,7 +220,7 @@ function checkPropType(k,v,propTypes,component){
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
-	if(checkType.indexOf(vType) < 0){
+	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
 		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
 	}
 }

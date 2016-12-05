@@ -94,7 +94,7 @@
         enter:function(){
             this.exec(this.lastRs);
         },
-        leave:function(){
+        postLeave:function(){
             this.exec(this.lastRs);
         },
         exec:function(rs){
@@ -137,8 +137,7 @@
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate:function(DOMHelper,ts){
-            this.DOMHelper = DOMHelper;
+        onCreate:function(ts){
             this.placeholder = document.createComment('-- directive [if] placeholder --');
 
             var transition = this.attr('transition');
@@ -149,6 +148,69 @@
             this.exec(false);
         },
         onUpdate : function(rs){
+            if(this.elseD){
+                this.elseD.doUpdate(!rs);
+            }
+            if(this.component.__state === Component.state.suspend)return;
+            if(rs === this.lastRs && !this.el.parentNode)return;
+            this.lastRs = rs;
+
+            if(this.transition){
+                if(rs){
+                    this.transition.enter();
+                }else{
+                    this.transition.leave();
+                }
+            }else{
+                this.exec(rs);
+            }
+
+
+
+        },
+        enter:function(){
+            this.exec(this.lastRs);
+        },
+        postLeave:function(){
+            this.exec(this.lastRs);
+        },
+        exec:function(rs){
+            if(rs){
+                if(this.el.parentNode)return;
+                //添加
+                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
+            }else{
+                if(!this.el.parentNode)return;
+                //删除
+                this.el.parentNode.replaceChild(this.placeholder,this.el);
+            }
+        }
+    },['Transitions'])
+    /**
+     * 和x-if成对出现，单独出现无效。并且只匹配前一个if
+     * <br/>使用方式：<div x-if="exp"></div><div x-else></div>
+     */
+    .directive('else',{
+        onCreate:function(ts){
+            this.placeholder = document.createComment('-- directive [else] placeholder --');
+
+            //find if
+            var xif = this.component.directives[this.component.directives.length-2];
+            if(xif.name !== 'x-if'){
+                LOGGER.warn("can not find directive[x-if] to make a pair");
+                return;
+            }
+
+            xif.elseD = this;
+
+            var transition = this.attr('transition');
+            if(transition !== null){
+                this.transition = ts.get(transition,this);
+            }
+            this.lastRs = true;
+            this.exec(true);
+        },
+        doUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
@@ -166,7 +228,7 @@
         enter:function(){
             this.exec(this.lastRs);
         },
-        leave:function(){
+        postLeave:function(){
             this.exec(this.lastRs);
         },
         exec:function(rs){
@@ -180,7 +242,7 @@
                 this.el.parentNode.replaceChild(this.placeholder,this.el);
             }
         }
-    },['DOMHelper','Transitions'])
+    },['Transitions'])
     /**
      * x-if的范围版本
      * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
@@ -236,7 +298,7 @@
      * <br/>使用方式：<input x-model="model.prop">
      */
     .directive('model',{
-        onCreate:function(){
+        onActive:function(){
             var el = this.el;
             this.toNum = el.getAttribute('number');
             this.debounce = el.getAttribute('debounce')>>0;
@@ -548,7 +610,7 @@
                     v.__im__extPropChain.push([this,vi,index]);
                 }
                 
-                var data = subComp.state.__im__target || subComp.state;
+                var data = subComp.state;
 
                 data[vi] = v;
                 data['$index'] = index++;
@@ -559,10 +621,11 @@
                     subComp.init();
                 }
                 subComp.display();
-                if(subComp.__state === "displayed")
+                if(subComp.__state === "displayed"){
                     Renderer.recurRender(subComp);
+                }
                 
-                // isSuspend &&　Builder.build(subComp);
+                
                 onDisplay(subComp);
             }
         }
@@ -637,7 +700,7 @@
                 subComp.onDisplay = function(){
                     this.transition.enter();
                 };
-                subComp.leave = function(){
+                subComp.postLeave = function(){
                     this.suspend(false);
                     this.__leaving = false;
                 }
