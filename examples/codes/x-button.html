@@ -25,8 +25,8 @@
         </a>
     </template>
     <!-- 模型  -->
-    <script type="javascript/impex-component">
-        (function(){
+    <script type="text/javascript" id="impex">
+        function component(){
             return {
                 onInit:function(msg){
                     msg.sub('test',function(){
@@ -41,7 +41,7 @@
                     times:0
                 }
             };
-        })();
+        }
     </script>
     <!-- 单元测试  -->
     <x-button id="test">
