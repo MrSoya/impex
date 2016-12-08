@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-12-07
+ * last build: 2016-12-08
  */
 !function (global) {
 	'use strict';
@@ -149,6 +149,34 @@ var Util = new function () {
             return o;
         }
         return v;
+    }
+
+
+    this.compileViewOf = function(component,__nodes){
+        var data = Scanner.scan(__nodes,component);
+        //link exp & obj
+        Builder.link(component,data.exps);
+        //render exps
+        Renderer.renderExpNodes(data.exps);
+        //init children
+        var children = data.comps;
+        for(var i = children.length;i--;){
+            children[i].init();
+        }
+        //init directs
+        var directs = data.directs;
+        for(var i = directs.length;i--;){
+            directs[i].init();
+        }
+        //display children
+        for(var i = 0;i<children.length;i++){
+            if(!children[i].__url)
+                children[i].display();
+        }
+        //active directs
+        for(var i = directs.length;i--;){
+            directs[i].active();
+        }
     }
 }
 	var Observer = null;
@@ -911,11 +939,12 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(scanNodes,component){
-        
+		var direcs = [],subComps = [],exps = [];
         for(var i=0,l=scanNodes.length;i<l;i++){
         	prescan(scanNodes[i]);
-            scan(scanNodes[i],component);
+            scan(scanNodes[i],component,direcs,subComps,exps);
         }
+        return {directs:direcs,comps:subComps,exps:exps};
 	}
 
 	function getRestrictParent(selfComp){
@@ -928,7 +957,7 @@ var Scanner = new function() {
 		return null;
 	}
 
-	function scan(node,component){
+	function scan(node,component,direcs,subComps,exps){
 		if(node.tagName === 'SCRIPT')return;
 
 		if(node.attributes || node.nodeType === 11){
@@ -965,7 +994,8 @@ var Scanner = new function() {
 					var c = scopeDirs[0][0],
 						attr = scopeDirs[0][1];
 					if(DirectiveFactory.isFinal(c)){
-						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						var direct = DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						direcs.push(direct);
 						return;
 					}
 				}
@@ -983,7 +1013,7 @@ var Scanner = new function() {
 						if(parents.indexOf(pr.name) < 0)return;
 					}
 					var instance = component.createSubComponentOf(node);
-
+					subComps.push(instance);
 					return;
 				}
 				
@@ -998,25 +1028,29 @@ var Scanner = new function() {
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
+							var direct = DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
+							direcs.push(direct);
 						}
 					}else if(attName[0] === ':'){
-						DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
+						var direct = DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
+						direcs.push(direct);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
-				    	recordExpNode(attVal,component,node,attName);
+				    	var exp = recordExpNode(attVal,component,node,attName);
+				    	if(exp)exps.push(exp);
 					}
 				}
 			}
 
 	    	if(node.childNodes.length>0){
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					scan(node.childNodes[i],component);
+					scan(node.childNodes[i],component,direcs,subComps,exps);
 				}
 			}
 		}else if(node.nodeType === 3){
 			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
 			//文本节点处理
-			recordExpNode(node.nodeValue,component,node);
+			var exp = recordExpNode(node.nodeValue,component,node);
+			if(exp)exps.push(exp);
 		}
 	}
 
@@ -1137,10 +1171,10 @@ var Scanner = new function() {
 
 var Builder = new function() {
 	//预链接
-	function prelink(comp){
+	this.link = function(comp,expNodes){
 		//build expressions
-		for(var i=comp.__expNodes.length;i--;){
-			var expNode = comp.__expNodes[i];
+		for(var i=expNodes.length;i--;){
+			var expNode = expNodes[i];
 			for(var expStr in expNode.expMap){
 				var lexInfo = expNode.expMap[expStr];
 				var varTree = lexInfo.varTree;
@@ -1195,7 +1229,7 @@ var Builder = new function() {
 	 * 构建组件
 	 */
 	this.build = function(component){
-		prelink(component);
+		this.link(component,component.__expNodes);
 	}
 
 }
@@ -1648,28 +1682,29 @@ var Renderer = new function() {
 		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
-		if(nodes)
-			Scanner.scan(nodes,component);
-		Builder.build(component);
-		Renderer.render(component);
+		Util.compileViewOf(component,nodes);
 
-		//init children
-		for(var i = component.children.length;i--;){
-			component.children[i].init();
-		}
-		for(var i = component.directives.length;i--;){
-			component.directives[i].init();
-		}
+		// Scanner.scan(nodes,component);
+		// Builder.build(component);
+		// Renderer.render(component);
 
-		//display children
-		for(var i = 0;i<component.children.length;i++){
-			if(!component.children[i].__url)
-				component.children[i].display();
-		}
+		// //init children
+		// for(var i = component.children.length;i--;){
+		// 	component.children[i].init();
+		// }
+		// for(var i = component.directives.length;i--;){
+		// 	component.directives[i].init();
+		// }
 
-		for(var i = component.directives.length;i--;){
-			component.directives[i].active();
-		}
+		// //display children
+		// for(var i = 0;i<component.children.length;i++){
+		// 	if(!component.children[i].__url)
+		// 		component.children[i].display();
+		// }
+
+		// for(var i = component.directives.length;i--;){
+		// 	component.directives[i].active();
+		// }
 
 
 		return true;
@@ -3642,7 +3677,8 @@ impex.service('Msg',new function(){
      * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
      */
     impex.directive('ignore',{
-        final:true
+        final:true,
+        priority:999
     })
     /**
      * 内联样式指令
@@ -3769,8 +3805,6 @@ impex.service('Msg',new function(){
         onCreate:function(ts,DOMHelper){
             if(this.el.tagName === 'TEMPLATE'){
                 DOMHelper.replace(this.el,this.__nodes);
-                // Scanner.scan(this.__nodes,this.component);
-                // Renderer.render(this.component);
             }
 
             var transition = this.attr('transition');
@@ -3833,8 +3867,7 @@ impex.service('Msg',new function(){
         },
         onUpdate : function(rs){
             if(rs && !this.compiled){
-                Scanner.scan(this.__nodes,this.component);
-                Renderer.render(this.component);
+                Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
             if(this.elseD){
@@ -3904,8 +3937,7 @@ impex.service('Msg',new function(){
         },
         doUpdate : function(rs){
             if(rs && !this.compiled){
-                Scanner.scan(this.__nodes,this.component);
-                Renderer.render(this.component);
+                Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
             if(this.component.__state === Component.state.suspend)return;
@@ -4553,7 +4585,7 @@ impex.service('Msg',new function(){
     };
     var each = new eachModel();
     each.final = true;
-    each.priority = 999;
+    each.priority = 998;
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：

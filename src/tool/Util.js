@@ -137,4 +137,32 @@ var Util = new function () {
         }
         return v;
     }
+
+
+    this.compileViewOf = function(component,__nodes){
+        var data = Scanner.scan(__nodes,component);
+        //link exp & obj
+        Builder.link(component,data.exps);
+        //render exps
+        Renderer.renderExpNodes(data.exps);
+        //init children
+        var children = data.comps;
+        for(var i = children.length;i--;){
+            children[i].init();
+        }
+        //init directs
+        var directs = data.directs;
+        for(var i = directs.length;i--;){
+            directs[i].init();
+        }
+        //display children
+        for(var i = 0;i<children.length;i++){
+            if(!children[i].__url)
+                children[i].display();
+        }
+        //active directs
+        for(var i = directs.length;i--;){
+            directs[i].active();
+        }
+    }
 }

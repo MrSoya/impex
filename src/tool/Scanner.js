@@ -64,11 +64,12 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(scanNodes,component){
-        
+		var direcs = [],subComps = [],exps = [];
         for(var i=0,l=scanNodes.length;i<l;i++){
         	prescan(scanNodes[i]);
-            scan(scanNodes[i],component);
+            scan(scanNodes[i],component,direcs,subComps,exps);
         }
+        return {directs:direcs,comps:subComps,exps:exps};
 	}
 
 	function getRestrictParent(selfComp){
@@ -81,7 +82,7 @@ var Scanner = new function() {
 		return null;
 	}
 
-	function scan(node,component){
+	function scan(node,component,direcs,subComps,exps){
 		if(node.tagName === 'SCRIPT')return;
 
 		if(node.attributes || node.nodeType === 11){
@@ -118,7 +119,8 @@ var Scanner = new function() {
 					var c = scopeDirs[0][0],
 						attr = scopeDirs[0][1];
 					if(DirectiveFactory.isFinal(c)){
-						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						var direct = DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
+						direcs.push(direct);
 						return;
 					}
 				}
@@ -136,7 +138,7 @@ var Scanner = new function() {
 						if(parents.indexOf(pr.name) < 0)return;
 					}
 					var instance = component.createSubComponentOf(node);
-
+					subComps.push(instance);
 					return;
 				}
 				
@@ -151,25 +153,29 @@ var Scanner = new function() {
 						if(CPDI > -1)c = c.substring(0,CPDI);
 						//如果有对应的处理器
 						if(DirectiveFactory.hasTypeOf(c)){
-							DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
+							var direct = DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
+							direcs.push(direct);
 						}
 					}else if(attName[0] === ':'){
-						DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
+						var direct = DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
+						direcs.push(direct);
 					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
-				    	recordExpNode(attVal,component,node,attName);
+				    	var exp = recordExpNode(attVal,component,node,attName);
+				    	if(exp)exps.push(exp);
 					}
 				}
 			}
 
 	    	if(node.childNodes.length>0){
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					scan(node.childNodes[i],component);
+					scan(node.childNodes[i],component,direcs,subComps,exps);
 				}
 			}
 		}else if(node.nodeType === 3){
 			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
 			//文本节点处理
-			recordExpNode(node.nodeValue,component,node);
+			var exp = recordExpNode(node.nodeValue,component,node);
+			if(exp)exps.push(exp);
 		}
 	}
 

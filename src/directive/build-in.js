@@ -8,7 +8,8 @@
      * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
      */
     impex.directive('ignore',{
-        final:true
+        final:true,
+        priority:999
     })
     /**
      * 内联样式指令
@@ -135,8 +136,6 @@
         onCreate:function(ts,DOMHelper){
             if(this.el.tagName === 'TEMPLATE'){
                 DOMHelper.replace(this.el,this.__nodes);
-                // Scanner.scan(this.__nodes,this.component);
-                // Renderer.render(this.component);
             }
 
             var transition = this.attr('transition');
@@ -199,8 +198,7 @@
         },
         onUpdate : function(rs){
             if(rs && !this.compiled){
-                Scanner.scan(this.__nodes,this.component);
-                Renderer.render(this.component);
+                Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
             if(this.elseD){
@@ -270,8 +268,7 @@
         },
         doUpdate : function(rs){
             if(rs && !this.compiled){
-                Scanner.scan(this.__nodes,this.component);
-                Renderer.render(this.component);
+                Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
             if(this.component.__state === Component.state.suspend)return;
@@ -919,7 +916,7 @@
     };
     var each = new eachModel();
     each.final = true;
-    each.priority = 999;
+    each.priority = 998;
     /**
      * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
      * <br/>使用方式：

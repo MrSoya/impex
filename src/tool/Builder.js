@@ -4,10 +4,10 @@
 
 var Builder = new function() {
 	//预链接
-	function prelink(comp){
+	this.link = function(comp,expNodes){
 		//build expressions
-		for(var i=comp.__expNodes.length;i--;){
-			var expNode = comp.__expNodes[i];
+		for(var i=expNodes.length;i--;){
+			var expNode = expNodes[i];
 			for(var expStr in expNode.expMap){
 				var lexInfo = expNode.expMap[expStr];
 				var varTree = lexInfo.varTree;
@@ -62,7 +62,7 @@ var Builder = new function() {
 	 * 构建组件
 	 */
 	this.build = function(component){
-		prelink(component);
+		this.link(component,component.__expNodes);
 	}
 
 }

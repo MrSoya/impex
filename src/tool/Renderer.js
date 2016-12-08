@@ -303,29 +303,7 @@ var Renderer = new function() {
 		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
-		if(nodes)
-			Scanner.scan(nodes,component);
-		Builder.build(component);
-		Renderer.render(component);
-
-		//init children
-		for(var i = component.children.length;i--;){
-			component.children[i].init();
-		}
-		for(var i = component.directives.length;i--;){
-			component.directives[i].init();
-		}
-
-		//display children
-		for(var i = 0;i<component.children.length;i++){
-			if(!component.children[i].__url)
-				component.children[i].display();
-		}
-
-		for(var i = component.directives.length;i--;){
-			component.directives[i].active();
-		}
-
+		Util.compileViewOf(component,nodes);
 
 		return true;
 	}
