@@ -193,6 +193,17 @@
 				LOGGER.warn('element ['+name+'] has been rendered');
 				return;
 			}
+			//link comps
+			var links = document.querySelectorAll('link[rel="impex"]');
+
+            //register requires
+            for(var i=links.length;i--;){
+                var lk = links[i];
+                var type = lk.getAttribute('type');
+                var href = lk.getAttribute('href');
+                impex.component(type,href);
+            }
+
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);

@@ -64,30 +64,10 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(scanNodes,component){
-        var startTag = null,
-            nodes = [];
         
         for(var i=0,l=scanNodes.length;i<l;i++){
         	prescan(scanNodes[i]);
-            if(startTag){
-                nodes.push(scanNodes[i]);
-                var endTag = DirectiveFactory.hasEndTag(startTag[0]);
-                var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
-                if(Util.isString(tmp)){
-                    DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-                    startTag = null;
-                    nodes = [];
-                }
-                continue;
-            }
-            
-            startTag = scan(scanNodes[i],component);
-            if(startTag){
-                nodes.push(scanNodes[i]);
-            }
-        }
-        if(startTag){
-            LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+            scan(scanNodes[i],component);
         }
 	}
 
@@ -125,7 +105,7 @@ var Scanner = new function() {
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c) || DirectiveFactory.hasEndTag(c)){
+						if(DirectiveFactory.isFinal(c)){
 							scopeDirs.push([c,atts[i],DirectiveFactory.priority(c) || 0]);
 						}
 					}
@@ -140,9 +120,6 @@ var Scanner = new function() {
 					if(DirectiveFactory.isFinal(c)){
 						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
 						return;
-					}
-					if(DirectiveFactory.hasEndTag(c)){
-						return [c,attr[1]];
 					}
 				}
 
@@ -185,29 +162,8 @@ var Scanner = new function() {
 			}
 
 	    	if(node.childNodes.length>0){
-	    		var startTag = null,
-	    			nodes = [];
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					// if(i > node.childNodes.length-1)return;
-					if(startTag){
-						nodes.push(node.childNodes[i]);
-						var endTag = DirectiveFactory.hasEndTag(startTag[0]);
-						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
-						if(Util.isString(tmp)){
-							DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-							startTag = null;
-							nodes = [];
-						}
-						continue;
-					}
-					startTag = scan(node.childNodes[i],component);
-					if(startTag){
-						nodes.push(node.childNodes[i]);
-					}
-				}
-
-				if(startTag){
-					LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+					scan(node.childNodes[i],component);
 				}
 			}
 		}else if(node.nodeType === 3){

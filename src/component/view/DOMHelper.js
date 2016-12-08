@@ -20,8 +20,6 @@ var DOMHelper = new function(){
 	this.detach = function(nodes){
 		var p = nodes[0].parentNode;
 		if(p){
-			if(nodes[0].__impex__view)
-				nodes[0].__impex__view = null;
 			for(var i=nodes.length;i--;){
 				nodes[i].parentNode && p.removeChild(nodes[i]);
 			}

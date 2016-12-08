@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+        <style type="text/css">
+            .c1{
+                color:red;
+            }
+            .c2{
+                font-size:20px;
+            }
+            .c3{
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        x-class支持不同的写法：
+        <ul>
+            <li><code>
+                &lt;div x-class="'cls1 cls2 cls3 ...'&gt;...&lt;/div&gt;
+            </code></li>
+            <li><code>
+                &lt;div x-class="['cls1','cls2','cls3']"&gt;...&lt;/div&gt;
+            </code></li>
+            <li><code>
+                &lt;div x-class="{cls1:boolExp,cls2:boolExp,cls3:boolExp}"&gt;...&lt;/div&gt;
+            </code></li>
+        </ul>
+
+        <h3>style</h3>
+        <code>
+            .c1{
+                color:red;
+            }
+            .c2{
+                font-size:20px;
+            }
+            .c3{
+                font-style: italic;
+            }
+        </code>
+
+        <p> 
+            <h3>demo 1</h3>
+            <code>
+                &lt;div x-class="'c1 c2 c3'"&gt;
+                    class
+                &lt;/div&gt;
+            </code>
+            <div x-class="'c1 c2 c3'">
+                class
+            </div>
+        </p>
+        <p> 
+            <h3>demo 2</h3>
+            <code>
+                &lt;div x-class="clsAry"&gt;
+                    class
+                &lt;/div&gt;
+            </code>
+            <div x-class=" clsAry">
+                class
+            </div>
+            <label>
+                c1<input type="checkbox" checked x-model="clsAry" value="c1">
+            </label>
+            <label>
+                c2<input type="checkbox" checked x-model="clsAry" value="c2">
+            </label>
+            <label>
+                c3<input type="checkbox" checked x-model="clsAry" value="c3">
+            </label>
+        </p>
+        <p> 
+            <h3>demo 3</h3>
+            <code>
+                &lt;div x-class="{'c1':addC1,'c2':addC2,'c3':addC3}"&gt;
+                    class
+                &lt;/div&gt;
+            </code>
+            <div x-class="{'c1':addC1,'c2':addC2,'c3':addC3}">
+                class
+            </div>
+            <button :click="addC1 = !addC1"> toggle c1</button>
+            <button :click="addC2 = !addC2"> toggle c2</button>
+            <button :click="addC3 = !addC3"> toggle c3</button>
+        </p>
+        
+        
+        
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            
+            //渲染
+            var debug = impex.render(document.body,{
+                state:{
+                    clsAry:['c1','c2','c3'],
+                    addC1:true,
+                    addC2:true,
+                    addC3:true
+                },
+                onDisplay:function(){
+                    this.ss = Date.now();
+                },
+                xx:function() {
+                    alert(Date.now() - this.ss)
+                }
+                
+            });
+        </script>
+    </body>
+</html>

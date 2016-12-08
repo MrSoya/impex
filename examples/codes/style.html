@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+        x-style支持不同的写法：
+        <ul>
+            <li><code>
+                &lt;div x-style="{'font-size': valExp}"&gt;...&lt;/div&gt;
+            </code></li>
+            <li><code>
+                &lt;div x-style="{'fontSize': valExp}"&gt;...&lt;/div&gt;
+            </code></li>
+            <li><code>
+                &lt;div x-style="obj"&gt;...&lt;/div&gt;
+            </code></li>
+        </ul>
+
+        <p> 
+            <h3>demo 1</h3>
+            <code>
+                &lt;div x-style=" {'color':color,'font-size':size}"&gt;
+                    style
+                &lt;/div&gt;
+            </code>
+            <div x-style=" {'color':color,'font-size':size}">
+                style
+            </div>
+            color:<input type="text" x-model="color">
+            size:<input type="text" x-model="size">
+        </p>
+        <p> 
+            <h3>demo 2</h3>
+            <code>
+                &lt;div x-style=" style"&gt;
+                    style
+                &lt;/div&gt;
+            </code>
+            <div x-style=" style">
+                style
+            </div>
+            style.color:<input type="text" x-model="style.color">
+            style.fontSize:<input type="text" x-model="style.fontSize">
+        </p>
+        
+        
+        
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            
+            //渲染
+            var debug = impex.render(document.body,{
+                state:{
+                    address:'https://github.com/MrSoya/impex',
+                    s:false,
+                    color:'red',
+                    size:'16px',
+                    style:{
+                        color:'red',
+                        fontSize:'16px'
+                    }
+                },
+                onDisplay:function(){
+                    this.ss = Date.now();
+                },
+                xx:function() {
+                    alert(Date.now() - this.ss)
+                }
+                
+            });
+        </script>
+    </body>
+</html>

@@ -1,4 +1,19 @@
 # Change Log
+## Version 0.35.0 - 2016/12/8
+### 新增
+* x-style
+* x-class
+
+### 更新
+* 不再支持范围指令概念
+* if/each/show的范围控制使用<template>标签
+* 优化解析流程
+
+### 移除
+* x-if-start/end
+* x-each-start/end
+* x-show-start/end
+
 ## Version 0.31.1 - 2016/12/5
 ### 新增
 * x-else 指令

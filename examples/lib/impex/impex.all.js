@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-12-05
+ * last build: 2016-12-07
  */
 !function (global) {
 	'use strict';
@@ -911,30 +911,10 @@ var Scanner = new function() {
 	 * 扫描DOM节点
 	 */
 	this.scan = function(scanNodes,component){
-        var startTag = null,
-            nodes = [];
         
         for(var i=0,l=scanNodes.length;i<l;i++){
         	prescan(scanNodes[i]);
-            if(startTag){
-                nodes.push(scanNodes[i]);
-                var endTag = DirectiveFactory.hasEndTag(startTag[0]);
-                var tmp = scanNodes[i].getAttribute && scanNodes[i].getAttribute(CMD_PREFIX+endTag);
-                if(Util.isString(tmp)){
-                    DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-                    startTag = null;
-                    nodes = [];
-                }
-                continue;
-            }
-            
-            startTag = scan(scanNodes[i],component);
-            if(startTag){
-                nodes.push(scanNodes[i]);
-            }
-        }
-        if(startTag){
-            LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+            scan(scanNodes[i],component);
         }
 	}
 
@@ -972,7 +952,7 @@ var Scanner = new function() {
 					if(CPDI > -1)c = c.substring(0,CPDI);
 
 					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c) || DirectiveFactory.hasEndTag(c)){
+						if(DirectiveFactory.isFinal(c)){
 							scopeDirs.push([c,atts[i],DirectiveFactory.priority(c) || 0]);
 						}
 					}
@@ -987,9 +967,6 @@ var Scanner = new function() {
 					if(DirectiveFactory.isFinal(c)){
 						DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
 						return;
-					}
-					if(DirectiveFactory.hasEndTag(c)){
-						return [c,attr[1]];
 					}
 				}
 
@@ -1032,29 +1009,8 @@ var Scanner = new function() {
 			}
 
 	    	if(node.childNodes.length>0){
-	    		var startTag = null,
-	    			nodes = [];
 				for(var i=0,l=node.childNodes.length;i<l;i++){
-					// if(i > node.childNodes.length-1)return;
-					if(startTag){
-						nodes.push(node.childNodes[i]);
-						var endTag = DirectiveFactory.hasEndTag(startTag[0]);
-						var tmp = node.childNodes[i].getAttribute && node.childNodes[i].getAttribute(CMD_PREFIX+endTag);
-						if(Util.isString(tmp)){
-							DirectiveFactory.newInstanceOf(startTag[0],nodes,component,CMD_PREFIX+startTag[0],startTag[1]);
-							startTag = null;
-							nodes = [];
-						}
-						continue;
-					}
-					startTag = scan(node.childNodes[i],component);
-					if(startTag){
-						nodes.push(node.childNodes[i]);
-					}
-				}
-
-				if(startTag){
-					LOGGER.error('can not find endTag of directive['+CMD_PREFIX+startTag[0]+']');
+					scan(node.childNodes[i],component);
 				}
 			}
 		}else if(node.nodeType === 3){
@@ -1827,7 +1783,9 @@ View.prototype = {
 	 * 显示视图
 	 */
 	show:function(){
-		this.el.style.display = '';
+		for(var i=this.__nodes.length;i--;){
+			this.__nodes[i].style.display = '';
+		}
 
 		return this;
 	},
@@ -1835,7 +1793,9 @@ View.prototype = {
 	 * 隐藏视图
 	 */
 	hide:function(){
-		this.el.style.display = 'none';
+		for(var i=this.__nodes.length;i--;){
+			this.__nodes[i].style.display = 'none';
+		}
 
 		return this;
 	},
@@ -2504,8 +2464,6 @@ var DOMHelper = new function(){
 	this.detach = function(nodes){
 		var p = nodes[0].parentNode;
 		if(p){
-			if(nodes[0].__impex__view)
-				nodes[0].__impex__view = null;
 			for(var i=nodes.length;i--;){
 				nodes[i].parentNode && p.removeChild(nodes[i]);
 			}
@@ -2596,21 +2554,11 @@ function Directive (name,value) {
 
 	/**
 	 * 是否终结<br/>
-	 * 终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成<br/>
-	 * *该属性与$endTag冲突，并会优先匹配
+	 * 终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成
 	 * @type {Boolean}
 	 * @default false
 	 */
 	this.final = false;
-	/**
-	 * 范围结束标记，用来标识一个范围指令的终结属性名<br/>
-	 * 如果设置了该标识，那么从当前指令开始到结束标识结束形成的范围，扫描器都不对内部进行扫描，包括表达式，指令，子组件都不会生成<br/>
-	 * *该标记必须加在与当前指令同级别的元素上<br/>
-	 * *该属性与$final冲突
-	 * @type {String}
-	 * @default null
-	 */
-	this.endTag = null;
 	/**
 	 * 指令优先级用于定义同类指令的执行顺序。最大999
 	 * @type {Number}
@@ -3235,14 +3183,6 @@ Util.ext(_DirectiveFactory.prototype,{
 	isFinal : function(type){
 		return !!this.types[type].props.final;
 	},
-	/**
-	 * 获取指定类型指令的范围结束标记
-	 * @param  {[type]}  type 指令名
-	 * @return {string} 
-	 */
-	hasEndTag : function(type){
-		return this.types[type].props.endTag;
-	},
 	priority : function(type){
 		return this.types[type].props.priority;
 	},
@@ -3275,19 +3215,21 @@ Util.ext(_DirectiveFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.ext(rs,this.types[type].props);
 
-		if(node.__impex__view){
-			var tmp = node.__impex__view;
-			rs.el = tmp[0];
-			rs.__nodes = tmp[1];
-		}else{
-			var el = node,nodes = [node];
-			if(Util.isArray(node)){
-				nodes = node;
-				el = node.length>1?null:node[0];
+		rs.el = node,rs.__nodes = [node];
+		if(node.tagName === 'TEMPLATE'){
+			var c = [];
+			var p = node,children = node.childNodes;
+			if(node.content && node.content.nodeType===11){
+				p = node.content;
+				children = p.childNodes;
 			}
-			rs.el = el;
-			rs.__nodes = nodes;
-			node.__impex__view = [el,nodes];
+			while(children.length){
+				var child = p.removeChild(children[0]);
+				if(child.nodeType===3 && child.nodeValue.trim().length<1)continue;
+				
+				c.push(child);
+			}
+			rs.__nodes = c;
 		}
 
 		if(params){
@@ -3300,11 +3242,8 @@ Util.ext(_DirectiveFactory.prototype,{
 		component.directives.push(rs);
 		rs.component = component;
 
-		rs.__nodes[0].removeAttribute(rs.name);
-		if(rs.endTag){
-            var lastNode = rs.__nodes[rs.__nodes.length-1];
-            lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
-        }
+		if(node.tagName !== 'TEMPLATE')
+			rs.__nodes[0].removeAttribute(rs.name);
 		
 		this._super.createCbk.call(this,rs,type);
 
@@ -3428,8 +3367,8 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,31,0],
-	        state:'beta',
+	        v:[0,31,1],
+	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -3577,6 +3516,17 @@ var TransitionFactory = {
 				LOGGER.warn('element ['+name+'] has been rendered');
 				return;
 			}
+			//link comps
+			var links = document.querySelectorAll('link[rel="impex"]');
+
+            //register requires
+            for(var i=links.length;i--;){
+                var lk = links[i];
+                var type = lk.getAttribute('type');
+                var href = lk.getAttribute('href');
+                impex.component(type,href);
+            }
+
 			var comp = ComponentFactory.newInstanceOf(name,element);
 			if(!comp){
 				topComponentNodes.push(element);
@@ -3695,6 +3645,70 @@ impex.service('Msg',new function(){
         final:true
     })
     /**
+     * 内联样式指令
+     * <br/>使用方式：
+     * <div x-style="{'font-size': valExp}" >...</div>
+     * <div x-style="{'fontSize': valExp}" >...</div>
+     * <div x-style="obj" >...</div>
+     */
+    .directive('style',{
+        onCreate:function(){
+            if(this.value.trim()[0]==='{'){
+                this.value = '('+this.value+')';
+            }
+        },
+        onUpdate:function(map){
+            var style = this.el.style;
+            for(var k in map){
+                var n = this.filterName(k);
+                var v = map[k];
+                style[n] = v;
+            }
+        },
+        filterName:function(k){
+            return k.replace(/-([a-z])/img,function(a,b){
+                return b.toUpperCase();
+            });
+        }
+    })
+    /**
+     * 外部样式指令
+     * <br/>使用方式：
+     * <div x-class="'cls1 cls2 cls3 ...'" >...</div>
+     * <div x-class="['cls1','cls2','cls3']" >...</div>
+     * <div x-class="{cls1:boolExp,cls2:boolExp,cls3:boolExp}" >...</div>
+     */
+    .directive('class',{
+        onCreate:function(){
+            if(this.value.trim()[0]==='{'){
+                this.value = '('+this.value+')';
+            }
+        },
+        onUpdate:function(map){
+            var str = '';
+            if(map instanceof Array){
+                map.forEach(function(cls){
+                    str += ' '+ cls;
+                });
+            }else if(typeof map === 'string'){
+                str = map;
+            }else{
+                for(var k in map){
+                    var v = map[k];
+                    if(v){
+                        str += ' '+ k;
+                    }
+                }
+            }
+
+            if(this.lastClassStr)
+                this.removeClass(this.lastClassStr);
+
+            this.addClass(str);
+            this.lastClassStr = str;
+        }
+    })
+    /**
      * 绑定视图事件，以参数指定事件类型，用于减少单一事件指令书写
      * <br/>使用方式1：<img x-on:load:mousedown:touchstart="hi()" x-on:dblclick="hello()">
      * <br/>使用方式2：<img :load:mousedown:touchstart="hi()" :dblclick="hello()">
@@ -3752,13 +3766,19 @@ impex.service('Msg',new function(){
      * <br/>使用方式：<div x-show="exp"></div>
      */
     .directive('show',{
-        onCreate:function(ts){
+        onCreate:function(ts,DOMHelper){
+            if(this.el.tagName === 'TEMPLATE'){
+                DOMHelper.replace(this.el,this.__nodes);
+                // Scanner.scan(this.__nodes,this.component);
+                // Renderer.render(this.component);
+            }
+
             var transition = this.attr('transition');
-            if(transition !== null){
+            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
-            this.lastRs = false;
-            this.exec(false);
+            this.lastRs = true;
+            this.compiled = false;
         },
         onUpdate : function(rs){
             if(this.component.__state === Component.state.suspend)return;
@@ -3790,48 +3810,33 @@ impex.service('Msg',new function(){
                 this.hide();
             }
         }
-    },['Transitions'])
-    /**
-     * x-show的范围版本
-     */
-    .directive('show-start',{
-        endTag : 'show-end',
-        onInit:function(){
-            //更新视图
-            Scanner.scan(this.__nodes,this.component);
-        },
-        onUpdate : function(rs){
-            if(this.component.__state === Component.state.suspend)return;
-            var nodes = this.__nodes;
-            if(rs){
-                //显示
-                for(var i=nodes.length;i--;){
-                    if(nodes[i].style)nodes[i].style.display = '';
-                }
-            }else{
-                // 隐藏
-                for(var i=nodes.length;i--;){
-                    if(nodes[i].style)nodes[i].style.display = 'none';
-                }
-            }
-        }
-    })
+    },['Transitions','DOMHelper'])
     /**
      * 效果与show相同，但是会移除视图
      * <br/>使用方式：<div x-if="exp"></div>
      */
     .directive('if',{
-        onCreate:function(ts){
-            this.placeholder = document.createComment('-- directive [if] placeholder --');
+        final:true,
+        onCreate:function(ts,DOMHelper){
+            this.DOMHelper = DOMHelper;
+            this.placeholder = document.createComment('-- directive [if] placeholder --');         
 
             var transition = this.attr('transition');
-            if(transition !== null){
+            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
             this.lastRs = false;
-            this.exec(false);
+            this.compiled = false;
+            //default false
+            if(this.el.parentNode)
+            this.el.parentNode.replaceChild(this.placeholder,this.el);
         },
         onUpdate : function(rs){
+            if(rs && !this.compiled){
+                Scanner.scan(this.__nodes,this.component);
+                Renderer.render(this.component);
+                this.compiled = true;
+            }
             if(this.elseD){
                 this.elseD.doUpdate(!rs);
             }
@@ -3848,9 +3853,6 @@ impex.service('Msg',new function(){
             }else{
                 this.exec(rs);
             }
-
-
-
         },
         enter:function(){
             this.exec(this.lastRs);
@@ -3860,23 +3862,29 @@ impex.service('Msg',new function(){
         },
         exec:function(rs){
             if(rs){
-                if(this.el.parentNode)return;
+                if(this.__nodes[0].parentNode)return;
                 //添加
-                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
+                this.DOMHelper.replace(this.placeholder,this.__nodes);
             }else{
-                if(!this.el.parentNode)return;
+                if(!this.__nodes[0].parentNode)return;
                 //删除
-                this.el.parentNode.replaceChild(this.placeholder,this.el);
+                var p = this.__nodes[0].parentNode;
+                p.insertBefore(this.placeholder,this.__nodes[0]);
+                this.DOMHelper.detach(this.__nodes);
             }
         }
-    },['Transitions'])
+    },['Transitions','DOMHelper'])
     /**
      * 和x-if成对出现，单独出现无效。并且只匹配前一个if
      * <br/>使用方式：<div x-if="exp"></div><div x-else></div>
      */
     .directive('else',{
-        onCreate:function(ts){
+        onCreate:function(ts,DOMHelper){
+            this.DOMHelper = DOMHelper;
             this.placeholder = document.createComment('-- directive [else] placeholder --');
+
+            //default false
+            this.el.parentNode.replaceChild(this.placeholder,this.el);
 
             //find if
             var xif = this.component.directives[this.component.directives.length-2];
@@ -3888,13 +3896,18 @@ impex.service('Msg',new function(){
             xif.elseD = this;
 
             var transition = this.attr('transition');
-            if(transition !== null){
+            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
-            this.lastRs = true;
-            this.exec(true);
+            this.lastRs = false;
+            this.compiled = false;
         },
         doUpdate : function(rs){
+            if(rs && !this.compiled){
+                Scanner.scan(this.__nodes,this.component);
+                Renderer.render(this.component);
+                this.compiled = true;
+            }
             if(this.component.__state === Component.state.suspend)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
@@ -3917,32 +3930,6 @@ impex.service('Msg',new function(){
         },
         exec:function(rs){
             if(rs){
-                if(this.el.parentNode)return;
-                //添加
-                this.placeholder.parentNode.replaceChild(this.el,this.placeholder);
-            }else{
-                if(!this.el.parentNode)return;
-                //删除
-                this.el.parentNode.replaceChild(this.placeholder,this.el);
-            }
-        }
-    },['Transitions'])
-    /**
-     * x-if的范围版本
-     * <br/>使用方式：<div x-if-start="exp"></div>...<div x-if-end></div>
-     */
-    .directive('if-start',{
-        endTag : 'if-end',
-        onCreate:function(DOMHelper){
-            this.DOMHelper = DOMHelper;
-            this.placeholder = document.createComment('-- directive [if] placeholder --');
-        },
-        onInit:function(){
-            Scanner.scan(this.__nodes,this.component);
-        },
-        onUpdate : function(rs){
-            if(this.component.__state === Component.state.suspend)return;
-            if(rs){
                 if(this.__nodes[0].parentNode)return;
                 //添加
                 this.DOMHelper.replace(this.placeholder,this.__nodes);
@@ -3954,7 +3941,7 @@ impex.service('Msg',new function(){
                 this.DOMHelper.detach(this.__nodes);
             }
         }
-    },['DOMHelper'])
+    },['Transitions','DOMHelper'])
     /**
      * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
      */
@@ -4087,13 +4074,16 @@ impex.service('Msg',new function(){
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
             this.DOMHelper = DOMHelper;
-            this.fragment = document.createDocumentFragment();
+            // this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
-            // this.__view = this.view;
             this.cache = [];
             this.__comp = this.component;
 
-            if(this.el){
+            this.placeholder = document.createComment('-- directive [each] placeholder --');
+            // DOMHelper.insertBefore([this.placeholder],this.__nodes[0]);
+            this.el.parentNode.replaceChild(this.placeholder,this.el);
+
+            if(this.el.tagName !== 'TEMPLATE'){
                 this.__tagName = this.el.tagName.toLowerCase();
                 this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
                 this.cacheable = this.attr('cache')==='false'?false:true;
@@ -4101,7 +4091,7 @@ impex.service('Msg',new function(){
                 this.cacheable = this.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
-            this.subComponents = [];//子组件，用于快速更新each视图，提高性能
+            this.subComponents = [];
 
             this.cacheSize = 20;
 
@@ -4109,7 +4099,7 @@ impex.service('Msg',new function(){
 
             this.over = this.el?this.attr('over'):this.__nodes[0].getAttribute('over');
 
-            var transition = this.el?this.attr('transition'):this.__nodes[0].getAttribute('transition');
+            var transition = this.el.tagName !== 'TEMPLATE'?this.attr('transition'):this.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
                 this.ts = ts;
@@ -4168,31 +4158,27 @@ impex.service('Msg',new function(){
                 this.over = rs;
             }            
             
-            this.lastDS = this.ds;
-            
-            this.placeholder = document.createComment('-- directive [each] placeholder --');
-            this.DOMHelper.insertBefore([this.placeholder],this.__nodes[0]);
+            this.lastDS = this.ds;            
 
-            this.fragmentPlaceholder = document.createComment('-- fragment placeholder --');
+            // this.fragmentPlaceholder = document.createComment('-- fragment placeholder --');
             
-            this.fragment.appendChild(this.fragmentPlaceholder);
+            // this.fragment.appendChild(this.fragmentPlaceholder);
 
             //parse props
-            this.__props = parseProps(this.__nodes,this.component);
+            this.__props = parseProps(this.el,this.component);
 
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
             this.destroy();
         }
-        function parseProps(nodes,comp){
+        function parseProps(el,comp){
             var props = {
                 str:{},
                 type:{},
                 sync:{}
             };
             var ks = ['cache','over','step','transition'];
-            var el = nodes[0];
             for(var i=el.attributes.length;i--;){
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
@@ -4231,6 +4217,7 @@ impex.service('Msg',new function(){
             
             var diffSize = ds.length - this.subComponents.length;
 
+            var compMap = {};
             if(diffSize < 0){
                 var tmp = this.subComponents.splice(0,diffSize*-1);
                 if(this.cache.length < this.cacheSize){
@@ -4262,7 +4249,8 @@ impex.service('Msg',new function(){
                 }
                 
                 while(restSize--){
-                    this.createSubComp();
+                    var pair = this.createSubComp();
+                    compMap[pair[0].__id] = pair;
                 }
             }
 
@@ -4300,7 +4288,13 @@ impex.service('Msg',new function(){
                 data['$index'] = index++;
                 if(ki)data[ki] = isIntK?k>>0:k;
 
-                // var isSuspend = subComp.__state === "suspend"?true:false;
+                if(compMap[subComp.__id]){
+                    var pair = compMap[subComp.__id];
+                    var holder = pair[1];
+                    //attach DOM
+                    this.DOMHelper.replace(holder,subComp.__nodes);
+                }
+                
                 if(subComp.__state === Component.state.created){
                     subComp.init();
                 }
@@ -4309,9 +4303,11 @@ impex.service('Msg',new function(){
                     Renderer.recurRender(subComp);
                 }
                 
-                
                 onDisplay(subComp);
             }
+
+            if(this.over)
+                this.over();
         }
         function onDisplay(comp){
             for(var i=0;i<comp.children.length;i++){
@@ -4325,23 +4321,27 @@ impex.service('Msg',new function(){
         }
         this.createSubComp = function(){
             var comp = this.__comp;
-            var subComp = null;            
+            var subComp = null;
+            var p = this.placeholder.parentNode;
+            var placeholder = document.createComment('-- directive [each] component --');
             //视图
             var copyNodes = [];
             for(var i=this.__nodes.length;i--;){
                 var c = this.__nodes[i].cloneNode(true);
                 copyNodes.unshift(c);
             }
+            p.insertBefore(placeholder,this.placeholder);
 
             //创建子组件
             if(this.__isComp){
-                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                // this.DOMHelper.insertBefore(copyNodes,this.placeholder);
                 subComp = comp.createSubComponentOf(copyNodes[0]);
             }else{
-                this.DOMHelper.insertBefore(copyNodes,this.placeholder);
+                // this.DOMHelper.insertBefore(copyNodes,this.placeholder);
                 subComp = comp.createSubComponent(copyNodes);
             }
-            subComp.suspend(true);
+
+            // subComp.suspend(true);
             this.subComponents.push(subComp);
 
             //bind props
@@ -4390,7 +4390,7 @@ impex.service('Msg',new function(){
                 }
             }
                 
-            return subComp;
+            return [subComp,placeholder];
         }
         function clone(obj,ref){
             if(obj === null)return null;
@@ -4452,11 +4452,14 @@ impex.service('Msg',new function(){
             if(ds.__im__extPropChain)
                 ds.__im__extPropChain.push([this,vi]);
 
+            var queue = [];
+
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
 
-                var subComp = this.createSubComp();
+                var subCompPair = this.createSubComp();
+                queue.push(subCompPair);
                 
                 //模型
                 var v = ds[k];
@@ -4472,29 +4475,27 @@ impex.service('Msg',new function(){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 
-                var data = subComp.state.__im__target || subComp.state;
+                var data = subCompPair[0].state.__im__target || subCompPair[0].state;
 
                 data[vi] = v;
                 data['$index'] = index++;
                 if(ki)data[ki] = isIntK?k>>0:k;
             }
 
-            //初始化组件
-            for(var i=this.subComponents.length;i--;){
-                this.subComponents[i].init();
-                this.subComponents[i].__state = Component.state.displayed;
-            }
-
-            var queue = this.subComponents.concat();
             renderEach(queue,this);
         }
         function renderEach(queue,eachObj){
             setTimeout(function(){
                 var list = queue.splice(0,50);
                 for(var i=0;i<list.length;i++){
-                    if(list[i].__state === Component.state.suspend)continue;
-                    list[i].__state = Component.state.inited;
-                    list[i].display();
+                    var pair = list[i];
+                    var comp = pair[0];
+                    var holder = pair[1];
+                    if(comp.__state === Component.state.suspend)continue;
+                    //attach DOM
+                    eachObj.DOMHelper.replace(holder,comp.__nodes);
+                    comp.init();
+                    comp.display();
                 }
 
                 if(queue.length > 0){
@@ -4563,19 +4564,6 @@ impex.service('Msg',new function(){
      */
     impex.directive('each',each,['DOMHelper','Transitions']);
 
-
-    var eachStart = new eachModel();
-    eachStart.endTag = 'each-end';
-    eachStart.priority = 999;
-    /**
-     * each-start/end指令类似each，但是可以循环范围内的所有节点。数据源可以是数组或者对象
-     * <br/>使用方式：
-     * <br/> &lt;a x-each-start="datasource as k => v"&gt;{{k}} {{v}}&lt;/a&gt;
-     * <br/> &lt;b x-each-end&gt;{{v}}&lt;/b&gt;
-     * 
-     * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
-     */
-    impex.directive('each-start',eachStart,['DOMHelper']);
 }(impex);
 impex.filter('json',{
     to:function(){

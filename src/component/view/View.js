@@ -104,7 +104,9 @@ View.prototype = {
 	 * 显示视图
 	 */
 	show:function(){
-		this.el.style.display = '';
+		for(var i=this.__nodes.length;i--;){
+			this.__nodes[i].style.display = '';
+		}
 
 		return this;
 	},
@@ -112,7 +114,9 @@ View.prototype = {
 	 * 隐藏视图
 	 */
 	hide:function(){
-		this.el.style.display = 'none';
+		for(var i=this.__nodes.length;i--;){
+			this.__nodes[i].style.display = 'none';
+		}
 
 		return this;
 	},

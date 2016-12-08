@@ -34,7 +34,6 @@
             </div>
             <div class="sidebar {{hideSide?'hidden':''}}">
             	<div class="scrollpane">
-            		<!-- 左侧导航开始 -->
             		<ul class="menu-items">
             			<li x-each="sidebar as k,list" .active:sync="active" >
             				<a class="cate">{{k}}</a>
@@ -50,7 +49,6 @@
             				</ul>
             			</li>
             		</ul>
-            		<!-- 左侧导航结束 -->
             	</div>
             </div>
 			<div class="main {{hideSide?'hidden':''}}">
@@ -134,13 +132,16 @@
             				'performence','eachover','eachstart','operation'
             			],
             			'input':[
-            				'attributes','number','bind'
-            			],
+                            'attributes','number','bind'
+                        ],
+                        'style':[
+                            'style','class'
+                        ],
             			'text':[
             				'cloak','directive'
             			],
             			'directive - if/show':[
-            				'if','ifstart','show','showstart',
+            				'if','ifrange','show','showrange',
             				'animationwithjs'
             			],
             			'demo':[

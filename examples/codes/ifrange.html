@@ -10,19 +10,29 @@
         </style>
     </head>
     <body>
-        <div x-if-start="size>0" .size:sync="size" x-each-start="[1,2] as i" x-cloak class="x-cloak">
-            line 1
-        </div>
-        <p x-if-end x-each-end >_____________________</p>
-        <div x-if-start="size>1" x-cloak class="x-cloak">
-            line 2
-        </div>
-        <p x-if-end >_____________________</p>
-        <div x-if-start="size>2" x-cloak class="x-cloak">
-            line 3
-        </div>
-        <p x-if-end >_____________________</p>
-    
+        <template  .size:sync="size" x-each="[1,2] as i">
+            <template x-if="size>0">
+                <div>
+                    line 1
+                </div>
+                <p>_____________________</p>
+            </template>
+        </template>
+        
+        <template x-if="size>1">
+            <div>
+                line 2
+            </div>
+            <p>_____________________</p>
+        </template>
+
+        <template x-if="size>2">
+            <div>
+                line 3
+            </div>
+            <p>_____________________</p>
+        </template>
+
 
         size:<input type="text" x-model="size" value="{{size}}">
 

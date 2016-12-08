@@ -14,14 +14,6 @@ Util.ext(_DirectiveFactory.prototype,{
 	isFinal : function(type){
 		return !!this.types[type].props.final;
 	},
-	/**
-	 * 获取指定类型指令的范围结束标记
-	 * @param  {[type]}  type 指令名
-	 * @return {string} 
-	 */
-	hasEndTag : function(type){
-		return this.types[type].props.endTag;
-	},
 	priority : function(type){
 		return this.types[type].props.priority;
 	},
@@ -54,19 +46,21 @@ Util.ext(_DirectiveFactory.prototype,{
 		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
 		Util.ext(rs,this.types[type].props);
 
-		if(node.__impex__view){
-			var tmp = node.__impex__view;
-			rs.el = tmp[0];
-			rs.__nodes = tmp[1];
-		}else{
-			var el = node,nodes = [node];
-			if(Util.isArray(node)){
-				nodes = node;
-				el = node.length>1?null:node[0];
+		rs.el = node,rs.__nodes = [node];
+		if(node.tagName === 'TEMPLATE'){
+			var c = [];
+			var p = node,children = node.childNodes;
+			if(node.content && node.content.nodeType===11){
+				p = node.content;
+				children = p.childNodes;
 			}
-			rs.el = el;
-			rs.__nodes = nodes;
-			node.__impex__view = [el,nodes];
+			while(children.length){
+				var child = p.removeChild(children[0]);
+				if(child.nodeType===3 && child.nodeValue.trim().length<1)continue;
+				
+				c.push(child);
+			}
+			rs.__nodes = c;
 		}
 
 		if(params){
@@ -79,11 +73,8 @@ Util.ext(_DirectiveFactory.prototype,{
 		component.directives.push(rs);
 		rs.component = component;
 
-		rs.__nodes[0].removeAttribute(rs.name);
-		if(rs.endTag){
-            var lastNode = rs.__nodes[rs.__nodes.length-1];
-            lastNode.removeAttribute(CMD_PREFIX+rs.endTag);
-        }
+		if(node.tagName !== 'TEMPLATE')
+			rs.__nodes[0].removeAttribute(rs.name);
 		
 		this._super.createCbk.call(this,rs,type);
 
