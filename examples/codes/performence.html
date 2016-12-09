@@ -7,18 +7,23 @@
         </style>
     </head>
     <body>
-        <div x-each="1 to 10000 as i">{{i / this.parent.state.x}}</div>
+        <div x-each="1 to 10000 as i" over="this.over.bind(this)">{{i / this.parent.state.x}}</div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
-        var s = Date.now();
 
             impex.render(document.body,{
                 state:{
                     x:2
+                },
+                onInit:function(){
+                    this.s = Date.now();
+                },
+                over:function(argument) {
+                    alert(Date.now() - this.s);
                 }
             });
-            console.log(Date.now() - s);
+            
         </script>
     </body>
 </html>

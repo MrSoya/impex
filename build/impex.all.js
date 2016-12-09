@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-12-08
+ * last build: 2016-12-09
  */
 !function (global) {
 	'use strict';
@@ -275,9 +275,6 @@ var Util = new function () {
 			}
 		};
 	}();
-	
-
-
 
 	///////////////////////////////////////// fallback ///////////////////////////////////////////
 	!window.Proxy && !function(){
@@ -370,7 +367,6 @@ var Util = new function () {
 							change.oldVal = oldVer[prop];
 							change.snap = oldVer;
 							change.type = 'delete';
-							change.id = 
 							
 							changes.push(change);
 						}
@@ -1684,29 +1680,6 @@ var Renderer = new function() {
 
 		Util.compileViewOf(component,nodes);
 
-		// Scanner.scan(nodes,component);
-		// Builder.build(component);
-		// Renderer.render(component);
-
-		// //init children
-		// for(var i = component.children.length;i--;){
-		// 	component.children[i].init();
-		// }
-		// for(var i = component.directives.length;i--;){
-		// 	component.directives[i].init();
-		// }
-
-		// //display children
-		// for(var i = 0;i<component.children.length;i++){
-		// 	if(!component.children[i].__url)
-		// 		component.children[i].display();
-		// }
-
-		// for(var i = component.directives.length;i--;){
-		// 	component.directives[i].active();
-		// }
-
-
 		return true;
 	}
 }
@@ -1876,7 +1849,7 @@ View.prototype = {
 	 * @param  {String} name  样式名
 	 */
 	hasClass:function(name){
-		return this.el.className.indexOf(name) > -1;
+		return this.el.className.split(' ').indexOf(name) > -1;
 	},
 	/**
 	 * 添加样式到视图
@@ -4106,21 +4079,16 @@ impex.service('Msg',new function(){
             this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
             this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
             this.DOMHelper = DOMHelper;
-            // this.fragment = document.createDocumentFragment();
             this.expInfo = this.parseExp(this.value);
             this.cache = [];
             this.__comp = this.component;
 
             this.placeholder = document.createComment('-- directive [each] placeholder --');
-            // DOMHelper.insertBefore([this.placeholder],this.__nodes[0]);
             this.el.parentNode.replaceChild(this.placeholder,this.el);
 
             if(this.el.tagName !== 'TEMPLATE'){
                 this.__tagName = this.el.tagName.toLowerCase();
                 this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
-                this.cacheable = this.attr('cache')==='false'?false:true;
-            }else{
-                this.cacheable = this.__nodes[0].getAttribute('cache')==='false'?false:true;
             }
 
             this.subComponents = [];
@@ -4190,11 +4158,7 @@ impex.service('Msg',new function(){
                 this.over = rs;
             }            
             
-            this.lastDS = this.ds;            
-
-            // this.fragmentPlaceholder = document.createComment('-- fragment placeholder --');
-            
-            // this.fragment.appendChild(this.fragmentPlaceholder);
+            this.lastDS = this.ds;
 
             //parse props
             this.__props = parseProps(this.el,this.component);
@@ -4249,9 +4213,13 @@ impex.service('Msg',new function(){
             
             var diffSize = ds.length - this.subComponents.length;
 
+            //resort
+            // this.subComponents.sort(function(a,b){return a.state.$index - b.state.$index})
+
             var compMap = {};
             if(diffSize < 0){
-                var tmp = this.subComponents.splice(0,diffSize*-1);
+                var len = diffSize*-1;
+                var tmp = this.subComponents.splice(this.subComponents.length-len,len);
                 if(this.cache.length < this.cacheSize){
                     for(var i=tmp.length;i--;){
                         this.cache.push(tmp[i]);
@@ -4270,16 +4238,7 @@ impex.service('Msg',new function(){
                     }
                 }
             }else if(diffSize > 0){
-                var restSize = diffSize;
-                if(this.cacheable){
-                    var tmp = this.cache.splice(0,diffSize);
-                    for(var i=0;i<tmp.length;i++){
-                        this.subComponents.push(tmp[i]);
-                        this.DOMHelper.insertBefore(tmp[i].__nodes,this.placeholder);
-                    }
-                    var restSize = diffSize - tmp.length;
-                }
-                
+                var restSize = diffSize;                
                 while(restSize--){
                     var pair = this.createSubComp();
                     compMap[pair[0].__id] = pair;
@@ -4296,6 +4255,9 @@ impex.service('Msg',new function(){
 
                 //模型
                 var v = ds[k];
+
+
+
                 if(ds[k] && ds[k].__im__origin){
                     v = ds[k].__im__origin;
 
@@ -4366,14 +4328,11 @@ impex.service('Msg',new function(){
 
             //创建子组件
             if(this.__isComp){
-                // this.DOMHelper.insertBefore(copyNodes,this.placeholder);
                 subComp = comp.createSubComponentOf(copyNodes[0]);
             }else{
-                // this.DOMHelper.insertBefore(copyNodes,this.placeholder);
                 subComp = comp.createSubComponent(copyNodes);
             }
 
-            // subComp.suspend(true);
             this.subComponents.push(subComp);
 
             //bind props

@@ -162,7 +162,7 @@ View.prototype = {
 	 * @param  {String} name  样式名
 	 */
 	hasClass:function(name){
-		return this.el.className.indexOf(name) > -1;
+		return this.el.className.split(' ').indexOf(name) > -1;
 	},
 	/**
 	 * 添加样式到视图

@@ -94,9 +94,6 @@
 			}
 		};
 	}();
-	
-
-
 
 	///////////////////////////////////////// fallback ///////////////////////////////////////////
 	!window.Proxy && !function(){
@@ -189,7 +186,6 @@
 							change.oldVal = oldVer[prop];
 							change.snap = oldVer;
 							change.type = 'delete';
-							change.id = 
 							
 							changes.push(change);
 						}
