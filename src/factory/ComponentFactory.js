@@ -163,9 +163,31 @@ var ComponentFactory = new _ComponentFactory(DOMHelper);
 
 function slotHandler(tmpl,innerHTML){
 	var slotMap = {};
-    innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)\s+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?\1(?:\s+)?>/img,function(str,b,name){
-        slotMap[name] = str;
+	var findMap = {};
+    innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)[^<>]+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>/img,function(a,tag,slot,i){
+    	findMap[tag] = [slot,i];
     });
+    for(var tag in findMap){
+    	var startPos = findMap[tag][1];
+    	var slot = findMap[tag][0];
+    	var stack = 0;
+    	var endPos = -1;
+    	var reg = new RegExp("<(?:(?:\s+)?\/)?(?:\s+)?"+tag+"[^>]*?>",'img');
+        innerHTML.replace(reg,function(tag,i){
+        	if(i <= startPos)return;
+
+        	if(/<(?:(?:\s+)?\/)/.test(tag)){
+        		stack--;
+        		if(stack < 0){
+        			endPos = i;
+        		}
+        	}else{
+        		stack++;
+        	}
+        });
+        var tmp = innerHTML.substring(startPos,endPos);
+        slotMap[slot] = tmp+'</'+tag+'>';
+    }
 
     if(innerHTML.trim().length>0)
     tmpl = tmpl.replace(/<(?:\s+)?slot(?:\s+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str){
