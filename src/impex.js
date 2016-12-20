@@ -243,4 +243,5 @@
 
 
 		this.logger = LOGGER;
+		this.util = Util;
 	}
