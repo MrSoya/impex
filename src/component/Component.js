@@ -407,18 +407,18 @@ Util.ext(Component.prototype,{
 			var change = changes[i];
 			var path = change.path;
 			this.__watchProps.forEach(function(prop){
-				var isMatch = this.__isVarMatch(prop.segments,path);
-				if(isMatch){
-					if(!matchMap[prop.subComp.__id])
-						matchMap[prop.subComp.__id] = [];
-					var rs = Renderer.evalExp(this,prop.expWords);
-					matchMap[prop.subComp.__id].push({
-						name:prop.name,
-						oldVal:prop.oldVal,
-						newVal:rs
-					});
-					prop.oldVal = rs;
-				}
+				var k = this.__isVarMatch(prop.segments,path);
+				if(!matchMap[prop.subComp.__id])
+					matchMap[prop.subComp.__id] = [];
+				var rs = Renderer.evalExp(this,prop.expWords);
+				matchMap[prop.subComp.__id].push({
+					name:prop.name,
+					oldVal:prop.oldVal,
+					newVal:rs,
+					path:path,
+					canUpdate:k>-1?true:false
+				});
+				prop.oldVal = rs;
 			},this);
 		}
 		for(var k in matchMap){
@@ -427,17 +427,17 @@ Util.ext(Component.prototype,{
 		}
 	},
 	__isVarMatch:function(segments,changePath){
-		if(segments.length < changePath.length)return false;
+		if(segments.length < changePath.length)return -1;
 		for(var k=0;k<segments.length;k++){
 			if(!changePath[k])break;
 
 			if(segments[k][0] !== '[' && 
 				changePath[k][0] !== '[' && 
 				segments[k] !== changePath[k]){
-				return false;
+				return -1;
 			}
 		}
-		return true;
+		return k;
 	},
 	__callWatchs:function (watchs){
 		var invokedWatchs = [];
@@ -445,20 +445,22 @@ Util.ext(Component.prototype,{
 			var change = watchs[i][1];
 			var watch = watchs[i][0];
 
-			var propChain = change.path;
 			var newVal = change.newVal;
 			var oldVal = change.oldVal;
 			var name = change.name;
 			var object = change.object;
+			var propChain = change.path.concat();
+			if(!Util.isArray(object))
+				change.path.pop();
 			var changeType = change.type;
 
 			if(watch.segments.length < propChain.length)continue;
 			if(invokedWatchs.indexOf(watch) > -1)continue;
 
 			//compare segs
-			var canWatch = this.__isVarMatch(watch.segments,propChain);
+			var k = this.__isVarMatch(watch.segments,propChain);
 
-			if(canWatch){
+			if(k > -1){
 				var nv = newVal,
 				ov = oldVal;
 				if(watch.segments.length > propChain.length){
@@ -469,14 +471,16 @@ Util.ext(Component.prototype,{
 						findStr += seg[0]==='['?seg:'.'+seg;
 					}
 					try{
+						if(newVal)
 						nv = new Function("$var","return "+findStr)(newVal);
+						if(oldVal)
 						ov = new Function("$var","return "+findStr)(oldVal);
 					}catch(e){
 						LOGGER.debug('error on parse watch params',e);
-						nv = null;
 					}
 				}
-				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,propChain);
+				var matchLevel = change.path.length+1 - watch.segments.length;
+				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,change.path,matchLevel);
 				invokedWatchs.push(watch);
 			}
 		}
@@ -496,6 +500,9 @@ Util.ext(Component.prototype,{
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
+			var canUpdate = c.canUpdate;
+			delete c.canUpdate;
+			if(!canUpdate)continue;
 			this.__props[name] = c.newVal;
 			stateMap[name] = c.newVal;
 			//check children which refers to props
@@ -521,7 +528,7 @@ Util.ext(Component.prototype,{
 
 		if(renderView !== false){
 			for(var k in stateMap){
-				this.state[k] = stateMap[k];
+				this.state[k] = Util.immutable(stateMap[k]);
 			}
 		}
 

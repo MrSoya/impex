@@ -497,15 +497,18 @@
                 this.ds = getForDs(begin,end,step);
             }else{
                 this.ds = this.component.d(this.expInfo.ds);
-                this.component.watch(this.expInfo.ds,function(object,name,type,newVal){
+                this.component.watch(this.expInfo.ds,
+                    function(object,name,type,newVal,oldVal,propChain,matchLevel){
                     if(!that.ds){
-                        that.ds = that.component.d(that.expInfo.ds);
+                        that.ds = that.__comp.d(that.expInfo.ds);
                         that.lastDS = that.ds;
                         that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;
                     }
 
-                    that.lastDS = Util.isArray(newVal)?newVal:object;
+                    var ds = that.__comp.d(that.expInfo.ds);
+                    
+                    that.lastDS = ds;
                     that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                 });
             }
@@ -548,7 +551,7 @@
                     if(PROP_SYNC_SUFX_EXP.test(n)){
                         var keys = Object.keys(tmp.varTree);
                         var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
-                        props.sync[propName] = [tmp,rs,keys];
+                        props.sync[propName] = [tmp,Util.immutable(rs),keys];
                     }else{
                         props.type[n] = Util.immutable(rs);
                     }
@@ -568,8 +571,10 @@
         }
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
+
+            var newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
             
-            var diffSize = ds.length - this.subComponents.length;
+            var diffSize = newSize - this.subComponents.length;
 
             //resort
             // this.subComponents.sort(function(a,b){return a.state.$index - b.state.$index})
@@ -613,15 +618,6 @@
 
                 //模型
                 var v = ds[k];
-
-
-
-                if(ds[k] && ds[k].__im__origin){
-                    v = ds[k].__im__origin;
-
-                    ds[k].__im__origin = null;
-                    delete ds[k].__im__origin;
-                }
 
                 //k,index,each
                 if(typeof v === 'object'){
@@ -741,38 +737,14 @@
                 
             return [subComp,placeholder];
         }
-        function clone(obj,ref){
-            if(obj === null)return null;
-            var rs = obj;
-            if(obj instanceof Array){
-                rs = obj.concat();
-                for(var i=rs.length;i--;){
-                    rs[i] = clone(rs[i],ref);
-                }
-            }else if(Util.isObject(obj)){
-                rs = {};
-                var ks = Object.keys(obj);
-                if(ks.length>0){
-                    var r = ref ===false ? false : !obj.__im__origin;
-                    for(var i=ks.length;i--;){
-                        var k = ks[i],
-                            v = obj[k];
-                        if(k.indexOf('__im__')===0)continue;
-                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
-                    }
-                }
-
-                if(ref !== false && !rs.__im__origin)
-                    rs.__im__origin = obj;
-            }
-            return rs;
-        }
-        this.doFilter = function(rs){
-            if(!this.filters)return rs;
+        this.doFilter = function(ds){
+            if(!this.filters)return ds;
             var filters = this.filters;
-            if(Object.keys(filters).length > 0){
-                if(rs && Util.isObject(rs)){
-                    rs = clone(rs);
+            if(Object.keys(filters).length > 0 && ds){
+                var rs = ds;
+                if(Util.isObject(ds)){
+                    rs = Util.isArray(ds)?[]:{};
+                    Util.ext(rs,ds);
                 }
 
                 for(var k in filters){
@@ -812,12 +784,6 @@
                 
                 //模型
                 var v = ds[k];
-                if(ds[k] && ds[k].__im__origin){
-                    v = ds[k].__im__origin;
-
-                    ds[k].__im__origin = null;
-                    delete ds[k].__im__origin;
-                }
 
                 //k,index,each
                 if(typeof v === 'object'){
