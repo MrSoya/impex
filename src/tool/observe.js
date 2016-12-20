@@ -52,7 +52,7 @@
 				    	var v = value;
 				    	if(old === v)return true;
 
-				    	if(typeof v === 'object'){
+				    	if(typeof v === 'object' && v !== null){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
 				    		v = observeData(this,pcs,v,this.comp);
