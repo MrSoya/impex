@@ -94,11 +94,12 @@ var Util = new function () {
             var cbks = requirements[this.url];
             var url = this.url;
             cbks.forEach(function(cbk){
-                var component = null;
-                eval('component = '+comp);//scope call
-                if(!component)
+                var __impex_comp_eval = null;
+                var evl = eval;
+                evl('__impex_comp_eval = '+comp);//scope call
+                if(!window.__impex_comp_eval)
                     LOGGER.error('can not find component defination of : '+url);
-                var data = component();
+                var data = window.__impex_comp_eval();
                 cbk([tmpl,data]);
             });
             requirements[this.url] = null;
