@@ -88,7 +88,7 @@ Util.ext(Directive.prototype,{
 			this.onUpdate(rs);
 		}
 
-		this.onActive && this.onActive();
+		this.onActive && this.onActive(rs);
 
 	},
 	/**
