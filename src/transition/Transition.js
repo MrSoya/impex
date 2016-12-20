@@ -14,7 +14,7 @@ function Transition (type,target,hook) {
         TESTNODE = document.createElement('div');
         document.body.appendChild(TESTNODE);
     }
-
+    var v = target;
     if(!hook || hook.css !== false){
         TESTNODE.className = (type + '-transition');
         TESTNODE.style.left = '-9999px';
@@ -29,7 +29,6 @@ function Transition (type,target,hook) {
         }
 
         if(max > 0){
-            var v = target;
             var expNodes = null;
             var comp = null;
             if(target instanceof Directive){
@@ -85,7 +84,7 @@ Transition.prototype = {
         	this.__direct.enter();
         }
         if(this.__hook.enter){
-        	this.__hook.enter.call(this.__direct);
+        	this.__hook.enter.call(this.__direct,this.__done.bind(this));
         }
 
         if(this.__css){
@@ -99,7 +98,7 @@ Transition.prototype = {
             this.__direct.postEnter();
         }
         if(this.__hook.postEnter){
-            this.__hook.postEnter.call(this.__direct);
+            this.__hook.postEnter.call(this.__direct,this.__done.bind(this));
         }
 	},
 	leave:function(){
@@ -114,7 +113,7 @@ Transition.prototype = {
             this.__direct.leave();
         }
         if(this.__hook.leave){
-        	this.__hook.leave.call(this.__direct);
+        	this.__hook.leave.call(this.__direct,this.__done.bind(this));
         }
         
 	},
@@ -123,7 +122,7 @@ Transition.prototype = {
             this.__direct.postLeave();
         }
         if(this.__hook.postLeave){
-            this.__hook.postLeave.call(this.__direct);
+            this.__hook.postLeave.call(this.__direct,this.__done.bind(this));
         }
         if(this.__css){
             this.__view.el.offsetHeight;
