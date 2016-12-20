@@ -408,6 +408,7 @@ Util.ext(Component.prototype,{
 			var path = change.path;
 			this.__watchProps.forEach(function(prop){
 				var k = this.__isVarMatch(prop.segments,path);
+				if(k<0)return;
 				if(!matchMap[prop.subComp.__id])
 					matchMap[prop.subComp.__id] = [];
 				var rs = Renderer.evalExp(this,prop.expWords);
