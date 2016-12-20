@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-12-13
+ * last build: 2016-12-20
  */
 !function (global) {
 	'use strict';
@@ -107,11 +107,12 @@ var Util = new function () {
             var cbks = requirements[this.url];
             var url = this.url;
             cbks.forEach(function(cbk){
-                var component = null;
-                eval('component = '+comp);//scope call
-                if(!component)
+                var __impex_comp_eval = null;
+                var evl = eval;
+                evl('__impex_comp_eval = '+comp);//scope call
+                if(!window.__impex_comp_eval)
                     LOGGER.error('can not find component defination of : '+url);
-                var data = component();
+                var data = window.__impex_comp_eval();
                 cbk([tmpl,data]);
             });
             requirements[this.url] = null;
@@ -233,7 +234,7 @@ var Util = new function () {
 				    	var v = value;
 				    	if(old === v)return true;
 
-				    	if(typeof v === 'object'){
+				    	if(typeof v === 'object' && v !== null){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
 				    		v = observeData(this,pcs,v,this.comp);
@@ -2326,18 +2327,19 @@ Util.ext(Component.prototype,{
 			var change = changes[i];
 			var path = change.path;
 			this.__watchProps.forEach(function(prop){
-				var isMatch = this.__isVarMatch(prop.segments,path);
-				if(isMatch){
-					if(!matchMap[prop.subComp.__id])
-						matchMap[prop.subComp.__id] = [];
-					var rs = Renderer.evalExp(this,prop.expWords);
-					matchMap[prop.subComp.__id].push({
-						name:prop.name,
-						oldVal:prop.oldVal,
-						newVal:rs
-					});
-					prop.oldVal = rs;
-				}
+				var k = this.__isVarMatch(prop.segments,path);
+				if(k<0)return;
+				if(!matchMap[prop.subComp.__id])
+					matchMap[prop.subComp.__id] = [];
+				var rs = Renderer.evalExp(this,prop.expWords);
+				matchMap[prop.subComp.__id].push({
+					name:prop.name,
+					oldVal:prop.oldVal,
+					newVal:rs,
+					path:path,
+					canUpdate:k>-1?true:false
+				});
+				prop.oldVal = rs;
 			},this);
 		}
 		for(var k in matchMap){
@@ -2346,17 +2348,17 @@ Util.ext(Component.prototype,{
 		}
 	},
 	__isVarMatch:function(segments,changePath){
-		if(segments.length < changePath.length)return false;
+		if(segments.length < changePath.length)return -1;
 		for(var k=0;k<segments.length;k++){
 			if(!changePath[k])break;
 
 			if(segments[k][0] !== '[' && 
 				changePath[k][0] !== '[' && 
 				segments[k] !== changePath[k]){
-				return false;
+				return -1;
 			}
 		}
-		return true;
+		return k;
 	},
 	__callWatchs:function (watchs){
 		var invokedWatchs = [];
@@ -2364,20 +2366,22 @@ Util.ext(Component.prototype,{
 			var change = watchs[i][1];
 			var watch = watchs[i][0];
 
-			var propChain = change.path;
 			var newVal = change.newVal;
 			var oldVal = change.oldVal;
 			var name = change.name;
 			var object = change.object;
+			var propChain = change.path.concat();
+			if(!Util.isArray(object))
+				change.path.pop();
 			var changeType = change.type;
 
 			if(watch.segments.length < propChain.length)continue;
 			if(invokedWatchs.indexOf(watch) > -1)continue;
 
 			//compare segs
-			var canWatch = this.__isVarMatch(watch.segments,propChain);
+			var k = this.__isVarMatch(watch.segments,propChain);
 
-			if(canWatch){
+			if(k > -1){
 				var nv = newVal,
 				ov = oldVal;
 				if(watch.segments.length > propChain.length){
@@ -2388,14 +2392,16 @@ Util.ext(Component.prototype,{
 						findStr += seg[0]==='['?seg:'.'+seg;
 					}
 					try{
+						if(newVal)
 						nv = new Function("$var","return "+findStr)(newVal);
+						if(oldVal)
 						ov = new Function("$var","return "+findStr)(oldVal);
 					}catch(e){
 						LOGGER.debug('error on parse watch params',e);
-						nv = null;
 					}
 				}
-				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,propChain);
+				var matchLevel = change.path.length+1 - watch.segments.length;
+				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,change.path,matchLevel);
 				invokedWatchs.push(watch);
 			}
 		}
@@ -2415,6 +2421,9 @@ Util.ext(Component.prototype,{
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
+			var canUpdate = c.canUpdate;
+			delete c.canUpdate;
+			if(!canUpdate)continue;
 			this.__props[name] = c.newVal;
 			stateMap[name] = c.newVal;
 			//check children which refers to props
@@ -2440,7 +2449,7 @@ Util.ext(Component.prototype,{
 
 		if(renderView !== false){
 			for(var k in stateMap){
-				this.state[k] = stateMap[k];
+				this.state[k] = Util.immutable(stateMap[k]);
 			}
 		}
 
@@ -2611,7 +2620,7 @@ Util.ext(Directive.prototype,{
 			this.onUpdate(rs);
 		}
 
-		this.onActive && this.onActive();
+		this.onActive && this.onActive(rs);
 
 	},
 	/**
@@ -2709,7 +2718,7 @@ function Transition (type,target,hook) {
         TESTNODE = document.createElement('div');
         document.body.appendChild(TESTNODE);
     }
-
+    var v = target;
     if(!hook || hook.css !== false){
         TESTNODE.className = (type + '-transition');
         TESTNODE.style.left = '-9999px';
@@ -2724,7 +2733,6 @@ function Transition (type,target,hook) {
         }
 
         if(max > 0){
-            var v = target;
             var expNodes = null;
             var comp = null;
             if(target instanceof Directive){
@@ -2780,7 +2788,7 @@ Transition.prototype = {
         	this.__direct.enter();
         }
         if(this.__hook.enter){
-        	this.__hook.enter.call(this.__direct);
+        	this.__hook.enter.call(this.__direct,this.__done.bind(this));
         }
 
         if(this.__css){
@@ -2794,7 +2802,7 @@ Transition.prototype = {
             this.__direct.postEnter();
         }
         if(this.__hook.postEnter){
-            this.__hook.postEnter.call(this.__direct);
+            this.__hook.postEnter.call(this.__direct,this.__done.bind(this));
         }
 	},
 	leave:function(){
@@ -2809,7 +2817,7 @@ Transition.prototype = {
             this.__direct.leave();
         }
         if(this.__hook.leave){
-        	this.__hook.leave.call(this.__direct);
+        	this.__hook.leave.call(this.__direct,this.__done.bind(this));
         }
         
 	},
@@ -2818,7 +2826,7 @@ Transition.prototype = {
             this.__direct.postLeave();
         }
         if(this.__hook.postLeave){
-            this.__hook.postLeave.call(this.__direct);
+            this.__hook.postLeave.call(this.__direct,this.__done.bind(this));
         }
         if(this.__css){
             this.__view.el.offsetHeight;
@@ -3151,6 +3159,9 @@ function checkPropType(k,v,propTypes,component){
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
+	if(v instanceof Array){
+		vType = 'array';
+	}
 	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
 		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
 	}
@@ -3596,6 +3607,7 @@ var TransitionFactory = {
 
 
 		this.logger = LOGGER;
+		this.util = Util;
 	}
 /**
  * 内建服务，提供基础操作接口
@@ -4161,15 +4173,18 @@ impex.service('Msg',new function(){
                 this.ds = getForDs(begin,end,step);
             }else{
                 this.ds = this.component.d(this.expInfo.ds);
-                this.component.watch(this.expInfo.ds,function(object,name,type,newVal){
+                this.component.watch(this.expInfo.ds,
+                    function(object,name,type,newVal,oldVal,propChain,matchLevel){
                     if(!that.ds){
-                        that.ds = that.component.d(that.expInfo.ds);
+                        that.ds = that.__comp.d(that.expInfo.ds);
                         that.lastDS = that.ds;
                         that.build(that.ds,that.expInfo.k,that.expInfo.v);
                         return;
                     }
 
-                    that.lastDS = Util.isArray(newVal)?newVal:object;
+                    var ds = that.__comp.d(that.expInfo.ds);
+                    
+                    that.lastDS = ds;
                     that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
                 });
             }
@@ -4212,7 +4227,7 @@ impex.service('Msg',new function(){
                     if(PROP_SYNC_SUFX_EXP.test(n)){
                         var keys = Object.keys(tmp.varTree);
                         var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
-                        props.sync[propName] = [tmp,rs,keys];
+                        props.sync[propName] = [tmp,Util.immutable(rs),keys];
                     }else{
                         props.type[n] = Util.immutable(rs);
                     }
@@ -4232,8 +4247,10 @@ impex.service('Msg',new function(){
         }
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
+
+            var newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
             
-            var diffSize = ds.length - this.subComponents.length;
+            var diffSize = newSize - this.subComponents.length;
 
             //resort
             // this.subComponents.sort(function(a,b){return a.state.$index - b.state.$index})
@@ -4277,15 +4294,6 @@ impex.service('Msg',new function(){
 
                 //模型
                 var v = ds[k];
-
-
-
-                if(ds[k] && ds[k].__im__origin){
-                    v = ds[k].__im__origin;
-
-                    ds[k].__im__origin = null;
-                    delete ds[k].__im__origin;
-                }
 
                 //k,index,each
                 if(typeof v === 'object'){
@@ -4405,38 +4413,14 @@ impex.service('Msg',new function(){
                 
             return [subComp,placeholder];
         }
-        function clone(obj,ref){
-            if(obj === null)return null;
-            var rs = obj;
-            if(obj instanceof Array){
-                rs = obj.concat();
-                for(var i=rs.length;i--;){
-                    rs[i] = clone(rs[i],ref);
-                }
-            }else if(Util.isObject(obj)){
-                rs = {};
-                var ks = Object.keys(obj);
-                if(ks.length>0){
-                    var r = ref ===false ? false : !obj.__im__origin;
-                    for(var i=ks.length;i--;){
-                        var k = ks[i],
-                            v = obj[k];
-                        if(k.indexOf('__im__')===0)continue;
-                        rs[k] = typeof obj[k]==='object'? clone(obj[k],r): obj[k];
-                    }
-                }
-
-                if(ref !== false && !rs.__im__origin)
-                    rs.__im__origin = obj;
-            }
-            return rs;
-        }
-        this.doFilter = function(rs){
-            if(!this.filters)return rs;
+        this.doFilter = function(ds){
+            if(!this.filters)return ds;
             var filters = this.filters;
-            if(Object.keys(filters).length > 0){
-                if(rs && Util.isObject(rs)){
-                    rs = clone(rs);
+            if(Object.keys(filters).length > 0 && ds){
+                var rs = ds;
+                if(Util.isObject(ds)){
+                    rs = Util.isArray(ds)?[]:{};
+                    Util.ext(rs,ds);
                 }
 
                 for(var k in filters){
@@ -4476,12 +4460,6 @@ impex.service('Msg',new function(){
                 
                 //模型
                 var v = ds[k];
-                if(ds[k] && ds[k].__im__origin){
-                    v = ds[k].__im__origin;
-
-                    ds[k].__im__origin = null;
-                    delete ds[k].__im__origin;
-                }
 
                 //k,index,each
                 if(typeof v === 'object'){
