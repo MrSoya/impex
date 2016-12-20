@@ -242,6 +242,9 @@ function checkPropType(k,v,propTypes,component){
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
+	if(v instanceof Array){
+		vType = 'array';
+	}
 	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
 		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
 	}
