@@ -55,10 +55,9 @@ function Watch (cbk,ctrlScope,segments) {
 /**
  * 参数信息
  */
-function Prop (subComp,name,segments,expWords,oldVal,fromPropKey) {
+function Prop (subComp,name,segments,expWords) {
 	this.subComp = subComp;
 	this.name = name;
 	this.segments = segments;
 	this.expWords = expWords;
-	this.oldVal = oldVal;
 }

@@ -244,4 +244,25 @@
 
 		this.logger = LOGGER;
 		this.util = Util;
+
+
+		//for prototype API
+		this.Component = Component;
+
+		/**
+		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
+		 */
+		this.useBasicRender = function(){
+			Util.ext(Component.prototype,{
+				onPropChange : function(changes){
+			        changes.forEach(function(c){
+			            var val = this.state[c.name];
+			            if(c.val !== val){
+			                this.state[c.name] = c.val;
+			            }
+			        },this);
+			    }
+			});
+		}
 	}
+

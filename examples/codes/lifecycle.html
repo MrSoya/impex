@@ -15,6 +15,8 @@
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
+        
+
             //自定义组件
             impex.component('x-comp',{
                 onCreate:function(){
@@ -30,9 +32,10 @@
                     this.logger('update...');
                     // return false;
                 },
-                onPropUpdate:function(arg){
+                onPropChange:function(changes){
+                    this.constructor.prototype.onPropChange.call(this,changes);
+                    // this.state.p = changes[0].val;
                     this.logger('propChange...');
-                    // return false;
                 },
                 onDestroy:function(){
                     this.logger('destroy...');

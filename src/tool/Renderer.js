@@ -71,29 +71,6 @@ var Renderer = new function() {
 		}
 	}
 
-	function clone(obj){
-		if(obj === null)return null;
-		var rs = obj;
-		if(obj instanceof Array){
-			rs = obj.concat();
-			for(var i=rs.length;i--;){
-				rs[i] = clone(rs[i]);
-			}
-		}else if(Util.isObject(obj)){
-			rs = {};
-			var ks = Object.keys(obj);
-            if(ks.length>0){
-                for(var i=ks.length;i--;){
-                    var k = ks[i],
-                        v = obj[k];
-                    if(k.indexOf('__im__')===0)continue;
-                    rs[k] = typeof obj[k]==='object'? clone(obj[k]): obj[k];
-                }
-            }
-		}
-		return rs;
-	}
-
 	//计算表达式的值，每次都使用从内到外的查找方式
 	function calcExpNode(expNode){
 		var component = expNode.component,
@@ -108,9 +85,11 @@ var Renderer = new function() {
 
 			var filters = expObj.filters;
 			if(Object.keys(filters).length > 0){
-				if(rs && Util.isObject(rs)){
-					rs = clone(rs);
-				}
+                if(Util.isObject(rs)){
+                	var tmp = rs;
+                    rs = Util.isArray(rs)?[]:{};
+                    Util.ext(rs,tmp);
+                }
 
 				for(var k in filters){
 					var c = filters[k][0];

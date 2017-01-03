@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
+    </head>
+    <body>
+        <x-a .items:sync="items">
+            <x-c .items:sync="items"></x-c>
+        </x-a>
+
+        <x-b .items:sync="items"></x-b>
+        <p>
+            items[0].name:<input type="text" x-model="items[0].name" value="50">
+        </p>
+        <p>
+        items[0].children[0].name:<input type="text" x-model="items[0].children[0].name" value="50">
+        </p>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            impex.component('x-a',{
+                onPropBind:function(k,v){
+                    console.log(k,v,this.__id);
+                    return impex.util.immutable(v);
+                },
+                onPropChange:function(changes){
+                    changes.forEach(function(c){
+                        var val = this.state[c.name];
+                        if(c.val !== val){
+                            this.state[c.name] = impex.util.immutable(c.val);
+                        }
+                    },this);
+                },
+                template:`
+                    <b>x-a</b>:  {{items =>json}}
+                    <p style="text-indent:2rem;"><slot></slot></p>
+                `
+            });
+            impex.component('x-b',{
+                onPropBind:function(k,v){
+                    console.log(k,v,this.__id);
+                    return v;
+                },
+                onPropChange:function(changes){
+                    changes.forEach(function(c){
+                        var val = this.state[c.name];
+                        if(c.val !== val){
+                            this.state[c.name] = c.val;
+                        }
+                    },this);
+                },
+                template:`
+                    <b>x-b</b>:  {{items =>json}}
+                `
+            });
+            impex.component('x-c',{
+                onPropBind:function(k,v){
+                    console.log(k,v,this.__id);
+                    return v;
+                },
+                onPropChange:function(changes){
+                    changes.forEach(function(c){
+                        var val = this.state[c.name];
+                        if(c.val !== val){
+                            this.state[c.name] = c.val;
+                        }
+                    },this);
+                },
+                template:`
+                    <b>x-c</b>:  {{items =>json}}
+                `
+            })
+
+            
+            //渲染
+            var debug = impex.render(document.body,{
+                begin:function(){
+                    return 1;
+                },
+                state:{
+                    items:[
+                        {name:11,children:[
+                            {name:1111}
+                        ]},
+                        {name:22},
+                        {name:33},
+                    ]
+                }
+            });
+            
+        </script>
+    </body>
+</html>

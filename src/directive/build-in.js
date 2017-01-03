@@ -540,7 +540,8 @@
                 var attr = el.attributes[i];
                 var k = attr.nodeName;
                 if(ks.indexOf(k) > -1)continue;
-
+                k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+                
                 var v = attr.nodeValue;
 
                 if(k[0] === PROP_TYPE_PRIFX){
@@ -551,9 +552,9 @@
                     if(PROP_SYNC_SUFX_EXP.test(n)){
                         var keys = Object.keys(tmp.varTree);
                         var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
-                        props.sync[propName] = [tmp,Util.immutable(rs),keys];
+                        props.sync[propName] = [tmp,rs,keys];
                     }else{
-                        props.type[n] = Util.immutable(rs);
+                        props.type[n] = rs;
                     }
                 }else{
                     props.str[k] = v;
@@ -689,17 +690,29 @@
 
             this.subComponents.push(subComp);
 
+            //bind callback first
+            for(var n in this.__props.type){
+                var v = this.__props.type[n];
+                if(v instanceof Function){
+                    subComp[n] = v;
+                }
+            }
+
             //bind props
             for(var n in this.__props.sync){
                 var prop = this.__props.sync[n];
                 var tmp = prop[0];
                 var rs = prop[1];
+                //call onPropBind
+                if(Util.isObject(rs) && subComp.onPropBind)
+                    rs = subComp.onPropBind(n,rs);
+
                 var keys = prop[2];
                 //watch props
                 keys.forEach(function(key){
                     if(tmp.varTree[key].isFunc)return;
 
-                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp,rs);
+                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp);
                     comp.__watchProps.push(prop);
                 });
                 subComp.state[n] = rs;
@@ -710,12 +723,12 @@
             }
             for(var n in this.__props.type){
                 var v = this.__props.type[n];
-                if(v instanceof Function){
-                    subComp[n] = v;
-                }else{
+                if(!(v instanceof Function)){
+                    //call onPropBind
+                    if(Util.isObject(v) && subComp.onPropBind)
+                        v = subComp.onPropBind(n,v);
                     subComp.state[n] = v;
                 }
-                
             }
             
             if(this.trans){

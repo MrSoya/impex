@@ -1,4 +1,16 @@
 # Change Log
+## Version 0.36.0 - 2017/1/3
+### 新增
+* onPropBind 生命周期回调，可以处理参数的clone
+* 组件参数名如果通过连接符连接，会自动转成驼峰格式 on-prop-change --> onPropChange
+
+### 更新
+* 组件间参数传递默认引用
+
+### bug修复
+* 某些条件下当父组件修改了state后，子组件不会触发同步变更
+
+
 ## Version 0.35.0 - 2016/12/8
 ### 新增
 * x-style

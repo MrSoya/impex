@@ -9,6 +9,7 @@
  * 	组件生命周期
  * 	<ul>
  * 		<li>onCreate：当组件被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
+ * 		<li>onPropBind：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onDisplay：当组件被显示时，该事件被触发，此时组件以及完成数据构建和绑定</li>
  * 		<li>onDestroy：当组件被销毁时，该事件被触发</li>
@@ -414,12 +415,9 @@ Util.ext(Component.prototype,{
 				var rs = Renderer.evalExp(this,prop.expWords);
 				matchMap[prop.subComp.__id].push({
 					name:prop.name,
-					oldVal:prop.oldVal,
-					newVal:rs,
-					path:path,
-					canUpdate:k>-1?true:false
+					val:rs,
+					path:path
 				});
-				prop.oldVal = rs;
 			},this);
 		}
 		for(var k in matchMap){
@@ -428,7 +426,6 @@ Util.ext(Component.prototype,{
 		}
 	},
 	__isVarMatch:function(segments,changePath){
-		if(segments.length < changePath.length)return -1;
 		for(var k=0;k<segments.length;k++){
 			if(!changePath[k])break;
 
@@ -462,26 +459,8 @@ Util.ext(Component.prototype,{
 			var k = this.__isVarMatch(watch.segments,propChain);
 
 			if(k > -1){
-				var nv = newVal,
-				ov = oldVal;
-				if(watch.segments.length > propChain.length){
-					var findSegs = watch.segments.slice(k);
-					var findStr = '$var';
-					for(var k=0;k<findSegs.length;k++){
-						var seg = findSegs[k];
-						findStr += seg[0]==='['?seg:'.'+seg;
-					}
-					try{
-						if(newVal)
-						nv = new Function("$var","return "+findStr)(newVal);
-						if(oldVal)
-						ov = new Function("$var","return "+findStr)(oldVal);
-					}catch(e){
-						LOGGER.debug('error on parse watch params',e);
-					}
-				}
 				var matchLevel = change.path.length+1 - watch.segments.length;
-				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,nv,ov,change.path,matchLevel);
+				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,newVal,oldVal,change.path,matchLevel);
 				invokedWatchs.push(watch);
 			}
 		}
@@ -496,42 +475,27 @@ Util.ext(Component.prototype,{
 	},
 	__propChange:function(changes){
 		var matchMap = {};
-		var stateMap = {};
 		//update props
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
-			var canUpdate = c.canUpdate;
-			delete c.canUpdate;
-			if(!canUpdate)continue;
+			var path = c.path;
 			this.__props[name] = c.newVal;
-			stateMap[name] = c.newVal;
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
-				var k = prop.fromPropKey;
-				if(!k)return;
-				if(k[0] === '[' || k === name){
-					if(!matchMap[prop.subComp.__id])
-						matchMap[prop.subComp.__id] = [];
-					var rs = Renderer.evalExp(this,prop.expWords);
-					matchMap[prop.subComp.__id].push({
-						name:prop.name,
-						oldVal:prop.oldVal,
-						newVal:rs
-					});
-					prop.oldVal = rs;
-				}
+				var k = this.__isVarMatch(prop.segments,path);
+				if(k<0)return;
+				if(!matchMap[prop.subComp.__id])
+					matchMap[prop.subComp.__id] = [];
+				var rs = Renderer.evalExp(this,prop.expWords);
+				matchMap[prop.subComp.__id].push({
+					name:prop.name,
+					val:rs
+				});
 			},this);
 		}
 
-		var renderView = true;
-		this.onPropUpdate && (renderView = this.onPropUpdate(changes));
-
-		if(renderView !== false){
-			for(var k in stateMap){
-				this.state[k] = Util.immutable(stateMap[k]);
-			}
-		}
+		this.onPropChange && this.onPropChange(changes);
 
 		for(var k in matchMap){
 			var cs = matchMap[k];

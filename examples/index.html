@@ -52,9 +52,10 @@
             	</div>
             </div>
 			<div class="main {{hideSide?'hidden':''}}">
-				<iframe src="codes/{{v.type}}.html"
+				<iframe src="codes/{{v.type}}.html" 
 				scrolling="yes" frameborder="0" 
 				onload="changeFrameHeight(this)"
+				.on-prop-change="this.eachUpdate"
 				x-each="activeComps as v" 
 				.active:sync="active" 
 				class="panel {{active==v.type?'active':''}}">
@@ -97,6 +98,9 @@
                         }
                     });
                 },
+                eachUpdate:function(changes){
+                    this.state.active = changes[0].val;
+                },
                 onInit:function(){
                 	var comps = [];
                 	for(var k in this.state.sidebar){
@@ -118,7 +122,7 @@
             			'component':[
             				'anonymous','named','expression','html','remote','slot',
             				'watch','props','proptypes','propchange',
-            				'restrict','lifecycle','communication','route'
+            				'restrict','lifecycle','communication','route','updateprop'
             			],
             			'filter':[
             				'currency','chain'

@@ -251,7 +251,9 @@ function checkPropType(k,v,propTypes,component){
 }
 
 function handleProps(k,v,requires,propTypes,component){
-	// .xxxx
+	k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+
+	// xxxx
 	if(k[0] !== PROP_TYPE_PRIFX){
 		if(propTypes){
 			delete requires[k];
@@ -261,10 +263,14 @@ function handleProps(k,v,requires,propTypes,component){
 		return;
 	}
 
-	// xxxx
+	// .xxxx
 	var n = k.substr(1);
 	var tmp = lexer(v);
 	var rs = Renderer.evalExp(component.parent,tmp);
+
+	//call onPropBind
+	if(Util.isObject(rs) && component.onPropBind)
+		rs = component.onPropBind(n,rs);
 
 	//check sync
 	if(PROP_SYNC_SUFX_EXP.test(n)){
@@ -274,8 +280,8 @@ function handleProps(k,v,requires,propTypes,component){
 		//watch props
 		keys.forEach(function(key){
 			if(tmp.varTree[key].isFunc)return;
-			
-			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp,rs);
+
+			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp);
 			component.parent.__watchProps.push(prop);
 		});
 	}
@@ -286,8 +292,7 @@ function handleProps(k,v,requires,propTypes,component){
 	if(rs instanceof Function){
 		component[n] = rs;
 		return;
-	}
-	//immutable
-	var obj = Util.immutable(rs);
-	component.state[n] = obj;
+	}	
+
+	component.state[n] = rs;
 }
