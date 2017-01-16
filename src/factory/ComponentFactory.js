@@ -86,8 +86,6 @@ Util.ext(_ComponentFactory.prototype,{
 				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
 					instance = DirectiveFactory.newInstanceOf('on',component.el,component,k,v);
 				}else{
-					if(!component.parent)continue;
-
 					handleProps(k,v,requires,propTypes,component);
 				}
 

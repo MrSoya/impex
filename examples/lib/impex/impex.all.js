@@ -3,11 +3,11 @@
  * reactive webUI system
  *
  *
- * Copyright 2015-2016 MrSoya and other contributors
+ * Copyright 2015-2017 MrSoya and other contributors
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2016-12-26
+ * last build: 2017-01-13
  */
 !function (global) {
 	'use strict';
@@ -1107,11 +1107,9 @@ var Scanner = new function() {
 		for(var i=0;i<wds.length;i++){
 			if(wds[i] instanceof Array){
 				var w = wds[i][0];
-				var tmp = w.split('.');
+				var tmp = w.replace(/^\./,'');
 				
-				for(var k=1;k<tmp.length;k++){
-					words.push([tmp[k]]);
-				}
+				words.push([tmp]);
 			}else{
 				words.push(wds[i]);
 			}
@@ -1125,7 +1123,7 @@ var Scanner = new function() {
 						currParams.push(currParam);
 					currParam = '';
 					break;
-				case '.':
+				case FILTER_EXP_SPLITTER:
 					inParam = false;
 					if(currParam !== null)
 						currParams.push(currParam);
@@ -2079,7 +2077,7 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个匿名子组件
-	 * @param  {HTMLElement} els 视图
+	 * @param  {Array<HTMLElement>} els 视图
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(els){
@@ -2226,7 +2224,6 @@ Util.ext(Component.prototype,{
 		this.__url = 
 		this.template = 
 		this.restrict = 
-		this.events = 
 		this.state = null;
 	},
 	/**
@@ -2946,8 +2943,6 @@ Util.ext(_ComponentFactory.prototype,{
 				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
 					instance = DirectiveFactory.newInstanceOf('on',component.el,component,k,v);
 				}else{
-					if(!component.parent)continue;
-
 					handleProps(k,v,requires,propTypes,component);
 				}
 
@@ -3329,6 +3324,7 @@ var TransitionFactory = {
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
+	var FILTER_EXP_SPLITTER = '|';
 	var LOGGER = {
 	    log : function(){},
 	    debug : function(){},
@@ -3356,7 +3352,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,31,1],
+	        v:[0,36,0],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

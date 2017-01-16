@@ -835,9 +835,6 @@
                 }
             },0);
         }
-        this.over = function(){
-            alert('sdfdsf')
-        }
         this.parseExp = function(exp){
             var ds,k,v;
             var that = this;

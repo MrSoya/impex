@@ -8,7 +8,7 @@
     </head>
     <body>
         <div 
-        x-each="list2 as k,v => filterBy:filterKey:'name' .orderBy:orderKey:'desc'">
+        x-each="list2 as k,v => filterBy:filterKey:'name' |orderBy:orderKey:'desc'">
         {{k}} {{v => json}}
         </div>
         <p>

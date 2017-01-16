@@ -236,11 +236,9 @@ var Scanner = new function() {
 		for(var i=0;i<wds.length;i++){
 			if(wds[i] instanceof Array){
 				var w = wds[i][0];
-				var tmp = w.split('.');
+				var tmp = w.replace(/^\./,'');
 				
-				for(var k=1;k<tmp.length;k++){
-					words.push([tmp[k]]);
-				}
+				words.push([tmp]);
 			}else{
 				words.push(wds[i]);
 			}
@@ -254,7 +252,7 @@ var Scanner = new function() {
 						currParams.push(currParam);
 					currParam = '';
 					break;
-				case '.':
+				case FILTER_EXP_SPLITTER:
 					inParam = false;
 					if(currParam !== null)
 						currParams.push(currParam);

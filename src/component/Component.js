@@ -181,7 +181,7 @@ Util.ext(Component.prototype,{
 	},
 	/**
 	 * 创建一个匿名子组件
-	 * @param  {HTMLElement} els 视图
+	 * @param  {Array<HTMLElement>} els 视图
 	 * @return {Component} 子组件
 	 */
 	createSubComponent:function(els){
@@ -328,7 +328,6 @@ Util.ext(Component.prototype,{
 		this.__url = 
 		this.template = 
 		this.restrict = 
-		this.events = 
 		this.state = null;
 	},
 	/**

@@ -17,6 +17,7 @@
 	var EXP2HTML_START_EXP = /^\s*#/;
 	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
+	var FILTER_EXP_SPLITTER = '|';
 	var LOGGER = {
 	    log : function(){},
 	    debug : function(){},
@@ -44,7 +45,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,31,1],
+	        v:[0,36,1],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
