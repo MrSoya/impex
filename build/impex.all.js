@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-01-13
+ * last build: 2017-01-16
  */
 !function (global) {
 	'use strict';
@@ -3352,7 +3352,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,36,0],
+	        v:[0,36,1],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -4476,9 +4476,6 @@ impex.service('Msg',new function(){
                     eachObj.over();
                 }
             },0);
-        }
-        this.over = function(){
-            alert('sdfdsf')
         }
         this.parseExp = function(exp){
             var ds,k,v;
