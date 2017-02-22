@@ -66,7 +66,7 @@ var ChangeHandler = new function() {
 	        comp = pc[0].subComponents[parseInt(index)];
 	        chains.push(pc[1]);
 	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.state.__im__target[pc[1]] = newVal;
+	        	comp.state.__im__target && (comp.state.__im__target[pc[1]] = newVal);
 	        }
         }else{
         	chains = pc.concat();
