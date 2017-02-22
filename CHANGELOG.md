@@ -1,4 +1,12 @@
 # Change Log
+## Version 0.36.2 - 2017/2/22
+### 更新
+* each指令的rebuild如果新增列表项，也会异步触发
+
+### bug修复
+* each指令的over回调，如果数组长度是0也会触发
+
+
 ## Version 0.36.0 - 2017/1/3
 ### 新增
 * onPropBind 生命周期回调，可以处理参数的clone

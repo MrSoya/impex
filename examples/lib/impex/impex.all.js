@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-01-16
+ * last build: 2017-02-22
  */
 !function (global) {
 	'use strict';
@@ -1295,7 +1295,7 @@ var ChangeHandler = new function() {
 	        comp = pc[0].subComponents[parseInt(index)];
 	        chains.push(pc[1]);
 	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.state.__im__target[pc[1]] = newVal;
+	        	comp.state.__im__target && (comp.state.__im__target[pc[1]] = newVal);
 	        }
         }else{
         	chains = pc.concat();
@@ -3352,7 +3352,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,36,1],
+	        v:[0,36,2],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -4253,6 +4253,7 @@ impex.service('Msg',new function(){
 
             var isIntK = Util.isArray(ds)?true:false;
             var index = 0;
+            var updateQ = [];
             for(var k in ds){
                 if(!ds.hasOwnProperty(k))continue;
                 if(isIntK && isNaN(k))continue;
@@ -4280,25 +4281,13 @@ impex.service('Msg',new function(){
                 if(ki)data[ki] = isIntK?k>>0:k;
 
                 if(compMap[subComp.__id]){
-                    var pair = compMap[subComp.__id];
-                    var holder = pair[1];
-                    //attach DOM
-                    this.DOMHelper.replace(holder,subComp.__nodes);
+                    updateQ.push(compMap[subComp.__id]);
                 }
                 
-                if(subComp.__state === Component.state.created){
-                    subComp.init();
-                }
-                subComp.display();
-                if(subComp.__state === "displayed"){
-                    Renderer.recurRender(subComp);
-                }
-                
-                onDisplay(subComp);
+                // onDisplay(subComp);
             }
 
-            if(this.over)
-                this.over();
+            renderEach(updateQ,this,true);
         }
         function onDisplay(comp){
             for(var i=0;i<comp.children.length;i++){
@@ -4454,7 +4443,8 @@ impex.service('Msg',new function(){
 
             renderEach(queue,this);
         }
-        function renderEach(queue,eachObj){
+        function renderEach(queue,eachObj,deep){
+            if(queue.length<1)return;
             setTimeout(function(){
                 var list = queue.splice(0,50);
                 for(var i=0;i<list.length;i++){
@@ -4466,6 +4456,12 @@ impex.service('Msg',new function(){
                     eachObj.DOMHelper.replace(holder,comp.__nodes);
                     comp.init();
                     comp.display();
+
+                    if(deep){
+                        if(comp.__state === "displayed"){
+                            Renderer.recurRender(comp);
+                        }
+                    }
                 }
 
                 if(queue.length > 0){
