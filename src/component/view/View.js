@@ -11,7 +11,7 @@ function View () {
 	this.el = null;
 }
 View.prototype = {
-	__destroy:function(){
+	__destroyView:function(){
 		for(var k in this.__evMap){
 			var events = this.__evMap[k];
 	        for(var i=events.length;i--;){
@@ -38,10 +38,12 @@ View.prototype = {
 		}
 	},
 	/**
-	 * 绑定事件到视图
+	 * 绑定事件到视图。支持原生事件类型或自定义事件类型。<br/>
+	 * 如果同一个事件类型两者都有，自定义事件会优先绑定
 	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
      * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
      * @param  {function} handler   事件处理回调，回调参数e
+     * @see impex.events
 	 */
 	on:function(type,exp,handler){
 		if(!this.el)return;
@@ -75,6 +77,12 @@ View.prototype = {
 			}
 		};
 
+		//check custom events
+		if(EVENTS_MAP[type]){
+			EVENTS_MAP[type].onbind(this.el,evHandler);
+			return;
+		}
+
         this.el.addEventListener(type,evHandler,false);
 		
 		if(!this.__evMap[type]){
@@ -89,6 +97,12 @@ View.prototype = {
 	 */
 	off:function(type,exp){
 		if(!this.el)return;
+
+		//check custom events
+		if(EVENTS_MAP[type]){
+			EVENTS_MAP[type].onunbind(this.el);
+			return;
+		}
 
 		var events = this.__evMap[type];
         for(var i=events.length;i--;){

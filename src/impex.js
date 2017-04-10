@@ -27,6 +27,8 @@
 
 	var im_counter = 0;
 
+	var EVENTS_MAP = {};
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -36,6 +38,44 @@
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */
 	var impex = new function(){
+
+		/**
+		 * 保存注册过的全局组件实例引用。注册全局组件可以使用x-global指令.
+		 * <p>
+		 * 		<x-panel x-global="xPanel" >...</x-panel>
+		 * </p>
+		 * <p>
+		 * 		impex.global.xPanel.todo();
+		 * </p>
+		 * @type {Object}
+		 */
+		this.global = {};
+
+		/**
+		 * impex事件管理接口
+		 * @type {Object}
+		 */
+		this.events = {
+			/**
+			 * 注册自定义事件处理器
+			 * @param  {String} type  事件类型
+			 * @param  {Function} onbind   事件被绑定时的回调
+			 * @param  {Function} onunbind 事件被解绑时的回调
+			 */
+			register : function(type,onbind,onunbind){
+				EVENTS_MAP[type] = {
+					onbind:onbind,
+					onunbind:onunbind
+				};
+			},
+			/**
+			 * 解除自定义事件注册
+			 * @param  {String} type  事件类型
+			 */
+			unregister : function(type){
+				EVENTS_MAP[type] = null;
+			}
+		}
 
 		/**
 	     * 版本信息
@@ -163,7 +203,10 @@
 	                var lk = links[i];
 	                var type = lk.getAttribute('type');
 	                var href = lk.getAttribute('href');
-	                impex.component(type,href);
+	                var services = lk.getAttribute('services');
+	                if(services)
+	                	services = services.split(',');
+	                impex.component(type,href,services);
 	            }
 
 	            //render
@@ -202,7 +245,10 @@
                 var lk = links[i];
                 var type = lk.getAttribute('type');
                 var href = lk.getAttribute('href');
-                impex.component(type,href);
+                var services = lk.getAttribute('services');
+                if(services)
+	                	services = services.split(',');
+                impex.component(type,href,services);
             }
 
 			var comp = ComponentFactory.newInstanceOf(name,element);
@@ -225,7 +271,7 @@
 			}
 			
 			comp.init();
-			comp.display();
+			comp.mount();
 
 			return comp;
 		}
