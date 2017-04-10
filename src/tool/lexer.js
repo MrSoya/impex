@@ -46,7 +46,7 @@ var lexer = (function(){
             escape = false;
         }
     }
-    function varParse(varMap,sentence,nested,parentVO){
+    function varParse(varMap,sentence,pair,parentVO){
         var literal = '';
         var stack = [];
         var stackBeginPos = -1;
@@ -59,7 +59,7 @@ var lexer = (function(){
             if(stack.length>0){
                 if(VAR_EXP_START.test(l)){
                     var vo = Var();
-                    var varLiteral = varParse(varMap,sentence.substr(i),true,vo);
+                    var varLiteral = varParse(varMap,sentence.substr(i),stack[0],vo);
                     i = i + varLiteral.length - 1;
 
                     //words
@@ -75,6 +75,9 @@ var lexer = (function(){
                     varObj.words.push(tmp);
                 }else 
                 if(l === ']' || l === ')'){
+                    if(l === ']' && stack[0] !== '[')continue;//x[(y)]
+                    if(l === ')' && stack[0] !== '(')continue;
+
                     stack.pop();
                     if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
@@ -144,7 +147,7 @@ var lexer = (function(){
 
                     lastWordPos = i;
                 }else
-                if((l === ']' || l === ')') && nested){
+                if((l === ']' && pair === '[') || (l === ')' && pair === '(')){
                     //push words
                     var tmp = literal;
                     //x.y ]
@@ -190,7 +193,7 @@ var lexer = (function(){
                         lastSegPos = i;
                     }
                     
-                    if(!nested && keyWords.indexOf(tmp) < 0){
+                    if(!pair && keyWords.indexOf(tmp) < 0){
                         varMap['.'+literal] = varObj;
                     }
                     return literal;
@@ -212,7 +215,7 @@ var lexer = (function(){
             varObj.words.push(tmp);
         }
         
-        if(!nested){
+        if(!pair){
             varMap['.'+literal] = varObj;
         }
         
