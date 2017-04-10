@@ -9,10 +9,10 @@
  * 	组件生命周期
  * 	<ul>
  * 		<li>onCreate：当组件被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
- * 		<li>onPropBind：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
+ * 		<li>onPropChange：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
- * 		<li>onDisplay：当组件被显示时，该事件被触发，此时组件以及完成数据构建和绑定</li>
- * 		<li>onDestroy：当组件被销毁时，该事件被触发</li>
+ * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
+ * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
  * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
  * 	</ul>
  * </p>
@@ -96,7 +96,7 @@ function Component () {
 Component.state = {
 	created : 'created',
 	inited : 'inited',
-	displayed : 'displayed',
+	mounted : 'mounted',
 	suspend : 'suspend'
 };
 Util.inherits(Component,View);
@@ -212,7 +212,7 @@ Util.ext(Component.prototype,{
 				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
 				that.__init();
-				that.display();
+				that.mount();
 			});
 			
 		}else{
@@ -252,10 +252,10 @@ Util.ext(Component.prototype,{
 		
 	},
 	/**
-	 * 显示组件到视图上
+	 * 挂载组件到组件树上
 	 */
-	display:function(){
-		if(this.__state === Component.state.displayed)return;
+	mount:function(){
+		if(this.__state === Component.state.mounted)return;
 		if(this.__state === Component.state.created)return;
 
 		Renderer.render(this);
@@ -270,48 +270,62 @@ Util.ext(Component.prototype,{
 			}
 		},this);
 
-		this.__state = Component.state.displayed;
-		LOGGER.log(this,'displayed');
+		this.__state = Component.state.mounted;
+		LOGGER.log(this,'mounted');
 		
 
-		//display children
+		//mount children
 		for(var i = 0;i<this.children.length;i++){
 			if(!this.children[i].templateURL)
-				this.children[i].display();
+				this.children[i].mount();
 		}
 
 		for(var i = this.directives.length;i--;){
 			this.directives[i].active();
 		}
 
-		this.onDisplay && this.onDisplay();
+		this.onMount && this.onMount();
 	},
 	/**
-	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
+	 * 卸载组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
-	destroy:function(){
+	unmount:function(){
 		if(this.__state === null)return;
 
-		LOGGER.log(this,'destroy');
+		LOGGER.log(this,'unmount');
 
-		this.onDestroy && this.onDestroy();
+		this.onUnmount && this.onUnmount();
 
 		if(this.parent){
-			var i = this.parent.children.indexOf(this);
-			if(i > -1){
-				this.parent.children.splice(i,1);
+			//check parent watchs
+			var index = -1;
+			for(var i=this.parent.__watchProps.length;i--;){
+				var prop = this.parent.__watchProps[i];
+				if(prop.subComp === this){
+					index = i;
+					break;
+				}
+			}
+			if(index > -1){
+				this.parent.__watchProps.splice(index,1);
+			}
+
+
+			index = this.parent.children.indexOf(this);
+			if(index > -1){
+				this.parent.children.splice(index,1);
 			}
 			this.parent = null;
 		}
 		
-		this.__destroy(this);
+		this.__destroyView(this);
 
 		while(this.children.length > 0){
-			this.children[0].destroy();
+			this.children[0].unmount();
 		}
 
 		for(var i = this.directives.length;i--;){
-			this.directives[i].destroy();
+			this.directives[i].unmount();
 		}
 
 
@@ -333,11 +347,11 @@ Util.ext(Component.prototype,{
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
 	 * 但数据都不会销毁
-	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
+	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用mount时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
 	suspend:function(hook){
-		if(this.__state !== Component.state.displayed)return;
+		if(this.__state !== Component.state.mounted)return;
 
 		LOGGER.log(this,'suspend');
 		

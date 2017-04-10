@@ -12,6 +12,20 @@
         priority:999
     })
     /**
+     * 注册全局组件指令
+     * <br/>使用方式：<x-panel x-global="xPanel" >...</x-panel>
+     */
+    impex.directive('global',{
+        onCreate:function(){
+            var k = this.value;
+            if(impex.global[k]){
+                LOGGER.warn('duplicate name "'+k+'" exists in global');
+                return;
+            }
+            impex.global[k] = this.component;
+        }
+    })
+    /**
      * 内联样式指令
      * <br/>使用方式：
      * <div x-style="{'font-size': valExp}" >...</div>
@@ -527,7 +541,7 @@
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
-            this.destroy();
+            this.unmount();
         }
         function parseProps(el,comp){
             var props = {
@@ -589,7 +603,7 @@
                         this.cache.push(tmp[i]);
                     }
                     for(var i=this.cache.length;i--;){
-                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === 'displayed'){
+                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === Component.state.mounted){
                             this.cache[i].__leaving = true;
                             this.cache[i].transition.leave();
                         }else{
@@ -598,7 +612,7 @@
                     }
                 }else{
                     for(var i=tmp.length;i--;){
-                        tmp[i].destroy();
+                        tmp[i].unmount();
                     }
                 }
             }else if(diffSize > 0){
@@ -642,21 +656,11 @@
                     updateQ.push(compMap[subComp.__id]);
                 }
                 
-                // onDisplay(subComp);
             }
 
             renderEach(updateQ,this,true);
         }
-        function onDisplay(comp){
-            for(var i=0;i<comp.children.length;i++){
-                var sub = comp.children[i];
-                if(sub.onDisplay)
-                    sub.onDisplay();
-                if(sub.children.length > 0){
-                    onDisplay(sub);
-                }
-            }
-        }
+
         this.createSubComp = function(){
             var comp = this.__comp;
             var subComp = null;
@@ -728,7 +732,7 @@
                         this.transition = that.ts.get(that.trans,this);
                     }
                 };
-                subComp.onDisplay = function(){
+                subComp.onMount = function(){
                     this.transition.enter();
                 };
                 subComp.postLeave = function(){
@@ -813,10 +817,10 @@
                     //attach DOM
                     eachObj.DOMHelper.replace(holder,comp.__nodes);
                     comp.init();
-                    comp.display();
+                    comp.mount();
 
                     if(deep){
-                        if(comp.__state === "displayed"){
+                        if(comp.__state === Component.state.mounted){
                             Renderer.recurRender(comp);
                         }
                     }
