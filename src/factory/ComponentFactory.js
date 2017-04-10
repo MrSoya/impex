@@ -218,7 +218,7 @@ function cssHandler(name,tmpl){
 
 function filterStyle(host,style){
 	style = style.replace(/\n/img,'').trim();
-	style = style.replace(/(^|})(?:\s+)?[a-z:_$](?:[^{]+)?\{/img,function(name){
+	style = style.replace(/(^|})(?:\s+)?[a-z:_$.>~+](?:[^{]+)?\{/img,function(name){
 		var rs = name.trim();
 		if(!/(^|}|((?:\s+)?,))(?:\s+)?:host/.test(rs)){
 			if(rs[0]==='}'){
@@ -236,7 +236,7 @@ function filterStyle(host,style){
 }
 
 function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k])return;
+	if(!propTypes[k] || !propTypes[k].type)return;
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
