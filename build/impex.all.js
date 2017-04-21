@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-02-22
+ * last build: 2017-04-21
  */
 !function (global) {
 	'use strict';
@@ -531,7 +531,7 @@ var lexer = (function(){
             escape = false;
         }
     }
-    function varParse(varMap,sentence,nested,parentVO){
+    function varParse(varMap,sentence,pair,parentVO){
         var literal = '';
         var stack = [];
         var stackBeginPos = -1;
@@ -544,7 +544,7 @@ var lexer = (function(){
             if(stack.length>0){
                 if(VAR_EXP_START.test(l)){
                     var vo = Var();
-                    var varLiteral = varParse(varMap,sentence.substr(i),true,vo);
+                    var varLiteral = varParse(varMap,sentence.substr(i),stack[0],vo);
                     i = i + varLiteral.length - 1;
 
                     //words
@@ -560,6 +560,9 @@ var lexer = (function(){
                     varObj.words.push(tmp);
                 }else 
                 if(l === ']' || l === ')'){
+                    if(l === ']' && stack[0] !== '[')continue;//x[(y)]
+                    if(l === ')' && stack[0] !== '(')continue;
+
                     stack.pop();
                     if(stack.length === 0){
                         var part = sentence.substring(stackBeginPos,i+1);
@@ -629,7 +632,7 @@ var lexer = (function(){
 
                     lastWordPos = i;
                 }else
-                if((l === ']' || l === ')') && nested){
+                if((l === ']' && pair === '[') || (l === ')' && pair === '(')){
                     //push words
                     var tmp = literal;
                     //x.y ]
@@ -675,7 +678,7 @@ var lexer = (function(){
                         lastSegPos = i;
                     }
                     
-                    if(!nested && keyWords.indexOf(tmp) < 0){
+                    if(!pair && keyWords.indexOf(tmp) < 0){
                         varMap['.'+literal] = varObj;
                     }
                     return literal;
@@ -697,7 +700,7 @@ var lexer = (function(){
             varObj.words.push(tmp);
         }
         
-        if(!nested){
+        if(!pair){
             varMap['.'+literal] = varObj;
         }
         
@@ -1663,6 +1666,129 @@ var Renderer = new function() {
 
 
 /**
+ * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
+ * 
+ * @class 
+ * @param {data} 扩展数据
+ */
+var Handler = new function() {
+	var EVENTS_MAP = {};
+
+	this.evalEventExp = function(meta,e,type){
+		var originExp = meta.exp;
+		var handler = meta.handler;
+		var comp = meta.comp;
+		var componentFn = meta.componentFn;
+
+		var tmpExp = originExp;
+
+		if(handler instanceof Function){
+			tmpExp = handler.call(comp,e,originExp);
+		}
+		if(!tmpExp)return;
+
+		if(!componentFn){
+			var expObj = lexer(tmpExp);
+
+			var evalStr = Renderer.getExpEvalStr(comp,expObj);
+
+			var tmp = evalStr.replace('self.$event','$event');
+			componentFn = new Function('$event',tmp);
+
+			meta.componentFn = componentFn;//cache
+		}
+		
+		try{
+			return componentFn(e);
+		}catch(error){
+			LOGGER.debug("error in event '"+type +"'",error);
+		}
+	}
+	this.addDefaultEvent = function(type,meta){
+		var originExp = meta.exp;
+		
+		var tmpExpOutside = '';
+		var fnOutside = null;
+
+		if(!EVENTS_MAP[type]){
+			EVENTS_MAP[type] = [];
+		}
+		EVENTS_MAP[type].push(meta);
+
+        meta.el.addEventListener(type,this.__defaultEventHandler.bind(this),false);
+	}
+
+	this.__defaultEventHandler = function(e){
+		var type = e.type;
+		var t = e.target;
+		var metas = EVENTS_MAP[type];
+		for(var i=metas.length;i--;){
+			if(metas[i].el === t){
+				break;
+			}
+		}
+		this.evalEventExp(metas[i],e,type);
+	}
+}
+/**
+ * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
+ * 
+ * @class 
+ * @param {data} 扩展数据
+ */
+function Dispatcher(data) {
+	/**
+	 * 用来存放在当前分派器上注册的事件，优化派发性能
+	 * @type {Object}
+	 */
+	this.__eventMap = {};
+
+	/**
+	 * 初始化回调。由系统自动调用
+	 * @type {Function}
+	 */
+	this.onInit = null;
+
+	Util.ext(this,data);
+};
+Util.ext(Dispatcher.prototype,{
+	/**
+	 * 派发事件
+	 * @param  {String} eventStr 事件名
+	 * @param  {Object} e 事件对象
+	 */
+	dispatch:function(eventStr,e){
+		var t = e.target;
+        var events = this.__eventMap[eventStr];
+        if(!events)return;
+        
+        do{
+            if(this.fireEvent(t,events,e,eventStr) === false){
+                break;
+            }
+
+            t = t.parentNode;
+        }while(t.tagName && t.tagName != 'HTML');
+	},
+    fireEvent:function(target,events,e,type){
+        for(var i=events.length;i--;){
+            if(events[i].el === target)break;
+        }
+        if(i < 0)return;
+
+        //callback
+        var bubbles = Handler.evalEventExp(events[i],e,type);
+
+        return bubbles;//是否冒泡
+    },
+	addEvent:function(type,meta){
+		var events = this.__eventMap[type];
+		if(!events)events = this.__eventMap[type] = [];
+		events.push(meta);
+	}
+});
+
+/**
  * @classdesc 视图接口，提供视图相关操作。组件和指令实现此接口
  * @class
  */
@@ -1675,7 +1801,7 @@ function View () {
 	this.el = null;
 }
 View.prototype = {
-	__destroy:function(){
+	__destroyView:function(){
 		for(var k in this.__evMap){
 			var events = this.__evMap[k];
 	        for(var i=events.length;i--;){
@@ -1702,67 +1828,46 @@ View.prototype = {
 		}
 	},
 	/**
-	 * 绑定事件到视图
+	 * 绑定事件到视图。支持原生事件类型或自定义事件类型。<br/>
+	 * 如果同一个事件类型两者都有，自定义事件会优先绑定
 	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
      * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
      * @param  {function} handler   事件处理回调，回调参数e
+     * @see impex.events
 	 */
 	on:function(type,exp,handler){
 		if(!this.el)return;
 
-		var originExp = exp;
 		var comp = this instanceof Component?this:this.component;
-		var tmpExpOutside = '';
-		var fnOutside = null;
-		var evHandler = function(e){
-			var tmpExp = originExp;
 
-			if(handler instanceof Function){
-				tmpExp = handler.call(comp,e,originExp);
+		//查找
+		var isDefault = true;
+		for(var i=DISPATCHERS.length;i--;){
+			var events = DISPATCHERS[i][0];
+			if(events.indexOf(type) > -1){
+				isDefault = false;
+				break;
 			}
-			if(!tmpExp)return;
-			if(tmpExpOutside != tmpExp){
-				var expObj = lexer(tmpExp);
-
-				var evalStr = Renderer.getExpEvalStr(comp,expObj);
-
-				var tmp = evalStr.replace('self.$event','$event');
-				fnOutside = new Function('$event',tmp);
-
-				tmpExpOutside = tmpExp;
-			}
-			
-			try{
-				fnOutside(e);
-			}catch(error){
-				LOGGER.debug("error in event '"+type +"'",error);
-			}
-		};
-
-        this.el.addEventListener(type,evHandler,false);
-		
-		if(!this.__evMap[type]){
-			this.__evMap[type] = [];
 		}
-		this.__evMap[type].push([exp,evHandler]);
-	},
-	/**
-	 * 从视图解绑事件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
-	 */
-	off:function(type,exp){
-		if(!this.el)return;
 
-		var events = this.__evMap[type];
-        for(var i=events.length;i--;){
-            var pair = events[i];
-            var evExp = pair[0];
-            var evHandler = pair[1];
-            if(evExp == exp){
-	            this.el.removeEventListener(type,evHandler,false);
-            }
-        }
+		if(isDefault){
+			Handler.addDefaultEvent(type,{
+				el:this.el,
+				exp:exp,
+				comp:comp,
+				handler:handler
+			});
+		}else{
+			DISPATCHERS[i][1].addEvent(type,{
+				el:this.el,
+				exp:exp,
+				comp:comp,
+				handler:handler
+			});
+
+			DISPATCHERS[i][1].onInit();
+		}
+		
 	},
 	/**
 	 * 显示视图
@@ -1905,10 +2010,10 @@ View.prototype = {
  * 	组件生命周期
  * 	<ul>
  * 		<li>onCreate：当组件被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
- * 		<li>onPropBind：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
+ * 		<li>onPropChange：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
- * 		<li>onDisplay：当组件被显示时，该事件被触发，此时组件以及完成数据构建和绑定</li>
- * 		<li>onDestroy：当组件被销毁时，该事件被触发</li>
+ * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
+ * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
  * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
  * 	</ul>
  * </p>
@@ -1992,7 +2097,7 @@ function Component () {
 Component.state = {
 	created : 'created',
 	inited : 'inited',
-	displayed : 'displayed',
+	mounted : 'mounted',
 	suspend : 'suspend'
 };
 Util.inherits(Component,View);
@@ -2108,7 +2213,7 @@ Util.ext(Component.prototype,{
 				ComponentFactory.parse(tmpl,that);
 				that.__url = null;
 				that.__init();
-				that.display();
+				that.mount();
 			});
 			
 		}else{
@@ -2148,10 +2253,10 @@ Util.ext(Component.prototype,{
 		
 	},
 	/**
-	 * 显示组件到视图上
+	 * 挂载组件到组件树上
 	 */
-	display:function(){
-		if(this.__state === Component.state.displayed)return;
+	mount:function(){
+		if(this.__state === Component.state.mounted)return;
 		if(this.__state === Component.state.created)return;
 
 		Renderer.render(this);
@@ -2166,48 +2271,62 @@ Util.ext(Component.prototype,{
 			}
 		},this);
 
-		this.__state = Component.state.displayed;
-		LOGGER.log(this,'displayed');
+		this.__state = Component.state.mounted;
+		LOGGER.log(this,'mounted');
 		
 
-		//display children
+		//mount children
 		for(var i = 0;i<this.children.length;i++){
 			if(!this.children[i].templateURL)
-				this.children[i].display();
+				this.children[i].mount();
 		}
 
 		for(var i = this.directives.length;i--;){
 			this.directives[i].active();
 		}
 
-		this.onDisplay && this.onDisplay();
+		this.onMount && this.onMount();
 	},
 	/**
-	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
+	 * 卸载组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
-	destroy:function(){
+	unmount:function(){
 		if(this.__state === null)return;
 
-		LOGGER.log(this,'destroy');
+		LOGGER.log(this,'unmount');
 
-		this.onDestroy && this.onDestroy();
+		this.onUnmount && this.onUnmount();
 
 		if(this.parent){
-			var i = this.parent.children.indexOf(this);
-			if(i > -1){
-				this.parent.children.splice(i,1);
+			//check parent watchs
+			var index = -1;
+			for(var i=this.parent.__watchProps.length;i--;){
+				var prop = this.parent.__watchProps[i];
+				if(prop.subComp === this){
+					index = i;
+					break;
+				}
+			}
+			if(index > -1){
+				this.parent.__watchProps.splice(index,1);
+			}
+
+
+			index = this.parent.children.indexOf(this);
+			if(index > -1){
+				this.parent.children.splice(index,1);
 			}
 			this.parent = null;
 		}
 		
-		this.__destroy(this);
+		this.__destroyView(this);
 
 		while(this.children.length > 0){
-			this.children[0].destroy();
+			this.children[0].unmount();
 		}
 
 		for(var i = this.directives.length;i--;){
-			this.directives[i].destroy();
+			this.directives[i].unmount();
 		}
 
 
@@ -2229,11 +2348,11 @@ Util.ext(Component.prototype,{
 	/**
 	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
 	 * 但数据都不会销毁
-	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用display时，可以在原位置还原组件，
+	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用mount时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
 	suspend:function(hook){
-		if(this.__state !== Component.state.displayed)return;
+		if(this.__state !== Component.state.mounted)return;
 
 		LOGGER.log(this,'suspend');
 		
@@ -2479,7 +2598,7 @@ var DOMHelper = new function(){
  * 		<li>onInit：当指令初始化时触发</li>
  * 		<li>onActive: 当指令激活时触发</li>
  * 		<li>onUpdate: 当指令条件变更时触发</li>
- * 		<li>onDestroy：当指令被销毁时触发</li>
+ * 		<li>onUnmount：当指令被卸载时触发</li>
  * 	</ul>
  * </p>
  * @class 
@@ -2531,7 +2650,7 @@ Util.ext(Directive.prototype,{
 		//预处理自定义标签中的表达式
 		var expNode = Scanner.getExpNode(this.value,this.component);
 		var calcVal = expNode && Renderer.calcExpNode(expNode);
-		if(calcVal)this.value = calcVal;
+		if(calcVal !== undefined)this.value = calcVal;
 
 		LOGGER.log(this,'inited');
 
@@ -2566,17 +2685,17 @@ Util.ext(Directive.prototype,{
 	/**
 	 * 销毁指令
 	 */
-	destroy:function(){
-		LOGGER.log(this,'destroy');
+	unmount:function(){
+		LOGGER.log(this,'unmount');
 
-		this.__destroy(this);
+		this.__destroyView(this);
 
 		this.component = 
 		this.params = 
 		this.filter = 
 		this.onUpdate = null;
 
-		this.onDestroy && this.onDestroy();
+		this.onUnmount && this.onUnmount();
 	}
 });
 /**
@@ -3075,7 +3194,7 @@ function cssHandler(name,tmpl){
 
 function filterStyle(host,style){
 	style = style.replace(/\n/img,'').trim();
-	style = style.replace(/(^|})(?:\s+)?[a-z:_$](?:[^{]+)?\{/img,function(name){
+	style = style.replace(/(^|})(?:\s+)?[a-z:_$.>~+](?:[^{]+)?\{/img,function(name){
 		var rs = name.trim();
 		if(!/(^|}|((?:\s+)?,))(?:\s+)?:host/.test(rs)){
 			if(rs[0]==='}'){
@@ -3093,7 +3212,7 @@ function filterStyle(host,style){
 }
 
 function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k])return;
+	if(!propTypes[k] || !propTypes[k].type)return;
 	var checkType = propTypes[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
@@ -3334,6 +3453,9 @@ var TransitionFactory = {
 
 	var im_counter = 0;
 
+	var DISPATCHERS = [];
+
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -3343,6 +3465,37 @@ var TransitionFactory = {
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */
 	var impex = new function(){
+
+		/**
+		 * 保存注册过的全局组件实例引用。注册全局组件可以使用x-global指令.
+		 * <p>
+		 * 		<x-panel x-global="xPanel" >...</x-panel>
+		 * </p>
+		 * <p>
+		 * 		impex.global.xPanel.todo();
+		 * </p>
+		 * @type {Object}
+		 */
+		this.global = {};
+
+		/**
+		 * impex事件管理接口
+		 * @type {Object}
+		 */
+		this.events = {
+			guid:0,
+			/**
+			 * 注册一个事件分派器
+			 * @param  {String | Array} events 支持的事件列表。数组或者以空格分割的字符串
+			 * @param  {Dispatcher} dispatcher 分派器
+			 */
+			registerDispatcher:function(events,dispatcher){
+				if(typeof(events) == 'string'){
+					events = events.split(' ');
+				}
+				DISPATCHERS.push([events,dispatcher]);
+			}
+		}
 
 		/**
 	     * 版本信息
@@ -3470,7 +3623,10 @@ var TransitionFactory = {
 	                var lk = links[i];
 	                var type = lk.getAttribute('type');
 	                var href = lk.getAttribute('href');
-	                impex.component(type,href);
+	                var services = lk.getAttribute('services');
+	                if(services)
+	                	services = services.split(',');
+	                impex.component(type,href,services);
 	            }
 
 	            //render
@@ -3509,7 +3665,10 @@ var TransitionFactory = {
                 var lk = links[i];
                 var type = lk.getAttribute('type');
                 var href = lk.getAttribute('href');
-                impex.component(type,href);
+                var services = lk.getAttribute('services');
+                if(services)
+	                	services = services.split(',');
+                impex.component(type,href,services);
             }
 
 			var comp = ComponentFactory.newInstanceOf(name,element);
@@ -3532,7 +3691,7 @@ var TransitionFactory = {
 			}
 			
 			comp.init();
-			comp.display();
+			comp.mount();
 
 			return comp;
 		}
@@ -3652,6 +3811,20 @@ impex.service('Msg',new function(){
     impex.directive('ignore',{
         final:true,
         priority:999
+    })
+    /**
+     * 注册全局组件指令
+     * <br/>使用方式：<x-panel x-global="xPanel" >...</x-panel>
+     */
+    impex.directive('global',{
+        onCreate:function(){
+            var k = this.value;
+            if(impex.global[k]){
+                LOGGER.warn('duplicate name "'+k+'" exists in global');
+                return;
+            }
+            impex.global[k] = this.component;
+        }
     })
     /**
      * 内联样式指令
@@ -4169,7 +4342,7 @@ impex.service('Msg',new function(){
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
-            this.destroy();
+            this.unmount();
         }
         function parseProps(el,comp){
             var props = {
@@ -4231,7 +4404,7 @@ impex.service('Msg',new function(){
                         this.cache.push(tmp[i]);
                     }
                     for(var i=this.cache.length;i--;){
-                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === 'displayed'){
+                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === Component.state.mounted){
                             this.cache[i].__leaving = true;
                             this.cache[i].transition.leave();
                         }else{
@@ -4240,7 +4413,7 @@ impex.service('Msg',new function(){
                     }
                 }else{
                     for(var i=tmp.length;i--;){
-                        tmp[i].destroy();
+                        tmp[i].unmount();
                     }
                 }
             }else if(diffSize > 0){
@@ -4284,21 +4457,11 @@ impex.service('Msg',new function(){
                     updateQ.push(compMap[subComp.__id]);
                 }
                 
-                // onDisplay(subComp);
             }
 
             renderEach(updateQ,this,true);
         }
-        function onDisplay(comp){
-            for(var i=0;i<comp.children.length;i++){
-                var sub = comp.children[i];
-                if(sub.onDisplay)
-                    sub.onDisplay();
-                if(sub.children.length > 0){
-                    onDisplay(sub);
-                }
-            }
-        }
+
         this.createSubComp = function(){
             var comp = this.__comp;
             var subComp = null;
@@ -4370,7 +4533,7 @@ impex.service('Msg',new function(){
                         this.transition = that.ts.get(that.trans,this);
                     }
                 };
-                subComp.onDisplay = function(){
+                subComp.onMount = function(){
                     this.transition.enter();
                 };
                 subComp.postLeave = function(){
@@ -4455,10 +4618,10 @@ impex.service('Msg',new function(){
                     //attach DOM
                     eachObj.DOMHelper.replace(holder,comp.__nodes);
                     comp.init();
-                    comp.display();
+                    comp.mount();
 
                     if(deep){
-                        if(comp.__state === "displayed"){
+                        if(comp.__state === Component.state.mounted){
                             Renderer.recurRender(comp);
                         }
                     }
@@ -4608,6 +4771,194 @@ impex.filter('json',{
         return this.value;
     }
 });
+/**
+ * 内建分派器
+ */
+!function(impex){
+    ///////////////////// 鼠标事件分派器 /////////////////////
+    var mouseDispatcher = new Dispatcher({
+        listeningEventMap:{},
+        onInit:function() {
+            if(this.inited)return;
+
+            document.addEventListener('mousedown',this.doMousedown.bind(this),true);
+            document.addEventListener('mousemove',this.doMousemove.bind(this),true);
+            document.addEventListener('mouseup',this.doMouseup.bind(this),true);
+
+            var type = document.body.onmousewheel == null?'mousewheel':'DOMMouseScroll';
+            document.addEventListener(type,this.doMousewheel.bind(this),true);
+
+            document.addEventListener('mouseout',this.doMouseout.bind(this),true);
+
+            this.inited = true;
+            this.lastClickTime = 0;
+        },
+        doMousedown:function(e){
+            this.dispatch('mousedown',e);
+
+            this.hasMoved = false;
+        },
+        doMousemove:function(e){
+            this.dispatch('mousemove',e);
+
+            this.hasMoved = true;
+        },
+        doMouseup:function(e){
+            this.dispatch('mouseup',e);
+
+            if(!this.hasMoved){
+                this.dispatch('click',e);
+
+                if(Date.now() - this.lastClickTime < 300){
+                    this.dispatch('dblclick',e);
+                }
+
+                this.lastClickTime = Date.now();
+            }
+        },
+        doMouseout:function(e){
+            this.dispatch('mouseout',e);
+
+            //check leave
+            var t = e.target;
+            var events = this.__eventMap['mouseleave'];
+            if(!events)return;
+            
+            do{
+                if(this.fireMouseleave(t,events,e) === false){
+                    break;
+                }
+
+                t = t.parentNode;
+            }while(t.tagName && t.tagName != 'HTML');
+        },
+        fireMouseleave:function(t,events,e){
+            for(var i=events.length;i--;){
+                if(events[i].el === t){
+                    break;
+                }
+            }
+            if(i < 0)return;
+
+            var currentTarget = t;
+            var target = e.target;
+
+            if(!this.contains(currentTarget,target))return;
+
+            var toElement = e.toElement || e.relatedTarget;
+            if(this.contains(currentTarget,toElement))return;
+            
+            return this.fireEvent(t,events,e,'mouseleave');
+        },
+        contains:function(a,b){
+            if(a.contains){
+                return a.contains(b);
+            }
+            do{
+                if(a == b)return true;
+                b = b.parentNode;
+            }while(b && b.tagName != 'BODY');
+            return false;
+        },
+        doMousewheel:function(e){
+            this.dispatch('mousewheel',e);
+        }
+    });
+
+    impex.events.
+    registerDispatcher('mousedown mouseup click dblclick mousemove mousewheel mouseout mouseleave',mouseDispatcher);
+
+    ///////////////////// 触摸事件分派器 /////////////////////
+    var touchDispatcher = new Dispatcher({
+        onInit:function() {
+            if(this.inited)return;
+
+            document.addEventListener('touchstart',this.doStart.bind(this),true);
+            document.addEventListener('touchmove',this.doMove.bind(this),true);
+            document.addEventListener('touchend',this.doEnd.bind(this),true);
+            document.addEventListener('touchcancel',this.doCancel.bind(this),true);
+
+            this.inited = true;
+            this.lastTapTime = 0;
+
+            this.FLING_INTERVAL = 200;
+        },
+        doStart:function(e){
+            this.dispatch('touchstart',e);
+
+            //start timer
+            var that = this;
+            this.timer = setTimeout(function(){
+                that.dispatch('press',e);
+            },800);
+
+            this.hasMoved = false;
+            this.canceled = false;
+
+            //handle fling
+            var touch = e.touches[0];
+            this.fling_data = {
+                x:touch.clientX,
+                y:touch.clientY,
+                t:Date.now()
+            };
+        },
+        doMove:function(e){
+            clearTimeout(this.timer);
+
+            this.dispatch('touchmove',e);
+
+            this.hasMoved = true;
+        },
+        doCancel:function(e){
+            clearTimeout(this.timer);
+
+            this.canceled = true;
+            this.dispatch('touchcancel',e);
+        },
+        doEnd:function(e){
+            this.dispatch('touchend',e);
+
+            if(this.canceled)return;
+
+            if(!this.hasMoved){
+                this.dispatch('tap',e);
+
+                if(Date.now() - this.lastTapTime < 300){
+                    this.dispatch('dbltap',e);
+                }
+
+                this.lastTapTime = Date.now();
+            }else{
+                var touch = e.changedTouches[0];
+                var dx = touch.clientX,
+                    dy = touch.clientY;
+
+                var data = this.fling_data;
+                var sx = data.x,
+                    sy = data.y,
+                    st = data.t;
+
+                var long = Date.now() - st;
+                var s = Math.sqrt((dx-sx)*(dx-sx)+(dy-sy)*(dy-sy)) >> 0;
+                //时间小于interval并且位移大于20px才触发fling
+                if(long <= this.FLING_INTERVAL && s > 20){
+                    var r = Math.atan2(dy-sy,dx-sx);
+
+                    e.impex_ext_slope = r;
+                    e.impex_ext_time = long;
+                    e.impex_ext_length = s;
+
+                    this.dispatch('fling',e);
+                }
+            }
+        }
+    });
+
+    impex.events.
+    registerDispatcher('touchstart touchend touchcancel press tap dbltap touchmove fling',touchDispatcher);
+
+}(impex);
 
  	if ( typeof module === "object" && typeof module.exports === "object" ) {
  		module.exports = impex;

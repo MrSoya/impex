@@ -48,71 +48,36 @@ View.prototype = {
 	on:function(type,exp,handler){
 		if(!this.el)return;
 
-		var originExp = exp;
 		var comp = this instanceof Component?this:this.component;
-		var tmpExpOutside = '';
-		var fnOutside = null;
-		var evHandler = function(e){
-			var tmpExp = originExp;
 
-			if(handler instanceof Function){
-				tmpExp = handler.call(comp,e,originExp);
+		//查找
+		var isDefault = true;
+		for(var i=DISPATCHERS.length;i--;){
+			var events = DISPATCHERS[i][0];
+			if(events.indexOf(type) > -1){
+				isDefault = false;
+				break;
 			}
-			if(!tmpExp)return;
-			if(tmpExpOutside != tmpExp){
-				var expObj = lexer(tmpExp);
-
-				var evalStr = Renderer.getExpEvalStr(comp,expObj);
-
-				var tmp = evalStr.replace('self.$event','$event');
-				fnOutside = new Function('$event',tmp);
-
-				tmpExpOutside = tmpExp;
-			}
-			
-			try{
-				fnOutside(e);
-			}catch(error){
-				LOGGER.debug("error in event '"+type +"'",error);
-			}
-		};
-
-		//check custom events
-		if(EVENTS_MAP[type]){
-			EVENTS_MAP[type].onbind(this.el,evHandler);
-			return;
 		}
 
-        this.el.addEventListener(type,evHandler,false);
+		if(isDefault){
+			Handler.addDefaultEvent(type,{
+				el:this.el,
+				exp:exp,
+				comp:comp,
+				handler:handler
+			});
+		}else{
+			DISPATCHERS[i][1].addEvent(type,{
+				el:this.el,
+				exp:exp,
+				comp:comp,
+				handler:handler
+			});
+
+			DISPATCHERS[i][1].onInit();
+		}
 		
-		if(!this.__evMap[type]){
-			this.__evMap[type] = [];
-		}
-		this.__evMap[type].push([exp,evHandler]);
-	},
-	/**
-	 * 从视图解绑事件
-	 * @param  {string} type 事件名
-     * @param {string} exp 自定义函数表达式，比如 { fn(x+1) }
-	 */
-	off:function(type,exp){
-		if(!this.el)return;
-
-		//check custom events
-		if(EVENTS_MAP[type]){
-			EVENTS_MAP[type].onunbind(this.el);
-			return;
-		}
-
-		var events = this.__evMap[type];
-        for(var i=events.length;i--;){
-            var pair = events[i];
-            var evExp = pair[0];
-            var evHandler = pair[1];
-            if(evExp == exp){
-	            this.el.removeEventListener(type,evHandler,false);
-            }
-        }
 	},
 	/**
 	 * 显示视图

@@ -1,4 +1,26 @@
 # Change Log
+## Version 0.50.0 - 2017/4/21
+### 新增
+* link方式引入组件，支持services注入 &lt;link href="component.html" type="x-comp" rel="impex"  services="Msg" /&gt;
+* 全局引用
+	<x-comp x-global="Comp"></x-comp>
+	...
+	impex.global.Comp.xxx
+* 全局事件分派器
+	impex.events.registerDispatcher('tap',...)
+	...
+	<div :tap="hello()"></div>
+* 增加对touch事件的支持 
+
+### 更新
+* 更合理的生命周期定义
+* 重构事件系统，性能大幅提升
+
+### bug修复
+* lexer在解析xx[yy(...)]类似格式事的问题
+* 模版中style的某些问题
+
+
 ## Version 0.36.2 - 2017/2/22
 ### 更新
 * each指令的rebuild如果新增列表项，也会异步触发

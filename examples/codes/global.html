@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
+    </head>
+    <body>
+        全局变量注册
+        <x-panel x-global="xPanel">2222222222222222</x-panel>
+        <x-panel x-global="xPanel">111111111</x-panel>
+
+
+        <button :click="togglePanel()">toggle</button>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
+        <script type="text/javascript">
+            imLog.level = 3;
+            impex.config({
+                logger:imLog
+            });
+
+            impex.component('x-panel',{
+                template:'<div><slot></slot></div>',
+                onMount:function(){
+                    this.hide();
+                },
+                showPanel:function(){
+                    alert(343434);
+                    this.show();
+                }
+            });
+
+            //渲染
+            var debug = impex.render(document.body,{
+                togglePanel:function(){
+                    impex.global.xPanel.showPanel();
+                }
+            });
+            
+        </script>
+    </body>
+</html>

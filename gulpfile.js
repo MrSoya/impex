@@ -31,6 +31,9 @@ var gulp = require('gulp'),
             'src/tool/ChangeHandler.js',
             'src/tool/Renderer.js',
 
+            'src/component/events/Handler.js',
+            'src/component/events/Dispatcher.js',
+            
             'src/component/view/View.js',
             'src/component/Component.js',
             'src/component/view/DOMHelper.js',
@@ -51,6 +54,7 @@ var gulp = require('gulp'),
     		'src/service/build-in.js',
             'src/directive/build-in.js',
             'src/filter/build-in.js',
+            'src/component/events/build-in.js',
 
     		'src/shellEnd.js'
     	])

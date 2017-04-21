@@ -27,7 +27,8 @@
 
 	var im_counter = 0;
 
-	var EVENTS_MAP = {};
+	var DISPATCHERS = [];
+
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -57,23 +58,15 @@
 		 */
 		this.events = {
 			/**
-			 * 注册自定义事件处理器
-			 * @param  {String} type  事件类型
-			 * @param  {Function} onbind   事件被绑定时的回调
-			 * @param  {Function} onunbind 事件被解绑时的回调
+			 * 注册一个事件分派器
+			 * @param  {String | Array} events 支持的事件列表。数组或者以空格分割的字符串
+			 * @param  {Dispatcher} dispatcher 分派器
 			 */
-			register : function(type,onbind,onunbind){
-				EVENTS_MAP[type] = {
-					onbind:onbind,
-					onunbind:onunbind
-				};
-			},
-			/**
-			 * 解除自定义事件注册
-			 * @param  {String} type  事件类型
-			 */
-			unregister : function(type){
-				EVENTS_MAP[type] = null;
+			registerDispatcher:function(events,dispatcher){
+				if(typeof(events) == 'string'){
+					events = events.split(' ');
+				}
+				DISPATCHERS.push([events,dispatcher]);
 			}
 		}
 
@@ -85,7 +78,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,36,2],
+	        v:[0,50,0],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
