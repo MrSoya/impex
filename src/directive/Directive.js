@@ -13,7 +13,7 @@
  * @class 
  */
 function Directive (name,value) {
-	View.call(this);
+	Signal.call(this);
 	/**
 	 * 指令的字面值
 	 */
@@ -50,7 +50,7 @@ function Directive (name,value) {
 	 */
 	this.priority = 0;
 }
-Util.inherits(Directive,View);
+Util.inherits(Directive,Signal);
 Util.ext(Directive.prototype,{
 	init:function(){
 		if(this.__state == Component.state.inited){
@@ -97,7 +97,7 @@ Util.ext(Directive.prototype,{
 	unmount:function(){
 		LOGGER.log(this,'unmount');
 
-		this.__destroyView(this);
+		DOMHelper.detach(this.__nodes);
 
 		this.component = 
 		this.params = 

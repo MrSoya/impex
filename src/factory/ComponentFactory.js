@@ -152,6 +152,9 @@ Util.ext(_ComponentFactory.prototype,{
 		Util.ext(ins,this.types[type].props);
 		var state = this.types[type].state;
 		if(state){
+			if(state instanceof Function){
+				state = state.call(ins);
+			}
 			Util.ext(ins.state,state);
 		}
 	}

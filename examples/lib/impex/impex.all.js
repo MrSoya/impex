@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-04-21
+ * last build: 2017-04-28
  */
 !function (global) {
 	'use strict';
@@ -172,7 +172,7 @@ var Util = new function () {
         //display children
         for(var i = 0;i<children.length;i++){
             if(!children[i].__url)
-                children[i].display();
+                children[i].mount();
         }
         //active directs
         for(var i = directs.length;i--;){
@@ -218,7 +218,7 @@ var Util = new function () {
 		}
 
 		Observer = {
-			observe:function(data,component){
+			observe:function(data,component,cbk){
 				if(data && data.__im__propChain)return data;
 
 				//build handler
@@ -249,7 +249,8 @@ var Util = new function () {
 				    	var xpath = target.__im__extPropChain;
 
 				    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
-				    	ChangeHandler.handle(changeObj);
+
+				    	cbk(changeObj);
 				    	
 				    	return true;
 				    },
@@ -266,7 +267,7 @@ var Util = new function () {
 				    	var xpath = target.__im__extPropChain;
 
 					    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
-				    	ChangeHandler.handle(changeObj);
+				    	cbk(changeObj);
 
 					    return true;
 					}
@@ -279,6 +280,7 @@ var Util = new function () {
 
 	///////////////////////////////////////// fallback ///////////////////////////////////////////
 	!window.Proxy && !function(){
+		var cbk = null;
 		function getter(k){
 			return this.__im__innerProps[k];
 		}
@@ -455,7 +457,7 @@ var Util = new function () {
 		    	}
 
 		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
-		    	ChangeHandler.handle(changeObj);
+		    	cbk(changeObj);
 		    }
 		}
 		var observedObjects = [],//用于保存监控对象
@@ -475,8 +477,9 @@ var Util = new function () {
 		})(self);
 
 		Observer = {};
-		Observer.observe = function(data,component){
+		Observer.observe = function(data,component,callback){
 			if(data && data.__im__propChain)return data;
+			cbk = callback;
 
 			return observeData([],data,component);
 		}
@@ -1666,6 +1669,114 @@ var Renderer = new function() {
 
 
 /**
+ * 信号类用来实现impex内部的消息系统
+ * @class Signal
+ */
+function Signal(){
+    this.__signalMap = {};
+}
+Signal.prototype = {
+    /**
+     * 监听信号。支持原生事件类型或自定义事件类型。<br/>
+     * 如果同一个事件类型两者都有，自定义事件会优先绑定
+     * @param  {String} type 信号类型,多个类型使用空格分割
+     * @param {String | Function} exp 自定义函数表达式，比如  fn(x+1) 。或者回调函数，回调参数e
+     * @param {Object} context 参数/回调函数所属上下文。可以是组件、指令或者任何对象
+     * @see impex.events
+     */
+    on:function(type,exp,context){
+        var ts = type.replace(/\s+/mg,' ').split(' ');
+        for(var i=ts.length;i--;){
+            var t = ts[i];
+            var listeners = this.__signalMap[t];
+            if(!listeners)listeners = this.__signalMap[t] = [];
+            var comp = this instanceof Component?this:this.component;
+            var meta = {
+                id:Date.now() + Math.random(),
+                el:this.el,
+                exp:exp,
+                comp:comp,
+                context:context||this
+            }
+            listeners.push(meta);
+
+            //查找
+            var isDefault = true;
+            for(var l=DISPATCHERS.length;l--;){
+                var events = DISPATCHERS[l][0];
+                if(events.indexOf(t) > -1){
+                    isDefault = false;
+                    break;
+                }
+            }
+
+            if(isDefault){
+                Handler.addDefaultEvent(t,meta);
+            }else{
+                DISPATCHERS[l][1].addEvent(t,meta);
+                DISPATCHERS[l][1].onInit();
+            }
+        }//end for
+        
+    },
+    /**
+     * 解除信号监听<br/>
+     * @param  {String} type 信号类型,多个类型使用空格分割
+     * @param {String | Function} exp 自定义函数表达式，比如  fn(x+1) 。或者回调函数，回调参数e
+     * @param {Object} context 参数/回调函数所属上下文。可以是组件、指令或者任何对象
+     * @see impex.events
+     */
+    off:function(type,exp,context){
+        context = context||this;
+
+        var types = null;
+        if(!type){
+            types = Object.keys(this.__signalMap);
+        }else{
+            types = type.replace(/\s+/mg,' ').split(' ');
+        }
+
+        for(var i=types.length;i--;){
+            var listeners = this.__signalMap[types[i]];
+            if(listeners){
+                var toDel = [];
+                for(var j=listeners.length;j--;){
+                    if(context === listeners[j].context && 
+                        (exp?listeners[j].exp === exp:true)){
+                        toDel.push(listeners[j]);
+                    }
+                }
+                toDel.forEach(function(meta){
+                    var index = listeners.indexOf(meta);
+                    listeners.splice(index,1);
+
+                    //del defautl
+                    Handler.removeDefaultEvent(type,meta);
+
+                    //del custom
+                    if(meta.dispatcher)
+                        meta.dispatcher._delEvent(type,meta);
+                });
+            }
+        }
+    },
+    //type
+    emit:function(){
+        var type = arguments[0];
+        var listeners = this.__signalMap[type];
+        if(!listeners)return;
+
+        var params = [];
+        for(var i=1;i<arguments.length;i++){
+            params.push(arguments[i]);
+        }
+
+        listeners.forEach(function(meta){
+            Handler.emitEventExp(meta,type,params);
+        });
+    }
+}
+/**
  * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
  * 
  * @class 
@@ -1674,48 +1785,112 @@ var Renderer = new function() {
 var Handler = new function() {
 	var EVENTS_MAP = {};
 
-	this.evalEventExp = function(meta,e,type){
+	this.evalEventExp = function(meta,e,type,extra){
 		var originExp = meta.exp;
-		var handler = meta.handler;
+		var context = meta.context;
 		var comp = meta.comp;
+		if(originExp instanceof Function)
+			meta.componentFn = originExp;
 		var componentFn = meta.componentFn;
 
 		var tmpExp = originExp;
 
-		if(handler instanceof Function){
-			tmpExp = handler.call(comp,e,originExp);
-		}
-		if(!tmpExp)return;
+		var ev = new Event(type,e,meta.el);
 
-		if(!componentFn){
+		if(extra)
+			Util.ext(ev,extra);
+
+		if(!meta.cache && componentFn){
+			tmpExp = componentFn.call(context,ev);
+		}
+
+		if(typeof(tmpExp) == "string"){
 			var expObj = lexer(tmpExp);
 
 			var evalStr = Renderer.getExpEvalStr(comp,expObj);
 
-			var tmp = evalStr.replace('self.$event','$event');
-			componentFn = new Function('$event',tmp);
+			var tmp = evalStr.replace(/self\.\$event/mg,'$event');
+			tmp = tmp.replace(/self\.arguments/mg,'arguments');
+			componentFn = new Function('$event','arguments',tmp);
 
 			meta.componentFn = componentFn;//cache
+			meta.cache = true;
 		}
 		
 		try{
-			return componentFn(e);
+			return componentFn.call(context,ev,[ev]);
+		}catch(error){
+			LOGGER.debug("error in event '"+type +"'",error);
+		}
+	}
+
+	this.emitEventExp = function(meta,type,params){
+		var originExp = meta.exp;
+		var context = meta.context;
+		var comp = meta.comp || context;
+
+		if(originExp instanceof Function){
+			meta.componentFn = originExp;
+			meta.isCbkFn = true;
+		}
+		var componentFn = meta.componentFn;
+
+		var tmpExp = originExp;
+
+		if(!meta.cache && componentFn){
+			tmpExp = componentFn.apply(context,params);
+		}
+
+		if(typeof(tmpExp) == "string"){
+			if(!(comp instanceof Component)){
+				LOGGER.error("need a context to parse '"+originExp+"' of type '"+type +"'");
+				return;
+			}
+
+			var expObj = lexer(tmpExp);
+
+			var evalStr = Renderer.getExpEvalStr(comp,expObj);
+
+			var tmp = evalStr.replace(/self\.arguments/mg,'arguments');
+			componentFn = new Function('arguments',tmp);
+
+			meta.componentFn = componentFn;//cache
+			meta.cache = true;
+		}
+
+
+		try{
+			if(meta.isCbkFn){
+				componentFn.apply(context,params);
+			}else{
+				componentFn.call(context,params);
+			}
 		}catch(error){
 			LOGGER.debug("error in event '"+type +"'",error);
 		}
 	}
 	this.addDefaultEvent = function(type,meta){
-		var originExp = meta.exp;
-		
-		var tmpExpOutside = '';
-		var fnOutside = null;
-
 		if(!EVENTS_MAP[type]){
 			EVENTS_MAP[type] = [];
 		}
 		EVENTS_MAP[type].push(meta);
+		var ref = this.__defaultEventHandler.bind(this);
+		meta.ref = ref;
 
-        meta.el.addEventListener(type,this.__defaultEventHandler.bind(this),false);
+        if(meta.el)meta.el.addEventListener(type,ref,false);
+	}
+
+	this.removeDefaultEvent = function(type,meta){
+		var metas = EVENTS_MAP[type];
+		for(var i=metas.length;i--;){
+			if(metas[i].id === meta.id){
+				break;
+			}
+		}
+
+		metas.splice(i,1);
+
+        if(meta.el)meta.el.removeEventListener(type,meta.ref,false);
 	}
 
 	this.__defaultEventHandler = function(e){
@@ -1729,6 +1904,18 @@ var Handler = new function() {
 		}
 		this.evalEventExp(metas[i],e,type);
 	}
+}
+/**
+ * @classdesc 事件封装对象
+ * 
+ * @class 
+ * 
+ */
+function Event(type,e,ct) {
+	this.type = type;
+	this.e = e;
+	this.target = e && e.target;
+	this.currentTarget = ct;
 }
 /**
  * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
@@ -1756,28 +1943,29 @@ Util.ext(Dispatcher.prototype,{
 	 * 派发事件
 	 * @param  {String} eventStr 事件名
 	 * @param  {Object} e 事件对象
+	 * @param {Object} extra 事件扩展属性，属性会被扩展到对象属性中
 	 */
-	dispatch:function(eventStr,e){
+	dispatch:function(eventStr,e,extra){
 		var t = e.target;
         var events = this.__eventMap[eventStr];
         if(!events)return;
         
         do{
-            if(this.fireEvent(t,events,e,eventStr) === false){
+            if(this.fireEvent(t,events,e,eventStr,extra) === false){
                 break;
             }
 
             t = t.parentNode;
         }while(t.tagName && t.tagName != 'HTML');
 	},
-    fireEvent:function(target,events,e,type){
+    fireEvent:function(target,events,e,type,extra){
         for(var i=events.length;i--;){
             if(events[i].el === target)break;
         }
         if(i < 0)return;
 
         //callback
-        var bubbles = Handler.evalEventExp(events[i],e,type);
+        var bubbles = Handler.evalEventExp(events[i],e,type,extra);
 
         return bubbles;//是否冒泡
     },
@@ -1785,219 +1973,16 @@ Util.ext(Dispatcher.prototype,{
 		var events = this.__eventMap[type];
 		if(!events)events = this.__eventMap[type] = [];
 		events.push(meta);
+		meta.dispatcher = this;
+	},
+	_delEvent:function(type,meta){
+		var events = this.__eventMap[type];
+		for(var i=events.length;i--;){
+            if(events[i].id === meta.id)break;
+        }
+        events.splice(i,1);
 	}
 });
-
-/**
- * @classdesc 视图接口，提供视图相关操作。组件和指令实现此接口
- * @class
- */
-function View () {
-	this.__evMap = {};
-	/**
-	 * 对视图节点的引用。如果组件/指令拥有多个顶级节点，该属性为null
-	 * @type {HTMLElement | null}
-	 */
-	this.el = null;
-}
-View.prototype = {
-	__destroyView:function(){
-		for(var k in this.__evMap){
-			var events = this.__evMap[k];
-	        for(var i=events.length;i--;){
-	            var pair = events[i];
-	            var evHandler = pair[1];
-
-	            this.el.removeEventListener(k,evHandler,false);
-	        }
-		}
-
-		DOMHelper.detach(this.__nodes);
-	},
-	__suspend:function(component,hook){
-		var p = this.__nodes[0].parentNode;
-		if(!p)return;
-		if(hook){
-			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
-			p.insertBefore(this.__target,this.__nodes[0]);
-		}
-
-		for(var i=this.__nodes.length;i--;){
-			if(this.__nodes[i].parentNode)
-				p.removeChild(this.__nodes[i]);
-		}
-	},
-	/**
-	 * 绑定事件到视图。支持原生事件类型或自定义事件类型。<br/>
-	 * 如果同一个事件类型两者都有，自定义事件会优先绑定
-	 * @param  {string} type 事件名，标准DOM事件名，比如click / mousedown
-     * @param {string} exp 自定义函数表达式，比如  fn(x+1) 
-     * @param  {function} handler   事件处理回调，回调参数e
-     * @see impex.events
-	 */
-	on:function(type,exp,handler){
-		if(!this.el)return;
-
-		var comp = this instanceof Component?this:this.component;
-
-		//查找
-		var isDefault = true;
-		for(var i=DISPATCHERS.length;i--;){
-			var events = DISPATCHERS[i][0];
-			if(events.indexOf(type) > -1){
-				isDefault = false;
-				break;
-			}
-		}
-
-		if(isDefault){
-			Handler.addDefaultEvent(type,{
-				el:this.el,
-				exp:exp,
-				comp:comp,
-				handler:handler
-			});
-		}else{
-			DISPATCHERS[i][1].addEvent(type,{
-				el:this.el,
-				exp:exp,
-				comp:comp,
-				handler:handler
-			});
-
-			DISPATCHERS[i][1].onInit();
-		}
-		
-	},
-	/**
-	 * 显示视图
-	 */
-	show:function(){
-		for(var i=this.__nodes.length;i--;){
-			this.__nodes[i].style.display = '';
-		}
-
-		return this;
-	},
-	/**
-	 * 隐藏视图
-	 */
-	hide:function(){
-		for(var i=this.__nodes.length;i--;){
-			this.__nodes[i].style.display = 'none';
-		}
-
-		return this;
-	},
-	/**
-	 * 获取或设置视图的样式
-	 * @param  {String} name  样式名，如width/height
-	 * @param  {var} value 样式值
-	 */
-	style:function(name,value){
-		if(arguments.length > 1){
-			this.el.style[name] = value;
-
-			return this;
-		}else{
-			return this.el.style[name];
-		}
-	},
-	/**
-	 * 获取或设置视图的属性值
-	 * @param  {String} name  属性名
-	 * @param  {String} value 属性值
-	 */
-	attr:function(name,value){
-		if(arguments.length > 1){
-			this.el.setAttribute(name,value);
-
-			return this;
-		}else{
-			return this.el.getAttribute(name);
-		}
-	},
-	/**
-	 * 删除视图属性
-	 * @param  {String} name  属性名
-	 */
-	removeAttr:function(name){
-		this.el.removeAttribute(name);
-		
-		return this;
-	},
-	/**
-	 * 视图是否包含指定样式
-	 * @param  {String} name  样式名
-	 */
-	hasClass:function(name){
-		return this.el.className.split(' ').indexOf(name) > -1;
-	},
-	/**
-	 * 添加样式到视图
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	addClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-
-		names = names.split(' ');
-		var cls = this.el.className.split(' ');
-		var rs = '';
-		for(var n=names.length;n--;){
-			if(cls.indexOf(names[n]) < 0){
-				rs += names[n]+' ';
-			}
-		}
-		this.el.className += ' '+rs;
-		
-		return this;
-	},
-	/**
-	 * 从视图删除指定样式
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	removeClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-		var clss = names.split(' ');
-		var clsName = this.el.className;
-		if(clsName){
-			for(var ci=clss.length;ci--;){
-				var cname = clss[ci];
-
-				var exp = new RegExp('^'+cname+'\\s+|\\s+'+cname+'$|\\s+'+cname+'\\s+','img');
-				clsName = clsName.replace(exp,'');
-			}
-
-			this.el.className = clsName;
-		}
-		
-		return this;
-	},
-	/**
-	 * 从视图添加或移除指定样式
-	 * @param  {String} names  空格分隔多个样式名
-	 */
-	toggleClass:function(names){
-		names = names.replace(/\s+/mg,' ').replace(/^\s*|\s*$/mg,'');
-
-		var clss = names.split(' ');
-		var add = false;
-		var clsName = this.el.className;
-		for(var ci=clss.length;ci--;){
-			var cname = clss[ci];
-
-			if(clsName.indexOf(cname) < 0){
-				add = true;
-				break;
-			}
-		}
-		if(add){
-			this.addClass(names);
-		}else{
-			this.removeClass(names);
-		}
-	}//fn over
-}
 
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
@@ -2025,7 +2010,7 @@ function Component () {
 	this.__id = id;
 	this.__state = Component.state.created;
 
-	View.call(this);
+	Signal.call(this);
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
@@ -2100,7 +2085,7 @@ Component.state = {
 	mounted : 'mounted',
 	suspend : 'suspend'
 };
-Util.inherits(Component,View);
+Util.inherits(Component,Signal);
 Util.ext(Component.prototype,{
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
@@ -2230,7 +2215,7 @@ Util.ext(Component.prototype,{
 		LOGGER.log(this,'inited');
 
 		//observe state
-		this.state = Observer.observe(this.state,this);
+		this.state = Observer.observe(this.state,this,ChangeHandler.handle);
 
 		Builder.build(this);
 
@@ -2319,7 +2304,7 @@ Util.ext(Component.prototype,{
 			this.parent = null;
 		}
 		
-		this.__destroyView(this);
+		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
 			this.children[0].unmount();
@@ -2361,6 +2346,19 @@ Util.ext(Component.prototype,{
 		this.onSuspend && this.onSuspend();
 
 		this.__state = Component.state.suspend;
+	},
+	__suspend:function(component,hook){
+		var p = this.__nodes[0].parentNode;
+		if(!p)return;
+		if(hook){
+			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
+			p.insertBefore(this.__target,this.__nodes[0]);
+		}
+
+		for(var i=this.__nodes.length;i--;){
+			if(this.__nodes[i].parentNode)
+				p.removeChild(this.__nodes[i]);
+		}
 	},
 	__getPath:function(){
 		return 'impex._cs["'+ this.__id +'"]';
@@ -2604,7 +2602,7 @@ var DOMHelper = new function(){
  * @class 
  */
 function Directive (name,value) {
-	View.call(this);
+	Signal.call(this);
 	/**
 	 * 指令的字面值
 	 */
@@ -2641,7 +2639,7 @@ function Directive (name,value) {
 	 */
 	this.priority = 0;
 }
-Util.inherits(Directive,View);
+Util.inherits(Directive,Signal);
 Util.ext(Directive.prototype,{
 	init:function(){
 		if(this.__state == Component.state.inited){
@@ -2688,7 +2686,7 @@ Util.ext(Directive.prototype,{
 	unmount:function(){
 		LOGGER.log(this,'unmount');
 
-		this.__destroyView(this);
+		DOMHelper.detach(this.__nodes);
 
 		this.component = 
 		this.params = 
@@ -2770,7 +2768,17 @@ var TRANSITIONS = {
     "OTransition"     : "oTransitionEnd",
     "MozTransition"   : "mozTransitionend",
     "WebkitTransition": "webkitTransitionEnd"
+};
+
+function getStyle(cs,style){
+    var rs = '';
+
+    for(var i=PREFIX.length;i--;){
+        rs = cs[PREFIX[i]+style];
+        if(rs)return rs;
+    }
 }
+var PREFIX = ['-webkit-','-moz-','-o-','-ms-',''];
 var TESTNODE;
 function Transition (type,target,hook) {
     if(!TESTNODE){
@@ -2782,8 +2790,8 @@ function Transition (type,target,hook) {
         TESTNODE.className = (type + '-transition');
         TESTNODE.style.left = '-9999px';
         var cs = window.getComputedStyle(TESTNODE,null);
-        var durations = cs['transition-duration'].split(',');
-        var delay = cs['transition-delay'].split(',');
+        var durations = getStyle(cs,'transition-duration').split(',');
+        var delay = getStyle(cs,'transition-delay').split(',');
         var max = -1;
         for(var i=durations.length;i--;){
             var du = parseFloat(durations[i]);
@@ -2810,7 +2818,8 @@ function Transition (type,target,hook) {
                     expNode.origin += ' '+ type + '-transition';
                 }
             }
-            v.addClass(type + '-transition');
+            v.el.className += ' ' +type + '-transition';
+
             this.__longest = max;
 
             var te = null;
@@ -2838,10 +2847,14 @@ Transition.prototype = {
 	enter:function(){
 		this.__start = 'enter';
 
-        this.__view.removeClass(this.__type + '-leave');
+        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+        this.__view.el.className = clsName;
 
-		if(this.__css)
-        	this.__view.addClass(this.__type + '-enter');
+		if(this.__css){
+            clsName += ' ' +this.__type + '-enter';
+            this.__view.el.className = clsName;
+        }
+
         //exec...
         if(this.__direct.enter){
         	this.__direct.enter();
@@ -2852,7 +2865,8 @@ Transition.prototype = {
 
         if(this.__css){
             this.__view.el.offsetHeight;
-            this.__view.removeClass(this.__type + '-enter');
+            var clsName = this.__view.el.className.replace(this.__type + '-enter','');
+            this.__view.el.className = clsName;
         }
         
 	},
@@ -2867,10 +2881,13 @@ Transition.prototype = {
 	leave:function(){
 		this.__start = 'leave';
 
-        this.__view.removeClass(this.__type + '-leave');
+        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+        this.__view.el.className = clsName;
 
-		if(this.__css)
-        	this.__view.addClass(this.__type + '-leave');
+		if(this.__css){
+            clsName += ' ' +this.__type + '-leave';
+            this.__view.el.className = clsName;
+        }
         //exec...
         if(this.__direct.leave){
             this.__direct.leave();
@@ -2889,7 +2906,8 @@ Transition.prototype = {
         }
         if(this.__css){
             this.__view.el.offsetHeight;
-            this.__view.removeClass(this.__type + '-leave');
+            var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+            this.__view.el.className = clsName;
         }
 	},
 	__done:function(e){
@@ -3128,6 +3146,9 @@ Util.ext(_ComponentFactory.prototype,{
 		Util.ext(ins,this.types[type].props);
 		var state = this.types[type].state;
 		if(state){
+			if(state instanceof Function){
+				state = state.call(ins);
+			}
 			Util.ext(ins.state,state);
 		}
 	}
@@ -3483,7 +3504,6 @@ var TransitionFactory = {
 		 * @type {Object}
 		 */
 		this.events = {
-			guid:0,
 			/**
 			 * 注册一个事件分派器
 			 * @param  {String | Array} events 支持的事件列表。数组或者以空格分割的字符串
@@ -3505,7 +3525,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,36,2],
+	        v:[0,51,0],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -3716,6 +3736,10 @@ var TransitionFactory = {
 		//for prototype API
 		this.Component = Component;
 
+		this.Signal = Signal;
+		
+		this.Observer = Observer;
+
 		/**
 		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
 		 */
@@ -3769,35 +3793,6 @@ impex.service('Transitions',new function(){
 		type = type||'x';
 		return TransitionFactory.get(type,component);
 	}
-});
-
-impex.service('Msg',new function(){
-	var messageMap = {};
-    //发送消息
-    this.pub = function(){
-        var channel = arguments[0];
-        var params = [this.host];
-        for (var i =1 ; i < arguments.length; i++) {
-            params.push(arguments[i]);
-        }
-        setTimeout(function(){
-            if(messageMap[channel]){
-                var mq = messageMap[channel];
-                if(mq)
-                for(var i=0;i<mq.length;i++){
-                    var suber = mq[i];
-                    suber[1].apply(suber[0],params);
-                }
-            }
-        },0);
-    }
-    //订阅消息
-    this.sub = function(channel,handler){
-        if(!messageMap[channel]){
-            messageMap[channel] = [];
-        }
-        messageMap[channel].push([this.host,handler]);
-    }
 });
 /**
  * 内建指令
@@ -3883,10 +3878,11 @@ impex.service('Msg',new function(){
                 }
             }
 
-            if(this.lastClassStr)
-                this.removeClass(this.lastClassStr);
+            if(this.lastClassStr){
+                this.el.className = this.el.className.replace(this.lastClassStr,'');
+            }
 
-            this.addClass(str);
+            this.el.className += ' '+str;
             this.lastClassStr = str;
         }
     })
@@ -3938,7 +3934,7 @@ impex.service('Msg',new function(){
 
             for(var i=this.params.length;i--;){
                 var p = this.params[i];
-                this.attr(p,rs);
+                this.el.setAttribute(p,rs);
             }
             
         }
@@ -3953,7 +3949,7 @@ impex.service('Msg',new function(){
                 DOMHelper.replace(this.el,this.__nodes);
             }
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -3984,10 +3980,14 @@ impex.service('Msg',new function(){
         exec:function(rs){
             if(rs){
                 //显示
-                this.show();
+                for(var i=this.__nodes.length;i--;){
+                    this.__nodes[i].style.display = '';
+                }
             }else{
                 // 隐藏
-                this.hide();
+                for(var i=this.__nodes.length;i--;){
+                    this.__nodes[i].style.display = 'none';
+                }
             }
         }
     },['Transitions','DOMHelper'])
@@ -4001,7 +4001,7 @@ impex.service('Msg',new function(){
             this.DOMHelper = DOMHelper;
             this.placeholder = document.createComment('-- directive [if] placeholder --');         
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -4074,7 +4074,7 @@ impex.service('Msg',new function(){
 
             xif.elseD = this;
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -4125,7 +4125,7 @@ impex.service('Msg',new function(){
      */
     .directive('cloak',{
         onCreate:function(){
-            var className = this.attr('class');
+            var className = this.el.getAttribute('class');
             if(!className){
                 LOGGER.warn("can not find attribute[class] of element["+this.el.tagName+"] which directive[cloak] on");
                 return;
@@ -4136,8 +4136,8 @@ impex.service('Msg',new function(){
         },
         onActive:function(){
             updateCloakAttr(this.component,this.el,this.__cn);
-            var curr = this.attr('class').replace('x-cloak','');
-            this.attr('class',curr);
+            var curr = this.el.getAttribute('class').replace('x-cloak','');
+            this.el.setAttribute('class',curr);
         }
     })
 
@@ -4155,26 +4155,26 @@ impex.service('Msg',new function(){
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
-                    var type = this.attr('type');
+                    var type = el.getAttribute('type');
                     switch(type){
                         case 'radio':
-                            this.on('click',null,this.changeModel.bind(this));
+                            this.on('change',this.changeModel);
                             break;
                         case 'checkbox':
-                            this.on('click',null,this.changeModelCheck.bind(this));
+                            this.on('change',this.changeModelCheck);
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.on(hack,null,this.changeModel.bind(this));
+                            this.on(hack,this.changeModel);
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.on('change',null,this.changeModelSelect.bind(this));
+                        this.on('change',this.changeModelSelect);
                     }else{
-                        this.on('change',null,this.changeModel.bind(this));
+                        this.on('change',this.changeModel);
                     }
                     
                     break;
@@ -4207,7 +4207,6 @@ impex.service('Msg',new function(){
                     parts.splice(i,1);
                 }
             }
-            this.component.d(this.value,parts);
         },
         changeModel : function(e){
             if(this.debounce){
@@ -4268,11 +4267,11 @@ impex.service('Msg',new function(){
 
             this.cacheSize = 20;
 
-            this.step = this.el?this.attr('step'):this.__nodes[0].getAttribute('step');
+            this.step = this.el?this.el.getAttribute('step'):this.__nodes[0].getAttribute('step');
 
-            this.over = this.el?this.attr('over'):this.__nodes[0].getAttribute('over');
+            this.over = this.el?this.el.getAttribute('over'):this.__nodes[0].getAttribute('over');
 
-            var transition = this.el.tagName !== 'TEMPLATE'?this.attr('transition'):this.__nodes[0].getAttribute('transition');
+            var transition = this.el.tagName !== 'TEMPLATE'?this.el.getAttribute('transition'):this.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
                 this.ts = ts;
@@ -4945,11 +4944,13 @@ impex.filter('json',{
                 if(long <= this.FLING_INTERVAL && s > 20){
                     var r = Math.atan2(dy-sy,dx-sx);
 
-                    e.impex_ext_slope = r;
-                    e.impex_ext_time = long;
-                    e.impex_ext_length = s;
+                    var extra = {
+                        slope:r,
+                        interval:long,
+                        distance:s
+                    }
 
-                    this.dispatch('fling',e);
+                    this.dispatch('fling',e,extra);
                 }
             }
         }

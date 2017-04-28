@@ -172,11 +172,13 @@
                 if(long <= this.FLING_INTERVAL && s > 20){
                     var r = Math.atan2(dy-sy,dx-sx);
 
-                    e.impex_ext_slope = r;
-                    e.impex_ext_time = long;
-                    e.impex_ext_length = s;
+                    var extra = {
+                        slope:r,
+                        interval:long,
+                        distance:s
+                    }
 
-                    this.dispatch('fling',e);
+                    this.dispatch('fling',e,extra);
                 }
             }
         }

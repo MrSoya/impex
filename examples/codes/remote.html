@@ -20,21 +20,13 @@
 
         <!-- 需要服务器环境 -->
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
-        <script type="text/javascript" src="../lib/impex/impex.ext.services.js"></script>
         <script type="text/javascript">
         
             //自定义组件
-            impex.component('x-button','x-button.html',['Msg']);
+            impex.component('x-button','x-button.html');
 
             //渲染
-            var debug = impex.render(document.body,{
-                onCreate:function(imsg) {
-                    setTimeout(function(){
-                        imsg.pub('test',1,2,3,4)
-                    },1000);
-                    
-                }
-            },['Msg']);
+            var debug = impex.render(document.body);
             
         </script>
     </body>

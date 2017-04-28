@@ -16,8 +16,12 @@
         
             impex.directive('change',{
                 onCreate : function(){
-                    this.on('change',this.value,function(e,exp){
-                        return exp.replace('$selected',e.target.options[e.target.selectedIndex].value);
+                    var a = 10;
+                    this.on('change',function(e){
+                        console.log(arguments)
+                        var exp = this.value;
+                        exp = exp.replace('$selected',e.target.options[e.target.selectedIndex].value);
+                        return exp;
                     });
                 }
             });

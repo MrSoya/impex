@@ -159,7 +159,7 @@ var Util = new function () {
         //display children
         for(var i = 0;i<children.length;i++){
             if(!children[i].__url)
-                children[i].display();
+                children[i].mount();
         }
         //active directs
         for(var i = directs.length;i--;){

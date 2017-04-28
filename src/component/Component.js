@@ -24,7 +24,7 @@ function Component () {
 	this.__id = id;
 	this.__state = Component.state.created;
 
-	View.call(this);
+	Signal.call(this);
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
@@ -99,7 +99,7 @@ Component.state = {
 	mounted : 'mounted',
 	suspend : 'suspend'
 };
-Util.inherits(Component,View);
+Util.inherits(Component,Signal);
 Util.ext(Component.prototype,{
 	/**
 	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
@@ -229,7 +229,7 @@ Util.ext(Component.prototype,{
 		LOGGER.log(this,'inited');
 
 		//observe state
-		this.state = Observer.observe(this.state,this);
+		this.state = Observer.observe(this.state,this,ChangeHandler.handle);
 
 		Builder.build(this);
 
@@ -318,7 +318,7 @@ Util.ext(Component.prototype,{
 			this.parent = null;
 		}
 		
-		this.__destroyView(this);
+		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
 			this.children[0].unmount();
@@ -360,6 +360,19 @@ Util.ext(Component.prototype,{
 		this.onSuspend && this.onSuspend();
 
 		this.__state = Component.state.suspend;
+	},
+	__suspend:function(component,hook){
+		var p = this.__nodes[0].parentNode;
+		if(!p)return;
+		if(hook){
+			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
+			p.insertBefore(this.__target,this.__nodes[0]);
+		}
+
+		for(var i=this.__nodes.length;i--;){
+			if(this.__nodes[i].parentNode)
+				p.removeChild(this.__nodes[i]);
+		}
 	},
 	__getPath:function(){
 		return 'impex._cs["'+ this.__id +'"]';

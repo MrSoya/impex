@@ -28,11 +28,8 @@
     <script type="text/javascript" id="impex">
         function component(){
             return {
-                onInit:function(msg){
-                    msg.sub('test',function(){
-                        console.log(arguments)
-                    })
-                    this.on('click','tip()');
+                onInit:function(){
+                    this.on('click',this.tip);
                 },
                 tip : function(){
                     alert('clicked '+(this.state.times++)+' times');

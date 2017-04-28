@@ -25,20 +25,19 @@
                 onInit:function(){
                     this.logger('init...');
                 },
-                onDisplay:function(){
-                    this.logger('display...');
+                onMount:function(){
+                    this.logger('mount...');
                 },
                 onUpdate:function(){
                     this.logger('update...');
                     // return false;
                 },
                 onPropChange:function(changes){
-                    this.constructor.prototype.onPropChange.call(this,changes);
-                    // this.state.p = changes[0].val;
+                    this.state.p = changes[0].val;
                     this.logger('propChange...');
                 },
-                onDestroy:function(){
-                    this.logger('destroy...');
+                onUnmount:function(){
+                    this.logger('unmount...');
                 },
                 state:{
                     i:0
@@ -63,7 +62,7 @@
                     this.state.x += 1;
                 },
                 destroyComp:function(){
-                    this.children[0].destroy();
+                    this.children[0].unmount();
                 },
                 state:{
                     info:'',

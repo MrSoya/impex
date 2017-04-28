@@ -83,7 +83,7 @@
                         transition="todo" .done="this.done.bind(this)"
                         class="{{v.type=='completed'?'completed':''}}"
                     >
-                        <input type="checkbox" x-checked="v.type=='completed'" :click="done($event,v)">
+                        <input type="checkbox" x-checked="v.type=='completed'" :change="done($event,v)">
                         {{v.val}} <i :click="this.parent.removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
@@ -130,7 +130,7 @@
                 },
                 addTodo:function(e){
                     var t = e.target;
-                    if(e.keyCode === 13 && t.value.trim()){
+                    if(e.e.keyCode === 13 && t.value.trim()){
 
                         this.state.todos.push({id:Math.random()+'',val:t.value,type:'active'});
                         t.value = '';
@@ -164,6 +164,8 @@
                 }
                 
             });
+
+            impex.useBasicRender();
             
         </script>
     </body>

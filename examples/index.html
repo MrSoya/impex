@@ -109,7 +109,7 @@
                 	}
                 	this.state.comps = comps;
                 },
-                onDisplay:function(){
+                onMount:function(){
 					$('.impex-layout > .sidebar .scrollpane > .menu-items').slimScroll({
 				        height: '100%'
 				    });
@@ -122,7 +122,7 @@
             			'component':[
             				'anonymous','named','expression','html','remote','slot',
             				'watch','props','proptypes','propchange',
-            				'restrict','lifecycle','communication','route','updateprop'
+            				'restrict','lifecycle','route','updateprop'
             			],
             			'filter':[
             				'currency','chain'

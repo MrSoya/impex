@@ -82,10 +82,11 @@
                 }
             }
 
-            if(this.lastClassStr)
-                this.removeClass(this.lastClassStr);
+            if(this.lastClassStr){
+                this.el.className = this.el.className.replace(this.lastClassStr,'');
+            }
 
-            this.addClass(str);
+            this.el.className += ' '+str;
             this.lastClassStr = str;
         }
     })
@@ -137,7 +138,7 @@
 
             for(var i=this.params.length;i--;){
                 var p = this.params[i];
-                this.attr(p,rs);
+                this.el.setAttribute(p,rs);
             }
             
         }
@@ -152,7 +153,7 @@
                 DOMHelper.replace(this.el,this.__nodes);
             }
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -183,10 +184,14 @@
         exec:function(rs){
             if(rs){
                 //显示
-                this.show();
+                for(var i=this.__nodes.length;i--;){
+                    this.__nodes[i].style.display = '';
+                }
             }else{
                 // 隐藏
-                this.hide();
+                for(var i=this.__nodes.length;i--;){
+                    this.__nodes[i].style.display = 'none';
+                }
             }
         }
     },['Transitions','DOMHelper'])
@@ -200,7 +205,7 @@
             this.DOMHelper = DOMHelper;
             this.placeholder = document.createComment('-- directive [if] placeholder --');         
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -273,7 +278,7 @@
 
             xif.elseD = this;
 
-            var transition = this.attr('transition');
+            var transition = this.el.getAttribute('transition');
             if(transition !== null && this.el.tagName !== 'TEMPLATE'){
                 this.transition = ts.get(transition,this);
             }
@@ -324,7 +329,7 @@
      */
     .directive('cloak',{
         onCreate:function(){
-            var className = this.attr('class');
+            var className = this.el.getAttribute('class');
             if(!className){
                 LOGGER.warn("can not find attribute[class] of element["+this.el.tagName+"] which directive[cloak] on");
                 return;
@@ -335,8 +340,8 @@
         },
         onActive:function(){
             updateCloakAttr(this.component,this.el,this.__cn);
-            var curr = this.attr('class').replace('x-cloak','');
-            this.attr('class',curr);
+            var curr = this.el.getAttribute('class').replace('x-cloak','');
+            this.el.setAttribute('class',curr);
         }
     })
 
@@ -354,26 +359,26 @@
             switch(el.nodeName.toLowerCase()){
                 case 'textarea':
                 case 'input':
-                    var type = this.attr('type');
+                    var type = el.getAttribute('type');
                     switch(type){
                         case 'radio':
-                            this.on('click',null,this.changeModel.bind(this));
+                            this.on('change',this.changeModel);
                             break;
                         case 'checkbox':
-                            this.on('click',null,this.changeModelCheck.bind(this));
+                            this.on('change',this.changeModelCheck);
                             break;
                         default:
                             var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.on(hack,null,this.changeModel.bind(this));
+                            this.on(hack,this.changeModel);
                     }
                     
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.on('change',null,this.changeModelSelect.bind(this));
+                        this.on('change',this.changeModelSelect);
                     }else{
-                        this.on('change',null,this.changeModel.bind(this));
+                        this.on('change',this.changeModel);
                     }
                     
                     break;
@@ -406,7 +411,6 @@
                     parts.splice(i,1);
                 }
             }
-            this.component.d(this.value,parts);
         },
         changeModel : function(e){
             if(this.debounce){
@@ -467,11 +471,11 @@
 
             this.cacheSize = 20;
 
-            this.step = this.el?this.attr('step'):this.__nodes[0].getAttribute('step');
+            this.step = this.el?this.el.getAttribute('step'):this.__nodes[0].getAttribute('step');
 
-            this.over = this.el?this.attr('over'):this.__nodes[0].getAttribute('over');
+            this.over = this.el?this.el.getAttribute('over'):this.__nodes[0].getAttribute('over');
 
-            var transition = this.el.tagName !== 'TEMPLATE'?this.attr('transition'):this.__nodes[0].getAttribute('transition');
+            var transition = this.el.tagName !== 'TEMPLATE'?this.el.getAttribute('transition'):this.__nodes[0].getAttribute('transition');
             if(transition !== null){
                 this.trans = transition;
                 this.ts = ts;

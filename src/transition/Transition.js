@@ -7,7 +7,17 @@ var TRANSITIONS = {
     "OTransition"     : "oTransitionEnd",
     "MozTransition"   : "mozTransitionend",
     "WebkitTransition": "webkitTransitionEnd"
+};
+
+function getStyle(cs,style){
+    var rs = '';
+
+    for(var i=PREFIX.length;i--;){
+        rs = cs[PREFIX[i]+style];
+        if(rs)return rs;
+    }
 }
+var PREFIX = ['-webkit-','-moz-','-o-','-ms-',''];
 var TESTNODE;
 function Transition (type,target,hook) {
     if(!TESTNODE){
@@ -19,8 +29,8 @@ function Transition (type,target,hook) {
         TESTNODE.className = (type + '-transition');
         TESTNODE.style.left = '-9999px';
         var cs = window.getComputedStyle(TESTNODE,null);
-        var durations = cs['transition-duration'].split(',');
-        var delay = cs['transition-delay'].split(',');
+        var durations = getStyle(cs,'transition-duration').split(',');
+        var delay = getStyle(cs,'transition-delay').split(',');
         var max = -1;
         for(var i=durations.length;i--;){
             var du = parseFloat(durations[i]);
@@ -47,7 +57,8 @@ function Transition (type,target,hook) {
                     expNode.origin += ' '+ type + '-transition';
                 }
             }
-            v.addClass(type + '-transition');
+            v.el.className += ' ' +type + '-transition';
+
             this.__longest = max;
 
             var te = null;
@@ -75,10 +86,14 @@ Transition.prototype = {
 	enter:function(){
 		this.__start = 'enter';
 
-        this.__view.removeClass(this.__type + '-leave');
+        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+        this.__view.el.className = clsName;
 
-		if(this.__css)
-        	this.__view.addClass(this.__type + '-enter');
+		if(this.__css){
+            clsName += ' ' +this.__type + '-enter';
+            this.__view.el.className = clsName;
+        }
+
         //exec...
         if(this.__direct.enter){
         	this.__direct.enter();
@@ -89,7 +104,8 @@ Transition.prototype = {
 
         if(this.__css){
             this.__view.el.offsetHeight;
-            this.__view.removeClass(this.__type + '-enter');
+            var clsName = this.__view.el.className.replace(this.__type + '-enter','');
+            this.__view.el.className = clsName;
         }
         
 	},
@@ -104,10 +120,13 @@ Transition.prototype = {
 	leave:function(){
 		this.__start = 'leave';
 
-        this.__view.removeClass(this.__type + '-leave');
+        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+        this.__view.el.className = clsName;
 
-		if(this.__css)
-        	this.__view.addClass(this.__type + '-leave');
+		if(this.__css){
+            clsName += ' ' +this.__type + '-leave';
+            this.__view.el.className = clsName;
+        }
         //exec...
         if(this.__direct.leave){
             this.__direct.leave();
@@ -126,7 +145,8 @@ Transition.prototype = {
         }
         if(this.__css){
             this.__view.el.offsetHeight;
-            this.__view.removeClass(this.__type + '-leave');
+            var clsName = this.__view.el.className.replace(this.__type + '-leave','');
+            this.__view.el.className = clsName;
         }
 	},
 	__done:function(e){

@@ -26,19 +26,29 @@
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
+            function addClass(el,cls){
+                el.className += ' '+cls;
+            }
+
+            function removeClass(el,cls){
+                var cls = el.className.replace(cls,'');
+                el.className = cls;
+            }
+
             //手动动画
             impex.transition('show',{
                 enter:function(done){
-                    this.addClass('x-enter')
+                    
+                    addClass(this.el,'x-enter')
                     this.el.offsetHeight;
-                    this.removeClass('x-enter');
+                    removeClass(this.el,'x-enter');
                     done();
                 },
                 leave:function(done){
-                    this.addClass('x-leave');
+                    addClass(this.el,'x-leave');
                     var that = this;
                     setTimeout(function(){
-                        that.removeClass('x-leave');
+                        removeClass(that.el,'x-leave');
                         done();
                     },300);
                 },

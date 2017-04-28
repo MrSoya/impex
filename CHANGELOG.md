@@ -1,4 +1,18 @@
 # Change Log
+## Version 0.51.0 - 2017/4/28
+### 新增
+* impex.Store 用于全局状态共享
+* impex.Signal 用于独立的信道通信
+* impex.Observer 用于状态更新相关的扩展开发
+
+### 更新
+* Component.state 支持函数返回值赋值
+* 回调事件现在返回包装的Event参数
+
+### 移除
+* View
+
+
 ## Version 0.50.0 - 2017/4/21
 ### 新增
 * link方式引入组件，支持services注入 &lt;link href="component.html" type="x-comp" rel="impex"  services="Msg" /&gt;
@@ -14,10 +28,10 @@
 
 ### 更新
 * 更合理的生命周期定义
-* 重构事件系统，性能大幅提升
+* 重构事件系统，性能提升
 
 ### bug修复
-* lexer在解析xx[yy(...)]类似格式事的问题
+* lexer在解析xx[yy(...)]类似格式时的问题
 * 模版中style的某些问题
 
 

@@ -26,13 +26,13 @@
 		var placeholder = document.createComment('-- placeholder --');
         router.DOMHelper.insertBefore([placeholder],routerView.el);
 
-        routerView.destroy();
+        routerView.unmount();
 
         //create new
         var node = document.createElement(compName);
         placeholder.parentNode.replaceChild(node,placeholder);
         var subComp = component.createSubComponentOf(node);
-        subComp.init().display();
+        subComp.init().mount();
 
         router.lastComp = subComp;
 	}

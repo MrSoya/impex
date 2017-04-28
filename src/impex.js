@@ -78,7 +78,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,50,0],
+	        v:[0,51,0],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -288,6 +288,10 @@
 
 		//for prototype API
 		this.Component = Component;
+
+		this.Signal = Signal;
+		
+		this.Observer = Observer;
 
 		/**
 		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化

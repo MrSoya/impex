@@ -31,10 +31,11 @@ var gulp = require('gulp'),
             'src/tool/ChangeHandler.js',
             'src/tool/Renderer.js',
 
+            'src/component/events/Signal.js',
             'src/component/events/Handler.js',
+            'src/component/events/Event.js',
             'src/component/events/Dispatcher.js',
             
-            'src/component/view/View.js',
             'src/component/Component.js',
             'src/component/view/DOMHelper.js',
     		'src/directive/Directive.js',

@@ -24,28 +24,29 @@ Util.ext(Dispatcher.prototype,{
 	 * 派发事件
 	 * @param  {String} eventStr 事件名
 	 * @param  {Object} e 事件对象
+	 * @param {Object} extra 事件扩展属性，属性会被扩展到对象属性中
 	 */
-	dispatch:function(eventStr,e){
+	dispatch:function(eventStr,e,extra){
 		var t = e.target;
         var events = this.__eventMap[eventStr];
         if(!events)return;
         
         do{
-            if(this.fireEvent(t,events,e,eventStr) === false){
+            if(this.fireEvent(t,events,e,eventStr,extra) === false){
                 break;
             }
 
             t = t.parentNode;
         }while(t.tagName && t.tagName != 'HTML');
 	},
-    fireEvent:function(target,events,e,type){
+    fireEvent:function(target,events,e,type,extra){
         for(var i=events.length;i--;){
             if(events[i].el === target)break;
         }
         if(i < 0)return;
 
         //callback
-        var bubbles = Handler.evalEventExp(events[i],e,type);
+        var bubbles = Handler.evalEventExp(events[i],e,type,extra);
 
         return bubbles;//是否冒泡
     },
@@ -53,5 +54,13 @@ Util.ext(Dispatcher.prototype,{
 		var events = this.__eventMap[type];
 		if(!events)events = this.__eventMap[type] = [];
 		events.push(meta);
+		meta.dispatcher = this;
+	},
+	_delEvent:function(type,meta){
+		var events = this.__eventMap[type];
+		for(var i=events.length;i--;){
+            if(events[i].id === meta.id)break;
+        }
+        events.splice(i,1);
 	}
 });

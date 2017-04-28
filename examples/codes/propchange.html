@@ -26,10 +26,8 @@
                     auto:true
                 },
                 // onPropChange:function(changes) {
-                    //这里判断changes
-                    /*
-                        if(true)this.state[changes[i].name] = changes[i].val;
-                     */
+                //     if(true)this.state[changes[0].name] = changes[0].val;
+                     
                 // },
                 template:'<p style="border:1px solid red">{{content}}</p>'
             });
@@ -40,6 +38,9 @@
                     msg:'这是参数'
                 }
             });
+
+            //使用默认渲染或者 onPropChange 
+            impex.useBasicRender();
             
         </script>
     </body>
