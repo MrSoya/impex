@@ -229,7 +229,7 @@ Util.ext(Component.prototype,{
 		LOGGER.log(this,'inited');
 
 		//observe state
-		this.state = Observer.observe(this.state,this,ChangeHandler.handle);
+		this.state = Observer.observe(this.state,this);
 
 		Builder.build(this);
 

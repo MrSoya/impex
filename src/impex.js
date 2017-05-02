@@ -290,9 +290,6 @@
 		this.Component = Component;
 
 		this.Signal = Signal;
-		
-		this.Observer = Observer;
-
 		/**
 		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
 		 */

@@ -36,7 +36,7 @@
 		}
 
 		Observer = {
-			observe:function(data,component,cbk){
+			observe:function(data,component){
 				if(data && data.__im__propChain)return data;
 
 				//build handler
@@ -68,7 +68,7 @@
 
 				    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
-				    	cbk(changeObj);
+				    	ChangeHandler.handle(changeObj);
 				    	
 				    	return true;
 				    },
@@ -85,7 +85,7 @@
 				    	var xpath = target.__im__extPropChain;
 
 					    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
-				    	cbk(changeObj);
+				    	ChangeHandler.handle(changeObj);
 
 					    return true;
 					}
@@ -98,7 +98,6 @@
 
 	///////////////////////////////////////// fallback ///////////////////////////////////////////
 	!window.Proxy && !function(){
-		var cbk = null;
 		function getter(k){
 			return this.__im__innerProps[k];
 		}
@@ -275,11 +274,10 @@
 		    	}
 
 		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
-		    	cbk(changeObj);
+		    	ChangeHandler.handle(changeObj);
 		    }
 		}
-		var observedObjects = [],//用于保存监控对象
-		observedArys = [];//用于保存监控数组
+		var observedObjects = [];//用于保存监控对象
 
 		var RAF = (function(w){
 		    return  w.requestAnimationFrame       || 
@@ -295,9 +293,8 @@
 		})(self);
 
 		Observer = {};
-		Observer.observe = function(data,component,callback){
+		Observer.observe = function(data,component){
 			if(data && data.__im__propChain)return data;
-			cbk = callback;
 
 			return observeData([],data,component);
 		}

@@ -3,7 +3,6 @@
 ### 新增
 * impex.Store 用于全局状态共享
 * impex.Signal 用于独立的信道通信
-* impex.Observer 用于状态更新相关的扩展开发
 
 ### 更新
 * Component.state 支持函数返回值赋值

@@ -2,6 +2,119 @@
  * Store是一个基于impex的flux解决方案。用于处理大量共享状态需要交互的场景
  */
 !function(impex){
+	function getter(k){
+		return this.__im__innerProps[k];
+	}
+	function setter(k,v){
+		var old = this.__im__innerProps[k];
+		clearObserve(old);
+		if(typeof v === 'object'){
+    		var pcs = this.__im__propChain.concat();
+			pcs.push(k);
+    		v = observeData(pcs,v,this.__im__comp);
+    	}
+		this.__im__innerProps[k] = v;
+
+		var path = this.__im__propChain;
+    	var xpath = this.__im__extPropChain;
+    	
+    	handler([{
+    		name:k,
+    		target:this,
+    		oldVal:old,
+    		newVal:v,
+    		type:'update'
+    	}],true);
+	}
+	function observeData(propChains,data,component){
+		if(data && data.__im__propChain)return data;
+		
+		var t = data instanceof Array?[]:{};
+
+		Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
+		var props = {};
+
+		var observeObj = {};
+		for(var k in data){
+			if(!data.hasOwnProperty(k))continue;
+
+			var o = data[k];			
+			if(typeof o === 'object'){
+				var pcs = propChains.concat();
+				pcs.push(k);
+				var tmp = observeData(pcs,o,component);
+				t.__im__innerProps[k] = tmp;
+			}else{
+				t.__im__innerProps[k] = o;
+			}
+
+			//设置监控属性
+			observeObj[k] = o;
+
+			!function(k){
+				props[k] = {
+					get:function(){return getter.call(this,k)},
+					set:function(v){setter.call(this,k,v)},
+					enumerable:true,
+					configurable:true
+				};
+			}(k);
+		}
+
+		Object.defineProperties(t,props);
+		Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
+		Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
+		Object.defineProperty(t,'__im__target',{enumerable: false,writable: false,value:t.__im__innerProps});
+		Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
+
+		var id = Date.now() + Math.random();
+		Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
+		observedObjects.push({snap:observeObj,now:t,id:id});
+
+		return t;
+	}
+	function clearObserve(obj){
+		var oo = null;
+		for(var i=observedObjects.length;i--;){
+			oo = observedObjects[i];
+			if(oo.id === obj.__im__oid)break;
+		}
+		if(i>-1){
+			observedObjects.splice(i,1);
+			if(typeof oo === 'object'){
+				clearObserve(oo);
+			}
+		}
+	}
+	function handler(changes,fromSetter){
+		for(var i=changes.length;i--;){
+			var change = changes[i];
+
+			// console.log(change);
+
+			var name = change.name;
+			var target = change.target;
+			var path = target.__im__propChain;//.concat();
+	    	var xpath = target.__im__extPropChain;
+	    	var old = change.oldVal;
+	    	var v = change.newVal;
+	    	var type = change.type;
+	    	var comp = target.__im__comp;
+	
+	    	if(!fromSetter){
+	    		continue;
+	    	}
+
+	    	var changeObj = {comp:comp,object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,type:type};
+	    	Handler.handle(changeObj);
+	    }
+	}
+	var observedObjects = [];//用于保存监控对象
+	function observe(data,component){
+		if(data && data.__im__propChain)return data;
+
+		return observeData([],data,component);
+	}
 
 	/**
 	 * 变更处理器，处理所有变量变更
@@ -91,7 +204,7 @@
 			this.state = this.state.call(ins);
 		}
 
-		this.state = impex.Observer.observe(this.state,this,Handler.handle);
+		this.state = observe(this.state,this);
 	}
 
 	var lastAction = null;

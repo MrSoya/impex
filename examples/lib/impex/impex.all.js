@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-04-28
+ * last build: 2017-05-02
  */
 !function (global) {
 	'use strict';
@@ -218,7 +218,7 @@ var Util = new function () {
 		}
 
 		Observer = {
-			observe:function(data,component,cbk){
+			observe:function(data,component){
 				if(data && data.__im__propChain)return data;
 
 				//build handler
@@ -250,7 +250,7 @@ var Util = new function () {
 
 				    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
-				    	cbk(changeObj);
+				    	ChangeHandler.handle(changeObj);
 				    	
 				    	return true;
 				    },
@@ -267,7 +267,7 @@ var Util = new function () {
 				    	var xpath = target.__im__extPropChain;
 
 					    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
-				    	cbk(changeObj);
+				    	ChangeHandler.handle(changeObj);
 
 					    return true;
 					}
@@ -280,7 +280,6 @@ var Util = new function () {
 
 	///////////////////////////////////////// fallback ///////////////////////////////////////////
 	!window.Proxy && !function(){
-		var cbk = null;
 		function getter(k){
 			return this.__im__innerProps[k];
 		}
@@ -457,7 +456,7 @@ var Util = new function () {
 		    	}
 
 		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
-		    	cbk(changeObj);
+		    	ChangeHandler.handle(changeObj);
 		    }
 		}
 		var observedObjects = [],//用于保存监控对象
@@ -477,9 +476,8 @@ var Util = new function () {
 		})(self);
 
 		Observer = {};
-		Observer.observe = function(data,component,callback){
+		Observer.observe = function(data,component){
 			if(data && data.__im__propChain)return data;
-			cbk = callback;
 
 			return observeData([],data,component);
 		}
@@ -2215,7 +2213,7 @@ Util.ext(Component.prototype,{
 		LOGGER.log(this,'inited');
 
 		//observe state
-		this.state = Observer.observe(this.state,this,ChangeHandler.handle);
+		this.state = Observer.observe(this.state,this);
 
 		Builder.build(this);
 
@@ -3737,9 +3735,6 @@ var TransitionFactory = {
 		this.Component = Component;
 
 		this.Signal = Signal;
-		
-		this.Observer = Observer;
-
 		/**
 		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
 		 */
