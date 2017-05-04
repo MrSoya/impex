@@ -144,6 +144,8 @@
             this.dispatch('touchcancel',e);
         },
         doEnd:function(e){
+            clearTimeout(this.timer);
+            
             this.dispatch('touchend',e);
 
             if(this.canceled)return;
