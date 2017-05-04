@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-05-02
+ * last build: 2017-05-04
  */
 !function (global) {
 	'use strict';
@@ -459,8 +459,7 @@ var Util = new function () {
 		    	ChangeHandler.handle(changeObj);
 		    }
 		}
-		var observedObjects = [],//用于保存监控对象
-		observedArys = [];//用于保存监控数组
+		var observedObjects = [];//用于保存监控对象
 
 		var RAF = (function(w){
 		    return  w.requestAnimationFrame       || 
@@ -1809,7 +1808,7 @@ var Handler = new function() {
 
 			var tmp = evalStr.replace(/self\.\$event/mg,'$event');
 			tmp = tmp.replace(/self\.arguments/mg,'arguments');
-			componentFn = new Function('$event','arguments',tmp);
+			componentFn = new Function('$event','arguments','return '+tmp);
 
 			meta.componentFn = componentFn;//cache
 			meta.cache = true;
@@ -3248,7 +3247,7 @@ function handleProps(k,v,requires,propTypes,component){
 
 	// xxxx
 	if(k[0] !== PROP_TYPE_PRIFX){
-		if(propTypes){
+		if(propTypes && k in propTypes){
 			delete requires[k];
 			checkPropType(k,v,propTypes,component);
 		}
@@ -3278,7 +3277,7 @@ function handleProps(k,v,requires,propTypes,component){
 			component.parent.__watchProps.push(prop);
 		});
 	}
-	if(propTypes){
+	if(propTypes && n in propTypes){
 		delete requires[n];
 		checkPropType(n,rs,propTypes,component);
 	}
@@ -4285,7 +4284,11 @@ impex.service('Transitions',new function(){
                 }
                 step = step || 1;
                 if(isNaN(begin)){
+                    var path = begin;
                     this.component.watch(begin,function(object,name,type,newVal,oldVal){
+                        if(isNaN(newVal)){
+                            newVal = this.d(path);
+                        }
                         var ds = getForDs(newVal>>0,end,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
@@ -4293,7 +4296,11 @@ impex.service('Transitions',new function(){
                     begin = this.component.d(begin);
                 }
                 if(isNaN(end)){
+                    var path = end;
                     this.component.watch(end,function(object,name,type,newVal,oldVal){
+                        if(isNaN(newVal)){
+                            newVal = this.d(path);
+                        }
                         var ds = getForDs(begin,newVal>>0,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
@@ -4911,6 +4918,8 @@ impex.filter('json',{
             this.dispatch('touchcancel',e);
         },
         doEnd:function(e){
+            clearTimeout(this.timer);
+            
             this.dispatch('touchend',e);
 
             if(this.canceled)return;

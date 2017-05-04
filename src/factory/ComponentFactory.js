@@ -256,7 +256,7 @@ function handleProps(k,v,requires,propTypes,component){
 
 	// xxxx
 	if(k[0] !== PROP_TYPE_PRIFX){
-		if(propTypes){
+		if(propTypes && k in propTypes){
 			delete requires[k];
 			checkPropType(k,v,propTypes,component);
 		}
@@ -286,7 +286,7 @@ function handleProps(k,v,requires,propTypes,component){
 			component.parent.__watchProps.push(prop);
 		});
 	}
-	if(propTypes){
+	if(propTypes && n in propTypes){
 		delete requires[n];
 		checkPropType(n,rs,propTypes,component);
 	}

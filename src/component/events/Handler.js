@@ -33,7 +33,7 @@ var Handler = new function() {
 
 			var tmp = evalStr.replace(/self\.\$event/mg,'$event');
 			tmp = tmp.replace(/self\.arguments/mg,'arguments');
-			componentFn = new Function('$event','arguments',tmp);
+			componentFn = new Function('$event','arguments','return '+tmp);
 
 			meta.componentFn = componentFn;//cache
 			meta.cache = true;
