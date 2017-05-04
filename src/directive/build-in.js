@@ -494,7 +494,11 @@
                 }
                 step = step || 1;
                 if(isNaN(begin)){
+                    var path = begin;
                     this.component.watch(begin,function(object,name,type,newVal,oldVal){
+                        if(isNaN(newVal)){
+                            newVal = this.d(path);
+                        }
                         var ds = getForDs(newVal>>0,end,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
@@ -502,7 +506,11 @@
                     begin = this.component.d(begin);
                 }
                 if(isNaN(end)){
+                    var path = end;
                     this.component.watch(end,function(object,name,type,newVal,oldVal){
+                        if(isNaN(newVal)){
+                            newVal = this.d(path);
+                        }
                         var ds = getForDs(begin,newVal>>0,step);
                         that.lastDS = ds;
                         that.rebuild(ds,that.expInfo.k,that.expInfo.v);
