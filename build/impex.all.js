@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-05-04
+ * last build: 2017-05-19
  */
 !function (global) {
 	'use strict';
@@ -1592,7 +1592,12 @@ var Renderer = new function() {
 
  		if(isKeyword || fullPath.indexOf('impex._cs')===0)return fullPath;
 
- 		var isDataType = varStr[varStr.length-1]===')'?false:true;
+ 		var isDataType = true;
+ 		if(varStr[varStr.length-1]===')' 
+ 			&& /^\.[^(.]+?\(/.test(varStr) //fixed .xx.fn()
+ 			){
+ 			isDataType = false;
+ 		}
  		var searchPath = watchPath || fullPath;
  		if(isDataType){
  			searchPath = '.state' + searchPath;
@@ -3108,6 +3113,10 @@ Util.ext(_ComponentFactory.prototype,{
 
 		if(param){
 			Util.ext(rs,param);
+
+			if(param.state instanceof Function){
+				rs.state = param.state.call(rs);
+			}
 		}
 		
 		return rs;

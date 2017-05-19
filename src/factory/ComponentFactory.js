@@ -117,6 +117,10 @@ Util.ext(_ComponentFactory.prototype,{
 
 		if(param){
 			Util.ext(rs,param);
+
+			if(param.state instanceof Function){
+				rs.state = param.state.call(rs);
+			}
 		}
 		
 		return rs;

@@ -216,7 +216,12 @@ var Renderer = new function() {
 
  		if(isKeyword || fullPath.indexOf('impex._cs')===0)return fullPath;
 
- 		var isDataType = varStr[varStr.length-1]===')'?false:true;
+ 		var isDataType = true;
+ 		if(varStr[varStr.length-1]===')' 
+ 			&& /^\.[^(.]+?\(/.test(varStr) //fixed .xx.fn()
+ 			){
+ 			isDataType = false;
+ 		}
  		var searchPath = watchPath || fullPath;
  		if(isDataType){
  			searchPath = '.state' + searchPath;
