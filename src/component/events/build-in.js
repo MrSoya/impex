@@ -22,26 +22,22 @@
         },
         doMousedown:function(e){
             this.dispatch('mousedown',e);
-
-            this.hasMoved = false;
         },
         doMousemove:function(e){
             this.dispatch('mousemove',e);
-
-            this.hasMoved = true;
         },
         doMouseup:function(e){
             this.dispatch('mouseup',e);
 
-            if(!this.hasMoved){
+            if(e.button === 0){
                 this.dispatch('click',e);
-
                 if(Date.now() - this.lastClickTime < 300){
                     this.dispatch('dblclick',e);
                 }
 
                 this.lastClickTime = Date.now();
             }
+            
         },
         doMouseout:function(e){
             this.dispatch('mouseout',e);

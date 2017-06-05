@@ -103,7 +103,7 @@
 		}
 		function setter(k,v){
 			var old = this.__im__innerProps[k];
-			clearObserve(old);
+			if(old)clearObserve(old);
 			if(typeof v === 'object'){
 	    		var pcs = this.__im__propChain.concat();
 				pcs.push(k);

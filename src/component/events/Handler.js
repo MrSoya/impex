@@ -117,7 +117,7 @@ var Handler = new function() {
 
 	this.__defaultEventHandler = function(e){
 		var type = e.type;
-		var t = e.target;
+		var t = e.currentTarget;
 		var metas = EVENTS_MAP[type];
 		for(var i=metas.length;i--;){
 			if(metas[i].el === t){

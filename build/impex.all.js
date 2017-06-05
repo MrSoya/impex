@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-05-19
+ * last build: 2017-06-05
  */
 !function (global) {
 	'use strict';
@@ -285,7 +285,7 @@ var Util = new function () {
 		}
 		function setter(k,v){
 			var old = this.__im__innerProps[k];
-			clearObserve(old);
+			if(old)clearObserve(old);
 			if(typeof v === 'object'){
 	    		var pcs = this.__im__propChain.concat();
 				pcs.push(k);
@@ -1897,7 +1897,7 @@ var Handler = new function() {
 
 	this.__defaultEventHandler = function(e){
 		var type = e.type;
-		var t = e.target;
+		var t = e.currentTarget;
 		var metas = EVENTS_MAP[type];
 		for(var i=metas.length;i--;){
 			if(metas[i].el === t){
@@ -4805,26 +4805,22 @@ impex.filter('json',{
         },
         doMousedown:function(e){
             this.dispatch('mousedown',e);
-
-            this.hasMoved = false;
         },
         doMousemove:function(e){
             this.dispatch('mousemove',e);
-
-            this.hasMoved = true;
         },
         doMouseup:function(e){
             this.dispatch('mouseup',e);
 
-            if(!this.hasMoved){
+            if(e.button === 0){
                 this.dispatch('click',e);
-
                 if(Date.now() - this.lastClickTime < 300){
                     this.dispatch('dblclick',e);
                 }
 
                 this.lastClickTime = Date.now();
             }
+            
         },
         doMouseout:function(e){
             this.dispatch('mouseout',e);
