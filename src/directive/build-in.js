@@ -30,6 +30,7 @@
      * <br/>使用方式：
      * <div x-style="{'font-size': valExp}" >...</div>
      * <div x-style="{'fontSize': valExp}" >...</div>
+     * <div x-style="'color:red;font-size:20px;'" >...</div>
      * <div x-style="obj" >...</div>
      */
     .directive('style',{
@@ -39,6 +40,15 @@
             }
         },
         onUpdate:function(map){
+            if(typeof map === 'string'){
+                var rs = {};
+                var tmp = map.split(';');
+                for(var i=tmp.length;i--;){
+                    var pair = tmp[i].split(':');
+                    rs[pair[0]] = pair[1];
+                }
+                map = rs;
+            }
             var style = this.el.style;
             for(var k in map){
                 var n = this.filterName(k);

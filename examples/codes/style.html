@@ -17,6 +17,9 @@
                 &lt;div x-style="{'fontSize': valExp}"&gt;...&lt;/div&gt;
             </code></li>
             <li><code>
+                &lt;div x-style="font-size:10px;color:red;"&gt;...&lt;/div&gt;
+            </code></li>
+            <li><code>
                 &lt;div x-style="obj"&gt;...&lt;/div&gt;
             </code></li>
         </ul>
@@ -25,27 +28,39 @@
             <h3>demo 1</h3>
             <code>
                 &lt;div x-style=" {'color':color,'font-size':size}"&gt;
-                    style
+                    ...
                 &lt;/div&gt;
             </code>
             <div x-style=" {'color':color,'font-size':size}">
-                style
+                color:{{color}} &nbsp;&nbsp;&nbsp;&nbsp; size:{{size}}
             </div>
-            color:<input type="text" x-model="color">
-            size:<input type="text" x-model="size">
+            color:<input type="text" x-model="color" value="{{color}}">
+            size:<input type="text" x-model="size" value="{{size}}">
         </p>
         <p> 
             <h3>demo 2</h3>
             <code>
                 &lt;div x-style=" style"&gt;
-                    style
+                    ...
                 &lt;/div&gt;
             </code>
             <div x-style=" style">
-                style
+                {{style => json}}
             </div>
-            style.color:<input type="text" x-model="style.color">
-            style.fontSize:<input type="text" x-model="style.fontSize">
+            style.color:<input type="text" x-model="style.color" value="{{style.color}}">
+            style.fontSize:<input type="text" x-model="style.fontSize" value="{{style.fontSize}}">
+        </p>
+        <p> 
+            <h3>demo 3</h3>
+            <code>
+                &lt;div x-style=" css"&gt;
+                    ...
+                &lt;/div&gt;
+            </code>
+            <div x-style="css">
+                {{css => json}}
+            </div>
+            css:<input type="text" x-model="css" value="{{css}}">
         </p>
         
         
@@ -57,20 +72,13 @@
             //渲染
             var debug = impex.render(document.body,{
                 state:{
-                    address:'https://github.com/MrSoya/impex',
-                    s:false,
                     color:'red',
                     size:'16px',
+                    css:'color:red;font-size:20px;',
                     style:{
                         color:'red',
                         fontSize:'16px'
                     }
-                },
-                onDisplay:function(){
-                    this.ss = Date.now();
-                },
-                xx:function() {
-                    alert(Date.now() - this.ss)
                 }
                 
             });
