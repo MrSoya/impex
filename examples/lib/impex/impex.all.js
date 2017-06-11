@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-06-07
+ * last build: 2017-6-10
  */
 !function (global) {
 	'use strict';
@@ -1674,7 +1674,8 @@ var Renderer = new function() {
  * 信号类用来实现impex内部的消息系统
  * @class Signal
  */
-function Signal(){
+function Signal(data){
+    if(data)Util.ext(this,data);
     this.__signalMap = {};
 }
 Signal.prototype = {
@@ -1830,20 +1831,19 @@ var Handler = new function() {
 		var originExp = meta.exp;
 		var context = meta.context;
 		var comp = meta.comp || context;
-
-		if(originExp instanceof Function){
-			meta.componentFn = originExp;
-			meta.isCbkFn = true;
-		}
-		var componentFn = meta.componentFn;
-
 		var tmpExp = originExp;
+		//如果表达式是函数，计算返回表达式
+		if(originExp instanceof Function && !meta.componentFn/*没有表达式时执行*/){
+			try{
+				tmpExp = originExp.apply(context,params);
+			}catch(error){
+				LOGGER.debug("error in event '"+type +"'",error);
+			}
 
-		if(!meta.cache && componentFn){
-			tmpExp = componentFn.apply(context,params);
+			if(!tmpExp)return;//没有表达式直接返回
 		}
-
-		if(typeof(tmpExp) == "string"){
+		
+		if(!meta.cache && typeof(tmpExp) == "string"){
 			if(!(comp instanceof Component)){
 				LOGGER.error("need a context to parse '"+originExp+"' of type '"+type +"'");
 				return;
@@ -1854,19 +1854,14 @@ var Handler = new function() {
 			var evalStr = Renderer.getExpEvalStr(comp,expObj);
 
 			var tmp = evalStr.replace(/self\.arguments/mg,'arguments');
-			componentFn = new Function('arguments',tmp);
+			var componentFn = new Function('arguments',tmp);
 
 			meta.componentFn = componentFn;//cache
-			meta.cache = true;
+			meta.cache = true;//不在重新计算表达式
 		}
 
-
 		try{
-			if(meta.isCbkFn){
-				componentFn.apply(context,params);
-			}else{
-				componentFn.call(context,params);
-			}
+			meta.componentFn.call(context,params);
 		}catch(error){
 			LOGGER.debug("error in event '"+type +"'",error);
 		}

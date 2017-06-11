@@ -38,18 +38,18 @@
                     console.log(this.state.name,arguments)
                 },
                 onXxx:function(){
-                    console.log(arguments)
+                    return 'onXx(arguments)';
                 }
             });
 
 
             var sig = new impex.Signal();
-            sig.on('xxx','onXx(arguments[1],arguments[2])')
-            sig.on('xxx',debug.onXxx);
+            // sig.on('xxx','onXx(arguments[1],arguments[2])')
+            sig.on('xxx',debug.onXxx,debug);
             // sig.off('xxx',debug.onXxx)
 
             sig.emit('xxx',1,2,3);
-
+ sig.emit('xxx',1,2,3);
             
         </script>
     </body>

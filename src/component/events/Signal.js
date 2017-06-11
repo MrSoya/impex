@@ -2,7 +2,8 @@
  * 信号类用来实现impex内部的消息系统
  * @class Signal
  */
-function Signal(){
+function Signal(data){
+    if(data)Util.ext(this,data);
     this.__signalMap = {};
 }
 Signal.prototype = {
