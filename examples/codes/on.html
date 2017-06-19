@@ -6,9 +6,9 @@
     </head>
     <body>
     	<button 
-            :mousedown="console.log(3434)"
+            :mousedown="console.log($event)"
             :click:mouseup="console.log(root,$event)" 
-            x-on:dblclick="showMe('wow',true);root.tip='!!';showMe2(root.tip);">点我两下试试！！</button>
+            x-on:dblclick="return showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！</button>
     
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
@@ -20,11 +20,17 @@
                         tip:''
                     }
                 },
-                showMe : function(wow,x){
-                    alert('show me the impex! '+wow + x);
+                xx:function(e){
+                    console.log('manual bind',e);
                 },
-                showMe2:function(tip){
-                    alert('show me again '+tip);
+                onInit:function(){
+                    this.on('click',this.xx)
+                },
+                showMe : function(e){
+                    console.log('show me the impex! ',e);
+                },
+                showMe2:function(e){
+                    console.log('show me again ',e);
                 }
                 
             });

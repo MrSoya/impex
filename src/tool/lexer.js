@@ -4,7 +4,7 @@ var lexer = (function(){
         VAR_EXP_START = /[a-zA-Z$_]/,
         VAR_EXP_BODY = /[a-zA-Z$_0-9.]/;
 
-    var keyWords = ['as','instanceof','typeof','in','true','false'];
+    var keyWords = ['return','as','instanceof','typeof','in','true','false'];
     
     function Var(){
         return {

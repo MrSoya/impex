@@ -11,36 +11,38 @@ var Handler = new function() {
 		var originExp = meta.exp;
 		var context = meta.context;
 		var comp = meta.comp;
-		if(originExp instanceof Function)
-			meta.componentFn = originExp;
-		var componentFn = meta.componentFn;
-
 		var tmpExp = originExp;
 
 		var ev = new Event(type,e,meta.el);
-
 		if(extra)
 			Util.ext(ev,extra);
 
-		if(!meta.cache && componentFn){
-			tmpExp = componentFn.call(context,ev);
+		//如果表达式是函数，计算返回表达式
+		if(originExp instanceof Function && !meta.componentFn/*没有表达式时执行*/){
+			try{
+				tmpExp = originExp.call(context,ev);
+			}catch(error){
+				LOGGER.debug("error in event '"+type +"'",error);
+			}
+
+			if(!tmpExp || typeof(tmpExp) != "string")return tmpExp;//没有表达式直接返回
 		}
 
-		if(typeof(tmpExp) == "string"){
+		if(!meta.cache && typeof(tmpExp) == "string"){
 			var expObj = lexer(tmpExp);
 
 			var evalStr = Renderer.getExpEvalStr(comp,expObj);
 
 			var tmp = evalStr.replace(/self\.\$event/mg,'$event');
 			tmp = tmp.replace(/self\.arguments/mg,'arguments');
-			componentFn = new Function('$event','arguments','return '+tmp);
+			var componentFn = new Function('$event','arguments',tmp);
 
 			meta.componentFn = componentFn;//cache
 			meta.cache = true;
 		}
 		
 		try{
-			return componentFn.call(context,ev,[ev]);
+			return meta.componentFn.call(context,ev,[ev]);
 		}catch(error){
 			LOGGER.debug("error in event '"+type +"'",error);
 		}
@@ -59,7 +61,7 @@ var Handler = new function() {
 				LOGGER.debug("error in event '"+type +"'",error);
 			}
 
-			if(!tmpExp)return;//没有表达式直接返回
+			if(!tmpExp || typeof(tmpExp) != "string")return tmpExp;//没有表达式直接返回
 		}
 		
 		if(!meta.cache && typeof(tmpExp) == "string"){

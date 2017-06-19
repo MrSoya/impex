@@ -58,7 +58,6 @@ function Component () {
 	this.__expDataRoot = new ExpData();
 	this.__eventMap = {};
 	this.__watchProps = [];
-	this.__props = {};
 	/**
 	 * 组件域内的指令列表
 	 * @type {Array}
@@ -448,7 +447,7 @@ Util.ext(Component.prototype,{
 		}
 		for(var k in matchMap){
 			var cs = matchMap[k];
-			impex._cs[k].__propChange && impex._cs[k].__propChange(cs);
+			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
 		}
 	},
 	__isVarMatch:function(segments,changePath){
@@ -499,18 +498,16 @@ Util.ext(Component.prototype,{
 			aon.directive.onUpdate(rs);
 		}
 	},
-	__propChange:function(changes){
+	__childPropChange:function(changes){
+		this.onPropChange && this.onPropChange(changes);
+		
 		var matchMap = {};
 		//update props
 		for(var i=changes.length;i--;){
 			var c = changes[i];
 			var name = c.name;
-			var path = c.path;
-			this.__props[name] = c.newVal;
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
-				var k = this.__isVarMatch(prop.segments,path);
-				if(k<0)return;
 				if(!matchMap[prop.subComp.__id])
 					matchMap[prop.subComp.__id] = [];
 				var rs = Renderer.evalExp(this,prop.expWords);
@@ -521,11 +518,9 @@ Util.ext(Component.prototype,{
 			},this);
 		}
 
-		this.onPropChange && this.onPropChange(changes);
-
 		for(var k in matchMap){
 			var cs = matchMap[k];
-			impex._cs[k].__propChange && impex._cs[k].__propChange(cs);
+			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
 		}
 	}
 });
