@@ -29,7 +29,9 @@
 
 	var DISPATCHERS = [];
 
-
+	var HTML_EXP_COMPILING = false;
+	var HTML_EXP_MAP = {};
+	var CURRENT_HTML_EXP_LIST = null;
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。

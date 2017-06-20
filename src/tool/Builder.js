@@ -40,7 +40,7 @@ var Builder = new function() {
  	function walkDataTree(parentProp,propName,expNode){
  		var prop = parentProp[propName];
  		if(!prop){
- 			prop = parentProp[propName] = new ExpData(propName);
+ 			prop = parentProp[propName] = new ExpData(propName,parentProp);
  		}
  		if(expNode instanceof ExpNode){
  			if(prop.expNodes.indexOf(expNode) < 0)

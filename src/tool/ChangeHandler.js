@@ -40,8 +40,6 @@ var ChangeHandler = new function() {
 					var type = change.type;
 					var name = change.name;
 					var object = change.object;
-
-					// console.log('处理变更',change);
 					
 					handlePath(newVal,oldVal,comp,type,name,object,pc);
 

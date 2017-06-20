@@ -275,21 +275,48 @@ var Renderer = new function() {
 		if(expNode.__lastNodes){
 			//release
 			DOMHelper.detach(expNode.__lastNodes);
+
+			//release related objs
+			var list = HTML_EXP_MAP[expNode.id];
+			if(list && list.length>0){
+				releaseObjs(list);
+				CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = null;
+				delete HTML_EXP_MAP[expNode.id];
+			}
+			
+			expNode.__lastNodes = null;
 		}
 
 		var target = document.createComment('-- [html] target --');
 		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
 
 		var nodes = DOMHelper.compile(val);
-		if(nodes.length<1)return;
-		DOMHelper.replace(target,nodes);
-
-		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
+		if(nodes.length<1)return;
+
+		DOMHelper.replace(target,nodes);
+		expNode.__lastNodes = nodes;
+
+
+		HTML_EXP_COMPILING = true;
+		CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = [];
 		Util.compileViewOf(component,nodes);
+		HTML_EXP_COMPILING = false;
 
 		return true;
+	}
+
+	function releaseObjs(list){
+		for(var i=list.length;i--;){
+			var o = list[i];
+			if(o.unmount){
+				o.unmount();
+			}else{
+				if(o.release)
+					o.release();
+			}
+		}
 	}
 }
 

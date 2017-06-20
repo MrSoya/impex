@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-06-19
+ * last build: 2017-06-20
  */
 !function (global) {
 	'use strict';
@@ -812,12 +812,51 @@ var lexer = (function(){
 /**
  * 表达式映射
  */
-function ExpData (propName) {
+function ExpData (propName,parent) {
 	this.propName = propName;
 	this.subProps = {};
 	this.expNodes = [];
 	this.attrObserveNodes = [];
 	this.watchs = [];
+
+	this.parentProp = parent;//for release
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
+}
+
+ExpData.prototype = {
+	release:function(){
+		if(this.expNodes == null)return;
+		
+		this.expNodes.forEach(function(item){
+			item.release();
+		});
+		this.attrObserveNodes.forEach(function(item){
+			item.release();
+		});
+		this.watchs.forEach(function(item){
+			item.release();
+		});
+		if(this.parentProp){
+			this.parentProp[this.propName] = null;
+			delete this.parentProp[this.propName];
+		}
+		for(var k in this.subProps){
+			var ed = this.subProps[k];
+			if(ed)ed.release();
+		}
+		
+
+		this.propName = 
+		this.subProps = 
+		this.expNodes = 
+		this.attrObserveNodes = 
+		this.watchs = 
+		this.parentProp = null;
+	}
 }
 
 /**
@@ -844,6 +883,22 @@ function ExpNode (node,attrName,origin,expMap,component,toHTML) {
 	this.component = component;	
 	this.toHTML = toHTML;
 	this.id = Math.random();
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
+}
+ExpNode.prototype = {
+	release:function(){
+		this.node = 
+		this.attrName = 
+		this.origin = 
+		this.expMap = 
+		this.component = 
+		this.toHTML = 
+		this.id = null;
+	}
 }
 
 /**
@@ -853,6 +908,12 @@ function AttrObserveNode (directive,expObj) {
 	this.directive = directive;
 	this.expObj = expObj;
 }
+AttrObserveNode.prototype = {
+	release:function(){
+		this.directive = 
+		this.expObj = null;
+	}
+}
 
 /**
  * watch
@@ -861,6 +922,13 @@ function Watch (cbk,ctrlScope,segments) {
 	this.cbk = cbk;
 	this.ctrlScope = ctrlScope;	
 	this.segments = segments;
+}
+Watch.prototype = {
+	release:function(){
+		this.cbk = 
+		this.segments = 
+		this.ctrlScope = null;
+	}
 }
 
 /**
@@ -1204,7 +1272,7 @@ var Builder = new function() {
  	function walkDataTree(parentProp,propName,expNode){
  		var prop = parentProp[propName];
  		if(!prop){
- 			prop = parentProp[propName] = new ExpData(propName);
+ 			prop = parentProp[propName] = new ExpData(propName,parentProp);
  		}
  		if(expNode instanceof ExpNode){
  			if(prop.expNodes.indexOf(expNode) < 0)
@@ -1272,8 +1340,6 @@ var ChangeHandler = new function() {
 					var type = change.type;
 					var name = change.name;
 					var object = change.object;
-
-					// console.log('处理变更',change);
 					
 					handlePath(newVal,oldVal,comp,type,name,object,pc);
 
@@ -1651,21 +1717,48 @@ var Renderer = new function() {
 		if(expNode.__lastNodes){
 			//release
 			DOMHelper.detach(expNode.__lastNodes);
+
+			//release related objs
+			var list = HTML_EXP_MAP[expNode.id];
+			if(list && list.length>0){
+				releaseObjs(list);
+				CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = null;
+				delete HTML_EXP_MAP[expNode.id];
+			}
+			
+			expNode.__lastNodes = null;
 		}
 
 		var target = document.createComment('-- [html] target --');
 		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
 
 		var nodes = DOMHelper.compile(val);
-		if(nodes.length<1)return;
-		DOMHelper.replace(target,nodes);
-
-		expNode.__lastNodes = nodes;
 		expNode.__lastVal = val;
 
+		if(nodes.length<1)return;
+
+		DOMHelper.replace(target,nodes);
+		expNode.__lastNodes = nodes;
+
+
+		HTML_EXP_COMPILING = true;
+		CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = [];
 		Util.compileViewOf(component,nodes);
+		HTML_EXP_COMPILING = false;
 
 		return true;
+	}
+
+	function releaseObjs(list){
+		for(var i=list.length;i--;){
+			var o = list[i];
+			if(o.unmount){
+				o.unmount();
+			}else{
+				if(o.release)
+					o.release();
+			}
+		}
 	}
 }
 
@@ -2076,6 +2169,11 @@ function Component () {
 	this.state = {};
 
 	impex._cs[this.__id] = this;
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
 };
 Component.state = {
 	created : 'created',
@@ -2312,6 +2410,7 @@ Util.ext(Component.prototype,{
 			this.directives[i].unmount();
 		}
 
+		this.__expDataRoot.release();
 
 		this.children = 
 		this.directives = 
@@ -2363,22 +2462,13 @@ Util.ext(Component.prototype,{
 	},
 	__update:function(changes){
 		var renderable = true;
-		var changeList = [];
 		var expNodes = [];
 		var watchs = [];
 		var attrObserveNodes = [];
 		for(var i=changes.length;i--;){
 			var c = changes[i];
-			var changeParam = {
-				name:c.name,
-				newVal:c.newVal,
-				oldVal:c.oldVal,
-				type:c.type,
-				path:c.path,
-				object:c.object
-			};
-			changeList.push(changeParam);
 			var expProps = c.expProps;
+			c.expProps = null;
 			for(var k=expProps.length;k--;){
 				var ens = expProps[k].expNodes;
 				for(var j=ens.length;j--;){
@@ -2393,12 +2483,12 @@ Util.ext(Component.prototype,{
 				var ws = expProps[k].watchs;
 				for(var j=ws.length;j--;){
 					var w = ws[j];
-					if(watchs.indexOf(w) < 0)watchs.push([w,changeParam]);
+					if(watchs.indexOf(w) < 0)watchs.push([w,c]);
 				}
 			}
 		}
 		if(this.onUpdate){
-			renderable = this.onUpdate(changeList);
+			renderable = this.onUpdate(changes);
 		}
 		//render view
 		if(renderable !== false){
@@ -2410,7 +2500,7 @@ Util.ext(Component.prototype,{
 		this.__callWatchs(watchs);
 
 		//update children props
-		this.__updateChildrenProps(changeList);
+		this.__updateChildrenProps(changes);
 	},
 	__updateChildrenProps:function(changes){
 		var matchMap = {};
@@ -2632,6 +2722,11 @@ function Directive (name,value) {
 	 * @type {Number}
 	 */
 	this.priority = 0;
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
 }
 Util.inherits(Directive,Signal);
 Util.ext(Directive.prototype,{
@@ -3474,7 +3569,9 @@ var TransitionFactory = {
 
 	var DISPATCHERS = [];
 
-
+	var HTML_EXP_COMPILING = false;
+	var HTML_EXP_MAP = {};
+	var CURRENT_HTML_EXP_LIST = null;
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。

@@ -49,6 +49,11 @@ function Directive (name,value) {
 	 * @type {Number}
 	 */
 	this.priority = 0;
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
 }
 Util.inherits(Directive,Signal);
 Util.ext(Directive.prototype,{
