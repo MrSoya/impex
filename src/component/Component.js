@@ -91,6 +91,11 @@ function Component () {
 	this.state = {};
 
 	impex._cs[this.__id] = this;
+
+	//bind exp
+	if(HTML_EXP_COMPILING){
+		CURRENT_HTML_EXP_LIST.push(this);
+	}
 };
 Component.state = {
 	created : 'created',
@@ -327,6 +332,7 @@ Util.ext(Component.prototype,{
 			this.directives[i].unmount();
 		}
 
+		this.__expDataRoot.release();
 
 		this.children = 
 		this.directives = 
@@ -378,22 +384,13 @@ Util.ext(Component.prototype,{
 	},
 	__update:function(changes){
 		var renderable = true;
-		var changeList = [];
 		var expNodes = [];
 		var watchs = [];
 		var attrObserveNodes = [];
 		for(var i=changes.length;i--;){
 			var c = changes[i];
-			var changeParam = {
-				name:c.name,
-				newVal:c.newVal,
-				oldVal:c.oldVal,
-				type:c.type,
-				path:c.path,
-				object:c.object
-			};
-			changeList.push(changeParam);
 			var expProps = c.expProps;
+			c.expProps = null;
 			for(var k=expProps.length;k--;){
 				var ens = expProps[k].expNodes;
 				for(var j=ens.length;j--;){
@@ -408,12 +405,12 @@ Util.ext(Component.prototype,{
 				var ws = expProps[k].watchs;
 				for(var j=ws.length;j--;){
 					var w = ws[j];
-					if(watchs.indexOf(w) < 0)watchs.push([w,changeParam]);
+					if(watchs.indexOf(w) < 0)watchs.push([w,c]);
 				}
 			}
 		}
 		if(this.onUpdate){
-			renderable = this.onUpdate(changeList);
+			renderable = this.onUpdate(changes);
 		}
 		//render view
 		if(renderable !== false){
@@ -425,7 +422,7 @@ Util.ext(Component.prototype,{
 		this.__callWatchs(watchs);
 
 		//update children props
-		this.__updateChildrenProps(changeList);
+		this.__updateChildrenProps(changes);
 	},
 	__updateChildrenProps:function(changes){
 		var matchMap = {};
