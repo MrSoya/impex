@@ -9,6 +9,7 @@
 	var REG_EXP = /\{\{#?(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
+	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
 	var PROP_SYNC_SUFX = ':sync';
 	var PROP_SYNC_SUFX_EXP = /:sync$/;
@@ -298,12 +299,13 @@
 		this.useBasicRender = function(){
 			Util.ext(Component.prototype,{
 				onPropChange : function(changes){
-			        changes.forEach(function(c){
-			            var val = this.state[c.name];
+					for(var k in changes){
+						var c = changes[k];
+						var val = this.state[c.name];
 			            if(c.val !== val){
 			                this.state[c.name] = c.val;
 			            }
-			        },this);
+					}
 			    }
 			});
 		}

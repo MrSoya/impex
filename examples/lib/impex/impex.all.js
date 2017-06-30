@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-06-20
+ * last build: 2017-06-27
  */
 !function (global) {
 	'use strict';
@@ -940,6 +940,78 @@ function Prop (subComp,name,segments,expWords) {
 	this.segments = segments;
 	this.expWords = expWords;
 }
+
+function CompSlot(isExp,is,comp,node,cache){
+	var calcVal = is;
+	if(isExp){
+		//calc 
+		var expObj = lexer(is);
+		calcVal = Renderer.evalExp(comp,expObj);
+		var that = this;
+		comp.watch(is,function(obj,name,type,newVal){
+			that.is(newVal);
+		});
+	}
+		
+	this.node = node;
+	this.cache = cache==null?false:true;
+	this.cacheMap = this.cache?{}:null;
+	this.comp = comp;
+
+	if(calcVal)this.is(calcVal);
+}
+CompSlot.prototype = {
+	/**
+	 * change current compslot to new component
+	 * @param  {String}  type comp type
+	 */
+	is:function(type){
+		var lastComp = this.lastComp;
+		if(lastComp && lastComp.name === type)return;
+
+		var el = this.node;
+		if(lastComp){
+			el = lastComp.el;
+			if(!ComponentFactory.hasTypeOf(type)){
+				LOGGER.warn('cannot find component['+type+']');
+				return;
+			}
+		}
+		var placeholder = document.createComment('-- placeholder --');
+	    DOMHelper.insertBefore([placeholder],el);
+		
+		if(lastComp){
+			if(this.cache){
+	        	lastComp.unmount(false);
+	        }else{
+	        	lastComp.destroy();
+	        }
+		}else{
+			DOMHelper.detach([el]);
+		}
+        
+        var subComp = null;
+        if(this.cache && this.cacheMap[type]){
+        	subComp = this.cacheMap[type];
+        	if(subComp){
+        		DOMHelper.replace(placeholder,subComp.__nodes);
+        		subComp.mount();
+        	}
+        }else{
+			//create new
+	        var node = document.createElement(type);
+	        placeholder.parentNode.replaceChild(node,placeholder);
+	        subComp = this.comp.createSubComponentOf(node);
+	        subComp.init().mount();
+        }
+
+        if(this.cache && !this.cacheMap[type]){
+        	this.cacheMap[type] = subComp;
+        }
+
+        this.lastComp = subComp;
+	}
+}
 /**
  * 扫描器
  */
@@ -1030,11 +1102,28 @@ var Scanner = new function() {
 		if(node.attributes || node.nodeType === 11){
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
-				
+
 				var atts = [];
 				for(var i=node.attributes.length;i--;){
 					var tmp = node.attributes[i];
 					atts.push([tmp.name,tmp.value]);
+				}
+
+				//check component slots
+				if(tagName === COMP_SLOT_TAG){
+					var is = node.getAttribute('is');
+					var cache = node.getAttribute('cache');
+					var n = node.getAttribute('name');
+					if(!n) n = 'compSlots_' + (Object.keys(component.compSlots).length+1);
+					var exp = false;
+					if(!is && node.getAttribute('.is')!=null){
+						is = node.getAttribute('.is');
+						exp = true;
+					}
+					if(is != null){
+						component.compSlots[n] = new CompSlot(exp,is,component,node,cache);
+						return;
+					}
 				}
 
 				var scopeDirs = [];
@@ -1752,8 +1841,8 @@ var Renderer = new function() {
 	function releaseObjs(list){
 		for(var i=list.length;i--;){
 			var o = list[i];
-			if(o.unmount){
-				o.unmount();
+			if(o.destroy){
+				o.destroy();
 			}else{
 				if(o.release)
 					o.release();
@@ -2091,7 +2180,7 @@ Util.ext(Dispatcher.prototype,{
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
  * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
- * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
+ * 		<li>onDestroy: 当组件被销毁时，该事件被触发</li>
  * 	</ul>
  * </p>
  * 
@@ -2103,6 +2192,11 @@ function Component () {
 	this.__state = Component.state.created;
 
 	Signal.call(this);
+	/**
+	 * 对组件内的所有组件槽的引用
+	 * @type {Object}
+	 */
+	this.compSlots = {};
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
@@ -2179,7 +2273,7 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	mounted : 'mounted',
-	suspend : 'suspend'
+	unmounted : 'unmounted'
 };
 Util.inherits(Component,Signal);
 Util.ext(Component.prototype,{
@@ -2340,7 +2434,15 @@ Util.ext(Component.prototype,{
 		if(this.__state === Component.state.mounted)return;
 		if(this.__state === Component.state.created)return;
 
+		if(this.__state === Component.state.unmounted && this.__target){
+			DOMHelper.replace(this.__target,this.__nodes);
+			return;
+		}
+
 		Renderer.render(this);
+
+		this.__state = Component.state.mounted;
+		LOGGER.log(this,'mounted');
 
 		//els
 		this.__nodes.forEach(function(el){
@@ -2351,9 +2453,6 @@ Util.ext(Component.prototype,{
 				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
 			}
 		},this);
-
-		this.__state = Component.state.mounted;
-		LOGGER.log(this,'mounted');
 		
 
 		//mount children
@@ -2369,14 +2468,14 @@ Util.ext(Component.prototype,{
 		this.onMount && this.onMount();
 	},
 	/**
-	 * 卸载组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
+	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
-	unmount:function(){
+	destroy:function(){
 		if(this.__state === null)return;
 
 		LOGGER.log(this,'unmount');
 
-		this.onUnmount && this.onUnmount();
+		this.onDestroy && this.onDestroy();
 
 		if(this.parent){
 			//check parent watchs
@@ -2403,11 +2502,11 @@ Util.ext(Component.prototype,{
 		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
-			this.children[0].unmount();
+			this.children[0].destroy();
 		}
 
 		for(var i = this.directives.length;i--;){
-			this.directives[i].unmount();
+			this.directives[i].destroy();
 		}
 
 		this.__expDataRoot.release();
@@ -2428,27 +2527,27 @@ Util.ext(Component.prototype,{
 		this.state = null;
 	},
 	/**
-	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
+	 * 卸载组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
 	 * 但数据都不会销毁
 	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用mount时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
-	suspend:function(hook){
+	unmount:function(hook){
 		if(this.__state !== Component.state.mounted)return;
 
-		LOGGER.log(this,'suspend');
+		LOGGER.log(this,'unmounted');
 		
-		this.__suspend(this,hook===false?false:true);
+		this.__unmount(this,hook===false?false:true);
 
-		this.onSuspend && this.onSuspend();
+		this.onUnmount && this.onUnmount();
 
-		this.__state = Component.state.suspend;
+		this.__state = Component.state.unmounted;
 	},
-	__suspend:function(component,hook){
+	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
 		if(!p)return;
 		if(hook){
-			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
+			this.__target =  document.createComment("-- view unmounted of ["+(component.name||'anonymous')+"] --");
 			p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
@@ -2511,13 +2610,17 @@ Util.ext(Component.prototype,{
 				var k = this.__isVarMatch(prop.segments,path);
 				if(k<0)return;
 				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = [];
+					matchMap[prop.subComp.__id] = {};
+
+				//duplicate check
+				var list = matchMap[prop.subComp.__id][prop.name];
+				if(list !== undefined)return;
+
 				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id].push({
+				matchMap[prop.subComp.__id][prop.name] = {
 					name:prop.name,
-					val:rs,
-					path:path
-				});
+					val:rs
+				};
 			},this);
 		}
 		for(var k in matchMap){
@@ -2578,18 +2681,24 @@ Util.ext(Component.prototype,{
 		
 		var matchMap = {};
 		//update props
-		for(var i=changes.length;i--;){
-			var c = changes[i];
+		for(var k in changes){
+			var c = changes[k];
 			var name = c.name;
+
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
 				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = [];
+					matchMap[prop.subComp.__id] = {};
+
+				//duplicate check
+				var list = matchMap[prop.subComp.__id][prop.name];
+				if(list !== undefined)return;
+
 				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id].push({
+				matchMap[prop.subComp.__id][prop.name] = {
 					name:prop.name,
 					val:rs
-				});
+				};
 			},this);
 		}
 
@@ -2680,7 +2789,7 @@ var DOMHelper = new function(){
  * 		<li>onInit：当指令初始化时触发</li>
  * 		<li>onActive: 当指令激活时触发</li>
  * 		<li>onUpdate: 当指令条件变更时触发</li>
- * 		<li>onUnmount：当指令被卸载时触发</li>
+ * 		<li>onDestroy：当指令被销毁时触发</li>
  * 	</ul>
  * </p>
  * @class 
@@ -2772,8 +2881,8 @@ Util.ext(Directive.prototype,{
 	/**
 	 * 销毁指令
 	 */
-	unmount:function(){
-		LOGGER.log(this,'unmount');
+	destroy:function(){
+		LOGGER.log(this,'destroy');
 
 		DOMHelper.detach(this.__nodes);
 
@@ -2782,7 +2891,7 @@ Util.ext(Directive.prototype,{
 		this.filter = 
 		this.onUpdate = null;
 
-		this.onUnmount && this.onUnmount();
+		this.onDestroy && this.onDestroy();
 	}
 });
 /**
@@ -3549,6 +3658,7 @@ var TransitionFactory = {
 	var REG_EXP = /\{\{#?(.*?)\}\}/img,
 		REG_CMD = /x-.*/;
 	var ATTR_REF_TAG = 'ref';
+	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
 	var PROP_SYNC_SUFX = ':sync';
 	var PROP_SYNC_SUFX_EXP = /:sync$/;
@@ -3838,12 +3948,13 @@ var TransitionFactory = {
 		this.useBasicRender = function(){
 			Util.ext(Component.prototype,{
 				onPropChange : function(changes){
-			        changes.forEach(function(c){
-			            var val = this.state[c.name];
+					for(var k in changes){
+						var c = changes[k];
+						var val = this.state[c.name];
 			            if(c.val !== val){
 			                this.state[c.name] = c.val;
 			            }
-			        },this);
+					}
 			    }
 			});
 		}
@@ -4059,7 +4170,7 @@ impex.service('Transitions',new function(){
             this.compiled = false;
         },
         onUpdate : function(rs){
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs)return;
             this.lastRs = rs;
 
@@ -4121,7 +4232,7 @@ impex.service('Transitions',new function(){
             if(this.elseD){
                 this.elseD.doUpdate(!rs);
             }
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
@@ -4188,7 +4299,7 @@ impex.service('Transitions',new function(){
                 Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
@@ -4451,7 +4562,7 @@ impex.service('Transitions',new function(){
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
-            this.unmount();
+            this.destroy();
         }
         function parseProps(el,comp){
             var props = {
@@ -4517,12 +4628,12 @@ impex.service('Transitions',new function(){
                             this.cache[i].__leaving = true;
                             this.cache[i].transition.leave();
                         }else{
-                            this.cache[i].suspend(false);
+                            this.cache[i].unmount(false);
                         }
                     }
                 }else{
                     for(var i=tmp.length;i--;){
-                        tmp[i].unmount();
+                        tmp[i].destroy();
                     }
                 }
             }else if(diffSize > 0){
@@ -4646,7 +4757,7 @@ impex.service('Transitions',new function(){
                     this.transition.enter();
                 };
                 subComp.postLeave = function(){
-                    this.suspend(false);
+                    this.unmount(false);
                     this.__leaving = false;
                 }
             }
@@ -4723,7 +4834,7 @@ impex.service('Transitions',new function(){
                     var pair = list[i];
                     var comp = pair[0];
                     var holder = pair[1];
-                    if(comp.__state === Component.state.suspend)continue;
+                    if(comp.__state === Component.state.unmounted)continue;
                     //attach DOM
                     eachObj.DOMHelper.replace(holder,comp.__nodes);
                     comp.init();

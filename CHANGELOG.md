@@ -1,4 +1,16 @@
 # Change Log
+## Version 0.55.0 - 2017/6/25
+### 新增
+* <component is="compName" name="attr"></component> 组件替换点
+* Component.destroy 销毁组件
+
+### 更新
+* Component.unmount函数现在只是移除组件，并不销毁
+
+### 移除
+* Component.suspend
+
+
 ## Version 0.51.0 - 2017/4/28
 ### 新增
 * impex.Store 用于全局状态共享

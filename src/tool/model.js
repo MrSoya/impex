@@ -129,3 +129,75 @@ function Prop (subComp,name,segments,expWords) {
 	this.segments = segments;
 	this.expWords = expWords;
 }
+
+function CompSlot(isExp,is,comp,node,cache){
+	var calcVal = is;
+	if(isExp){
+		//calc 
+		var expObj = lexer(is);
+		calcVal = Renderer.evalExp(comp,expObj);
+		var that = this;
+		comp.watch(is,function(obj,name,type,newVal){
+			that.is(newVal);
+		});
+	}
+		
+	this.node = node;
+	this.cache = cache==null?false:true;
+	this.cacheMap = this.cache?{}:null;
+	this.comp = comp;
+
+	if(calcVal)this.is(calcVal);
+}
+CompSlot.prototype = {
+	/**
+	 * change current compslot to new component
+	 * @param  {String}  type comp type
+	 */
+	is:function(type){
+		var lastComp = this.lastComp;
+		if(lastComp && lastComp.name === type)return;
+
+		var el = this.node;
+		if(lastComp){
+			el = lastComp.el;
+			if(!ComponentFactory.hasTypeOf(type)){
+				LOGGER.warn('cannot find component['+type+']');
+				return;
+			}
+		}
+		var placeholder = document.createComment('-- placeholder --');
+	    DOMHelper.insertBefore([placeholder],el);
+		
+		if(lastComp){
+			if(this.cache){
+	        	lastComp.unmount(false);
+	        }else{
+	        	lastComp.destroy();
+	        }
+		}else{
+			DOMHelper.detach([el]);
+		}
+        
+        var subComp = null;
+        if(this.cache && this.cacheMap[type]){
+        	subComp = this.cacheMap[type];
+        	if(subComp){
+        		DOMHelper.replace(placeholder,subComp.__nodes);
+        		subComp.mount();
+        	}
+        }else{
+			//create new
+	        var node = document.createElement(type);
+	        placeholder.parentNode.replaceChild(node,placeholder);
+	        subComp = this.comp.createSubComponentOf(node);
+	        subComp.init().mount();
+        }
+
+        if(this.cache && !this.cacheMap[type]){
+        	this.cacheMap[type] = subComp;
+        }
+
+        this.lastComp = subComp;
+	}
+}

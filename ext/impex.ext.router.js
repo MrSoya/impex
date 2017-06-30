@@ -26,7 +26,7 @@
 		var placeholder = document.createComment('-- placeholder --');
         router.DOMHelper.insertBefore([placeholder],routerView.el);
 
-        routerView.unmount();
+        routerView.destroy();
 
         //create new
         var node = document.createElement(compName);

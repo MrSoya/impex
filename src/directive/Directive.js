@@ -7,7 +7,7 @@
  * 		<li>onInit：当指令初始化时触发</li>
  * 		<li>onActive: 当指令激活时触发</li>
  * 		<li>onUpdate: 当指令条件变更时触发</li>
- * 		<li>onUnmount：当指令被卸载时触发</li>
+ * 		<li>onDestroy：当指令被销毁时触发</li>
  * 	</ul>
  * </p>
  * @class 
@@ -99,8 +99,8 @@ Util.ext(Directive.prototype,{
 	/**
 	 * 销毁指令
 	 */
-	unmount:function(){
-		LOGGER.log(this,'unmount');
+	destroy:function(){
+		LOGGER.log(this,'destroy');
 
 		DOMHelper.detach(this.__nodes);
 
@@ -109,6 +109,6 @@ Util.ext(Directive.prototype,{
 		this.filter = 
 		this.onUpdate = null;
 
-		this.onUnmount && this.onUnmount();
+		this.onDestroy && this.onDestroy();
 	}
 });

@@ -13,7 +13,7 @@
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
  * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
- * 		<li>onSuspend: 当组件被挂起时，该事件被触发</li>
+ * 		<li>onDestroy: 当组件被销毁时，该事件被触发</li>
  * 	</ul>
  * </p>
  * 
@@ -25,6 +25,11 @@ function Component () {
 	this.__state = Component.state.created;
 
 	Signal.call(this);
+	/**
+	 * 对组件内的所有组件槽的引用
+	 * @type {Object}
+	 */
+	this.compSlots = {};
 	/**
 	 * 对子组件的引用
 	 * @type {Object}
@@ -101,7 +106,7 @@ Component.state = {
 	created : 'created',
 	inited : 'inited',
 	mounted : 'mounted',
-	suspend : 'suspend'
+	unmounted : 'unmounted'
 };
 Util.inherits(Component,Signal);
 Util.ext(Component.prototype,{
@@ -262,7 +267,15 @@ Util.ext(Component.prototype,{
 		if(this.__state === Component.state.mounted)return;
 		if(this.__state === Component.state.created)return;
 
+		if(this.__state === Component.state.unmounted && this.__target){
+			DOMHelper.replace(this.__target,this.__nodes);
+			return;
+		}
+
 		Renderer.render(this);
+
+		this.__state = Component.state.mounted;
+		LOGGER.log(this,'mounted');
 
 		//els
 		this.__nodes.forEach(function(el){
@@ -273,9 +286,6 @@ Util.ext(Component.prototype,{
 				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
 			}
 		},this);
-
-		this.__state = Component.state.mounted;
-		LOGGER.log(this,'mounted');
 		
 
 		//mount children
@@ -291,14 +301,14 @@ Util.ext(Component.prototype,{
 		this.onMount && this.onMount();
 	},
 	/**
-	 * 卸载组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
+	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
-	unmount:function(){
+	destroy:function(){
 		if(this.__state === null)return;
 
 		LOGGER.log(this,'unmount');
 
-		this.onUnmount && this.onUnmount();
+		this.onDestroy && this.onDestroy();
 
 		if(this.parent){
 			//check parent watchs
@@ -325,11 +335,11 @@ Util.ext(Component.prototype,{
 		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
-			this.children[0].unmount();
+			this.children[0].destroy();
 		}
 
 		for(var i = this.directives.length;i--;){
-			this.directives[i].unmount();
+			this.directives[i].destroy();
 		}
 
 		this.__expDataRoot.release();
@@ -350,27 +360,27 @@ Util.ext(Component.prototype,{
 		this.state = null;
 	},
 	/**
-	 * 挂起组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
+	 * 卸载组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
 	 * 但数据都不会销毁
 	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用mount时，可以在原位置还原组件，
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
-	suspend:function(hook){
+	unmount:function(hook){
 		if(this.__state !== Component.state.mounted)return;
 
-		LOGGER.log(this,'suspend');
+		LOGGER.log(this,'unmounted');
 		
-		this.__suspend(this,hook===false?false:true);
+		this.__unmount(this,hook===false?false:true);
 
-		this.onSuspend && this.onSuspend();
+		this.onUnmount && this.onUnmount();
 
-		this.__state = Component.state.suspend;
+		this.__state = Component.state.unmounted;
 	},
-	__suspend:function(component,hook){
+	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
 		if(!p)return;
 		if(hook){
-			this.__target =  document.createComment("-- view suspended of ["+(component.name||'anonymous')+"] --");
+			this.__target =  document.createComment("-- view unmounted of ["+(component.name||'anonymous')+"] --");
 			p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
@@ -433,13 +443,17 @@ Util.ext(Component.prototype,{
 				var k = this.__isVarMatch(prop.segments,path);
 				if(k<0)return;
 				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = [];
+					matchMap[prop.subComp.__id] = {};
+
+				//duplicate check
+				var list = matchMap[prop.subComp.__id][prop.name];
+				if(list !== undefined)return;
+
 				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id].push({
+				matchMap[prop.subComp.__id][prop.name] = {
 					name:prop.name,
-					val:rs,
-					path:path
-				});
+					val:rs
+				};
 			},this);
 		}
 		for(var k in matchMap){
@@ -500,18 +514,24 @@ Util.ext(Component.prototype,{
 		
 		var matchMap = {};
 		//update props
-		for(var i=changes.length;i--;){
-			var c = changes[i];
+		for(var k in changes){
+			var c = changes[k];
 			var name = c.name;
+
 			//check children which refers to props
 			this.__watchProps.forEach(function(prop){
 				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = [];
+					matchMap[prop.subComp.__id] = {};
+
+				//duplicate check
+				var list = matchMap[prop.subComp.__id][prop.name];
+				if(list !== undefined)return;
+
 				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id].push({
+				matchMap[prop.subComp.__id][prop.name] = {
 					name:prop.name,
 					val:rs
-				});
+				};
 			},this);
 		}
 

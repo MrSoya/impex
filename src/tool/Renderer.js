@@ -310,8 +310,8 @@ var Renderer = new function() {
 	function releaseObjs(list){
 		for(var i=list.length;i--;){
 			var o = list[i];
-			if(o.unmount){
-				o.unmount();
+			if(o.destroy){
+				o.destroy();
 			}else{
 				if(o.release)
 					o.release();

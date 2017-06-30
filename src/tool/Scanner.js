@@ -88,11 +88,28 @@ var Scanner = new function() {
 		if(node.attributes || node.nodeType === 11){
 			if(node.tagName){
 				var tagName = node.tagName.toLowerCase();
-				
+
 				var atts = [];
 				for(var i=node.attributes.length;i--;){
 					var tmp = node.attributes[i];
 					atts.push([tmp.name,tmp.value]);
+				}
+
+				//check component slots
+				if(tagName === COMP_SLOT_TAG){
+					var is = node.getAttribute('is');
+					var cache = node.getAttribute('cache');
+					var n = node.getAttribute('name');
+					if(!n) n = 'compSlots_' + (Object.keys(component.compSlots).length+1);
+					var exp = false;
+					if(!is && node.getAttribute('.is')!=null){
+						is = node.getAttribute('.is');
+						exp = true;
+					}
+					if(is != null){
+						component.compSlots[n] = new CompSlot(exp,is,component,node,cache);
+						return;
+					}
 				}
 
 				var scopeDirs = [];

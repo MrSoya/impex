@@ -171,7 +171,7 @@
             this.compiled = false;
         },
         onUpdate : function(rs){
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs)return;
             this.lastRs = rs;
 
@@ -233,7 +233,7 @@
             if(this.elseD){
                 this.elseD.doUpdate(!rs);
             }
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
@@ -300,7 +300,7 @@
                 Util.compileViewOf(this.component,this.__nodes);
                 this.compiled = true;
             }
-            if(this.component.__state === Component.state.suspend)return;
+            if(this.component.__state === Component.state.unmounted)return;
             if(rs === this.lastRs && !this.el.parentNode)return;
             this.lastRs = rs;
 
@@ -563,7 +563,7 @@
             if(this.ds)
                 this.build(this.ds,this.expInfo.k,this.expInfo.v);
             //更新视图
-            this.unmount();
+            this.destroy();
         }
         function parseProps(el,comp){
             var props = {
@@ -629,12 +629,12 @@
                             this.cache[i].__leaving = true;
                             this.cache[i].transition.leave();
                         }else{
-                            this.cache[i].suspend(false);
+                            this.cache[i].unmount(false);
                         }
                     }
                 }else{
                     for(var i=tmp.length;i--;){
-                        tmp[i].unmount();
+                        tmp[i].destroy();
                     }
                 }
             }else if(diffSize > 0){
@@ -758,7 +758,7 @@
                     this.transition.enter();
                 };
                 subComp.postLeave = function(){
-                    this.suspend(false);
+                    this.unmount(false);
                     this.__leaving = false;
                 }
             }
@@ -835,7 +835,7 @@
                     var pair = list[i];
                     var comp = pair[0];
                     var holder = pair[1];
-                    if(comp.__state === Component.state.suspend)continue;
+                    if(comp.__state === Component.state.unmounted)continue;
                     //attach DOM
                     eachObj.DOMHelper.replace(holder,comp.__nodes);
                     comp.init();
