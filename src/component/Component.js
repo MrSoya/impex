@@ -10,6 +10,7 @@
  * 	<ul>
  * 		<li>onCreate：当组件被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
  * 		<li>onPropChange：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
+ * 		<li>onUpdate: 当state中任意属性变更时触发。</li>
  * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
  * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
  * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
@@ -167,6 +168,23 @@ Util.ext(Component.prototype,{
 		Builder.buildExpModel(this,varObj,watch);
 
 		return this;
+	},
+	/**
+	 * 在已经初始化过的组件中编译动态增加的DOM节点
+	 * @param  {Array} nodes 需要编译的顶级节点数组
+	 */
+	compile:function(nodes){
+		Scanner.scan(nodes,this);
+		Builder.build(this);
+
+		//init children
+		for(var i = this.children.length;i--;){
+			this.children[i].init();
+		}
+
+		for(var i = this.directives.length;i--;){
+			this.directives[i].init();
+		}
 	},
 	/**
 	 * 添加子组件到父组件

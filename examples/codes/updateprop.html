@@ -27,12 +27,13 @@
                     return impex.util.immutable(v);
                 },
                 onPropChange:function(changes){
-                    changes.forEach(function(c){
-                        var val = this.state[c.name];
+                    for(var name in changes){
+                        var c = changes[name];
+                        var val = this.state[name];
                         if(c.val !== val){
-                            this.state[c.name] = impex.util.immutable(c.val);
+                            this.state[name] = impex.util.immutable(c.val);
                         }
-                    },this);
+                    }
                 },
                 template:`
                     <b>x-a</b>:  {{items =>json}}
@@ -45,12 +46,13 @@
                     return v;
                 },
                 onPropChange:function(changes){
-                    changes.forEach(function(c){
-                        var val = this.state[c.name];
+                    for(var name in changes){
+                        var c = changes[name];
+                        var val = this.state[name];
                         if(c.val !== val){
-                            this.state[c.name] = c.val;
+                            this.state[name] = impex.util.immutable(c.val);
                         }
-                    },this);
+                    }
                 },
                 template:`
                     <b>x-b</b>:  {{items =>json}}
@@ -62,12 +64,13 @@
                     return v;
                 },
                 onPropChange:function(changes){
-                    changes.forEach(function(c){
-                        var val = this.state[c.name];
+                    for(var name in changes){
+                        var c = changes[name];
+                        var val = this.state[name];
                         if(c.val !== val){
-                            this.state[c.name] = c.val;
+                            this.state[name] = impex.util.immutable(c.val);
                         }
-                    },this);
+                    }
                 },
                 template:`
                     <b>x-c</b>:  {{items =>json}}

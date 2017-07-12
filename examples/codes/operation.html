@@ -36,9 +36,9 @@
         </p>
         
     	<ul id="opt">
-            <li x-each="list as k , v">
+            <li x-each="list as k , v" over="this.getCompCount.bind(this)">
             {{k + ':' +v}}
-            <a-b></a-b>
+            <!-- <a-b></a-b> -->
             {{# v.xxx}}
             <b x-if="true">111</b>
             </li>
@@ -146,7 +146,7 @@
                         },1000);
                     });
                 },
-                onDisplay : function(){
+                onMount : function(){
                     this.getCompCount();
                 }
             });

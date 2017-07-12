@@ -99,7 +99,7 @@
                     });
                 },
                 eachUpdate:function(changes){
-                    this.state.active = changes[0].val;
+                    this.state.active = changes.active.val;
                 },
                 onInit:function(){
                 	var comps = [];
@@ -122,7 +122,7 @@
             			'component':[
             				'anonymous','named','expression','html','remote','slot',
             				'watch','props','proptypes','propchange',
-            				'restrict','lifecycle','route','updateprop'
+            				'restrict','lifecycle','route','updateprop','componentis'
             			],
             			'filter':[
             				'currency','chain'

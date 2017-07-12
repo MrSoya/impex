@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <button :click="change('x-check')">x-check</button>
+        <button :click="change('x-radio')">x-radio</button>
+
+        <component is="x-check" name="attr"></component>
+
+        <!-- <component .is="type"></component> -->
+
+        {{# html}}
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            impex.component('x-radio',{
+                template:"<label><input type='radio'>radio</label>"
+            });
+
+            impex.component('x-check',{
+                template:"<label><input type='checkbox'>checkbox</label>"
+            });
+            
+            //渲染
+            var debug = impex.render(document.body,{
+                state:{
+                    html:'',
+                    type:'x-radio'
+                },
+                change:function(type){
+                    // this.state.type = type;
+                    this.compSlots['attr'].is(type);
+                    // if(this.state.html == "<label><input type='checkbox'>checkbox</label>"){
+                    //     this.state.html = "<label><input type='radio'>radio</label>";
+                    // }else{
+                    //     this.state.html = "<label><input type='checkbox'>checkbox</label>";
+                    // }
+                    
+                }
+            });
+
+            impex.useBasicRender();
+        </script>
+    </body>
+</html>

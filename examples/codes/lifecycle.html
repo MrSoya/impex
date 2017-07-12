@@ -9,8 +9,9 @@
         <button :click="load($event)">点击加载组件</button>
         <button :click="changeX()">点击修改参数</button>
         <button :click="destroyComp()">点击销毁组件</button>
-        {{# info}}
         {{# comp}}
+        {{# info}}
+        
         
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
@@ -33,11 +34,11 @@
                     // return false;
                 },
                 onPropChange:function(changes){
-                    this.state.p = changes[0].val;
+                    this.state.p = changes['p'].val;
                     this.logger('propChange...');
                 },
-                onUnmount:function(){
-                    this.logger('unmount...');
+                onDestroy:function(){
+                    this.logger('destroy...');
                 },
                 state:{
                     i:0
@@ -62,7 +63,7 @@
                     this.state.x += 1;
                 },
                 destroyComp:function(){
-                    this.children[0].unmount();
+                    this.children[0].destroy();
                 },
                 state:{
                     info:'',

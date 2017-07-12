@@ -41,9 +41,10 @@
             impex.component('x-comp',{
                 template:"<p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
                 <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
-                <p>time:{{time}}   ——同步类型参数，回触发更新</p>",
-                onPropUpdate:function(changes){
-                    console.log(changes)
+                <p>time:{{time}}   ——同步类型参数，会触发更新</p>",
+                onPropChange:function(changes){
+                    //手动同步
+                    this.state.time = changes.time.val;
                 }
             });
 
@@ -53,7 +54,7 @@
                     msg:'这是参数',
                     time:new Date().getTime()
                 },
-                onDisplay:function() {
+                onMount:function() {
                     var that = this;
                     setInterval(function(){
                         that.state.time = new Date().getTime();

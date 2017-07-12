@@ -168,17 +168,20 @@ var ComponentFactory = new _ComponentFactory(DOMHelper);
 
 function slotHandler(tmpl,innerHTML){
 	var slotMap = {};
-	var findMap = {};
+	var findList = [];
     innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)[^<>]+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>/img,function(a,tag,slot,i){
-    	findMap[tag] = [slot,i];
+    	findList.push([tag,slot,i]);
     });
-    for(var tag in findMap){
-    	var startPos = findMap[tag][1];
-    	var slot = findMap[tag][0];
+    var matchStr = innerHTML;
+    for(var i=findList.length;i--;){
+    	var tmp = findList[i];
+    	var startPos = tmp[2];
+    	var slot = tmp[1];
+    	var tag = tmp[0];
     	var stack = 0;
     	var endPos = -1;
     	var reg = new RegExp("<(?:(?:\s+)?\/)?(?:\s+)?"+tag+"[^>]*?>",'img');
-        innerHTML.replace(reg,function(tag,i){
+        matchStr.replace(reg,function(tag,i){
         	if(i <= startPos)return;
 
         	if(/<(?:(?:\s+)?\/)/.test(tag)){
@@ -190,8 +193,9 @@ function slotHandler(tmpl,innerHTML){
         		stack++;
         	}
         });
-        var tmp = innerHTML.substring(startPos,endPos);
+        var tmp = matchStr.substring(startPos,endPos);
         slotMap[slot] = tmp+'</'+tag+'>';
+        matchStr = matchStr.replace(slotMap[slot],'');
     }
 
     if(innerHTML.trim().length>0)

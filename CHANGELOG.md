@@ -1,4 +1,15 @@
 # Change Log
+## Version 0.56.0 - 2017/7/12
+### 新增
+* Component.compile 编译动态插入的DOM节点
+
+### 更新
+* examples
+
+### bug修复
+* 多个slot使用时无法识别 
+
+
 ## Version 0.55.0 - 2017/6/25
 ### 新增
 * <component is="compName" name="attr"></component> 组件替换点

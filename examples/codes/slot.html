@@ -5,26 +5,37 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <x-button1>
-            来自slot的内容
-        </x-button1>
+        <x-panel>
+            <span slot="name" ref="name">name</span>
+            <span slot="age" ref="age">13</span>
+        </x-panel>
 
-        <x-button2 name="来自name的内容">
+        <x-button2 name="来自name的内容" ref="btn">
+            来自slot的内容
         </x-button2>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             //自定义组件
-            impex.component('x-button1',{
-                template:"<button><slot></slot></button>"
+            impex.component('x-panel',{
+                template:"<p>name: <slot name='name'></slot><br>age: <slot name='age'></slot></p>",
+                onMount:function(){
+                    console.log(this.state.name)
+                    console.log(this.state.age)
+                }
             });
 
             impex.component('x-button2',{
-                template:"<button>{{name}}</button>"
+                template:"<slot></slot>"
             });
             
             //渲染
-            impex.render(document.body);
+            impex.render(document.body,{
+                onMount:function(){
+                    console.log(this.comps.btn)
+                    console.log(this.els.btn)
+                }
+            });
             
         </script>
     </body>
