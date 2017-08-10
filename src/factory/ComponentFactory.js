@@ -299,7 +299,7 @@ function handleProps(k,v,requires,propTypes,component){
 		checkPropType(n,rs,propTypes,component);
 	}
 	if(rs instanceof Function){
-		component[n] = rs;
+		component[n] = rs.bind(component.parent);
 		return;
 	}	
 

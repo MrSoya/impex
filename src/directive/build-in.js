@@ -658,7 +658,7 @@
                 var v = ds[k];
 
                 //k,index,each
-                if(typeof v === 'object'){
+                if(typeof v === 'object' && v != null){
                     for(var i=v.__im__extPropChain.length;i--;){
                         if(v.__im__extPropChain[i][0] === this){
                             break;
@@ -709,7 +709,7 @@
             for(var n in this.__props.type){
                 var v = this.__props.type[n];
                 if(v instanceof Function){
-                    subComp[n] = v;
+                    subComp[n] = v.bind(this.__comp);
                 }
             }
 
@@ -814,7 +814,7 @@
                 var v = ds[k];
 
                 //k,index,each
-                if(typeof v === 'object'){
+                if(typeof v === 'object' && v != null){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 
