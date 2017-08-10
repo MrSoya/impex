@@ -26,6 +26,12 @@ function Component () {
 	this.__state = Component.state.created;
 
 	Signal.call(this);
+
+	/**
+	 * 对顶级元素的引用
+	 * @type {HTMLElement}
+	 */
+	this.el = null;
 	/**
 	 * 对组件内的所有组件槽的引用
 	 * @type {Object}
@@ -396,15 +402,14 @@ Util.ext(Component.prototype,{
 	},
 	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
-		if(!p)return;
 		if(hook){
 			this.__target =  document.createComment("-- view unmounted of ["+(component.name||'anonymous')+"] --");
-			p.insertBefore(this.__target,this.__nodes[0]);
+			if(p)p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
 		for(var i=this.__nodes.length;i--;){
 			if(this.__nodes[i].parentNode)
-				p.removeChild(this.__nodes[i]);
+				this.__nodes[i].parentNode.removeChild(this.__nodes[i]);
 		}
 	},
 	__getPath:function(){

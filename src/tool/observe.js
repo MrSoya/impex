@@ -16,7 +16,7 @@
 			var t = data instanceof Array?[]:{};
 			for(var k in data){
 				var o = data[k];
-				if(typeof o === 'object'){
+				if(typeof o === 'object' && o != null){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(handler,pcs,o,component);
@@ -135,7 +135,7 @@
 				if(!data.hasOwnProperty(k))continue;
 
 				var o = data[k];			
-				if(typeof o === 'object'){
+				if(typeof o === 'object' && o != null){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(pcs,o,component);

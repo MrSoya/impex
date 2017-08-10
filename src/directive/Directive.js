@@ -15,6 +15,11 @@
 function Directive (name,value) {
 	Signal.call(this);
 	/**
+	 * 对顶级元素的引用
+	 * @type {HTMLElement}
+	 */
+	this.el = null;
+	/**
 	 * 指令的字面值
 	 */
 	this.value = value;

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-07-12
+ * last build: 2017-08-09
  */
 !function (global) {
 	'use strict';
@@ -198,7 +198,7 @@ var Util = new function () {
 			var t = data instanceof Array?[]:{};
 			for(var k in data){
 				var o = data[k];
-				if(typeof o === 'object'){
+				if(typeof o === 'object' && o != null){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(handler,pcs,o,component);
@@ -317,7 +317,7 @@ var Util = new function () {
 				if(!data.hasOwnProperty(k))continue;
 
 				var o = data[k];			
-				if(typeof o === 'object'){
+				if(typeof o === 'object' && o != null){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(pcs,o,component);
@@ -1753,13 +1753,23 @@ var Renderer = new function() {
  			){
  			isDataType = false;
  		}
+ 		
  		var searchPath = watchPath || fullPath;
+ 		var searchStr = null;
+ 		var context = component;
  		if(isDataType){
- 			searchPath = '.state' + searchPath;
+ 			searchStr = '.state' + searchPath;
  		}else{
- 			searchPath = '.' + searchPath.substr(1);
+ 			searchStr = '.' + searchPath.substr(1);
  		}
- 		component = varInComponent(component,searchPath);
+ 		component = varInComponent(component,searchStr);
+ 		if(!component && isDataType){
+ 			searchStr = '.' + searchPath.substr(1);
+ 			component = varInComponent(context,searchStr);
+ 			if(component){
+ 				isDataType = false;
+ 			}
+ 		}
 
  		if(component){
  			if(isDataType){
@@ -1768,6 +1778,10 @@ var Renderer = new function() {
 	 			fullPath = '.' + fullPath.substr(1);
 	 		}
  			return component.__getPath() + fullPath;
+ 		}else{
+ 			if(isDataType){
+	 			searchPath = '.' + searchPath.substr(1);
+	 		}
  		}
 
  		return 'self' + fullPath;
@@ -2193,6 +2207,12 @@ function Component () {
 	this.__state = Component.state.created;
 
 	Signal.call(this);
+
+	/**
+	 * 对顶级元素的引用
+	 * @type {HTMLElement}
+	 */
+	this.el = null;
 	/**
 	 * 对组件内的所有组件槽的引用
 	 * @type {Object}
@@ -2563,15 +2583,14 @@ Util.ext(Component.prototype,{
 	},
 	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
-		if(!p)return;
 		if(hook){
 			this.__target =  document.createComment("-- view unmounted of ["+(component.name||'anonymous')+"] --");
-			p.insertBefore(this.__target,this.__nodes[0]);
+			if(p)p.insertBefore(this.__target,this.__nodes[0]);
 		}
 
 		for(var i=this.__nodes.length;i--;){
 			if(this.__nodes[i].parentNode)
-				p.removeChild(this.__nodes[i]);
+				this.__nodes[i].parentNode.removeChild(this.__nodes[i]);
 		}
 	},
 	__getPath:function(){
@@ -2814,6 +2833,11 @@ var DOMHelper = new function(){
  */
 function Directive (name,value) {
 	Signal.call(this);
+	/**
+	 * 对顶级元素的引用
+	 * @type {HTMLElement}
+	 */
+	this.el = null;
 	/**
 	 * 指令的字面值
 	 */
@@ -3509,7 +3533,7 @@ function handleProps(k,v,requires,propTypes,component){
 		checkPropType(n,rs,propTypes,component);
 	}
 	if(rs instanceof Function){
-		component[n] = rs;
+		component[n] = rs.bind(component.parent);
 		return;
 	}	
 
@@ -3752,7 +3776,7 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,56,0],
+	        v:[0,56,1],
 	        state:'',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -4679,7 +4703,7 @@ impex.service('Transitions',new function(){
                 var v = ds[k];
 
                 //k,index,each
-                if(typeof v === 'object'){
+                if(typeof v === 'object' && v != null){
                     for(var i=v.__im__extPropChain.length;i--;){
                         if(v.__im__extPropChain[i][0] === this){
                             break;
@@ -4730,7 +4754,7 @@ impex.service('Transitions',new function(){
             for(var n in this.__props.type){
                 var v = this.__props.type[n];
                 if(v instanceof Function){
-                    subComp[n] = v;
+                    subComp[n] = v.bind(this.__comp);
                 }
             }
 
@@ -4835,7 +4859,7 @@ impex.service('Transitions',new function(){
                 var v = ds[k];
 
                 //k,index,each
-                if(typeof v === 'object'){
+                if(typeof v === 'object' && v != null){
                     v.__im__extPropChain.push([this,vi,index]);
                 }
 

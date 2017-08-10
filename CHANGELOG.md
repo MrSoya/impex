@@ -1,4 +1,14 @@
 # Change Log
+## Version 0.56.1 - 2017/8/2
+### 更新
+* 传递给组件的函数类型的参数会自动绑定context为组件的parent
+* 传递给组件的函数类型的参数无需再使用this.前缀，但如果有同名的state参数时，
+使用this.前缀可以确保类型正确
+
+### bug修复
+* 如果组件有多个顶级节点，unmount时可能会失效 
+* 当state中的属性值是null时，也会进行监控
+
 ## Version 0.56.0 - 2017/7/12
 ### 新增
 * Component.compile 编译动态插入的DOM节点
