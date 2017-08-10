@@ -222,13 +222,23 @@ var Renderer = new function() {
  			){
  			isDataType = false;
  		}
+ 		
  		var searchPath = watchPath || fullPath;
+ 		var searchStr = null;
+ 		var context = component;
  		if(isDataType){
- 			searchPath = '.state' + searchPath;
+ 			searchStr = '.state' + searchPath;
  		}else{
- 			searchPath = '.' + searchPath.substr(1);
+ 			searchStr = '.' + searchPath.substr(1);
  		}
- 		component = varInComponent(component,searchPath);
+ 		component = varInComponent(component,searchStr);
+ 		if(!component && isDataType){
+ 			searchStr = '.' + searchPath.substr(1);
+ 			component = varInComponent(context,searchStr);
+ 			if(component){
+ 				isDataType = false;
+ 			}
+ 		}
 
  		if(component){
  			if(isDataType){
@@ -237,6 +247,10 @@ var Renderer = new function() {
 	 			fullPath = '.' + fullPath.substr(1);
 	 		}
  			return component.__getPath() + fullPath;
+ 		}else{
+ 			if(isDataType){
+	 			searchPath = '.' + searchPath.substr(1);
+	 		}
  		}
 
  		return 'self' + fullPath;
