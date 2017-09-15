@@ -294,7 +294,9 @@
 
 		this.Signal = Signal;
 		/**
-		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
+		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化。
+		 * 注意：参数传递默认引用方式，这可能会导致父组件的一个对象参数的子属性变更无法通知子组件。
+		 * 如果需要传递不可变对象，可以使用impex.util.immutable()方法
 		 */
 		this.useBasicRender = function(){
 			Util.ext(Component.prototype,{

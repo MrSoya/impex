@@ -337,16 +337,23 @@ Util.ext(Component.prototype,{
 		if(this.parent){
 			//check parent watchs
 			var index = -1;
-			for(var i=this.parent.__watchProps.length;i--;){
-				var prop = this.parent.__watchProps[i];
-				if(prop.subComp === this){
-					index = i;
-					break;
+			var props = this.parent.__watchProps;
+			while(true){
+				index = -1;
+				for(var i=props.length;i--;){
+					var prop = props[i];
+					if(prop.subComp === this){
+						index = i;
+						break;
+					}
 				}
+				if(index > -1){
+					props.splice(index,1);
+					continue;
+				}
+				break;
 			}
-			if(index > -1){
-				this.parent.__watchProps.splice(index,1);
-			}
+			
 
 
 			index = this.parent.children.indexOf(this);
@@ -376,6 +383,12 @@ Util.ext(Component.prototype,{
 		impex._cs[this.__id] = null;
 		delete impex._cs[this.__id];
 
+		this.els = 
+		this.compSlots = 
+		this.__eventMap = 
+		this.__nodes = 
+		this._signalMap = 
+		this.__watchProps = 
 		this.__state = 
 		this.__id = 
 		this.__url = 

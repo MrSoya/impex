@@ -44,6 +44,7 @@
                 var rs = {};
                 var tmp = map.split(';');
                 for(var i=tmp.length;i--;){
+                    if(!tmp[i])continue;
                     var pair = tmp[i].split(':');
                     rs[pair[0]] = pair[1];
                 }
@@ -53,7 +54,13 @@
             for(var k in map){
                 var n = this.filterName(k);
                 var v = map[k];
-                style[n] = v;
+                if(v.indexOf('!important')){
+                    v = v.replace(/!important\s*;?$/,'');
+                    n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+                    style.setProperty(n, v, "important");
+                }else{
+                    style[n] = v;
+                }
             }
         },
         filterName:function(k){
@@ -609,7 +616,10 @@
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
 
-            var newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
+            var newSize = 0;
+            if(ds){
+                newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
+            }
             
             var diffSize = newSize - this.subComponents.length;
 

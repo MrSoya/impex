@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-08-09
+ * last build: 2017-09-13
  */
 !function (global) {
 	'use strict';
@@ -2518,16 +2518,23 @@ Util.ext(Component.prototype,{
 		if(this.parent){
 			//check parent watchs
 			var index = -1;
-			for(var i=this.parent.__watchProps.length;i--;){
-				var prop = this.parent.__watchProps[i];
-				if(prop.subComp === this){
-					index = i;
-					break;
+			var props = this.parent.__watchProps;
+			while(true){
+				index = -1;
+				for(var i=props.length;i--;){
+					var prop = props[i];
+					if(prop.subComp === this){
+						index = i;
+						break;
+					}
 				}
+				if(index > -1){
+					props.splice(index,1);
+					continue;
+				}
+				break;
 			}
-			if(index > -1){
-				this.parent.__watchProps.splice(index,1);
-			}
+			
 
 
 			index = this.parent.children.indexOf(this);
@@ -2557,6 +2564,12 @@ Util.ext(Component.prototype,{
 		impex._cs[this.__id] = null;
 		delete impex._cs[this.__id];
 
+		this.els = 
+		this.compSlots = 
+		this.__eventMap = 
+		this.__nodes = 
+		this._signalMap = 
+		this.__watchProps = 
 		this.__state = 
 		this.__id = 
 		this.__url = 
@@ -3989,7 +4002,9 @@ var TransitionFactory = {
 
 		this.Signal = Signal;
 		/**
-		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化
+		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化。
+		 * 注意：参数传递默认引用方式，这可能会导致父组件的一个对象参数的子属性变更无法通知子组件。
+		 * 如果需要传递不可变对象，可以使用impex.util.immutable()方法
 		 */
 		this.useBasicRender = function(){
 			Util.ext(Component.prototype,{
@@ -4089,6 +4104,7 @@ impex.service('Transitions',new function(){
                 var rs = {};
                 var tmp = map.split(';');
                 for(var i=tmp.length;i--;){
+                    if(!tmp[i])continue;
                     var pair = tmp[i].split(':');
                     rs[pair[0]] = pair[1];
                 }
@@ -4098,7 +4114,13 @@ impex.service('Transitions',new function(){
             for(var k in map){
                 var n = this.filterName(k);
                 var v = map[k];
-                style[n] = v;
+                if(v.indexOf('!important')){
+                    v = v.replace(/!important\s*;?$/,'');
+                    n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+                    style.setProperty(n, v, "important");
+                }else{
+                    style[n] = v;
+                }
             }
         },
         filterName:function(k){
@@ -4654,7 +4676,10 @@ impex.service('Transitions',new function(){
         this.rebuild = function(ds,ki,vi){
             ds = this.doFilter(ds);
 
-            var newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
+            var newSize = 0;
+            if(ds){
+                newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
+            }
             
             var diffSize = newSize - this.subComponents.length;
 
