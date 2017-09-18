@@ -29,9 +29,10 @@
         function component(){
             return {
                 onInit:function(){
-                    this.on('click',this.tip);
+                    this.on('pointerup',this.tip);
                 },
-                tip : function(){
+                tip : function(e){
+                    console.log(e)
                     alert('clicked '+(this.state.times++)+' times');
                 },
                 state:{
