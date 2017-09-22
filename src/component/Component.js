@@ -258,6 +258,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(){
 		Scanner.scan(this.__nodes,this);
+		if(this.__offscreen)
+			Scanner.scan(this.__offscreen,this);
 
 		LOGGER.log(this,'inited');
 
@@ -322,6 +324,13 @@ Util.ext(Component.prototype,{
 			this.directives[i].active();
 		}
 
+		//to DOM
+		if(this.__offscreen){
+			this.el.innerHTML = '';
+			DOMHelper.attach(this.el,this.__offscreen);
+			this.__offscreen = null;
+		}
+		
 		this.onMount && this.onMount();
 	},
 	/**

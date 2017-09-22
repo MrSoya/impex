@@ -107,12 +107,7 @@
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 
-			LOGGER = cfg.logger || new function(){
-			    this.log = function(){}
-			    this.debug = function(){}
-			    this.error = function(){}
-			    this.warn = function(){}
-			};
+			if(cfg.logger)LOGGER = cfg.logger;
 			this.logger = LOGGER;
 		};
 

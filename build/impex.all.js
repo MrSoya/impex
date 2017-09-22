@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-9-18
+ * last build: 2017-09-22
  */
 !function (global) {
 	'use strict';
@@ -2439,6 +2439,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(){
 		Scanner.scan(this.__nodes,this);
+		if(this.__offscreen)
+			Scanner.scan(this.__offscreen,this);
 
 		LOGGER.log(this,'inited');
 
@@ -2503,6 +2505,13 @@ Util.ext(Component.prototype,{
 			this.directives[i].active();
 		}
 
+		//to DOM
+		if(this.__offscreen){
+			this.el.innerHTML = '';
+			DOMHelper.attach(this.el,this.__offscreen);
+			this.__offscreen = null;
+		}
+		
 		this.onMount && this.onMount();
 	},
 	/**
@@ -3294,8 +3303,9 @@ Util.ext(_ComponentFactory.prototype,{
 
 		var nodes = DOMHelper.compile(compileStr);
 
-		el.innerHTML = '';
-		DOMHelper.attach(el,nodes);
+		component.__offscreen = nodes;
+		// el.innerHTML = '';
+		// DOMHelper.attach(el,nodes);
 
 		//check props
 		var requires = {};
@@ -4560,6 +4570,7 @@ impex.service('Transitions',new function(){
         }
         this.onInit = function(){
             var that = this;
+            var ds = null;
             //获取数据源
             if(this.forExp.test(this.expInfo.ds)){
                 var begin = RegExp.$1,
@@ -4577,8 +4588,11 @@ impex.service('Transitions',new function(){
                             newVal = this.d(path);
                         }
                         var ds = getForDs(newVal>>0,end,step);
+                        ds = that.doFilter(ds);
+                        var diff = compareDiff(that.lastDS,ds);
+
                         that.lastDS = ds;
-                        that.rebuild(ds,that.expInfo.k,that.expInfo.v);
+                        that.rebuild(diff,that.expInfo.k,that.expInfo.v);
                     });
                     begin = this.component.d(begin);
                 }
@@ -4589,30 +4603,35 @@ impex.service('Transitions',new function(){
                             newVal = this.d(path);
                         }
                         var ds = getForDs(begin,newVal>>0,step);
+                        ds = that.doFilter(ds);
+                        var diff = compareDiff(that.lastDS,ds);
+
                         that.lastDS = ds;
-                        that.rebuild(ds,that.expInfo.k,that.expInfo.v);
+                        that.rebuild(diff,that.expInfo.k,that.expInfo.v);
                     });
                     end = this.component.d(end);
                 }
                 begin = parseFloat(begin);
                 end = parseFloat(end);
                 
-                this.ds = getForDs(begin,end,step);
+                ds = getForDs(begin,end,step);
             }else{
-                this.ds = this.component.d(this.expInfo.ds);
+                ds = this.component.d(this.expInfo.ds);
                 this.component.watch(this.expInfo.ds,
-                    function(object,name,type,newVal,oldVal,propChain,matchLevel){
-                    if(!that.ds){
-                        that.ds = that.__comp.d(that.expInfo.ds);
-                        that.lastDS = that.ds;
-                        that.build(that.ds,that.expInfo.k,that.expInfo.v);
-                        return;
-                    }
+                    function(object,name,type,newVal,oldVal){
+                    // if(!that.ds){
+                    //     that.ds = that.__comp.d(that.expInfo.ds);
+                    //     that.lastDS = that.ds;
+                    //     that.build(that.ds,that.expInfo.k,that.expInfo.v);
+                    //     return;
+                    // }
 
                     var ds = that.__comp.d(that.expInfo.ds);
+                    ds = that.doFilter(ds);
+                    var diff = compareDiff(that.lastDS,ds);
                     
                     that.lastDS = ds;
-                    that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
+                    that.rebuild(diff,that.expInfo.k,that.expInfo.v);
                 });
             }
 
@@ -4620,15 +4639,22 @@ impex.service('Transitions',new function(){
                 var tmp = lexer(this.over);
                 var rs = Renderer.evalExp(this.__comp,tmp);
                 this.over = rs;
-            }            
+            }
             
-            this.lastDS = this.ds;
-
             //parse props
             this.__props = parseProps(this.el,this.component);
 
-            if(this.ds)
-                this.build(this.ds,this.expInfo.k,this.expInfo.v);
+            if(ds){
+                if(!(ds instanceof Array)){
+                    LOGGER.error('only support array!');
+                    return;
+                }
+
+                var ds = this.doFilter(ds);
+                this.lastDS = ds.concat();
+
+                this.build(ds,this.expInfo.k,this.expInfo.v);
+            }
             //更新视图
             this.destroy();
         }
@@ -4673,98 +4699,73 @@ impex.service('Transitions',new function(){
             }
             return ds;
         }
-        this.rebuild = function(ds,ki,vi){
-            ds = this.doFilter(ds);
+        this.rebuild = function(diff,ki,vi){
 
-            var newSize = 0;
-            if(ds){
-                newSize = ds instanceof Array?ds.length:Object.keys(ds).length;
-            }
-            
-            var diffSize = newSize - this.subComponents.length;
-
-            //resort
-            // this.subComponents.sort(function(a,b){return a.state.$index - b.state.$index})
-
-            var compMap = {};
-            if(diffSize < 0){
-                var len = diffSize*-1;
-                var tmp = this.subComponents.splice(this.subComponents.length-len,len);
-                if(this.cache.length < this.cacheSize){
-                    for(var i=tmp.length;i--;){
-                        this.cache.push(tmp[i]);
+            if(diff.del < 0){
+                var tmp = this.subComponents.splice(this.subComponents.length+diff.del,-diff.del);
+                for(var i=tmp.length;i--;){
+                    var comp = tmp[i];
+                    if(this.trans && !comp.__leaving){
+                        comp.__leaving = true;
+                        comp.transition.leave();
+                    }else{
+                        // comp.unmount(false);
+                        comp.destroy();
                     }
-                    for(var i=this.cache.length;i--;){
-                        if(this.trans && !this.cache[i].__leaving && this.cache[i].__state === Component.state.mounted){
-                            this.cache[i].__leaving = true;
-                            this.cache[i].transition.leave();
-                        }else{
-                            this.cache[i].unmount(false);
-                        }
-                    }
-                }else{
-                    for(var i=tmp.length;i--;){
-                        tmp[i].destroy();
-                    }
-                }
-            }else if(diffSize > 0){
-                var restSize = diffSize;                
-                while(restSize--){
-                    var pair = this.createSubComp();
-                    compMap[pair[0].__id] = pair;
                 }
             }
-
-            var isIntK = Util.isArray(ds)?true:false;
-            var index = 0;
-            var updateQ = [];
-            for(var k in ds){
-                if(!ds.hasOwnProperty(k))continue;
-                if(isIntK && isNaN(k))continue;
-
-                var subComp = this.subComponents[index];
-
-                //模型
-                var v = ds[k];
-
-                //k,index,each
-                if(typeof v === 'object' && v != null){
-                    for(var i=v.__im__extPropChain.length;i--;){
-                        if(v.__im__extPropChain[i][0] === this){
-                            break;
-                        }
-                    }
-                    v.__im__extPropChain.splice(i,1);
-                    v.__im__extPropChain.push([this,vi,index]);
-                }
-                
-                var data = subComp.state;
-
-                data[vi] = v;
-                data['$index'] = index++;
-                if(ki)data[ki] = isIntK?k>>0:k;
-
-                if(compMap[subComp.__id]){
-                    updateQ.push(compMap[subComp.__id]);
-                }
-                
+            if(diff.add.length>0){
+                this.build(diff.add,ki,vi);
             }
 
-            renderEach(updateQ,this,true);
+            if(diff.update.length>0){
+                for(var i=diff.update.length;i--;){
+                    var index = diff.update[i];
+
+                    var subComp = this.subComponents[index];
+                    var data = subComp.state.__im__target || subComp.state;
+
+                    data[vi] = this.lastDS[index];
+
+                    Renderer.recurRender(subComp);
+                }
+            }
         }
+        function compareDiff(oldDs,newDs){
+            var rs = {
+                update:[],
+                add:[],
+                del:0
+            };
+            var diffSize = newDs.length - oldDs.length;
+            if(diffSize > 0){
+                for(var i=0;i<diffSize;i++){
+                    rs.add.push(newDs[i+oldDs.length]);
+                }
+            }else if(diffSize < 0){
+                rs.del = diffSize;
+            }
 
+            var len = newDs.length < oldDs.length?newDs.length:oldDs.length;
+            for(var i=0;i<len;i++){
+                var nv = newDs[i];
+                var ov = oldDs[i];
+                if(nv !== ov){
+                    rs.update.push(i);
+                }
+            }
+
+            return rs;
+        }
         this.createSubComp = function(){
             var comp = this.__comp;
             var subComp = null;
-            var p = this.placeholder.parentNode;
-            var placeholder = document.createComment('-- directive [each] component --');
             //视图
             var copyNodes = [];
             for(var i=this.__nodes.length;i--;){
                 var c = this.__nodes[i].cloneNode(true);
                 copyNodes.unshift(c);
             }
-            p.insertBefore(placeholder,this.placeholder);
 
             //创建子组件
             if(this.__isComp){
@@ -4833,17 +4834,13 @@ impex.service('Transitions',new function(){
                 }
             }
                 
-            return [subComp,placeholder];
+            return subComp;
         }
         this.doFilter = function(ds){
             if(!this.filters)return ds;
             var filters = this.filters;
             if(Object.keys(filters).length > 0 && ds){
                 var rs = ds;
-                if(Util.isObject(ds)){
-                    rs = Util.isArray(ds)?[]:{};
-                    Util.ext(rs,ds);
-                }
 
                 for(var k in filters){
                     var c = filters[k][0];
@@ -4863,67 +4860,61 @@ impex.service('Transitions',new function(){
             }
         }
         this.build = function(ds,ki,vi){
-            var isIntK = Util.isArray(ds)?true:false;
-            var index = 0;
-            
-            ds = this.doFilter(ds);
+
             //bind each
             if(ds.__im__extPropChain)
                 ds.__im__extPropChain.push([this,vi]);
 
             var queue = [];
 
-            for(var k in ds){
-                if(!ds.hasOwnProperty(k))continue;
-                if(isIntK && isNaN(k))continue;
 
-                var subCompPair = this.createSubComp();
-                queue.push(subCompPair);
+            for(var k=0;k<ds.length;k++){
+                var subComp = this.createSubComp();
+                queue.push(subComp);
                 
                 //模型
                 var v = ds[k];
 
                 //k,index,each
                 if(typeof v === 'object' && v != null){
-                    v.__im__extPropChain.push([this,vi,index]);
+                    v.__im__extPropChain.push([this,vi,k]);
                 }
 
-                var data = subCompPair[0].state.__im__target || subCompPair[0].state;
+                var data = subComp.state.__im__target || subComp.state;
 
                 data[vi] = v;
-                data['$index'] = index++;
-                if(ki)data[ki] = isIntK?k>>0:k;
+                data['$index'] = k;
+                if(ki)data[ki] = k;
             }
 
-            renderEach(queue,this);
+            mergeEach(queue,this);
         }
-        function renderEach(queue,eachObj,deep){
+        function mergeEach(queue,xeach){
             if(queue.length<1)return;
-            setTimeout(function(){
-                var list = queue.splice(0,50);
-                for(var i=0;i<list.length;i++){
-                    var pair = list[i];
-                    var comp = pair[0];
-                    var holder = pair[1];
-                    if(comp.__state === Component.state.unmounted)continue;
-                    //attach DOM
-                    eachObj.DOMHelper.replace(holder,comp.__nodes);
-                    comp.init();
-                    comp.mount();
 
-                    if(deep){
-                        if(comp.__state === Component.state.mounted){
-                            Renderer.recurRender(comp);
-                        }
+            setTimeout(function(){
+                var list = queue.splice(0,500);
+                var fragment = document.createDocumentFragment();
+                for(var i=0;i<list.length;i++){
+                    var comp = list[i];
+
+                    for(var j=0;j<comp.__nodes.length;j++){
+                        fragment.appendChild(comp.__nodes[j]);
                     }
+                    
+                    comp.__init();
+                    comp.mount();
                 }
 
+                var p = xeach.placeholder.parentNode;
+                p.insertBefore(fragment,xeach.placeholder);
+
                 if(queue.length > 0){
-                    renderEach(queue,eachObj);
+                    mergeEach(queue,xeach);
                 }else{
                     //complete callback
-                    if(eachObj.over)
-                    eachObj.over();
+                    if(xeach.over)
+                        xeach.over();
                 }
             },0);
         }
@@ -5283,7 +5274,6 @@ impex.filter('json',{
         registerDispatcher(
             'mousedown mouseup click dblclick mousemove mousewheel mouseout mouseleave'+
             'pointerdown pointerup pointermove pointercancel press tap dbltap',mouseDispatcher);
-
     }
     
     

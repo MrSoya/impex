@@ -219,7 +219,6 @@
         registerDispatcher(
             'mousedown mouseup click dblclick mousemove mousewheel mouseout mouseleave'+
             'pointerdown pointerup pointermove pointercancel press tap dbltap',mouseDispatcher);
-
     }
     
     
