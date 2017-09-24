@@ -47,9 +47,9 @@ Util.ext(_ComponentFactory.prototype,{
 
 		var nodes = DOMHelper.compile(compileStr);
 
-		component.__offscreen = nodes;
-		// el.innerHTML = '';
-		// DOMHelper.attach(el,nodes);
+		// component.__offscreen = nodes;
+		el.innerHTML = '';
+		DOMHelper.attach(el,nodes);
 
 		//check props
 		var requires = {};

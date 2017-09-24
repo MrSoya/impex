@@ -258,8 +258,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(){
 		Scanner.scan(this.__nodes,this);
-		if(this.__offscreen)
-			Scanner.scan(this.__offscreen,this);
+		// if(this.__offscreen)
+		// 	Scanner.scan(this.__offscreen,this);
 
 		LOGGER.log(this,'inited');
 
@@ -325,11 +325,11 @@ Util.ext(Component.prototype,{
 		}
 
 		//to DOM
-		if(this.__offscreen){
-			this.el.innerHTML = '';
-			DOMHelper.attach(this.el,this.__offscreen);
-			this.__offscreen = null;
-		}
+		// if(this.__offscreen){
+		// 	this.el.innerHTML = '';
+		// 	DOMHelper.attach(this.el,this.__offscreen);
+		// 	this.__offscreen = null;
+		// }
 		
 		this.onMount && this.onMount();
 	},

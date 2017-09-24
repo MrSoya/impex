@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-09-22
+ * last build: 2017-9-24
  */
 !function (global) {
 	'use strict';
@@ -2439,8 +2439,8 @@ Util.ext(Component.prototype,{
 	},
 	__init:function(){
 		Scanner.scan(this.__nodes,this);
-		if(this.__offscreen)
-			Scanner.scan(this.__offscreen,this);
+		// if(this.__offscreen)
+		// 	Scanner.scan(this.__offscreen,this);
 
 		LOGGER.log(this,'inited');
 
@@ -2506,11 +2506,11 @@ Util.ext(Component.prototype,{
 		}
 
 		//to DOM
-		if(this.__offscreen){
-			this.el.innerHTML = '';
-			DOMHelper.attach(this.el,this.__offscreen);
-			this.__offscreen = null;
-		}
+		// if(this.__offscreen){
+		// 	this.el.innerHTML = '';
+		// 	DOMHelper.attach(this.el,this.__offscreen);
+		// 	this.__offscreen = null;
+		// }
 		
 		this.onMount && this.onMount();
 	},
@@ -3303,9 +3303,9 @@ Util.ext(_ComponentFactory.prototype,{
 
 		var nodes = DOMHelper.compile(compileStr);
 
-		component.__offscreen = nodes;
-		// el.innerHTML = '';
-		// DOMHelper.attach(el,nodes);
+		// component.__offscreen = nodes;
+		el.innerHTML = '';
+		DOMHelper.attach(el,nodes);
 
 		//check props
 		var requires = {};
@@ -3825,12 +3825,7 @@ var TransitionFactory = {
 
 			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
 
-			LOGGER = cfg.logger || new function(){
-			    this.log = function(){}
-			    this.debug = function(){}
-			    this.error = function(){}
-			    this.warn = function(){}
-			};
+			if(cfg.logger)LOGGER = cfg.logger;
 			this.logger = LOGGER;
 		};
 
