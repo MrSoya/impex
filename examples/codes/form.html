@@ -16,9 +16,11 @@
                 transition:color .2s ease-in;
             }
         </style>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     </head>
     <body >
-        <div id="entry">
+
+        <div id="demo">
             <p>
                 <h3>
                     {{name}} <sub>{{v}}</sub>
@@ -30,18 +32,18 @@
                     it's <i>{{features}}</i>
                 </p>
                 <p>
-                    made by <i class="{{author=='MrSoya'?'bc':'rc'}}">{{author}}</i>
+                    made by <i .class="author=='MrSoya'?'bc':'rc'">{{author}}</i>
                     ,{{sex}}
                 </p>
                 <p>
                     and {{others}}
                 </p>
             </p>
-        	<p>
-                name:<input type="text" x-model="name" value="{{name}}">
+            <p>
+                name:<input type="text" x-model="name" .value="name">
             </p>
             <p>
-                version:<input type="text" x-model="v" value="{{v}}">  
+                version:<input type="text" x-model="v" .value="v">  
             </p>
             <p>
                 features:
@@ -89,16 +91,7 @@
                 </select>
             </p>
         </div>
-
-
-        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
-        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
         <script type="text/javascript">
-            imLog.level = 4;
-            impex.config({
-                logger:imLog
-            });
-
             impex.directive('tval',{
                 observe:function(rs){
                     this.el.innerHTML=rs;
@@ -106,7 +99,7 @@
             });
 
             //渲染
-            var debug = impex.render(document.getElementById('entry'),{
+            var debug = impex.render('#demo',{
                 state:{
                     name : 'impex',
                     v : impex.version.toString(),

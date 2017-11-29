@@ -5,7 +5,7 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	<select x-change="show($selected)">
+    	<select x-change id="demo">
             <option>1</option>
             <option>2</option>
             <option>3</option>
@@ -15,20 +15,18 @@
         <script type="text/javascript">
         
             impex.directive('change',{
-                onCreate : function(){
+                onBind : function(vnode){
                     var a = 10;
-                    this.on('change',function(e){
-                        console.log(arguments)
-                        var exp = this.value;
-                        exp = exp.replace('$selected',e.target.options[e.target.selectedIndex].value);
-                        return exp;
+                    vnode.on('change',function(e){
+                        var v = e.target.options[e.target.selectedIndex].value;
+                        this.show(v)
                     });
                 }
             });
 
             
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                    show : function(opt){
                         alert(opt);
                     }

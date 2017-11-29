@@ -18,17 +18,19 @@
     </head>
     <body>
     
-        <code>x &gt; 4 <i x-if="a.x > 4" transition="test">true </i></code>
-        <br>
-        <code>x &lt; 4 <i x-else transition="test">true </i></code>
-        <br>
-        x:<input x-model="a.x" >
-
+        
+        <div id="demo">
+            <code>x &gt; 4 <i x-if="a.x > 4" transition="test">true </i></code>
+            <br>
+            <code>x &lt; 4 <i x-if="a.x < 4" transition="test">true </i></code>
+            <br>
+            x:<input x-model="a.x" >
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
             	state:{
             		aaa : 10,
 	                a : {

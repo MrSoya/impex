@@ -5,20 +5,20 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <p>
-            异步加载的远程组件
-        </p>
+        <div id="demo">
+            <p>
+                异步加载的远程组件
+            </p>
 
-        <x-button id="xbtn">
-        </x-button>
-
-        <p>
-            <x-button id="xbtn2">
-                按钮2{{times}}
+            <x-button id="xbtn">
             </x-button>
-        </p>
 
-        <!-- 需要服务器环境 -->
+            <p></p>
+                <x-button id="xbtn2">
+                    按钮2{{times}}
+                </x-button>
+            
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
         
@@ -26,7 +26,7 @@
             impex.component('x-button','x-button.html');
 
             //渲染
-            var debug = impex.render(document.body);
+            var debug = impex.render('#demo');
             
         </script>
     </body>

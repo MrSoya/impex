@@ -6,43 +6,34 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
         <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
         <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+        
     </head>
     <body>
-        <x-a .data:sync="data">
-            <x-b .value:sync="data.entity.name">
-                <x-c .value:sync="value" ></x-c>
-            </x-b>
-        </x-a>
-        
-        <button :click="change()">change</button>
+        <div id="demo">
+            <x-a .data="data">
+                <x-b .value="data.entity.name">
+                    <x-c .value="value" ></x-c>
+                </x-b>
+            </x-a>
+            
+            <button :click="change()">change</button>
+        </div>
         
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             impex.component('x-a',{
-                template:'<slot></slot>',
-                // onPropChange:function(changes){
-                    
-                //     console.log(changes,'x-a')
-                // }
+                template:'<div><slot></slot></div>'
             });
             impex.component('x-b',{
-                template:'<slot></slot>',
-                // onPropChange:function(changes){
-                    
-                //     console.log(changes,'x-b')
-                // }
+                template:'<div><slot></slot></div>'
             });
             impex.component('x-c',{
-                template:'<input value="{{value}}">',
-                // onPropChange:function(changes){
-                    
-                //     console.log(changes,'x-c')
-                // }
+                template:'<input .value="value">'
             });
             
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 state:{
                     data:{
                         entity:{
@@ -54,8 +45,6 @@
                     this.state.data = {entity:{name:2}};
                 }
             });
-
-            impex.useBasicRender();
         </script>
     </body>
 </html>

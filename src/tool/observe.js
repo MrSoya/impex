@@ -13,10 +13,10 @@
 		function observeData(handler,propChains,data,component){
 			if(data && data.__im__propChain)return data;
 
-			var t = data instanceof Array?[]:{};
+			var t = isArray(data)?[]:{};
 			for(var k in data){
 				var o = data[k];
-				if(typeof o === 'object' && o != null){
+				if(isObject(o)){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(handler,pcs,o,component);
@@ -26,7 +26,6 @@
 				}
 			}
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
 			
 			var p = new Proxy(t, handler);
 			Object.defineProperty(p,'__im__target',{enumerable: false,writable: false,value:t});
@@ -52,21 +51,20 @@
 				    	var v = value;
 				    	if(old === v)return true;
 
-				    	if(typeof v === 'object' && v !== null){
+				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
 				    		v = observeData(this,pcs,v,this.comp);
 				    	}
-				    	if(target instanceof Array){
+				    	if(isArray(target)){
 				    		setArray(target,name,v);
 				    	}else{
 					    	target[name] = v;
 				    	}
 
 				    	var path = target.__im__propChain;//.concat();
-				    	var xpath = target.__im__extPropChain;
 
-				    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
+				    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
 				    	ChangeHandler.handle(changeObj);
 				    	
@@ -75,16 +73,15 @@
 				    deleteProperty: function (target, name) {
 				    	var old = target[name];
 
-					    if(target instanceof Array){
+					    if(isArray(target)){
 				    		delArray(target,name);
 				    	}else{
 				    		delete target[name];
 				    	}
 
 					    var path = target.__im__propChain;//.concat();
-				    	var xpath = target.__im__extPropChain;
 
-					    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
+					    var changeObj = {object:target,name:name,pc:path,oldVal:old,comp:this.comp,type:'delete'};
 				    	ChangeHandler.handle(changeObj);
 
 					    return true;
@@ -104,7 +101,7 @@
 		function setter(k,v){
 			var old = this.__im__innerProps[k];
 			if(old)clearObserve(old);
-			if(typeof v === 'object'){
+			if(isObject(v)){
 	    		var pcs = this.__im__propChain.concat();
 				pcs.push(k);
 	    		v = observeData(pcs,v,this.__im__comp);
@@ -112,7 +109,6 @@
 			this.__im__innerProps[k] = v;
 
 			var path = this.__im__propChain;
-	    	var xpath = this.__im__extPropChain;
 	    	
 	    	handler([{
 	    		name:k,
@@ -125,7 +121,7 @@
 		function observeData(propChains,data,component){
 			if(data && data.__im__propChain)return data;
 			
-			var t = data instanceof Array?[]:{};
+			var t = isArray(data)?[]:{};
 
 			Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
 			var props = {};
@@ -135,7 +131,7 @@
 				if(!data.hasOwnProperty(k))continue;
 
 				var o = data[k];			
-				if(typeof o === 'object' && o != null){
+				if(isObject(o)){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(pcs,o,component);
@@ -159,7 +155,6 @@
 
 			Object.defineProperties(t,props);
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
 			Object.defineProperty(t,'__im__target',{enumerable: false,writable: false,value:t.__im__innerProps});
 			Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
 
@@ -219,7 +214,7 @@
 			}
 			if(i>-1){
 				observedObjects.splice(i,1);
-				if(typeof oo === 'object'){
+				if(isObject(oo)){
 					clearObserve(oo);
 				}
 			}
@@ -233,7 +228,6 @@
 				var name = change.name;
 				var target = change.target;
 				var path = target.__im__propChain;//.concat();
-		    	var xpath = target.__im__extPropChain;
 		    	var comp = target.__im__comp;
 		    	var old = change.oldVal;
 		    	var v = change.newVal;
@@ -243,7 +237,7 @@
 		    	if(type === 'add'){
 		    		snap[name] = v;
 		    		target.__im__innerProps[name] = v;
-		    		if(typeof v === 'object'){
+		    		if(isObject(v)){
 		    			var pc = path.concat();
 		    			pc.push(name);
 		    			target.__im__innerProps[name] = observeData(pc,v,comp);
@@ -264,7 +258,7 @@
 		    	}else 
 		    	if(type === 'delete'){
 		    		var obj = snap[name];
-		    		if(typeof obj === 'object'){
+		    		if(isObject(obj)){
 		    			clearObserve(obj);
 		    		}
 		    		delete snap[name];
@@ -273,7 +267,7 @@
 		    		continue;
 		    	}
 
-		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
+		    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:comp,type:type};
 		    	ChangeHandler.handle(changeObj);
 		    }
 		}

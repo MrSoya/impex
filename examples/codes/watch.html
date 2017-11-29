@@ -5,25 +5,30 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        watch用来对组件数据的特定表达式进行监控
-        <p>
-            a.b.x：{{a.b.x}}
-        </p>
-        <p>
-            b：{{b}}
-        </p>
-        <p>
-            a.b.c.list：{{a.b.c['list']}}
-        </p>
-        {{# info}}
-
-        <button :click="change()">修改数据</button>
-
+        <div id="demo">
+            watch用来对组件数据的特定表达式进行监控
+            <p>
+                a.b.x：{{a.b.x}}
+            </p>
+            <p>
+                b：{{b}}
+            </p>
+            <p>
+                a.b.c.list：{{a.b.c['list']}}
+            </p>
+            <button :click="change()">修改数据</button>
+            <div x-html="info">
+                内部所有东西都会被忽略
+                <x-b>
+                    <div>11221</div>
+                </x-b>
+            </div>            
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     a:{
                         b:{
@@ -42,14 +47,15 @@
                     this.state.x =23;
                 },
                 onCreate : function(){
-                    this.watch('a.b.x',function(){
-                        this.state.info += '<p>a.b.x change:'+JSON.stringify(arguments)+'</p>';
+                    this.watch('a.b.x',function(newVal,oldVal){
+                        this.state.info +=
+                         '<p>a.b.x change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.watch('b',function(){
-                        this.state.info += '<p>b change:'+JSON.stringify(arguments)+'</p>';
+                    this.watch('b',function(newVal,oldVal){
+                        this.state.info += '<p>b change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.watch('a.b.c.list',function(){
-                        this.state.info += '<p>a.b.c.list change:'+JSON.stringify(arguments)+'</p>';
+                    this.watch('a.b.c.list',function(newVal,oldVal){
+                        this.state.info += '<p>a.b.c.list change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
                 }
             });

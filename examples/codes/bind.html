@@ -5,24 +5,23 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        <a x-bind:href:title.validate="address">Hello impex ! <br/>website:{{address}}</a>
-        <p>
-            other address:<input type="text" x-model="address">
-        </p>
-
+        <div id="demo">
+            <a x-bind:href:title.validate="address">Hello impex ! <br/>website:{{address}}</a>
+            <p>
+                other address:<input type="text" x-model="address">
+            </p>
+        </div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 state:{
                     address:'https://github.com/MrSoya/impex'
                 },
-                methods:{
-                    validate:function (rs) {
-                        return rs.indexOf('http') === 0;
-                    }
+                validate:function (rs) {
+                    return rs.indexOf('http') === 0;
                 }
                 
             });

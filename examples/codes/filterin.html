@@ -7,20 +7,21 @@
         </style>
     </head>
     <body>
-        <div 
-        x-each="list2 as k,v => filterBy:filterKey:'name' |orderBy:orderKey:'desc'">
-        {{k}} {{v => json}}
+        <div id="demo">
+            <div x-for="list2 as v => filterBy:filterKey:'name' |orderBy:orderKey:'desc'">
+                {{$index}} {{v => json}}
+            </div>
+            <p>
+                name:<input type="text" x-model="filterKey" >
+            </p>
         </div>
-        <p>
-            name:<input type="text" x-model="filterKey" >
-        </p>
 
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 numFilter:function(item){
                     return item.p >2;
                 },

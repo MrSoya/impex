@@ -7,6 +7,7 @@
         <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
         <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
         <meta >
+    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     </head>
     <body>
         impex可以直接渲染命名组件
@@ -17,23 +18,66 @@
     impex.render(document.getElementById('demo'));
 </code>
 </pre>
-        <x-demo id="demo"></x-demo>
-    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    <div id="demo">
+        firstTextNode:{{start}}
+        <br>
+        <x-demo .pa="x">
+            <div>test</div>
+            <span slot="ss">content</span>
+        </x-demo>
+        <br>
+        <button :click="add()">add x</button>
+        
+        
+        lastTextNode:{{end}}
+    </div>
     <script type="text/javascript">
         impex.component('x-demo',{
-            template:'<div>name: {{impex}}\
-                        <p>\
-                            <button :click="attach()">click</button>\
-                        </p>\
+            template:'<div>parent x:[{{pa}}] + y:[{{y}}] = {{pa+y}}\
+                        <p></p>\
+                            <button :click="add()">add y</button>\
+                        <slot></slot>\
+                        <slot name="ss"></slot>\
                         </div>',
-            attach:function() {
-                this.state.impex += 'x';
+            add:function() {
+                this.state.y ++;
             },
             state:{
-                impex:'impex'
+                show:true,
+                y:100
             }
         });
-        impex.render(document.getElementById('demo'));
+        impex.render('#demo',{
+                add:function() {
+                    this.state.x ++;
+                    delete this.state.a.b.x;
+                },
+                onInit:function(){
+                    this.watch('a.b.x',function(){
+                        console.log(arguments)
+                    })
+                },
+                state:{
+                    show:true,
+                    x:10,
+                    y:20,
+                    a:{
+                        b:{
+                            x:10
+                        }
+                    },
+                    start:'the start',
+                    end:'the end'
+                }
+            });
+        buildFilterStr
+        //测试项
+        //1. 组件的正确解析 OK
+        //2. slot OK
+        //3. 父组件同步参数修改影响子组件 OK
+        //4. 渲染入口多个平行节点，包括文本节点 OK
+        //
+        //组件模板多个表达式解析出现问题 OK
     </script>
     </body>
 </html>

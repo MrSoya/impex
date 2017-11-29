@@ -5,23 +5,14 @@
                 font-size: 1.1em;
                 background-color: #52A7F1;
                 border-bottom: 3px solid #1463F3;
-                display: inline-block;
-            }
-            a{
-                display:inline-block;
                 color: #fff;
                 padding: 1em 3em;
-                background-color: transparent;
                 border:none;
+                display: inline-block;
             }
         </style>
-        <style type="text/css">
-            a{
-                border-right: 1px solid red;
-            }
-        </style>
-        <a>
-            <slot name="txt">按钮{{times}}</slot>
+        <a :pointerdown="tip($event)">
+            <slot>按钮{{times}}</slot>
         </a>
     </template>
     <!-- 模型  -->
@@ -29,7 +20,6 @@
         function component(){
             return {
                 onInit:function(){
-                    this.on('pointerup',this.tip);
                 },
                 tip : function(e){
                     console.log(e)
@@ -41,6 +31,8 @@
             };
         }
     </script>
+    <link href="core/components/menu.html" type="ss-menu" rel="impex" >
+    <link href="core/components/xxx.html" type="ss-xxx" rel="impex" >
     <!-- 单元测试  -->
     <x-button id="test">
         <span slot="txt" style="width:100px;color:#fff">

@@ -5,18 +5,19 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body >
-        <p>
-            在属性变更回调中如果覆盖onPropChange回调，就需要自己实现更新
-            <b>放开代码中的注释，尝试编写一个手动更新</b>
-        </p>
+        <div id="demo">
+            <p>
+                在属性变更回调中如果覆盖onPropChange回调，就需要自己实现更新
+                <b>放开代码中的注释，尝试编写一个手动更新</b>
+            </p>
 
-        <x-comp .content:sync="msg">
-        </x-comp>
+            <x-comp .content="msg">
+            </x-comp>
 
+            修改组件参数:<input type="text" x-model="msg">
+        </div>
         
 
-        修改组件参数:<input type="text" x-model="msg">
-        
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
         
@@ -33,14 +34,11 @@
             });
 
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     msg:'这是参数'
                 }
             });
-
-            //使用默认渲染或者 onPropChange 
-            impex.useBasicRender();
             
         </script>
     </body>

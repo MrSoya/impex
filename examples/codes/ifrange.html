@@ -10,42 +10,39 @@
         </style>
     </head>
     <body>
-        <template  .size:sync="size" x-each="[1,2] as i">
-            <template x-if="size>0">
+        <div id="demo">
+            <template x-for="[1,2] as i">
+                <template x-if="size>0">
+                    <div>
+                        line 1
+                    </div>
+                    <p>_____________________</p>
+                </template>
+            </template>
+            <template x-if="size>1">
                 <div>
-                    line 1
+                    line 2
                 </div>
                 <p>_____________________</p>
             </template>
-        </template>
-        
-        <template x-if="size>1">
-            <div>
-                line 2
-            </div>
-            <p>_____________________</p>
-        </template>
-
-        <template x-if="size>2">
-            <div>
-                line 3
-            </div>
-            <p>_____________________</p>
-        </template>
-
-
-        size:<input type="text" x-model="size" value="{{size}}">
-
+            <template x-if="size>2">
+                <div>
+                    line 3
+                </div>
+                <p>_____________________</p>
+            </template>
+            size:<input type="text" x-model="size" .value="size">
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 state:{
                     size : 1
                 }
             });
-            
+            buildFilterStr
         </script>
     </body>
 </html>

@@ -2,11 +2,210 @@
  * Store是一个基于impex的flux解决方案。用于处理大量共享状态需要交互的场景
  */
 !function(impex){
+	var RAF = (function(w){
+	    return  w.requestAnimationFrame       || 
+	            w.webkitRequestAnimationFrame ||
+	            w.msRequestAnimationFrame     ||
+	            w.mozRequestAnimationFrame    ||
+	            w.oRequestAnimationFrame      ||
+	            function(callback) {
+	                return w.setTimeout(function() {
+	                    callback(Date.now());
+	                },16.7);
+	            };
+	})(self);
+	function getter(k){
+		return this.__im__innerProps[k];
+	}
+	function setter(k,v){
+		var old = this.__im__innerProps[k];
+		clearObserve(old);
+		if(typeof v === 'object'){
+    		var pcs = this.__im__propChain.concat();
+			pcs.push(k);
+    		v = observeData(pcs,v,this.__im__comp);
+    	}
+		this.__im__innerProps[k] = v;
 
+		var path = this.__im__propChain;
+    	var xpath = this.__im__extPropChain;
+    	
+    	handler([{
+    		name:k,
+    		target:this,
+    		oldVal:old,
+    		newVal:v,
+    		type:'update'
+    	}],true);
+	}
+	function observeData(propChains,data,component){
+		if(data && data.__im__propChain)return data;
+		
+		var t = data instanceof Array?[]:{};
+
+		Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
+		var props = {};
+
+		var observeObj = {};
+		for(var k in data){
+			if(!data.hasOwnProperty(k))continue;
+
+			var o = data[k];			
+			if(typeof o === 'object'){
+				var pcs = propChains.concat();
+				pcs.push(k);
+				var tmp = observeData(pcs,o,component);
+				t.__im__innerProps[k] = tmp;
+			}else{
+				t.__im__innerProps[k] = o;
+			}
+
+			//设置监控属性
+			observeObj[k] = o;
+
+			!function(k){
+				props[k] = {
+					get:function(){return getter.call(this,k)},
+					set:function(v){setter.call(this,k,v)},
+					enumerable:true,
+					configurable:true
+				};
+			}(k);
+		}
+
+		Object.defineProperties(t,props);
+		Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
+		Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
+		Object.defineProperty(t,'__im__target',{enumerable: false,writable: false,value:t.__im__innerProps});
+		Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
+
+		var id = Date.now() + Math.random();
+		Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
+		observedObjects.push({snap:observeObj,now:t,id:id});
+
+		return t;
+	}
+	function clearObserve(obj){
+		var oo = null;
+		for(var i=observedObjects.length;i--;){
+			oo = observedObjects[i];
+			if(oo.id === obj.__im__oid)break;
+		}
+		if(i>-1){
+			observedObjects.splice(i,1);
+			if(typeof oo === 'object'){
+				clearObserve(oo);
+			}
+		}
+	}
+	function dirtyCheck(){
+		RAF(function(){
+			for(var i=observedObjects.length;i--;){
+				var obj = observedObjects[i];
+
+				var oldVer = obj.snap,
+					newVer = obj.now,
+					id = obj.id;
+
+				var changes = [];
+				for(var prop in oldVer){
+					if(!(prop in newVer)){
+						var change = {};
+						change.name = prop;
+						change.target = newVer;
+						change.oldVal = oldVer[prop];
+						change.snap = oldVer;
+						change.type = 'delete';
+						
+						changes.push(change);
+					}
+				}
+				for(var prop in newVer){
+					if(!(prop in oldVer)){
+						var change = {};
+						change.name = prop;
+						change.target = newVer;
+						change.newVal = newVer[prop];
+						change.snap = oldVer;
+						change.type = 'add';
+						
+						changes.push(change);
+					}
+				}
+				if(changes.length>0){
+					handler(changes);
+				}
+			}
+
+			dirtyCheck();
+		});
+	}
+	function handler(changes,fromSetter){
+		for(var i=changes.length;i--;){
+			var change = changes[i];
+
+			// console.log(change);
+
+			var name = change.name;
+			var target = change.target;
+			var path = target.__im__propChain;//.concat();
+	    	var xpath = target.__im__extPropChain;
+	    	var comp = target.__im__comp;
+	    	var old = change.oldVal;
+	    	var v = change.newVal;
+	    	var type = change.type;
+	    	var snap = change.snap;
+
+	    	if(type === 'add'){
+	    		snap[name] = v;
+	    		target.__im__innerProps[name] = v;
+	    		if(typeof v === 'object'){
+	    			var pc = path.concat();
+	    			pc.push(name);
+	    			target.__im__innerProps[name] = observeData(pc,v,comp);
+	    		}
+	    		!function(name,target){
+	    			Object.defineProperty(target,name,{
+	    				get:function(){
+	    					return getter.call(this,name)
+	    				},
+						set:function(v){
+							setter.call(this,name,v)
+						},
+						enumerable:true,
+						configurable:true
+	    			});
+	    		}(name,target);
+	    		
+	    	}else 
+	    	if(type === 'delete'){
+	    		var obj = snap[name];
+	    		if(typeof obj === 'object'){
+	    			clearObserve(obj);
+	    		}
+	    		delete snap[name];
+	    	}else if(!fromSetter){
+	    		console.log('无效update')
+	    		continue;
+	    	}
+
+	    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
+	    	Handler.handle(changeObj);
+	    }
+	}
+	var observedObjects = [];//用于保存监控对象
+	function observe(data,component){
+		if(data && data.__im__propChain)return data;
+
+		return observeData([],data,component);
+	}
+
+	dirtyCheck();
+
+	var lastAction = null;
 	/**
 	 * 变更处理器，处理所有变量变更
 	 */
-
 	var Handler = new function() {
 
 		function mergeChange(change){
@@ -14,8 +213,9 @@
 				var c = changeQ[i];
 				if(c.object.__im__oid === change.object.__im__oid && c.name === change.name)break;
 			}
-			if(i > -1)
+			if(i > -1){
 				changeQ.splice(i,1,change);
+			}
 			else{
 				changeQ.push(change);
 			}
@@ -27,6 +227,7 @@
 		var store = null;
 
 		this.handle = function (change){
+			change.actionType = lastAction;
 			if(combineChange){
 				mergeChange(change);
 			}else{
@@ -47,6 +248,7 @@
 						var type = change.type;
 						var name = change.name;
 						var object = change.object;
+						var actionType = change.actionType;
 
 						// console.log('处理变更',change);
 						
@@ -56,7 +258,9 @@
 							oldVal:oldVal,
 							path:pc,
 							type:type,
-							object:object};
+							object:object,
+							actionType:actionType
+						};
 
 						changes.push(c);
 					});//end for
@@ -83,7 +287,11 @@
 
 		this.echoMap = {};
 
-		impex.util.ext(this,data);
+		var keys = Object.keys(data);
+        for (var i=keys.length;i--;) {
+            var k = keys[i];
+            this[k] = data[k];
+        }
 
 		if(!this.actions)this.actions = {};
 
@@ -91,26 +299,27 @@
 			this.state = this.state.call(ins);
 		}
 
-		this.state = impex.Observer.observe(this.state,this,Handler.handle);
+		this.state = observe(this.state,this);
 	}
 
-	var lastAction = null;
+	
 
 	Store.prototype = {
 		/**
 		 * 监听action执行
 		 * @param  {String} type     action type
-		 * @param  {Function | Component} listener 监听回调或组件引用。
+		 * @param  {Function | Component} listener 监听回调或组件引用
+		 * @param {Object} context 参数/回调函数所属上下文。可以是组件、指令或者任何对象
 		 * 如果是组件引用，系统会自动更新组件对应由action执行引起的state变动
 		 */
-		on:function(type,listener){
+		on:function(type,listener,context){
 	        var ts = type.replace(/\s+/mg,' ').split(' ');
 	        for(var i=ts.length;i--;){
 	            var t = ts[i];
 	            var listeners = this.echoMap[t];
 	            if(!listeners)listeners = this.echoMap[t] = [];
 	            
-	            listeners.push(listener);
+	            listeners.push([listener,context]);
 	        }//end for
 	    },
 	    /**
@@ -131,7 +340,7 @@
 	            if(listeners){
 	                var toDel = [];
 	                for(var j=listeners.length;j--;){
-	                    if(listener?listeners[j] === listener:true){
+	                    if(listener?listeners[j][0] === listener:true){
 	                        toDel.push(listeners[j]);
 	                    }
 	                }
@@ -159,24 +368,41 @@
 
 	        var act = this.actions[action];
 	        act && act.apply(this,params);
+
+	        return this;
 		},
 		__update:function(changes){
-			// console.log(changes)
-
-			var action = lastAction;
-			var cbks = this.echoMap[action];
-
-			var meta = {type:action,changes:changes};
-
-			this.onUpdate && this.onUpdate(meta);
-
-			cbks.forEach(function(cbk){
-				if(cbk instanceof Function){
-					cbk(meta);
+			var actionTypes = [];
+			var actionMap = {};
+			changes.forEach(function(c){
+				if(actionTypes.indexOf(c.actionType)<0){
+					actionTypes.push(c.actionType);
+					actionMap[c.actionType] = [c];
 				}else{
-					setState(cbk,changes);
+					actionMap[c.actionType].push(c);
 				}
 			});
+
+			for(var i=actionTypes.length;i--;){
+				var action = actionTypes[i];
+				var cbks = this.echoMap[action];
+				var cs = actionMap[action];
+				var meta = {type:action,changes:cs};
+
+				this.onUpdate && this.onUpdate(meta);
+
+				if(cbks)
+				cbks.forEach(function(cbk){
+					var fn = cbk[0];
+					var context = cbk[1];
+					if(fn instanceof Function){
+						fn.call(context,meta);
+					}else{
+						setState(fn,cs);
+					}
+				});
+			}
+			
 		}
 	};
 
@@ -194,7 +420,7 @@
 			}else{
 				p = c.name;
 			}
-			comp.d(p,c.newVal);
+			comp.setState(p,c.newVal);
         });
 	}
 

@@ -21,20 +21,49 @@ impex.render(document.body,{
 });
 </code>
 </pre>
-    <div id="demo">
-        name: {{impex}}
-        <p>
-            <button :click="attach()">click</button>
-        </p>
-    </div>
+    <div id="demo"></div>
+    <script type="text/tmpl" id="tmpl">
+        <div x="10" x-style="{color:red?'red':'blue','font-size':fs+'px'}">
+            name: {{nameStr => cap|json}} xx:{{x=>json}}
+            <p>
+                <button :click="attach($event,1+x,atty())">click</button>
+            </p>
+            <input type="text" x-model="x.a">
+        </div>
+    </script>
     <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     <script type="text/javascript">
-        impex.render(document.getElementById('demo'), {
+        impex.filter('cap',function(v){
+            return v[0].toUpperCase() + v.substr(1);
+        });
+        impex.filter('round',function(v){
+            return v<10?15:v;
+        })
+        impex.renderTo(
+            document.getElementById('tmpl').innerText,
+            document.getElementById('demo'), {
             state:{
-                impex:'impex'
+                nameStr:'impex',
+                x:{a:1,b:2},
+                red:false,
+                fs:15 - Math.random()*10
+            },
+            onCompile:function(){
+                this.watch('nameStr',function(){
+                    console.log(arguments)
+                });
+                this.watch('x.a',function(){
+                    console.log(arguments)
+                });
+            },
+            onBeforeUpdate:function(){
+                // return false;
             },
             attach:function() {
-                this.state.impex += 'x';
+                this.state.nameStr += 'x';
+            },
+            atty:function(){
+                return 2;
             }
         });
     </script>

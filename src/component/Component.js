@@ -20,33 +20,24 @@
  * 
  * @class 
  */
-function Component () {
-	var id = 'C_' + im_counter++;
-	this.__id = id;
-	this.__state = Component.state.created;
-
-	Signal.call(this);
+function Component (el) {
+	this._uid = 'C_' + im_counter++;
 
 	/**
 	 * 对顶级元素的引用
 	 * @type {HTMLElement}
 	 */
-	this.el = null;
+	this.el = el;
 	/**
 	 * 对组件内的所有组件槽的引用
 	 * @type {Object}
 	 */
 	this.compSlots = {};
 	/**
-	 * 对子组件的引用
+	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
-	this.comps = {};
-	/**
-	 * 对组件内视图元素的引用
-	 * @type {Object}
-	 */
-	this.els = {};
+	this.refs = {};
 	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
@@ -66,15 +57,16 @@ function Component () {
 	 * @type {Array}
 	 */
 	this.children = [];
-	this.__expNodes = [];
-	this.__expDataRoot = new ExpData();
-	this.__eventMap = {};
-	this.__watchProps = [];
-	/**
-	 * 组件域内的指令列表
-	 * @type {Array}
-	 */
-	this.directives = [];
+	//watchs
+	this.__watchMap = {};
+	this.__watchFn;
+	this.__watchOldVal;
+	this.__watchPaths = [];
+	//syncs
+	this.__syncFn = {};
+	this.__syncOldVal = {};
+	this.__syncFnForScope = {};
+
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -84,94 +76,41 @@ function Component () {
 	//组件url
 	this.__url;
 	/**
-	 * 组件约束，用于定义组件的使用范围包括上级组件限制
-	 * <p>
-	 * {
-	 * 	parents:'comp name' | 'comp name1,comp name2,comp name3...',
-	 * 	children:'comp name' | 'comp name1,comp name2,comp name3...'
-	 * }
-	 * </p>
-	 * 这些限制可以单个或者同时出现
-	 * @type {Object}
-	 */
-	this.restrict;
-
-	/**
 	 * 组件数据
 	 * @type {Object}
 	 */
 	this.state = {};
 
-	impex._cs[this.__id] = this;
-
-	//bind exp
-	if(HTML_EXP_COMPILING){
-		CURRENT_HTML_EXP_LIST.push(this);
-	}
+	impex._cs[this._uid] = this;
 };
-Component.state = {
-	created : 'created',
-	inited : 'inited',
-	mounted : 'mounted',
-	unmounted : 'unmounted'
-};
-Util.inherits(Component,Signal);
-Util.ext(Component.prototype,{
+Component.prototype = {
 	/**
-	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
-	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
-	 * @param  {string} path 表达式路径
-	 * @param  {var} val  值
-	 * @return this
+	 * 设置组件状态值
+	 * @param {String} path 状态路径
+	 * @param {Object} v  
 	 */
-	d:function(path,val){
-		if(!path){
-			LOGGER.warn('invalid path \''+ path +'\'');
-			return;
-		}
-		var expObj = lexer(path);
-		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		if(arguments.length > 1){
-			if(Util.isObject(val) || Util.isArray(val)){
-				val = JSON.stringify(val);
-			}else 
-			if(Util.isString(val)){
-				val = '"'+val.replace(/\\/mg,'\\\\').replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
-			}
-			try{
-				eval(evalStr + '= '+ val);
-			}catch(e){
-				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
-			}
-			
-			return this;
-		}else{
-			try{
-				return eval(evalStr);
-			}catch(e){
-				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
-			}
-			
-		}
+	setState:function(path,v){
+		v = JSON.stringify(v);
+		var str = 'with(scope){'+path+'='+v+'}';
+		var fn = new Function('scope',str);
+		fn(this.state);
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
-	 * @param  {string} expPath 属性路径，比如a.b.c
-	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
+	 * @param  {String} path 属性路径，比如a.b.c
+	 * @param  {Function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
 	 */
-	watch:function(expPath,cbk){
-		var expObj = lexer(expPath);
-		var keys = Object.keys(expObj.varTree);
-		if(keys.length < 1)return;
-		if(keys.length > 1){
-			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
-			return;
+	watch:function(path,cbk){
+		this.__watchPaths.push(path);
+		var str = '';
+		for(var i=this.__watchPaths.length;i--;){
+			var p = this.__watchPaths[i];
+			str += ','+JSON.stringify(p)+':'+p;
 		}
-		
-		var varObj = expObj.varTree[keys[0]];
-		var watch = new Watch(cbk,this,varObj.segments);
-		//监控变量
-		Builder.buildExpModel(this,varObj,watch);
+		str = str.substr(1);
+		var fn = this.__watchFn = new Function('scope','with(scope){return {'+str+'}}');
+		this.__watchOldVal = fn(this.state);
+		this.__watchMap[path] = cbk;
 
 		return this;
 	},
@@ -180,230 +119,58 @@ Util.ext(Component.prototype,{
 	 * @param  {Array} nodes 需要编译的顶级节点数组
 	 */
 	compile:function(nodes){
-		Scanner.scan(nodes,this);
-		Builder.build(this);
+		// Scanner.scan(nodes,this);
+		// Builder.build(this);
 
-		//init children
-		for(var i = this.children.length;i--;){
-			this.children[i].init();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].init();
-		}
-	},
-	/**
-	 * 添加子组件到父组件
-	 * @param {Component} child 子组件
-	 */
-	add:function(child){
-		this.children.push(child);
-		child.parent = this;
-	},
-	/**
-	 * 创建一个未初始化的子组件
-	 * @param  {HTMLElement} el 视图
-	 * @return {Component} 子组件
-	 */
-	createSubComponentOf:function(el){
-		var instance = ComponentFactory.newInstanceOf(el.tagName.toLowerCase(),el);
-		this.children.push(instance);
-		instance.parent = this;
-
-		return instance;
-	},
-	/**
-	 * 创建一个匿名子组件
-	 * @param  {Array<HTMLElement>} els 视图
-	 * @return {Component} 子组件
-	 */
-	createSubComponent:function(els){
-		var instance = ComponentFactory.newInstance(els);
-		this.children.push(instance);
-		instance.parent = this;
-
-		return instance;
-	},
-	/**
-	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
-	 */
-	init:function(){
-		if(this.__state !== Component.state.created)return;
-
-		if(this.__url){
-			var that = this;
-			Util.loadComponent(this.__url,function(data){
-				var tmpl = data[0];
-				that.template = tmpl;
-				var model = data[1];
-				model.template = tmpl;
-				//cache
-				ComponentFactory.register(that.name,model);
-				ComponentFactory.initInstanceOf(that.name,that);
-
-				//init
-				ComponentFactory.parse(tmpl,that);
-				that.__url = null;
-				that.__init();
-				that.mount();
-			});
-			
-		}else{
-			if(this.template){
-				ComponentFactory.parse(this.template,this);
-			}
-			this.__init();
-		}
-		return this;
-	},
-	__init:function(){
-		Scanner.scan(this.__nodes,this);
-		// if(this.__offscreen)
-		// 	Scanner.scan(this.__offscreen,this);
-
-		LOGGER.log(this,'inited');
-
-		//observe state
-		this.state = Observer.observe(this.state,this);
-
-		Builder.build(this);
-
-		this.__state = Component.state.inited;
-
-		if(this.onInit){
-			var services = ComponentFactory.getServices(this,this.name);
-			
-			services ? this.onInit.apply(this,services) : this.onInit();
-		}
-
-		//init children
-		for(var i = this.children.length;i--;){
-			this.children[i].init();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].init();
-		}
-		
-	},
-	/**
-	 * 挂载组件到组件树上
-	 */
-	mount:function(){
-		if(this.__state === Component.state.mounted)return;
-		if(this.__state === Component.state.created)return;
-
-		if(this.__state === Component.state.unmounted && this.__target){
-			DOMHelper.replace(this.__target,this.__nodes);
-			return;
-		}
-
-		Renderer.render(this);
-
-		this.__state = Component.state.mounted;
-		LOGGER.log(this,'mounted');
-
-		//els
-		this.__nodes.forEach(function(el){
-			if(!el.querySelectorAll)return;
-			var els = el.querySelectorAll('*['+ATTR_REF_TAG+']');
-			for(var i=els.length;i--;){
-				var node = els[i];
-				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
-			}
-		},this);
-		
-
-		//mount children
-		for(var i = 0;i<this.children.length;i++){
-			if(!this.children[i].templateURL)
-				this.children[i].mount();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].active();
-		}
-
-		//to DOM
-		// if(this.__offscreen){
-		// 	this.el.innerHTML = '';
-		// 	DOMHelper.attach(this.el,this.__offscreen);
-		// 	this.__offscreen = null;
+		// //init children
+		// for(var i = this.children.length;i--;){
+		// 	this.children[i].init();
 		// }
-		
-		this.onMount && this.onMount();
+
+		// for(var i = this.directives.length;i--;){
+		// 	this.directives[i].init();
+		// }
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.__state === null)return;
-
-		LOGGER.log(this,'unmount');
-
 		this.onDestroy && this.onDestroy();
 
 		if(this.parent){
-			//check parent watchs
-			var index = -1;
-			var props = this.parent.__watchProps;
-			while(true){
-				index = -1;
-				for(var i=props.length;i--;){
-					var prop = props[i];
-					if(prop.subComp === this){
-						index = i;
-						break;
-					}
-				}
-				if(index > -1){
-					props.splice(index,1);
-					continue;
-				}
-				break;
-			}
-			
-
-
-			index = this.parent.children.indexOf(this);
+			this.parent.__syncFn[this._uid] = null;
+			this.parent.__syncOldVal[this._uid] = null;
+			this.parent.__syncFnForScope[this._uid] = null;
+			delete this.parent.__syncFn[this._uid];
+			delete this.parent.__syncOldVal[this._uid];
+			delete this.parent.__syncFnForScope[this._uid];
+			var index = this.parent.children.indexOf(this);
 			if(index > -1){
 				this.parent.children.splice(index,1);
 			}
 			this.parent = null;
 		}
-		
-		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
 			this.children[0].destroy();
 		}
 
-		for(var i = this.directives.length;i--;){
-			this.directives[i].destroy();
-		}
-
-		this.__expDataRoot.release();
-
 		this.children = 
-		this.directives = 
-		this.__expNodes = 
-		this.__expDataRoot = null;
+		impex._cs[this._uid] = null;
+		delete impex._cs[this._uid];
 
-		impex._cs[this.__id] = null;
-		delete impex._cs[this.__id];
-
-		this.els = 
+		this.refs = 
 		this.compSlots = 
-		this.__eventMap = 
 		this.__nodes = 
-		this._signalMap = 
-		this.__watchProps = 
-		this.__state = 
-		this.__id = 
+		this.__syncFn = 
+		this._uid = 
+
 		this.__url = 
 		this.template = 
-		this.restrict = 
 		this.state = null;
+	},
+	remount:function(){
+
 	},
 	/**
 	 * 卸载组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -412,15 +179,9 @@ Util.ext(Component.prototype,{
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
 	unmount:function(hook){
-		if(this.__state !== Component.state.mounted)return;
-
-		LOGGER.log(this,'unmounted');
-		
 		this.__unmount(this,hook===false?false:true);
 
 		this.onUnmount && this.onUnmount();
-
-		this.__state = Component.state.unmounted;
 	},
 	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
@@ -434,155 +195,461 @@ Util.ext(Component.prototype,{
 				this.__nodes[i].parentNode.removeChild(this.__nodes[i]);
 		}
 	},
-	__getPath:function(){
-		return 'impex._cs["'+ this.__id +'"]';
-	},
-	__update:function(changes){
-		var renderable = true;
-		var expNodes = [];
-		var watchs = [];
-		var attrObserveNodes = [];
-		for(var i=changes.length;i--;){
-			var c = changes[i];
-			var expProps = c.expProps;
-			c.expProps = null;
-			for(var k=expProps.length;k--;){
-				var ens = expProps[k].expNodes;
-				for(var j=ens.length;j--;){
-					var en = ens[j];
-					if(expNodes.indexOf(en) < 0)expNodes.push(en);
-				}
-				var aons = expProps[k].attrObserveNodes;
-				for(var j=aons.length;j--;){
-					var aon = aons[j];
-					if(attrObserveNodes.indexOf(aon) < 0)attrObserveNodes.push(aon);
-				}
-				var ws = expProps[k].watchs;
-				for(var j=ws.length;j--;){
-					var w = ws[j];
-					if(watchs.indexOf(w) < 0)watchs.push([w,c]);
-				}
+	onPropChange : function(newProps,oldProps){
+		for(var k in newProps){
+			var v = newProps[k];
+			if(isObject(v)){
+				var copy = v instanceof Array?[]:{};
+				this.state[k] = Object.assign(copy,v);
+			}else if(v !== this.state[k]){
+				this.state[k] = v;
 			}
 		}
-		if(this.onUpdate){
-			renderable = this.onUpdate(changes);
+    }
+};
+
+/*********	component handlers	*********/
+//////	init flow
+function buildOffscreenDOM(vnode,comp){
+	var n,cid = comp._uid;
+	if(isUndefined(vnode.txt)){
+		n = document.createElement(vnode.tag);
+		n._vid = vnode.vid;
+		vnode._cid = cid;
+
+		if(!vnode._comp){//component dosen't exec directive
+			//directive init
+			var dircts = vnode._directives;
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var dName = di[1][0];
+					var d = DIRECT_MAP[dName];
+					if(!d)return;
+					
+					var params = di[1][1];
+					var v = di[2];
+					var exp = di[3];
+					d.onBind && d.onBind(vnode,{comp:comp,value:v,args:params,exp:exp});
+				});
+			}
 		}
-		//render view
-		if(renderable !== false){
-			Renderer.renderExpNodes(expNodes);
+
+		for(var k in vnode.attrNodes){
+			if(k[0] === BIND_AB_PRIFX)continue;
+			n.setAttribute(k,vnode.attrNodes[k]);
+		}
+
+		if(vnode.attrNodes[ATTR_REF_TAG]){
+			comp.refs[vnode.attrNodes[ATTR_REF_TAG]] = n;
 		}
 		
-		this.__updateDirective(attrObserveNodes);
-
-		this.__callWatchs(watchs);
-
-		//update children props
-		this.__updateChildrenProps(changes);
-	},
-	__updateChildrenProps:function(changes){
-		var matchMap = {};
-		for(var i=changes.length;i--;){
-			var change = changes[i];
-			var path = change.path;
-			this.__watchProps.forEach(function(prop){
-				var k = this.__isVarMatch(prop.segments,path);
-				if(k<0)return;
-				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = {};
-
-				//duplicate check
-				var list = matchMap[prop.subComp.__id][prop.name];
-				if(list !== undefined)return;
-
-				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id][prop.name] = {
-					name:prop.name,
-					val:rs
-				};
-			},this);
-		}
-		for(var k in matchMap){
-			var cs = matchMap[k];
-			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
-		}
-	},
-	__isVarMatch:function(segments,changePath){
-		for(var k=0;k<segments.length;k++){
-			if(!changePath[k])break;
-
-			if(segments[k][0] !== '[' && 
-				changePath[k][0] !== '[' && 
-				segments[k] !== changePath[k]){
-				return -1;
+		if(vnode._comp){
+			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attrNodes);
+			vnode._comp = c;
+		}else{
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					var c = buildOffscreenDOM(vnode.children[i],comp);
+					n.appendChild(c);
+				}
 			}
 		}
-		return k;
-	},
-	__callWatchs:function (watchs){
-		var invokedWatchs = [];
-		for(var i=watchs.length;i--;){
-			var change = watchs[i][1];
-			var watch = watchs[i][0];
-
-			var newVal = change.newVal;
-			var oldVal = change.oldVal;
-			var name = change.name;
-			var object = change.object;
-			var propChain = change.path.concat();
-			if(!Util.isArray(object))
-				change.path.pop();
-			var changeType = change.type;
-
-			if(watch.segments.length < propChain.length)continue;
-			if(invokedWatchs.indexOf(watch) > -1)continue;
-
-			//compare segs
-			var k = this.__isVarMatch(watch.segments,propChain);
-
-			if(k > -1){
-				var matchLevel = change.path.length+1 - watch.segments.length;
-				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,newVal,oldVal,change.path,matchLevel);
-				invokedWatchs.push(watch);
-			}
-		}
-	},
-	__updateDirective:function (attrObserveNodes){
-		for(var j=attrObserveNodes.length;j--;){
-			var aon = attrObserveNodes[j];
-
-			var rs = Renderer.evalExp(aon.directive.component,aon.expObj);
-			aon.directive.onUpdate(rs);
-		}
-	},
-	__childPropChange:function(changes){
-		this.onPropChange && this.onPropChange(changes);
 		
-		var matchMap = {};
-		//update props
-		for(var k in changes){
-			var c = changes[k];
-			var name = c.name;
+	}else{
+		n = document.createTextNode(filterEntity(vnode.txt));
+	}
+	vnode.dom = n;
+	return n;
+}
+function filterEntity(str){
+	return str.replace?str.replace(/&lt;/img,'<').replace(/&gt;/img,'>'):str;
+}
 
-			//check children which refers to props
-			this.__watchProps.forEach(function(prop){
-				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = {};
+function callDirectiveUpdate(vnode,comp){
+	if(isUndefined(vnode.txt)){
+		if(!vnode._comp){//component dosen't exec directive
+			//directive init
+			var dircts = vnode._directives;
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var dName = di[1][0];
+					var d = DIRECT_MAP[dName];
+					if(!d)return;
+					
+					var params = di[1][1];
+					var v = di[2];
+					var exp = di[3];
+					d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+				});
+			}
 
-				//duplicate check
-				var list = matchMap[prop.subComp.__id][prop.name];
-				if(list !== undefined)return;
-
-				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id][prop.name] = {
-					name:prop.name,
-					val:rs
-				};
-			},this);
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					callDirectiveUpdate(vnode.children[i],comp);
+				}
+			}//end if
+		}//end if
+	}
+}
+/**
+ * parse component template & to create vdom
+ */
+function parseComponent(comp){
+	if(comp.__url){
+		loadComponent(comp.name,comp.__url,function(model,css){
+			COMP_MAP[comp.name] = model;
+			ext(model,comp);
+			preCompile(comp.template,comp);
+			
+			//css
+			if(css){
+				var cssStr = scopeStyle(comp.name,css);
+				if(!COMP_CSS_MAP[comp.name]){
+					//attach style
+					if(cssStr.trim().length>0){
+						var target = document.head.children[0];
+						if(target){
+							target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
+						}else{
+							document.head.innerHTML = '<style>'+cssStr+'</style>';
+						}
+					}
+					COMP_CSS_MAP[comp.name] = true;	
+				}
+			}
+			comp.__url = null;
+			compileComponent(comp);
+			mountComponent(comp);
+		});
+	}else{
+		if(comp.template){
+			preCompile(comp.template,comp);
 		}
-
-		for(var k in matchMap){
-			var cs = matchMap[k];
-			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
+		compileComponent(comp);
+	}
+}
+function preCompile(tmpl,comp){
+	if(comp.onBeforeCompile)
+        tmpl = comp.onBeforeCompile(tmpl);
+    
+    comp.compiledTmp = tmpl = tmpl.replace(/^\s+|\s+$/img,'').replace(/>\s([^<]*)\s</,function(a,b){
+            return '>'+b+'<';
+    });
+}
+function doSlot(slotList,slots,slotMap){
+	if(slots || slotMap)
+		slotList.forEach(function(slot){
+			var parent = slot[0];
+			var node = slot[1];
+			var name = slot[2];
+			//update slot position everytime
+			var pos = parent.children.indexOf(node);
+			var params = [pos,1];
+			
+			if(name){
+				params.push(slotMap[name]);
+			}else{
+				params = params.concat(slots);
+			}
+			parent.children.splice.apply(parent.children,params);
+		});
+}
+function scopeStyle(host,style){
+	style = style.replace(/\n/img,'').trim()//.replace(/:host/img,host);
+	var isBody = false;
+	var selector = '';
+	var body = '';
+	var lastStyle = {};
+	var styles = [];
+	for(var i=0;i<style.length;i++){
+		var c = style[i];
+		if(isBody){
+			if(c === '}'){
+				isBody = false;
+				lastStyle.body = body.trim();
+				selector = '';
+				styles.push(lastStyle);
+				lastStyle = {};
+			}
+			body += c;
+		}else{
+			if(c === '{'){
+				isBody = true;
+				lastStyle.selector = selector.trim();
+				body = '';
+				continue;
+			}
+			selector += c;
 		}
 	}
-});
+
+	var css = '';
+	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
+	styles.forEach(function(style){
+		var parts = style.selector.split(',');
+		var tmp = '';
+		for(var i=0;i<parts.length;i++){
+			var name = parts[i].trim();
+			
+			if(name.indexOf(':host')===0){
+				tmp += ','+name.replace(/:host/,host);
+			}else{
+				tmp += ','+host + ' ' + name;
+			}
+		}
+		tmp = tmp.substr(1);
+		css += tmp + '{'+style.body+'}';
+	});
+
+	return css;
+}
+function compileComponent(comp){
+	var vnode = buildVDOMTree(comp);
+	var pv = null;
+	if(comp.vnode){
+		pv = comp.vnode.parent;
+		var cs = pv.children;
+		var i = cs.indexOf(comp.vnode);
+		if(i>-1){
+			cs.splice(i,1,vnode);
+		}
+	}
+	comp.vnode = vnode;
+	vnode.parent = pv;
+
+	//observe state
+	comp.state = Observer.observe(comp.state,comp);
+
+	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
+}
+/**
+ * 准备挂载组件到页面
+ */
+function mountComponent(comp,parentVNode){
+	var dom = buildOffscreenDOM(comp.vnode,comp);
+
+	//beforemount
+	comp.onBeforeMount && comp.onBeforeMount(dom);
+	comp.el.parentNode.replaceChild(dom,comp.el);
+	comp.el = dom;
+
+	//init children
+	for(var i = comp.children.length;i--;){
+		parseComponent(comp.children[i]);
+	}
+	//mount children
+	for(var i = 0;i<comp.children.length;i++){
+		if(!comp.children[i].__url)
+			mountComponent(comp.children[i],comp.vnode);
+	}
+	if(comp.name){
+		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
+		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
+	}
+	comp.onMount && comp.onMount(comp.el);
+
+	comp.vnode.parent = parentVNode;
+
+	callDirectiveUpdate(comp.vnode,comp);
+}
+
+//////	update flow
+function updateComponent(comp,changes){
+	var renderable = true;
+	var syncPropMap = {};
+	
+	if(comp.onBeforeUpdate){
+		renderable = comp.onBeforeUpdate(changes);
+	}
+	if(renderable === false)return;
+
+	//rebuild VDOM tree
+	var vnode = buildVDOMTree(comp);
+	comp.onCompile && comp.onCompile(vnode);
+
+	//diffing
+	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
+
+	//call watchs
+	if(comp.__watchFn){
+		var newVal = comp.__watchFn(comp.state);
+		for(var k in newVal){
+			var nv = newVal[k];
+			var ov = comp.__watchOldVal[k];
+			if(nv !== ov){
+				comp.__watchMap[k].call(comp,nv,ov);
+			}
+		}
+		comp.__watchOldVal = newVal;
+	}	
+
+	//update children props
+	for(var uid in comp.__syncFn){
+		var changeProps = {};
+		var args = [comp.state];
+		if(forScopeQ[uid])comp.__syncFnForScope[uid] = forScopeQ[uid];
+		var sfs = comp.__syncFnForScope[uid];
+	    if(sfs)
+	        for(var i=0;i<sfs.length;i++){
+	            args.push(sfs[i]);
+	        }
+		var rs = comp.__syncFn[uid].apply(comp,args);
+		impex._cs[uid].onPropChange && impex._cs[uid].onPropChange(rs,comp.__syncOldVal[uid]);
+		comp.__syncOldVal[uid] = rs;
+	}
+
+	comp.onUpdate && comp.onUpdate();
+
+	callDirectiveUpdate(comp.vnode,comp);
+}
+
+
+
+function newComponent(tmpl,el,param){
+	var c = new Component(el);
+	c.compiledTmp = tmpl;
+	if(param){
+		ext(param,c);
+
+		if(isFunction(param.state)){
+			c.state = param.state.call(c);
+		}
+	}
+	
+	return c;
+}
+function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
+	var param = COMP_MAP[type];
+	var c = new Component(el);
+	c.name = type;
+	//bind parent
+	parent.children.push(c);
+	c.parent = parent;
+	c.vnode = vnode;
+	//ref
+	if(attrs[ATTR_REF_TAG]){
+		parent.refs[attrs[ATTR_REF_TAG]] = c;
+	}
+	//global
+	if(attrs[ATTR_G_TAG]){
+		impex.g[attrs[ATTR_G_TAG]] = c;
+	}
+
+	if(isString(param)){
+		c.__url = param;
+		return c;
+	}
+	if(param){
+		ext(param,c);
+		
+		if(isFunction(param.state)){
+			c.state = param.state.call(c);
+		}else if(param.state){
+			c.state = {};
+			ext(param.state,c.state);
+		}
+	}
+	c.compiledTmp = param.template;
+	c.__slots = slots;
+	c.__slotMap = slotMap;
+	
+	bindProps(c,parent,attrs);
+	
+	return c;
+}
+
+function bindProps(comp,parent,parentAttrs){
+	//check props
+	var requires = {};
+	var propTypes = comp.propTypes;
+	if(propTypes){
+		for(var k in propTypes){
+			var type = propTypes[k];
+			if(type.require){
+				requires[k] = type;
+			}
+		}
+	}
+
+	if(parentAttrs){
+		handleProps(parentAttrs,comp,parent,propTypes,requires);
+	}
+
+	//check requires
+	var ks = Object.keys(requires);
+	if(ks.length > 0){
+		error("props ["+ks.join(',')+"] of component["+comp.name+"] are required");
+		return;
+	}
+}
+function handleProps(parentAttrs,comp,parent,propTypes,requires){
+	var str = '';
+	for(var k in parentAttrs){
+		var v = parentAttrs[k];
+		if(k == ATTR_REF_TAG){
+			continue;
+		}
+		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+		// xxxx
+		if(k[0] !== PROP_TYPE_PRIFX){
+			if(propTypes && k in propTypes){
+				delete requires[k];
+				checkPropType(k,v,propTypes,comp);
+			}
+			comp.state[k] = v;
+			continue;
+		}
+
+		// .xxxx
+		var n = k.substr(1);
+		str += ','+JSON.stringify(n)+':'+v;
+		
+		if(propTypes && n in propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,comp);
+		}
+		if(rs instanceof Function){
+			comp[n] = rs.bind(parent);
+			continue;
+		}
+	}//end for
+	str = str.substr(1);
+	var forScopeStart = '',forScopeEnd = '';
+	var vn = comp.vnode;
+	var args = [parent.state];
+	var sfs = parent.__syncFnForScope[comp._uid] = [];
+    if(vn._forScopeQ)
+        for(var i=0;i<vn._forScopeQ.length;i++){
+            forScopeStart += 'with(arguments['+(1+i)+']){';
+            forScopeEnd += '}';
+            args.push(vn._forScopeQ[i]);
+            sfs.push(vn._forScopeQ[i]);
+        }
+	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
+	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+	if(comp.onPropBind){
+		comp.onPropBind(rs);
+	}else{
+		for(var k in rs){
+			var v = rs[k];
+			if(v instanceof Function){
+				comp[k] = v;
+			}else{
+				comp.state[k] = v;
+			}
+		}
+	}//end if	
+}
+
+function checkPropType(k,v,propTypes,component){
+	if(!propTypes[k] || !propTypes[k].type)return;
+	var checkType = propTypes[k].type;
+	checkType = checkType instanceof Array?checkType:[checkType];
+	var vType = typeof v;
+	if(v instanceof Array){
+		vType = 'array';
+	}
+	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+		error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+	}
+}

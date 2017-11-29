@@ -287,7 +287,11 @@
 
 		this.echoMap = {};
 
-		impex.util.ext(this,data);
+		var keys = Object.keys(data);
+        for (var i=keys.length;i--;) {
+            var k = keys[i];
+            this[k] = data[k];
+        }
 
 		if(!this.actions)this.actions = {};
 
@@ -416,7 +420,7 @@
 			}else{
 				p = c.name;
 			}
-			comp.d(p,c.newVal);
+			comp.setState(p,c.newVal);
         });
 	}
 

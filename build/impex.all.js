@@ -7,125 +7,101 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-9-24
+ * last build: 2017-11-29
  */
 !function (global) {
 	'use strict';
 /**
- * 工具类，为系统提供基础服务
- * 该类来自于soya2d.js
+ * utils
  */
-var Util = new function () {
-	/**
-     * 继承
-     * @param {function} child 子类
-     * @param {function} parent 父类
-     */
-	this.inherits = function(child,parent){
-        child.prototype = Object.create(parent.prototype);
-        child.prototype.constructor = child;
-        child.prototype._super = parent.prototype;
-	}
-
-    this.ext = function(to,from){
+    function ext(from,to){
         var keys = Object.keys(from);
         for (var i=keys.length;i--;) {
             var k = keys[i];
             to[k] = from[k];
         }
     }
-
-    this.isObject = function(obj){
+    function isObject(obj){
         return typeof(obj) === 'object' && obj !== null;
     }
-
-    /**
-     * 验证对象是不是数组
-     * @param  {Object}  obj 
-     * @return {Boolean}
-     */
-    this.isArray = function(obj){
+    function isArray(obj){
         return obj instanceof Array;
     }
-
-    this.isString = function(obj){
-        return typeof(obj) === 'string';
+    function isString(obj){
+        return typeof obj === 'string';
     }
-
-    this.isUndefined = function(obj){
+    function isUndefined(obj){
         return obj === undefined;
     }
-
-    this.isFunction = function(obj){
+    function isFunction(obj){
         return obj instanceof Function;
     }
 
-    var compiler = document.createElement('div');
-
-    this.isDOMStr = function(template){
-        compiler.innerHTML = template;
-        if(compiler.children[0])return true;
-        return false;
-    }
-
-    /**
-     * 验证对象是不是DOM节点
-     * @param  {Object}  obj 
-     * @type {Boolean}
-     */
-    this.isDOM = typeof HTMLElement === 'object' ?
-                function(obj){
-                    return obj instanceof HTMLElement;
-                } :
-                function(obj){
-                    return obj && typeof obj === 'object' && obj.nodeType && typeof obj.nodeName === 'string';
-                }
-
     function loadError(){
-        LOGGER.error('can not fetch remote data of : '+this.url);
+        error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        LOGGER.error('load timeout : '+this.url);
+        error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
             var txt = this.responseText;
-            compiler.innerHTML = txt;
-            var tmpl = compiler.querySelector('template').innerHTML;
-            var comp = compiler.querySelector('script#impex').innerHTML;
-            var links = compiler.querySelectorAll('link[rel="impex"]');
+            var obj = requirements[this.url];
+            var cbks = obj.cbks;
+            var name = obj.name;
 
-            //register requires
-            for(var i=links.length;i--;){
-                var lk = links[i];
-                var type = lk.getAttribute('type');
-                var href = lk.getAttribute('href');
-                impex.component(type,href);
+            txt = txt.replace(/<!--[\s\S]*?-->/mg,'').trim();
+            txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
+            var tmpl = RegExp.$1;
+            if(!tmpl){
+                error('can not find tag <template> in component file');
+                return;
             }
 
-            var cbks = requirements[this.url];
+            var css = '';
+            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
+                css += b;
+                return '';
+            });
+
+            txt.match(/<\s*script[^<>]*\s*id\s*=\s*['"]impex['"][^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
+            var modelStr = RegExp.$1;
+            var links = txt.match(/<link[^<>]+rel\s*=\s*['"]impex['"][^<>]+>/img);
+            var registerComp = {};
+            for(var i=links.length;i--;){
+                var tmp = links[i];
+                tmp.match(/href=['"](.*?)['"]/)[0];
+                var href = RegExp.$1;
+                tmp.match(/type=['"](.*?)['"]/)[0];
+                var type = RegExp.$1;
+                registerComp[type] = href;
+            }
+
+            var model = new Function('return ('+modelStr+')()')();
+
+            //register
+            for(var k in registerComp){
+                impex.component(k,registerComp[k]);
+            }
+
+            model.template = tmpl.trim();
+            
             var url = this.url;
             cbks.forEach(function(cbk){
-                var __impex_comp_eval = null;
-                var evl = eval;
-                evl('__impex_comp_eval = '+comp);//scope call
-                if(!window.__impex_comp_eval)
-                    LOGGER.error('can not find component defination of : '+url);
-                var data = window.__impex_comp_eval();
-                cbk([tmpl,data]);
+                cbk(model,css.trim());
             });
             requirements[this.url] = null;
         }
     }
 
     var requirements = {};
-    this.loadComponent = function(url,cbk,timeout){
+    function loadComponent(name,url,cbk,timeout){
         if(!requirements[url]){
-            requirements[url] = [];
-            requirements[url].push(cbk);
+            requirements[url] = {name:name,cbks:[]};
+            requirements[url].cbks.push(cbk);
         }else{
-            requirements[url].push(cbk);
+            requirements[url].cbks.push(cbk);
             return;
         }        
 
@@ -139,47 +115,9 @@ var Util = new function () {
         }else{
             xhr.onreadystatechange = onload;
         }
-        // xhr.cbk = cbk;
         xhr.url = url;
         xhr.send(null);
     }
-
-    this.immutable = function(v){
-        if(typeof v === 'object'){
-            var o = JSON.parse(JSON.stringify(v));
-            return o;
-        }
-        return v;
-    }
-
-
-    this.compileViewOf = function(component,__nodes){
-        var data = Scanner.scan(__nodes,component);
-        //link exp & obj
-        Builder.link(component,data.exps);
-        //render exps
-        Renderer.renderExpNodes(data.exps);
-        //init children
-        var children = data.comps;
-        for(var i = children.length;i--;){
-            children[i].init();
-        }
-        //init directs
-        var directs = data.directs;
-        for(var i = directs.length;i--;){
-            directs[i].init();
-        }
-        //display children
-        for(var i = 0;i<children.length;i++){
-            if(!children[i].__url)
-                children[i].mount();
-        }
-        //active directs
-        for(var i = directs.length;i--;){
-            directs[i].active();
-        }
-    }
-}
 	var Observer = null;
 	window.Proxy && !function(){
 		function setArray(ary,index,value){
@@ -195,10 +133,10 @@ var Util = new function () {
 		function observeData(handler,propChains,data,component){
 			if(data && data.__im__propChain)return data;
 
-			var t = data instanceof Array?[]:{};
+			var t = isArray(data)?[]:{};
 			for(var k in data){
 				var o = data[k];
-				if(typeof o === 'object' && o != null){
+				if(isObject(o)){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(handler,pcs,o,component);
@@ -208,7 +146,6 @@ var Util = new function () {
 				}
 			}
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
 			
 			var p = new Proxy(t, handler);
 			Object.defineProperty(p,'__im__target',{enumerable: false,writable: false,value:t});
@@ -234,21 +171,20 @@ var Util = new function () {
 				    	var v = value;
 				    	if(old === v)return true;
 
-				    	if(typeof v === 'object' && v !== null){
+				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
 				    		v = observeData(this,pcs,v,this.comp);
 				    	}
-				    	if(target instanceof Array){
+				    	if(isArray(target)){
 				    		setArray(target,name,v);
 				    	}else{
 					    	target[name] = v;
 				    	}
 
 				    	var path = target.__im__propChain;//.concat();
-				    	var xpath = target.__im__extPropChain;
 
-				    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
+				    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
 				    	ChangeHandler.handle(changeObj);
 				    	
@@ -257,16 +193,15 @@ var Util = new function () {
 				    deleteProperty: function (target, name) {
 				    	var old = target[name];
 
-					    if(target instanceof Array){
+					    if(isArray(target)){
 				    		delArray(target,name);
 				    	}else{
 				    		delete target[name];
 				    	}
 
 					    var path = target.__im__propChain;//.concat();
-				    	var xpath = target.__im__extPropChain;
 
-					    var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,comp:this.comp,type:'delete'};
+					    var changeObj = {object:target,name:name,pc:path,oldVal:old,comp:this.comp,type:'delete'};
 				    	ChangeHandler.handle(changeObj);
 
 					    return true;
@@ -286,7 +221,7 @@ var Util = new function () {
 		function setter(k,v){
 			var old = this.__im__innerProps[k];
 			if(old)clearObserve(old);
-			if(typeof v === 'object'){
+			if(isObject(v)){
 	    		var pcs = this.__im__propChain.concat();
 				pcs.push(k);
 	    		v = observeData(pcs,v,this.__im__comp);
@@ -294,7 +229,6 @@ var Util = new function () {
 			this.__im__innerProps[k] = v;
 
 			var path = this.__im__propChain;
-	    	var xpath = this.__im__extPropChain;
 	    	
 	    	handler([{
 	    		name:k,
@@ -307,7 +241,7 @@ var Util = new function () {
 		function observeData(propChains,data,component){
 			if(data && data.__im__propChain)return data;
 			
-			var t = data instanceof Array?[]:{};
+			var t = isArray(data)?[]:{};
 
 			Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
 			var props = {};
@@ -317,7 +251,7 @@ var Util = new function () {
 				if(!data.hasOwnProperty(k))continue;
 
 				var o = data[k];			
-				if(typeof o === 'object' && o != null){
+				if(isObject(o)){
 					var pcs = propChains.concat();
 					pcs.push(k);
 					var tmp = observeData(pcs,o,component);
@@ -341,7 +275,6 @@ var Util = new function () {
 
 			Object.defineProperties(t,props);
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__extPropChain',{enumerable: false,writable: true,value:[]});
 			Object.defineProperty(t,'__im__target',{enumerable: false,writable: false,value:t.__im__innerProps});
 			Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
 
@@ -401,7 +334,7 @@ var Util = new function () {
 			}
 			if(i>-1){
 				observedObjects.splice(i,1);
-				if(typeof oo === 'object'){
+				if(isObject(oo)){
 					clearObserve(oo);
 				}
 			}
@@ -415,7 +348,6 @@ var Util = new function () {
 				var name = change.name;
 				var target = change.target;
 				var path = target.__im__propChain;//.concat();
-		    	var xpath = target.__im__extPropChain;
 		    	var comp = target.__im__comp;
 		    	var old = change.oldVal;
 		    	var v = change.newVal;
@@ -425,7 +357,7 @@ var Util = new function () {
 		    	if(type === 'add'){
 		    		snap[name] = v;
 		    		target.__im__innerProps[name] = v;
-		    		if(typeof v === 'object'){
+		    		if(isObject(v)){
 		    			var pc = path.concat();
 		    			pc.push(name);
 		    			target.__im__innerProps[name] = observeData(pc,v,comp);
@@ -446,7 +378,7 @@ var Util = new function () {
 		    	}else 
 		    	if(type === 'delete'){
 		    		var obj = snap[name];
-		    		if(typeof obj === 'object'){
+		    		if(isObject(obj)){
 		    			clearObserve(obj);
 		    		}
 		    		delete snap[name];
@@ -455,7 +387,7 @@ var Util = new function () {
 		    		continue;
 		    	}
 
-		    	var changeObj = {object:target,name:name,pc:path,xpc:xpath,oldVal:old,newVal:v,comp:comp,type:type};
+		    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:comp,type:type};
 		    	ChangeHandler.handle(changeObj);
 		    }
 		}
@@ -483,910 +415,1313 @@ var Util = new function () {
 
 		dirtyCheck();
 	}();
-var lexer = (function(){
+/**
+ * 测试
+ * @type {String}
+ */
+// var EXP_START_TAG = '{{',
+//     EXP_END_TAG = '}}';
+// var REG_CMD = /x-.*/;
 
-    var STR_EXP_START = /(['"])/,
-        VAR_EXP_START = /[a-zA-Z$_]/,
-        VAR_EXP_BODY = /[a-zA-Z$_0-9.]/;
+// var FILTER_EXP_START_TAG = '=>';
+// var FILTER_EXP_SPLITTER = '|';
+// var FILTER_EXP_PARAM_SPLITTER = ':';
+// var CMD_PREFIX = 'x-';//指令前缀
+// var CMD_PARAM_DELIMITER = ':';
+// var CMD_FILTER_DELIMITER = '.';
+// var EV_AB_PRIFX = ':';
+// var BIND_AB_PRIFX = '.';
 
-    var keyWords = ['return','as','instanceof','typeof','in','true','false'];
-    
-    function Var(){
-        return {
-            subVars:{},
-            words:[],
-            segments:[],
-            brakLength:0//记录顶级方括号的个数
+
+function pNode(type,tag,txtQ){
+    this.type = type;//1 node 3 text
+    this.tag = tag;
+    this.txtQ = txtQ;
+    this.children = [];
+    this.attrNodes = {};
+    this.slotMap = {};
+}
+function pNodeAttr(name,directive){
+    this.value;
+    this.name = name;
+    this.directive = directive;
+}
+
+var vn_counter = 0;
+/**
+ * 虚拟节点
+ */
+function VNode(tag,attrNodes,directives){
+    this.tag = tag;
+    this.txt;
+    this.children;
+    this.vid = vn_counter++;
+    this.attrNodes = attrNodes;
+    this._directives = directives;
+    this._comp;//组件
+    this.dom;
+    this._forScopeQ;
+    this._slotMap;
+}
+VNode.prototype = {
+    /**
+     * 绑定事件到该节点
+     */
+    on:function(type,exp){
+        var evMap = EVENT_MAP[type];
+        if(!evMap){
+            evMap = EVENT_MAP[type] = {};
         }
-    }
-    function typeDetect(l,sentence,varMap){
-        if(VAR_EXP_START.test(l)){
-            var rs = varParse(varMap,sentence);
-            lastType = 'var';
-            return rs;
-        }else
-        if(STR_EXP_START.test(l)){
-            lastType = 'str';
-            return strParse(sentence,RegExp.$1);
+        var fn = false;
+        if(isFunction(exp)){
+            fn = true;
+        }
+        if(fn){
+            evMap[this.vid] = [this,exp,this._cid,fn];
         }else{
-            lastType = '';
-            return l;
-        }
-    }
-    function strParse(sentence,startTag){
-        var escape = false;
-        var literal = startTag;
-        for(var i=1;i<sentence.length;i++){
-            var l = sentence[i];
-            if(l === '\\'){
-                escape = true;
-                literal += l;
-                continue;
-            }else
-            if(!escape && l === startTag){
-                return literal+startTag;
-            }else{
-                literal += l;
-            }
-            escape = false;
-        }
-    }
-    function varParse(varMap,sentence,pair,parentVO){
-        var literal = '';
-        var stack = [];
-        var stackBeginPos = -1;
-        var lastWordPos = -1;
-        var lastSegPos = -1;
-        //记录当前变量信息
-        var varObj = parentVO || Var();
-        for(var i=0;i<sentence.length;i++){
-            var l = sentence[i];
-            if(stack.length>0){
-                if(VAR_EXP_START.test(l)){
-                    var vo = Var();
-                    var varLiteral = varParse(varMap,sentence.substr(i),stack[0],vo);
-                    i = i + varLiteral.length - 1;
-
-                    //words
-                    var tmp = varLiteral;
-                    if(VAR_EXP_START.test(varLiteral[0]) && 
-                        keyWords.indexOf(tmp)<0
-                    ){
-                        varObj.subVars['.'+varLiteral] = vo;
-                        //keywords check
-                        if(keyWords.indexOf(tmp) < 0)
-                            tmp = ['.'+tmp];
-                    }
-                    varObj.words.push(tmp);
-                }else 
-                if(l === ']' || l === ')'){
-                    if(l === ']' && stack[0] !== '[')continue;//x[(y)]
-                    if(l === ')' && stack[0] !== '(')continue;
-
-                    stack.pop();
-                    if(stack.length === 0){
-                        var part = sentence.substring(stackBeginPos,i+1);
-                        literal += part;
-
-                        varObj.segments.push(part);
-                        lastSegPos = i;
-                    }
-                    if(l === ')'){
-                        varObj.isFunc = true;
-                    }
-                    //push words
-                    varObj.words.push(l);
-                    lastWordPos = i;
-
-                }else{
-                    //非var
-                    var strLiteral = typeDetect(l,sentence.substr(i),varMap);
-                    i = i + strLiteral.length - 1;
-                    //push words
-                    varObj.words.push(strLiteral);
-
-                    lastWordPos = i;
+            var forScopeStart = '',forScopeEnd = '';
+            if(this._forScopeQ)
+                for(var i=0;i<this._forScopeQ.length;i++){
+                    forScopeStart += 'with(arguments['+(3+i)+']){';
+                    forScopeEnd += '}';
                 }
-            }else{
-                if(VAR_EXP_BODY.test(l)){
-                    literal += l;
+            evMap[this.vid] = [this,new Function('scope,$event,$vnode','with(scope){'+forScopeStart+exp+forScopeEnd+'}'),this._cid];
+        }
+    },
+    setAttribute:function(k,v){
+        this.attrNodes[k] = v;
+        return this;
+    },
+    getAttribute:function(k){
+        return this.attrNodes[k];
+    }
+};
 
-                    if(l==='.'){
-                        var tmp = literal.substr(lastSegPos+1);
-                        tmp = tmp.replace(/\./,'');
-                        if(tmp){
-                            varObj.segments.push(tmp);
-                            lastSegPos = i;
-                        }
-                    }
-                }else 
-                if(l === '[' || l === '('){
-                    stack.push(l);
-                    stackBeginPos = i;
 
-                    varObj.brakLength++;
-  
-                    //push words
-                    var tmpStr = literal.substr(lastWordPos+1);
-                    if(tmpStr){
-                        var tmp = tmpStr;
-                        if(keyWords.indexOf(tmpStr) < 0 && lastWordPos<0)
-                         tmp = ['.'+tmpStr];
-                        varObj.words.push(tmp);
-                    }
-                    varObj.words.push(l);
+/**
+ * funcs for build VNode
+ */
+function createElement(comp,condition,tag,props,directives,children,html,forScope){
+    if(!condition)return;
 
-                    //segments
-                    var closed = l==='['?']':')';
-                    if(literal[i-1] !== closed){
-                        var index = tmpStr.lastIndexOf('.');
-                        if(index > -1){
-                            tmpStr = tmpStr.substr(index);
-                            varObj.segments.push(tmpStr);
-                        }else{
-                            if(tmpStr)
-                            varObj.segments.push(tmpStr);
-                        }
-                        lastSegPos = i;
-                    }
-
-                    lastWordPos = i;
-                }else
-                if((l === ']' && pair === '[') || (l === ')' && pair === '(')){
-                    //push words
-                    var tmp = literal;
-                    //x.y ]
-                    //x[...].y ]
-                    //x[..] ]
-                    if(tmp[tmp.length-1] !== l){
-                        tmp = tmp.substring(lastWordPos+1,tmp.length);
-
-                        if(tmp){//is var
-                            if(sentence.indexOf(tmp) === 0){
-                                varObj.words.push(['.'+tmp]);
+    var rs = new VNode(tag,props,directives);
+    var fsq = null;
+    if(forScope)
+        fsq = rs._forScopeQ = [forScope];
+    if (COMP_MAP[tag]) {
+        rs._comp = true;
+        var slotData = children[0];
+        rs._slots = slotData[0];
+        rs._slotMap = slotData[1];
+        return rs;
+    }
+    if(html != null){
+        //这里需要更新children
+        var pair = parseHTML(html);
+        var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
+        var root;
+        try{
+            root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+        }catch(e){
+            error('[x-html] compile error on '+e.message);
+            return;
+        }
+        children = root.children || [];
+    }
+    
+    if(children.length>0){
+        rs.children = [];
+        children.forEach(function(node){
+            if(node){
+                if(node instanceof Array){
+                    node.forEach(function(c){
+                        c.parent = rs;
+                        rs.children.push(c);
+                        if(fsq){
+                            var cfsq = c._forScopeQ;
+                            if(cfsq){
+                                c._forScopeQ = fsq.concat(cfsq);
                             }else{
-                                varObj.words.push(tmp);
+                                c._forScopeQ = fsq;
                             }
                         }
-
-                        //segments
-                        var point = tmp.lastIndexOf('.');
-                        if(point > 0){
-                            tmp = tmp.substr(point);
-                        }
-                        
-                        if(tmp)
-                            varObj.segments.push(tmp);
-                        lastSegPos = i;
-                    }
-                    lastWordPos = i;
-
-                    return literal;
+                    });
                 }else{
-                    
-                    //push words
-                    var tmp = literal.substr(lastWordPos+1);
-                    if(tmp){
-                        if(tmp[0] !== '.' && keyWords.indexOf(tmp) < 0)
-                            tmp = ['.'+tmp];
-                        varObj.words.push(tmp);
-                    }
-
-                    var segStr = literal.substr(lastSegPos+1);
-                    if(segStr){
-                        varObj.segments.push(segStr);
-                        lastSegPos = i;
-                    }
-                    
-                    if(!pair && keyWords.indexOf(tmp) < 0){
-                        varMap['.'+literal] = varObj;
-                    }
-                    return literal;
-                }
-            }
-        }
-
-        var str1 = literal.substr(literal.lastIndexOf(']')+1);
-        var str2 = literal.substr(literal.lastIndexOf(')')+1);
-        if(str1 && str2){
-            var str = str1.length < str2.length?str1:str2;
-            var segStr = literal.substr(lastSegPos+1);
-            varObj.segments.push(segStr);
-
-            var tmp = (str[0]==='[' || str[0]==='(')?str:str[0]==='.'?str:'.'+str;
-            if(varObj.words.length<1 && keyWords.indexOf(tmp) < 0){
-                tmp = [tmp]
-            }
-            varObj.words.push(tmp);
-        }
-        
-        if(!pair){
-            varMap['.'+literal] = varObj;
-        }
-        
-        return literal;
-    }
-    function parseWatchPath(map){
-        for(var k in map){
-            var varObj = map[k];
-            var lastPart = null,
-                watchPath = null;
-            var i = k.lastIndexOf('.');
-            if(k[k.length-1] === ']' || k[k.length-1] === ')'){
-                i = brak(k,varObj.brakLength);
-
-                var closed = k[k.length-1] === ']'?'[':'(';
-
-                var brakLen = varObj.brakLength;
-                varObj.watchPathWords = [];
-                for(var j=0;j<varObj.words.length;j++){
-                    var w = varObj.words[j];
-                    if(w === closed){
-                        if(--brakLen<1){
-                            break;
+                    node.parent = rs;
+                    rs.children.push(node);
+                    if(fsq){
+                        var cfsq = node._forScopeQ;
+                        if(cfsq){
+                            node._forScopeQ = fsq.concat(cfsq);
+                        }else{
+                            node._forScopeQ = fsq;
                         }
                     }
-                    varObj.watchPathWords.push(w);
-                }
-            }else{
-                varObj.watchPathWords = varObj.words.concat();
-                varObj.watchPathWords.splice(-1,1);
-            }
-
-            lastPart = k.substr(i);
-            if(lastPart[0] === '('){
-                varObj.lastVar = k;
-            }else{
-                varObj.lastVar = lastPart;
-            }
-
-            if(Object.keys(varObj.subVars).length<1){
-                watchPath = k.substring(0,i).replace(/\.$/,'');
-                varObj.watchPath = watchPath;
-            }
-
-
-            for(var j=varObj.segments.length;j--;){
-                varObj.segments[j] = varObj.segments[j].replace(/^\.|\.$/g,'');
-            }
-
-            parseWatchPath(varObj.subVars);
-        }
+                }//end if
+            }//end if
+        });
     }
-    function brak(k,len){
-        for(var i=0;i<k.length;i++){
-            var l = k[i];
+    
+    return rs;
+}
+function createTemplate(condition,children,forScope){
+    if(!condition)return;
 
-            if(l === '[' || l === '('){
+    var fsq = null;
+    if(forScope)
+        fsq = [forScope];
+    var rs = [];
+    if(children.length>0){
+        children.forEach(function(node){
+            if(node){
+                if(node instanceof Array){
+                    node.forEach(function(c){
+                        rs.push(c);
+                        if(fsq){
+                            var cfsq = c._forScopeQ;
+                            if(cfsq){
+                                c._forScopeQ = fsq.concat(cfsq);
+                            }else{
+                                c._forScopeQ = fsq;
+                            }
+                        }
+                    });
+                }else{
+                    rs.push(node);
+                    if(fsq){
+                        var cfsq = node._forScopeQ;
+                        if(cfsq){
+                            node._forScopeQ = fsq.concat(cfsq);
+                        }else{
+                            node._forScopeQ = fsq;
+                        }
+                    }
+                }//end if
+            }//end if
+        });
+    }
+    
+    return rs;
+}
+function createText(txt){
+    var rs = new VNode();
+    rs.txt = txt && txt.toString?txt.toString():txt;
+    return rs;
+}
+function createElementList(ds,iterator,scope,k,v){
+    var rs = [];
+    ds.forEach(function(item,i){
+        var forScope = {$index:i};
+        
+        if(k)forScope[k] = i;
+        forScope[v] = item;
+        var tmp = iterator.call(scope,forScope);
+        if(tmp){
+            if(isArray(tmp)){
+                rs = rs.concat(tmp);
+            }else{
+                rs.push(tmp);
+            }
+        }
+    });
+    return rs;
+}
+function doFilter(v,filters){
+    for(var i=0;i<filters.length;i++){
+        var f = filters[i];
+        var ins = FILTER_MAP[f[0]];
+        var params = f[1];
+        params.unshift(v);
+        v = ins.apply(ins,params);
+    }
+    return v;
+}
+var VDOM_CACHE = [];
+//解析属性名，如果是指令，返回指令name,参数
+function isDirectiveVNode(attrName,comp){
+    var rs = null;
+    var params = null;
+    var filter = null;
+    if(REG_CMD.test(attrName)){
+        var c = attrName.replace(CMD_PREFIX,'');
+        var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+        if(CPDI > -1)c = c.substring(0,CPDI);
+        rs = c;
+
+        var i = attrName.indexOf(CMD_PARAM_DELIMITER);
+        if(i > -1){
+            params = attrName.substr(i+1);
+        }
+
+        switch(c){
+            case 'if':case 'for':case 'html':return c;
+        }
+
+        //如果有对应的处理器
+        if(!DIRECT_MAP[c]){
+            warn("指令 '"+c+"' 没有对应的处理器");
+            return;
+        }
+    }else if(attrName[0] === EV_AB_PRIFX){
+        rs = 'on';
+        params = attrName.substr(1);
+    }else if(attrName[0] === BIND_AB_PRIFX && !comp){
+        rs = 'bind';
+        params = attrName.substr(1);
+    }
+
+    if(params){
+        var fi = params.indexOf(CMD_FILTER_DELIMITER);
+        if(fi > -1){
+            filter = params.substr(fi+1);
+            params = params.substring(0,fi);
+        }
+
+        params = params.split(CMD_PARAM_DELIMITER);
+    }
+
+    return rs?[rs,params,filter]:rs;
+}
+//解析for语句：datasource，alias
+//包括to和普通语法
+function parseDirectFor(name,attrNode){
+    if(name !== 'for')return false;
+
+    var rs = null;//k,v,filters,ds1,ds2;
+    var forExpStr = attrNode.exp[0];
+    var filters = attrNode.exp[1];
+    if(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/)){
+        //each语法错误
+        error('invalid each expression : '+forExpStr);
+        return;
+    }
+    var alias = RegExp.$2;
+    var kv = alias.split(',');
+    var k = kv.length>1?kv[0]:null;
+    var v = kv.length>1?kv[1]:kv[0];
+    var ds = RegExp.$1;
+    if(ds.match(/^([\s\S]*?)\s+to\s+([\s\S]*?)$/)){ 
+        rs = [k,v,filters,RegExp.$1,RegExp.$2];
+    }else{
+        rs = [k,v,filters,ds];
+    }
+    return rs;
+}
+function parseDirectIf(name,attrNode){
+    if(name !== 'if')return false;
+
+    return attrNode.exp[0];
+}
+function parseDirectHTML(name,attrNode){
+    if(name !== 'html')return false;
+
+    return attrNode.exp[0];
+}
+function replaceGtLt(str){
+    return str.replace(/&gt;/img,'>').replace(/&lt;/img,'<');
+}
+
+//https://www.w3.org/TR/html5/syntax.html#void-elements
+var VOIDELS = ['br','hr','img','input','link','meta','area','base','col','embed','keygen','param','source','track','wbr'];
+function parseHTML(str){
+    var op = null;
+    var strQueue = '';
+    var lastNode = null;
+    var lastAttrNode = null;
+    var delimiter = null;
+    var escape = false;
+    var roots = [];
+    var nodeStack = [];
+    var startTagLen = EXP_START_TAG.length;
+    var endTagLen = EXP_END_TAG.length;
+    var inExp = false;//在表达式内部
+    var delimiterInExp = null;
+    var escapeInExp = null;
+    var expStartPoint = 0;
+    var expEndPoint = 0;
+    var filterStartTagLen = FILTER_EXP_START_TAG.length;
+    var filterStartEntityLen = FILTER_EXP_START_TAG_ENTITY.length;
+    var filterStartPoint = 0;
+    var lastFilter = '';
+    var lastOp = null;
+    var lastFilterList = [];
+    var lastFilterParam = '';
+    var lastFilterParamList = [];
+    var textQ = [];
+    var compNode;
+    var slotNode;
+    var slotList = [];
+
+    for(var i=0;i<=str.length;i++){
+        var c = str[i];
+
+        if(!op && c==='<'){//开始解析新节点
+            op = 'n';
+            continue;
+        }else if(!op){
+            op = 't';
+        }
+
+        if(op==='a' || op==='t' || op==='efp'){
+            if(strQueue.length>=startTagLen && !inExp){
+                var expStart = strQueue.substr(strQueue.length-startTagLen);
+                if(expStart == EXP_START_TAG){
+                    var sp = expEndPoint===0?expEndPoint:expEndPoint+endTagLen;
+                    textQ.push(strQueue.substr(sp).replace(EXP_START_TAG,''));
+                    inExp = true;
+                    expStartPoint = strQueue.length;
+                    if(op==='a'){
+                        var n = lastAttrNode.name;
+                        error("属性'"+n+"'不能包含表达式，动态内容请使用 'x-bind:"+n+" / ."+n+"'替代");
+                        return;
+                    }
+                }
+            }
+            escape = false;
+            if(c === '\\'){
+                escape = true;
+            }
+            if(inExp && (c === '\'' || c === '"')){
+                if(!delimiterInExp)delimiterInExp = c;
+                else{
+                    if(c === delimiterInExp && !escape){
+                        delimiterInExp = null;
+                    }
+                }
+            }
+        }
+
+        switch(op){
+            case 'n':
+                if(c===' '||c==='\n'|| c==='\t' || c==='>'){
+                    if(!strQueue)break;//<  div 这种场景，过滤前面的空格
+                    if(strQueue.indexOf('<')>-1){
+                        error("unexpected identifier '<' in tagName '"+strQueue+"'");
+                        return;
+                    }
+
+                    //创建VNode
+                    var node = new pNode(1,strQueue);
+                    lastNode = nodeStack[nodeStack.length-1];
+                    //handle slot
+                    if(COMP_MAP[strQueue]){
+                        compNode = node;
+                    }
+                    if(strQueue === SLOT){
+                        slotNode = [lastNode,node];
+                        slotList.push(slotNode);
+                    }
+
+                    if(lastNode){
+                        lastNode.children.push(node);
+                    }
+                    if(VOIDELS.indexOf(strQueue)>-1){
+                        node.isVoid = true;
+                    }
+                    if(nodeStack.length<1){
+                        roots.push(node);
+                    }
+                    lastNode = node;
+                    if(!node.isVoid)
+                        nodeStack.push(lastNode);
+
+                    
+
+                    if(c==='>'){
+                        if(node.isVoid){
+                            lastNode = nodeStack[nodeStack.length-1];
+                        }
+                        op = 't';
+                    }else{
+                        op = 'a';
+                    }
+                    
+                    strQueue = '';
+                    break;
+                }
+                if(c === '\/'){//终结节点，这里要判断是否和当前解析的元素节点相同
+                    //如果不做非法语法验证，只需要跳过即可
+                    op = 'e';
+                    break;
+                }
+                strQueue += c;break;
+            case 'e':
+                if(c===' '|| c==='\t')break;
+                if(c === '>'){
+                    nodeStack.pop();
+                    lastNode = nodeStack[nodeStack.length-1];
+
+                    if(compNode && compNode.tag === strQueue){
+                        compNode = null;
+                    }
+                    if(strQueue === SLOT){
+                        slotNode = null;
+                    }
+                    
+                    op = 't';
+                    strQueue = '';
+                    break;
+                }
+                strQueue += c;break;
+            case 'a':
+                if(!delimiter && strQueue.length<1 && (c === ' '|| c==='\t'))break;
+                if(!delimiter && c === '>'){//结束节点解析
+                    //check component or directive
+                    // if(ComponentFactory.hasTypeOf(lastNode.tag)){
+                    //     node.comp = lastNode.tag;
+                    // }
+
+                    if(lastNode.isVoid){
+                        lastNode = nodeStack[nodeStack.length-1];
+                    }
+                    op = 't';
+                    break;
+                }
+                if(!lastAttrNode){//解析属性名
+                    var noValueAttr = strQueue.length>0 && (c === ' '|| c==='\t');
+                    if(c === '=' || noValueAttr){
+                        //创建VAttrNode
+                        var aName = strQueue.trim();
+                        lastAttrNode = new pNodeAttr(aName,isDirectiveVNode(aName,compNode));
+                        lastNode.attrNodes[aName] = lastAttrNode;
+
+                        strQueue = '';
+
+                        if(noValueAttr){
+                            lastAttrNode = null;
+                        }
+                        break;
+                    }
+                    strQueue += c;break;
+                }else{
+                    if(c === '\'' || c === '"'){
+                        if(!delimiter){
+                            delimiter = c;
+
+                            if(lastAttrNode.directive){
+                                //进入表达式解析
+                                inExp = true;
+                                expStartPoint = 0;
+                            }
+
+                            break;
+                        }else{
+                            if(c === delimiter && !escape){
+                                lastAttrNode.value = strQueue;
+                                if(lastAttrNode.name === SLOT){
+                                    compNode.slotMap[strQueue] = lastNode;
+                                }
+
+                                if(slotNode && lastAttrNode.name === 'name'){
+                                    slotNode.push(strQueue);
+                                }
+
+                                //parse for
+                                if(lastAttrNode.directive){
+                                    var tmp = null;
+                                    var dName = lastAttrNode.directive;
+                                    if(dName === 'for' || dName === 'if' || dName === 'html'){
+                                        if(tmp = parseDirectFor(dName,lastAttrNode)){
+                                            lastNode.for = tmp;
+                                        }
+                                        if(tmp = parseDirectIf(dName,lastAttrNode)){
+                                            lastNode.if = tmp;
+                                        }
+                                        if(tmp = parseDirectHTML(dName,lastAttrNode)){
+                                            lastNode.html = tmp;
+                                        }
+                                        lastNode.attrNodes[lastAttrNode.name] = null;
+                                        delete lastNode.attrNodes[lastAttrNode.name];
+                                    }
+                                }
+
+                                lastAttrNode = null;
+                                delimiter = null;
+                                strQueue = '';
+                                break;
+                            }
+                        }
+                    }
+                    strQueue += c;break;
+                }
+                break;
+            case 't':
+                if(!inExp && (c === '<' || !c)){
+                    var tmp = strQueue.replace(/^\s*|\s*$/,'');
+                    if(tmp){
+                        var txt = strQueue;
+                        if(textQ.length>0)txt = txt.substr(expEndPoint+endTagLen,strQueue.length-startTagLen);
+                        if(txt){
+                            textQ.push(txt);
+                        }
+                        var tn = new pNode(3,null,textQ);
+                        textQ = [];
+                        if(lastNode){
+                            lastNode.children.push(tn);
+                        }
+                        expEndPoint = 0;
+                    }
+                    op = 'n';
+                    strQueue = '';
+                    break;
+                }
+                strQueue += c;
+                break;
+            case 'ef':
+                if(c === ' '|| c==='\t')break;
+                var append = true;
+                if(c===FILTER_EXP_PARAM_SPLITTER){
+                    // => xxx:
+                    // => xxx:yy: 
+                    // 这里只会出现第一种情况，第二种需要在efp中处理
+                    lastFilter = {name:lastFilter,param:[]};
+                    lastFilterList.push(lastFilter);
+                    // lastFilter = '';
+                    op='efp';
+                    append = false;
+                }else if(c===FILTER_EXP_SPLITTER){
+                    // => xxx |
+                    // => xxx:yy |
+                    // 这里只会出现第一种情况，第二种需要在efp中处理
+                    lastFilter = {name:lastFilter,param:[]};
+                    lastFilterList.push(lastFilter);
+                    lastFilter = '';
+                    append = false;
+                }
                 
-                if(--len < 1){
-                    return i;
+                strQueue += c;
+                if(append)lastFilter += c;
+                break;
+            case 'efp':
+                var append = true;
+                if(!delimiterInExp){
+                    if(c === ' '|| c==='\t')break;
+                    if(lastFilter && (c===FILTER_EXP_PARAM_SPLITTER ||c===FILTER_EXP_SPLITTER)){
+                        lastFilter.param.push(lastFilterParam);
+                        lastFilterParam = '';
+                        append = false;
+                        if(c===FILTER_EXP_SPLITTER){
+                            op = 'ef';
+                            lastFilter = '';
+                        }
+                    }
+                }
+
+                if(append)lastFilterParam += c;
+                strQueue += c;
+        }//end switch
+
+        if((op==='a' || op==='t' || op==='ef' || op==='efp') && inExp){
+            var filterStart = strQueue.substr(strQueue.length-filterStartTagLen);
+            var filterEntityStart = strQueue.substr(strQueue.length-filterStartEntityLen);
+            if((filterStart===FILTER_EXP_START_TAG || filterEntityStart===FILTER_EXP_START_TAG_ENTITY) 
+                && op!=='ef' && !delimiterInExp){
+                // inFilter = true;
+                lastOp = op;
+                op = 'ef';
+                if(filterStart===FILTER_EXP_START_TAG){
+                    filterStartPoint = strQueue.length - filterStartTagLen;
+                }else{
+                    filterStartPoint = strQueue.length - filterStartEntityLen;
+                }
+                
+            }else if(inExp){
+                var expEnd = strQueue.substr(strQueue.length-endTagLen);
+                var doEnd = expEnd===EXP_END_TAG;//大括号表达式结束
+                var isDi = false;
+                //对于指令表达式结束
+                if(lastAttrNode && lastAttrNode.directive && delimiter 
+                    && (!delimiterInExp && !escape) 
+                    && str[i+1]==delimiter){
+                    isDi = doEnd = true;
+                }
+                if(doEnd){
+                    switch(op){
+                        case 't':
+                            if(delimiterInExp)continue;
+                            break;
+                        case 'ef':
+                            if(lastFilter){
+                                var tmp = new RegExp(EXP_END_TAG+'$');
+                                lastFilter = lastFilter.replace(tmp,'');
+                                lastFilter = {name:lastFilter,param:[]};
+                                lastFilterList.push(lastFilter);
+                            }
+                            break;
+                        case 'efp':
+                            if(lastFilterParam){
+                                var tmp = new RegExp(EXP_END_TAG+'$');
+                                lastFilterParam = lastFilterParam.replace(tmp,'');                            
+
+                                lastFilter.param.push(lastFilterParam);
+                            }
+                            break;
+                    }
+                    inExp = false;
+                    var withoutFilterStr = strQueue.substring(expStartPoint,filterStartPoint||(strQueue.length-endTagLen));
+                    expEndPoint = strQueue.length-endTagLen;
+                    
+                    if(isDi){
+                        withoutFilterStr = strQueue.substring(0,filterStartPoint||strQueue.length);
+                    }
+                    
+                    filterStartPoint = 0;
+                    if(lastOp==='t' || op==='t'){
+                        textQ.push(['('+replaceGtLt(withoutFilterStr)+')',lastFilterList]);
+                    }else if(lastOp==='a' || op==='a'){
+                        lastAttrNode.exp = [withoutFilterStr,lastFilterList];
+                        expEndPoint = 0;
+                    }
+                    
+                    
+                    lastFilter = '';
+                    lastFilterList = [];
+                    if(lastOp){
+                        lastFilter = '';
+                        lastFilterParam = '';
+                        op = lastOp;
+                        lastOp = null;
+                    }
                 }
             }
+            
+        }//end if
+    }// end for
+
+    return [roots,slotList];
+}
+function buildVDOMStr(pm){
+    var str = buildEvalStr(pm);
+    return 'with(scope){return '+str+'}';
+}
+function buildEvalStr(pm){
+    var str = '';
+    if(pm.type === 1){
+        var children = '';
+        if(COMP_MAP[pm.tag]){
+            children = JSON.stringify([pm.children,pm.slotMap]);
+        }else{
+            for(var i=0;i<pm.children.length;i++){
+                children += ','+buildEvalStr(pm.children[i]);
+            }
+            if(children.length>0)children = children.substr(1);
+        }            
+        var pair = buildAttrs(pm.attrNodes);
+        var attrStr = pair[0];
+        var dirStr = pair[1];
+        var ifStr = pm.if || 'true';
+        var innerHTML = pm.html || 'null';
+        var nodeStr = '_ce(this,'+ifStr+',"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
+        if(pm.tag == 'template'){
+            nodeStr = '_tmp('+ifStr+',['+children+']';
         }
+        if(pm.for){
+            var k = (pm.for[0]||'').trim();
+            var v = pm.for[1].trim();
+            var filter = pm.for[2];
+            var ds1 = pm.for[3];
+            var ds2 = pm.for[4];
+            var dsStr = ds1;
+            if(ds2){
+                ds1 = ds1.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
+                    if(a.indexOf('this')===0)return a;
+                    return 'this.'+a;
+                });
+                ds2 = ds2.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
+                    if(a.indexOf('this')===0)return a;
+                    return 'this.'+a;
+                });
+                dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
+            }
+            if(filter){
+                dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+")";
+            }
+            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope)}},this,"'+k+'","'+v+'")';
+        }else{
+            str += nodeStr+')';
+        }
+    }else{
+        var tmp = buildTxtStr(pm.txtQ);
+        str += '_ct('+tmp+')';
     }
 
-    var lastType = '';
+    return str;
+}
+function buildAttrs(map){
+    var rs = {};
+    var dirStr = '';
+    for(var k in map){
+        var attr = map[k];
+        if(attr.directive){
+            var exp = attr.value.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
+                if(a.indexOf('this')===0)return a;
+                return 'this.'+a;
+            });
+            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(attr.directive[0] === 'on'?JSON.stringify(exp):exp)+","+JSON.stringify(exp)+"]";
+        }else{
+            rs[k] = attr.value;
+        }
+    }//end for
+    return [JSON.stringify(rs),'['+dirStr.substr(1)+']'];
+}
+function buildTxtStr(q){
+    var rs = '';
+    q.forEach(function(item){
+        if(item instanceof Array){
+            var exp = item[0];
+            var filter = item[1];
+            if(filter.length>0){
+                rs += "+_fi("+exp+","+buildFilterStr(filter)+")";
+            }else{
+                rs += "+"+exp;
+            }
+        }else if(item){
+            rs += "+"+JSON.stringify(item);
+        }
+    });
+    rs = rs.replace(/\n/mg,'');
+    if(rs.length>0)rs = rs.substr(1);
+    return rs;
+}
+function buildFilterStr(filters){
+    var rs = '';
+    filters.forEach(function(f){
+        var tmp = '["'+f.name+'",['+f.param.toString()+']]';
+        rs += ','+tmp;
+    });
+    return '['+rs.substr(1)+']';
+}
+function compileVDOM(str,comp){
+    if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var cache = {};
-    return function(sentence){
-        if(cache[sentence])return cache[sentence];
+    var pair = parseHTML(str);
+    var roots = pair[0];
+    if(roots.length>1){
+        warn('组件只能有唯一的顶级节点');
+    }
+    var rs = roots[0];
+    if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
+        error('组件顶级标签不能是template / slot');
+        return;
+    }
+    //doslot
+    doSlot(pair[1],comp.__slots,comp.__slotMap);
 
-        var words = [],
-            varMap = {};
+    rs = buildVDOMStr(rs);
+    // console.log(rs);
+    rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
+    VDOM_CACHE[str] = rs;
+    return rs;
+}
+/**
+ * get vdom tree for component
+ */
+function buildVDOMTree(comp){
+    var fn = compileVDOM(comp.compiledTmp,comp);
 
-        for(var i=0;i<sentence.length;i++){
-            var l = sentence[i];
-            lastType = '';
-            var literal = typeDetect(l,sentence.substr(i),varMap);
-            i = i + literal.length - 1;
-            switch(lastType){
-                case 'var':
-                    words.push(keyWords.indexOf(literal)<0?['.'+literal]:literal);
-                    break;
-                case 'str':
-                case '':
-                    words.push(literal);
-                    break;
+    var root = null;
+    try{
+        root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+    }catch(e){
+        error('compile error on '+e.message);
+    }
+    return root;
+}
+var forScopeQ = null;
+function compareVDOM(newVNode,oldVNode,comp){
+    forScopeQ = {};
+    if(isSameVNode(newVNode,oldVNode)){
+        compareSame(newVNode,oldVNode,comp);
+    }else{
+        //remove old,insert new
+        insertBefore(newVNode,oldVNode,oldVNode.parent?oldVNode.parent.children:null,oldVNode.parent,comp);
+        removeVNode(oldVNode);
+    }
+    return forScopeQ;
+}
+function compareSame(newVNode,oldVNode,comp){
+    if(newVNode._comp){
+        forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
+        return;
+    }
+
+    if(newVNode.tag){
+        var rebindDis = false;
+        //先比较指令列表
+        for(var i=newVNode._directives.length;i--;){
+            var ndi = newVNode._directives[i];
+            var odi = oldVNode._directives[i];
+            if(ndi[2] !== odi[2]){
+                rebindDis = true;
+                break;
             }
         }
+        if(rebindDis){
+            newVNode._directives.forEach(function(di){
+                var dName = di[1][0];
+                if(dName === 'on')return;
+                var d = DIRECT_MAP[dName];
+                if(!d)return;
+                
+                var params = di[1][1];
+                var v = di[2];
+                var exp = di[3];
+                d.onBind && d.onBind(newVNode,{value:v,args:params,exp:exp});
+            });
+        }
 
-        parseWatchPath(varMap);
-        
+        //for unstated change like x-html
+        updateAttr(newVNode,oldVNode);
 
-        // console.log('输入',sentence);
-        // console.log('校验',words.join(''));
-        // console.log('分词',JSON.stringify(words));
-        // //input--->a[b.x[c]].d
-        // //a[b.x[c]].d ---> b.x[c]
-        // //b.x[c] ---> c
-        // console.log('变量tree',varMap);
-        
-        cache[sentence] = {
-            words:words,
-            varTree:varMap
-        };
-        return cache[sentence];
+        //update events forscope
+        if(oldVNode._forScopeQ){
+            oldVNode._forScopeQ = newVNode._forScopeQ;
+        }
+    }else{
+        if(newVNode.txt !== oldVNode.txt){
+            updateTxt(newVNode,oldVNode);
+        }
     }
-})();
-/**
- * 表达式映射
- */
-function ExpData (propName,parent) {
-	this.propName = propName;
-	this.subProps = {};
-	this.expNodes = [];
-	this.attrObserveNodes = [];
-	this.watchs = [];
 
-	this.parentProp = parent;//for release
-
-	//bind exp
-	if(HTML_EXP_COMPILING){
-		CURRENT_HTML_EXP_LIST.push(this);
-	}
+    if(newVNode.children && oldVNode.children){
+        compareChildren(newVNode.children,oldVNode.children,oldVNode,comp);
+    }else if(newVNode.children){
+        //插入新的整个子树
+        insertChildren(oldVNode,newVNode.children,comp);
+    }else if(oldVNode.children && oldVNode.children.length>0){
+        //删除旧的整个子树
+        removeVNode(oldVNode.children);
+    }
 }
 
-ExpData.prototype = {
-	release:function(){
-		if(this.expNodes == null)return;
-		
-		this.expNodes.forEach(function(item){
-			item.release();
-		});
-		this.attrObserveNodes.forEach(function(item){
-			item.release();
-		});
-		this.watchs.forEach(function(item){
-			item.release();
-		});
-		if(this.parentProp){
-			this.parentProp[this.propName] = null;
-			delete this.parentProp[this.propName];
-		}
-		for(var k in this.subProps){
-			var ed = this.subProps[k];
-			if(ed)ed.release();
-		}
-		
+function compareChildren(nc,oc,op,comp){
+    var osp = 0,oep = oc.length-1,
+        nsp = 0,nep = nc.length-1,
+        os = oc[0],oe = oc[oep],
+        ns = nc[0],ne = nc[nep];
 
-		this.propName = 
-		this.subProps = 
-		this.expNodes = 
-		this.attrObserveNodes = 
-		this.watchs = 
-		this.parentProp = null;
-	}
-}
-
-/**
- * 变更信息
- */
-function Change(name,newVal,oldVal,path,type,object){
-	this.name = name;
-	this.newVal = newVal;
-	this.oldVal = oldVal;
-	this.path = path;
-	this.type = type;
-	this.object = object;
-	this.expProps = [];
-}
-
-/**
- * 表达式节点
- */
-function ExpNode (node,attrName,origin,expMap,component,toHTML) {
-	this.node = node;
-	this.attrName = attrName;
-	this.origin = origin;
-	this.expMap = expMap;
-	this.component = component;	
-	this.toHTML = toHTML;
-	this.id = Math.random();
-
-	//bind exp
-	if(HTML_EXP_COMPILING){
-		CURRENT_HTML_EXP_LIST.push(this);
-	}
-}
-ExpNode.prototype = {
-	release:function(){
-		this.node = 
-		this.attrName = 
-		this.origin = 
-		this.expMap = 
-		this.component = 
-		this.toHTML = 
-		this.id = null;
-	}
-}
-
-/**
- * 自定义observe节点
- */
-function AttrObserveNode (directive,expObj) {
-	this.directive = directive;
-	this.expObj = expObj;
-}
-AttrObserveNode.prototype = {
-	release:function(){
-		this.directive = 
-		this.expObj = null;
-	}
-}
-
-/**
- * watch
- */
-function Watch (cbk,ctrlScope,segments) {
-	this.cbk = cbk;
-	this.ctrlScope = ctrlScope;	
-	this.segments = segments;
-}
-Watch.prototype = {
-	release:function(){
-		this.cbk = 
-		this.segments = 
-		this.ctrlScope = null;
-	}
-}
-
-/**
- * 参数信息
- */
-function Prop (subComp,name,segments,expWords) {
-	this.subComp = subComp;
-	this.name = name;
-	this.segments = segments;
-	this.expWords = expWords;
-}
-
-function CompSlot(isExp,is,comp,node,cache){
-	var calcVal = is;
-	if(isExp){
-		//calc 
-		var expObj = lexer(is);
-		calcVal = Renderer.evalExp(comp,expObj);
-		var that = this;
-		comp.watch(is,function(obj,name,type,newVal){
-			that.is(newVal);
-		});
-	}
-		
-	this.node = node;
-	this.cache = cache==null?false:true;
-	this.cacheMap = this.cache?{}:null;
-	this.comp = comp;
-
-	if(calcVal)this.is(calcVal);
-}
-CompSlot.prototype = {
-	/**
-	 * change current compslot to new component
-	 * @param  {String}  type comp type
-	 */
-	is:function(type){
-		var lastComp = this.lastComp;
-		if(lastComp && lastComp.name === type)return;
-
-		var el = this.node;
-		if(lastComp){
-			el = lastComp.el;
-			if(!ComponentFactory.hasTypeOf(type)){
-				LOGGER.warn('cannot find component['+type+']');
-				return;
-			}
-		}
-		var placeholder = document.createComment('-- placeholder --');
-	    DOMHelper.insertBefore([placeholder],el);
-		
-		if(lastComp){
-			if(this.cache){
-	        	lastComp.unmount(false);
-	        }else{
-	        	lastComp.destroy();
-	        }
-		}else{
-			DOMHelper.detach([el]);
-		}
-        
-        var subComp = null;
-        if(this.cache && this.cacheMap[type]){
-        	subComp = this.cacheMap[type];
-        	if(subComp){
-        		DOMHelper.replace(placeholder,subComp.__nodes);
-        		subComp.mount();
-        	}
+    while(osp <= oep && nsp <= nep){
+        if(isSameVNode(ns,os)){
+            compareSame(ns,os,comp);
+            os = oc[++osp],
+            ns = nc[++nsp];
+            continue;
+        }else if(isSameVNode(ne,oe)){
+            compareSame(ne,oe,comp);
+            oe = oc[--oep],
+            ne = nc[--nep];
+            continue;
+        }else if(isSameVNode(ne,os)){
+            insertBefore(os,next(oe),oc,op,comp);
+            os = oc[osp];oep--;
+            ne = nc[--nep];
+            continue;
+        }else if(isSameVNode(ns,oe)){
+            insertBefore(oe,os,oc,op,comp);
+            oe = oc[oep];osp++;
+            ns = nc[++nsp];
+            continue;
         }else{
-			//create new
-	        var node = document.createElement(type);
-	        placeholder.parentNode.replaceChild(node,placeholder);
-	        subComp = this.comp.createSubComponentOf(node);
-	        subComp.init().mount();
+            if(ns.getAttribute('xid')){
+                //处理id重用
+            }else{
+                //插入ov之前，并删除ov
+                insertBefore(ns,os,oc,op,comp);
+                removeVNode(os);
+                nsp++;
+            }
         }
-
-        if(this.cache && !this.cacheMap[type]){
-        	this.cacheMap[type] = subComp;
+    }
+    //在osp位置，插入剩余的newlist，删除剩余的oldlist
+    if(osp <= oep && oep>0){
+        var toDelList = oc.splice(osp,oep-osp+1);
+        if(toDelList.length>0){
+            removeVNode(toDelList);
         }
-
-        this.lastComp = subComp;
-	}
+    }
+    if(nsp <= nep){
+        var toAddList = nsp==nep?[nc[nsp]]:nc.splice(nsp,nep-nsp+1);
+        if(toAddList.length>0){
+            insertBefore(toAddList,oc[osp],oc,op,comp);
+        }
+    }
 }
+
+function insertBefore(nv,target,list,targetParent,comp){
+    if(list){
+        //处理vdom
+        if(nv.dom){//删除ov
+            var i = list.indexOf(nv);
+            if(i>-1)list.splice(i,1);
+        }
+        var p = targetParent;
+        if(target){
+            i = list.indexOf(target);
+            p = p || target.parent;
+            if(isArray(nv)){
+                for(var l=nv.length;l--;){
+                    nv[l].parent = p;
+                }
+                var args = [i,0].concat(nv);
+                list.splice.apply(list,args);
+            }else{
+                nv.parent = p;
+                list.splice(i,0,nv);
+            }//end if
+        }else{
+            if(isArray(nv)){
+                nv.forEach(function(n){
+                    list.push(n);
+                    n.parent = p;
+                });
+            }else{
+                nv.parent = p;
+                list.push(nv);
+            }//end if
+        }
+    }
+    //处理dom
+    var dom = nv.dom;
+    var compAry = [];
+    if(!dom){
+        if(isArray(nv)){
+            var fragment = document.createDocumentFragment();
+            for(var i=0;i<nv.length;i++){
+                var vn = nv[i];
+                var tmp = buildOffscreenDOM(vn,comp);
+                //bind vdom
+                if(vn._comp){
+                    parseComponent(vn._comp);
+                    compAry.push(vn._comp);
+                }
+                fragment.appendChild(tmp);
+            }
+            dom = fragment;
+        }else{
+            dom = buildOffscreenDOM(nv,comp);
+        }
+    }else{
+        dom.parentNode.removeChild(dom);
+    }
+    // if(dom.parentNode)dom.parentNode.removeChild(dom);
+    if(target){
+        var tdom = target.dom;
+        tdom.parentNode.insertBefore(dom,tdom);
+    }else{
+        targetParent.dom.appendChild(dom);
+    }
+    
+    //comp
+    for(var i=0;i<compAry.length;i++){
+        var tmp = compAry[i];
+        mountComponent(tmp,targetParent);
+    }
+}
+function next(nv){
+    var p = nv.parent;
+    var i = p.children.indexOf(nv);
+    return p.children[i+1];
+}
+function removeVNode(vnodes){
+    if(!isArray(vnodes))vnodes = [vnodes];
+    var parent = vnodes[0].parent;
+    for(var i=vnodes.length;i--;){
+        var vnode = vnodes[i];
+        var k = parent.children.indexOf(vnode);
+        if(k>-1){
+            parent.children.splice(k,1);
+        }
+        var p = vnode.dom.parentNode;
+        p && p.removeChild(vnode.dom);
+
+        //todo...   release other resource
+        if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
+            impex._cs[vnode._cid].destroy();
+        }
+    }
+}
+function insertChildren(parent,children,comp){
+    parent.children = children;
+    var fragment = document.createDocumentFragment();
+    var compAry = [];
+    for(var i=0;i<children.length;i++){
+        var vn = children[i];
+        var dom = buildOffscreenDOM(vn,comp);
+        //bind vdom
+        if(vn._comp){
+            parseComponent(vn._comp);
+            compAry.push(vn._comp);
+            // mountComponent(vn._comp);
+        }
+        fragment.appendChild(dom);
+    }
+    parent.dom.appendChild(fragment);
+
+    for(var i=0;i<compAry.length;i++){
+        var tmp = compAry[i];
+        mountComponent(tmp);
+    }
+}
+function isSameVNode(nv,ov){
+    if(nv._comp && ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
+    return ov.tag === nv.tag;
+}
+function updateTxt(nv,ov){
+    ov.txt = nv.txt;
+    var dom = ov.dom;
+    dom.textContent = nv.txt;
+}
+function updateAttr(nv,ov){
+    //比较节点属性
+    var nvas = nv.attrNodes;
+    var ovas = ov.attrNodes;
+    var nvasKs = Object.keys(nvas);
+    var ovasKs = Object.keys(ovas);
+    var odom = ov.dom;
+    for(var i=nvasKs.length;i--;){
+        var k = nvasKs[i];
+        var index = ovasKs.indexOf(k);
+        if(index<0){
+            odom.setAttribute(k,nvas[k]);
+        }else{
+            if(nvas[k] != ovas[k])
+                odom.setAttribute(k,nvas[k]);
+            ovasKs.splice(index,1);
+        }
+    }
+    for(var i=ovasKs.length;i--;){
+        if(ovasKs[i] === DOM_COMP_ATTR)continue;
+        odom.removeAttribute(ovasKs[i]);
+    }
+
+    //update new attrs
+    var comp_attr = ov.attrNodes[DOM_COMP_ATTR];
+    ov.attrNodes = nv.attrNodes;
+    if(comp_attr)ov.attrNodes[DOM_COMP_ATTR] = comp_attr;
+    //update new directive exp value
+    ov._directives = nv._directives;
+    ov._directives.forEach(function(dir){
+        if(isArray(dir[2]) || isObject(dir[2])){
+            dir[2] = JSON.parse(JSON.stringify(dir[2]));
+        }
+    });
+}
+
+
+
 /**
- * 扫描器
+ * for DOM event delegation，support mouseEvent , touchEvent and pointerEvent
  */
+function dispatch(type,e) {
+    var p = e.target;
+    do{
+        var uid = p._vid;
+        if(uid === undefined)continue;
+        var evMap = EVENT_MAP[type];
+        if(!evMap)continue;
+        var tmp = evMap[uid];
+        if(!tmp)continue;
 
-var Scanner = new function() {
-	//预扫描
-	function prescan(node){
-		if(!node)return;
-		var textNodeAry = [];
-		var replacements = [];
-		queryAllTextNode(node,textNodeAry);
-
-		for(var ii=textNodeAry.length;ii--;){
-			var node = textNodeAry[ii];
-			var text = node.nodeValue;
-			var segments = [];
-			var lastPos = 0;
-			text.replace(REG_EXP,function(fullTxt,modelExp,pos){
-				var txt = text.substring(lastPos,pos);
-				if(txt)segments.push(txt);
-				segments.push(fullTxt);
-
-				lastPos = pos + fullTxt.length;
-			});
-
-			var txt = text.substring(lastPos,text.length);
-			if(txt)segments.push(txt);
-
-			if(segments.length<2){
-				replacements.unshift(null);
-				continue;
-			}
-			
-			var fragment = document.createDocumentFragment();
-			for(var i=0;i<segments.length;i++){
-				var tn = document.createTextNode(segments[i]);
-				fragment.appendChild(tn);
-			}
-			replacements.unshift(fragment);
-		}
-		
-		for(var i=textNodeAry.length;i--;){
-			var n = textNodeAry[i];
-			if(replacements[i] && replacements[i].childNodes.length>1 && n.parentNode)
-				n.parentNode.replaceChild(replacements[i],n);
-		}
-	}
-	function queryAllTextNode(node,textAry){
-		if(node.tagName === 'SCRIPT')return;
-		if(node.attributes || node.nodeType === 11){
-			if(node.childNodes.length>0){
-				for(var i=0,l=node.childNodes.length;i<l;i++){
-					queryAllTextNode(node.childNodes[i],textAry);
-				}
-			}
-		}else
-		if(node.nodeType === 3){
-			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
-			textAry.push(node);
-		}
-	}
-
-	/**
-	 * 扫描DOM节点
-	 */
-	this.scan = function(scanNodes,component){
-		var direcs = [],subComps = [],exps = [];
-        for(var i=0,l=scanNodes.length;i<l;i++){
-        	prescan(scanNodes[i]);
-            scan(scanNodes[i],component,direcs,subComps,exps);
+        var vnode = tmp[0];
+        var fn = tmp[1];
+        var cid = tmp[2];
+        var isFn = tmp[3];
+        var comp = impex._cs[cid];
+        if(isFn){
+            fn.call(comp,e,vnode);
+        }else{
+            var args = [comp.state,e,vnode];
+            if(vnode._forScopeQ)
+                for(var i=0;i<vnode._forScopeQ.length;i++){
+                    args.push(vnode._forScopeQ[i]);
+                }
+            fn.apply(comp,args);
         }
-        return {directs:direcs,comps:subComps,exps:exps};
-	}
-
-	function getRestrictParent(selfComp){
-		if(selfComp.restrict)return selfComp;
-		var p = selfComp.parent;
-		while(p){
-			if(p.name && p.restrict)return p;
-			p = p.parent;
-		};
-		return null;
-	}
-
-	function scan(node,component,direcs,subComps,exps){
-		if(node.tagName === 'SCRIPT')return;
-
-		if(node.attributes || node.nodeType === 11){
-			if(node.tagName){
-				var tagName = node.tagName.toLowerCase();
-
-				var atts = [];
-				for(var i=node.attributes.length;i--;){
-					var tmp = node.attributes[i];
-					atts.push([tmp.name,tmp.value]);
-				}
-
-				//check component slots
-				if(tagName === COMP_SLOT_TAG){
-					var is = node.getAttribute('is');
-					var cache = node.getAttribute('cache');
-					var n = node.getAttribute('name');
-					if(!n) n = 'compSlots_' + (Object.keys(component.compSlots).length+1);
-					var exp = false;
-					if(!is && node.getAttribute('.is')!=null){
-						is = node.getAttribute('.is');
-						exp = true;
-					}
-					if(is != null){
-						component.compSlots[n] = new CompSlot(exp,is,component,node,cache);
-						return;
-					}
-				}
-
-				var scopeDirs = [];
-				//检测是否有子域属性，比如each
-				for(var i=atts.length;i--;){
-					var name = atts[i][0];
-					if(name.indexOf(CMD_PREFIX) !== 0)continue;
-					
-					var c = name.replace(CMD_PREFIX,'');
-					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-					if(CPDI > -1)c = c.substring(0,CPDI);
-
-					if(DirectiveFactory.hasTypeOf(c)){
-						if(DirectiveFactory.isFinal(c)){
-							scopeDirs.push([c,atts[i],DirectiveFactory.priority(c) || 0]);
-						}
-					}
-				}
-
-				if(scopeDirs.length>0){
-					scopeDirs.sort(function(a,b){
-						return b[2] - a[2];
-					});
-					var c = scopeDirs[0][0],
-						attr = scopeDirs[0][1];
-					if(DirectiveFactory.isFinal(c)){
-						var direct = DirectiveFactory.newInstanceOf(c,node,component,attr[0],attr[1]);
-						direcs.push(direct);
-						return;
-					}
-				}
-
-				//解析组件
-				if(component.name!==tagName && ComponentFactory.hasTypeOf(tagName)){
-					var pr = getRestrictParent(component);
-					if(pr && pr.restrict.children){
-						var children = pr.restrict.children.split(',');
-						if(children.indexOf(tagName) < 0)return;
-					}
-					var cr = ComponentFactory.getRestrictOf(tagName);
-					if(cr && cr.parents){
-						var parents = cr.parents.split(',');
-						if(parents.indexOf(pr.name) < 0)return;
-					}
-					var instance = component.createSubComponentOf(node);
-					subComps.push(instance);
-					return;
-				}
-				
-
-				//others
-				for(var i=atts.length;i--;){
-					var attName = atts[i][0];
-					var attVal = atts[i][1];
-					if(REG_CMD.test(attName)){
-						var c = attName.replace(CMD_PREFIX,'');
-						var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-						if(CPDI > -1)c = c.substring(0,CPDI);
-						//如果有对应的处理器
-						if(DirectiveFactory.hasTypeOf(c)){
-							var direct = DirectiveFactory.newInstanceOf(c,node,component,attName,attVal);
-							direcs.push(direct);
-						}
-					}else if(attName[0] === ':'){
-						var direct = DirectiveFactory.newInstanceOf('on',node,component,attName,attVal);
-						direcs.push(direct);
-					}else if(REG_EXP.test(attVal)){//只对value检测是否表达式，name不检测
-				    	var exp = recordExpNode(attVal,component,node,attName);
-				    	if(exp)exps.push(exp);
-					}
-				}
-			}
-
-	    	if(node.childNodes.length>0){
-				for(var i=0,l=node.childNodes.length;i<l;i++){
-					scan(node.childNodes[i],component,direcs,subComps,exps);
-				}
-			}
-		}else if(node.nodeType === 3){
-			if(node.nodeValue.replace(/\t|\r|\s/img,'').length<1)return;
-			//文本节点处理
-			var exp = recordExpNode(node.nodeValue,component,node);
-			if(exp)exps.push(exp);
-		}
-	}
-
-	//表达式解析
-	function recordExpNode(origin,component,node,attrName){
-		//origin可能包括非表达式，所以需要记录原始value
-		var expNode = getExpNode(origin,component,node,attrName);
-		expNode && component.__expNodes.push(expNode);
-
-		return expNode;
-	}
-
-	function getExpNode(origin,component,node,attrName){
-		var exps = {};
-		var toHTML = !attrName && origin.replace(/\s*/mg,'').indexOf(EXP_START_TAG + EXP2HTML_EXP_TAG)===0;
-		if(toHTML){
-			origin = origin.replace(EXP2HTML_EXP_TAG,'');
-		}
-		origin.replace(REG_EXP,function(a,modelExp){
-
-			var filters = {};
-			var i = 1;
-			var varMap = null;
-			if(FILTER_EXP.test(modelExp)){
-				varMap = parseFilters(lexer(RegExp.$1),filters,component);
-				i = modelExp.indexOf(FILTER_EXP_START_TAG);
-			}
-
-			var expStr = modelExp;
-			if(i > 1)
-				expStr = modelExp.substring(0,i);
-    		var tmp = lexer(expStr);
-    		
-    		if(varMap)
-    			Util.ext(tmp.varTree,varMap);
-    		//保存表达式
-    		exps[modelExp] = {
-    			words:tmp.words,
-    			varTree:tmp.varTree,
-    			filters:filters
-    		};
-    	});
-		if(Object.keys(exps).length<1)return;
-
-		return new ExpNode(node,attrName,origin,exps,component,toHTML);
-	}
-
-	this.getExpNode = getExpNode;
-
-	function parseFilters(expNode,filters,component){
-		var currParams = [],
-			currParam = null;
-		var inParam = false;
-		var varMap = {};
-
-		var words = [];
-		var wds = expNode.words;
-		for(var i=0;i<wds.length;i++){
-			if(wds[i] instanceof Array){
-				var w = wds[i][0];
-				var tmp = w.replace(/^\./,'');
-				
-				words.push([tmp]);
-			}else{
-				words.push(wds[i]);
-			}
-		}
-		for(var i=0;i<words.length;i++){
-			var w = words[i];
-			switch(w){
-				case ':':
-					inParam = true;
-					if(currParam !== null)
-						currParams.push(currParam);
-					currParam = '';
-					break;
-				case FILTER_EXP_SPLITTER:
-					inParam = false;
-					if(currParam !== null)
-						currParams.push(currParam);
-					currParam = '';
-					currParams = [];
-					break;
-				default:
-					if(w instanceof Array){
-						var partName = w[0];
-						var filterName = partName.toLowerCase();
-						if(!inParam && filterName && FilterFactory.hasTypeOf(filterName)){
-							currParam = null;
-							filters[filterName] = [FilterFactory.newInstanceOf(filterName,component),currParams];
-						}else{
-							var tmp = lexer(partName);
-							Util.ext(varMap,tmp.varTree);
-							currParams.push(tmp);
-							currParam = null;
-						}
-					}else{
-						if(!inParam || !w.replace(/\s+/,''))continue;
-						currParam += w.replace(/^['"]|['"]$/g,'');
-					}
-			}
-		}
-
-		if(currParam){
-			currParams.push(currParam);
-		}
-
-		return varMap;
-	}
-
-	this.parseFilters = parseFilters;
+        
+    }while((p = p.parentNode) && p.tagName != 'BODY');
 }
-/**
- * 构建器
- */
+//touch/mouse/pointer events
+var userAgent = self.navigator.userAgent.toLowerCase();
+var isAndroid = userAgent.indexOf('android')>0?true:false;
+var isIphone = userAgent.indexOf('iphone')>0?true:false;
+var isIpad = userAgent.indexOf('ipad')>0?true:false;
+var isWphone = userAgent.indexOf('windows phone')>0?true:false;
+var isMobile = isIphone || isIpad || isAndroid || isWphone;
+if(isMobile){
+    var FLING_INTERVAL = 200;
+    var lastTapTime = 0;
+    var timer;
+    var hasMoved = false;
+    var canceled = false;
+    var fling_data;
+    ///////////////////// touch events /////////////////////
+    document.addEventListener('touchstart',doStart,true);
+    document.addEventListener('touchmove',doMove,true);
+    document.addEventListener('touchend',doEnd,true);
+    document.addEventListener('touchcancel',doCancel,true);
+    function doStart(e){
+        dispatch('touchstart',e);
+        dispatch('pointerdown',e);
 
-var Builder = new function() {
-	//预链接
-	this.link = function(comp,expNodes){
-		//build expressions
-		for(var i=expNodes.length;i--;){
-			var expNode = expNodes[i];
-			for(var expStr in expNode.expMap){
-				var lexInfo = expNode.expMap[expStr];
-				var varTree = lexInfo.varTree;
+        //start timer
+        timer = setTimeout(function(){
+            dispatch('press',e);
+        },800);
 
-				//遍历表达式中的所有变量串
-				for(var varStr in varTree){
-					var varObj = varTree[varStr];
+        hasMoved = false;
+        canceled = false;
 
-					//监控变量
-					buildExpModel(comp,varObj,expNode);
-				}
-			}
-		}
-	}
+        //handle fling
+        var touch = e.touches[0];
+        fling_data = {
+            x:touch.clientX,
+            y:touch.clientY,
+            t:Date.now()
+        };
+    }
+    function doMove(e){
+        clearTimeout(timer);
 
- 	function buildExpModel(comp,varObj,expNode){
- 		for(var subV in varObj.subVars){
- 			var subVar = varObj.subVars[subV];
- 			buildExpModel(comp,subVar,expNode);
- 		}
+        dispatch('touchmove',e);
+        dispatch('pointermove',e);
 
- 		var prop = walkDataTree(comp.__expDataRoot.subProps,varObj.segments[0],expNode);
- 		
- 		for(var i=1;i<varObj.segments.length;i++){
- 			prop = walkDataTree(prop.subProps,varObj.segments[i],expNode);
- 		}
- 	}
- 	this.buildExpModel = buildExpModel;
+        hasMoved = true;
+    }
+    function doCancel(e){
+        clearTimeout(timer);
 
- 	function walkDataTree(parentProp,propName,expNode){
- 		var prop = parentProp[propName];
- 		if(!prop){
- 			prop = parentProp[propName] = new ExpData(propName,parentProp);
- 		}
- 		if(expNode instanceof ExpNode){
- 			if(prop.expNodes.indexOf(expNode) < 0)
- 				prop.expNodes.push(expNode);
- 		}else 
- 		if(expNode instanceof AttrObserveNode){
- 			if(prop.attrObserveNodes.indexOf(expNode) < 0)
- 				prop.attrObserveNodes.push(expNode);
- 		}else 
- 		if(expNode instanceof Watch){
- 			if(prop.watchs.indexOf(expNode) < 0)
- 				prop.watchs.push(expNode);
- 		}
+        canceled = true;
+        dispatch('touchcancel',e);
+        dispatch('pointercancel',e);
+    }
+    function doEnd(e){
+        clearTimeout(timer);
+        
+        dispatch('touchend',e);
+        dispatch('pointerup',e);
 
- 		return parentProp[propName];
- 	}
+        if(canceled)return;
 
-	/**
-	 * 构建组件
-	 */
-	this.build = function(component){
-		this.link(component,component.__expNodes);
-	}
+        if(!hasMoved){
+            dispatch('tap',e);
 
+            if(Date.now() - lastTapTime < 300){
+                dispatch('dbltap',e);
+            }
+
+            lastTapTime = Date.now();
+        }else{
+            var touch = e.changedTouches[0];
+            var dx = touch.clientX,
+                dy = touch.clientY;
+
+            var data = fling_data;
+            var sx = data.x,
+                sy = data.y,
+                st = data.t;
+
+            var long = Date.now() - st;
+            var s = Math.sqrt((dx-sx)*(dx-sx)+(dy-sy)*(dy-sy)) >> 0;
+            //时间小于interval并且位移大于20px才触发fling
+            if(long <= FLING_INTERVAL && s > 20){
+                var r = Math.atan2(dy-sy,dx-sx);
+
+                var extra = {
+                    slope:r,
+                    interval:long,
+                    distance:s
+                }
+
+                dispatch('fling',e,extra);
+            }
+        }
+    }
+}else{
+    ///////////////////// 鼠标事件分派器 /////////////////////
+    document.addEventListener('mousedown',doMousedown,true);
+    document.addEventListener('mousemove',doMousemove,true);
+    document.addEventListener('mouseup',doMouseup,true);
+    window.addEventListener('blur',doMouseCancel,true);
+    var type = self.onmousewheel == null?'mousewheel':'DOMMouseScroll';
+    document.addEventListener(type,doMousewheel,true);
+
+    document.addEventListener('mouseout',doMouseout,true);
+
+    var inited = true;
+    var lastClickTime = 0;
+    var timer;
+        
+    function doMousedown(e){
+        dispatch('mousedown',e);
+        dispatch('pointerdown',e);
+
+        //start timer
+        timer = setTimeout(function(){
+            dispatch('press',e);
+        },800);
+    }
+    function doMousemove(e){
+        clearTimeout(timer);
+
+        dispatch('mousemove',e);
+        dispatch('pointermove',e);
+    }
+    function doMouseup(e){
+        clearTimeout(timer);
+
+        dispatch('mouseup',e);
+        dispatch('pointerup',e);
+
+        if(e.button === 0){
+            dispatch('click',e);
+            dispatch('tap',e);
+            if(Date.now() - lastClickTime < 300){
+                dispatch('dblclick',e);
+                dispatch('dbltap',e);
+            }
+
+            lastClickTime = Date.now();
+        }
+    }
+    function doMouseCancel(e){
+        clearTimeout(timer);
+
+        dispatch('pointercancel',e);                
+    }
+    function doMouseout(e){
+        dispatch('mouseout',e);
+    }
+    function doMousewheel(e){
+        dispatch('mousewheel',e);
+    }
 }
+
+//model events
+document.addEventListener('input',function(e){
+    dispatch('input',e);
+},true);
+document.addEventListener('change',function(e){
+    dispatch('change',e);
+},true);
+
+//keyboard events
+document.addEventListener('keydown',function(e){
+    dispatch('keydown',e);
+},true);
+document.addEventListener('keypress',function(e){
+    dispatch('keypress',e);
+},true);
+document.addEventListener('keyup',function(e){
+    dispatch('keyup',e);
+},true);
+
+//focus events
+document.addEventListener('focus',function(e){
+    dispatch('focus',e);
+},true);
+document.addEventListener('blur',function(e){
+    dispatch('blur',e);
+},true);
 /**
  * 变更处理器，处理所有变量变更，并触发渲染
  */
@@ -1421,25 +1756,20 @@ var ChangeHandler = new function() {
 				combineChange = false;
 
 				changeQ.forEach(function(change){
+					var comp = change.comp;
+
 					var newVal = change.newVal;
 					var oldVal = change.oldVal;
 					var pc = change.pc;
-					var xpc = change.xpc;
-					var comp = change.comp;
 					var type = change.type;
 					var name = change.name;
 					var object = change.object;
 					
 					handlePath(newVal,oldVal,comp,type,name,object,pc);
-
-					xpc.forEach(function(pc){
-						handlePath(newVal,oldVal,comp,type,name,object,pc);
-					});
-
 				});//end for
 				var tmp = changeMap;
 				for(var k in tmp){
-					tmp[k].comp.__update(tmp[k].changes);
+					updateComponent(tmp[k].comp,tmp[k].changes);
 				}
 			},20);
 		}
@@ -1447,738 +1777,34 @@ var ChangeHandler = new function() {
 	
 	function handlePath(newVal,oldVal,comp,type,name,object,pc){
         var chains = [];
-        if(pc[0] instanceof Directive){
-        	var index = pc[2] === undefined?name:pc[2];
-
-	        comp = pc[0].subComponents[parseInt(index)];
-	        chains.push(pc[1]);
-	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.state.__im__target && (comp.state.__im__target[pc[1]] = newVal);
-	        }
-        }else{
-        	chains = pc.concat();
-			if(!Util.isArray(object))
-	        chains.push(name);
-        }
+    	chains = pc.concat();
+		if(!isArray(object))
+        	chains.push(name);
         
         if(!comp)return;
 
-        if(!changeMap[comp.__id]){
-        	changeMap[comp.__id] = {
+        if(!changeMap[comp._uid]){
+        	changeMap[comp._uid] = {
         		changes:[],
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
-        changeMap[comp.__id].changes.push(c);
-
-        mergeExpProp(comp,chains,c);
-	}
-
-	var sqbExp = /(^\[)|(,\[)/;
-	function mergeExpProp(component,propChain,changeObj){
-		var props = component.__expDataRoot.subProps;
-		var prop;
-		var hasSqb = false;
-		for(var i=0;i<propChain.length;i++){
-			var p = propChain[i];
-			if(sqbExp.test(Object.keys(props).join(','))){
-				hasSqb = true;
-				break;
-			}
-			if(props[p]){
-				prop = props[p];
-				props = props[p].subProps;
-				continue;
-			}
-			break;
-		}
-		if(!prop)return;
-
-        var matchs = [];
-        if(hasSqb){
-            var findLength = propChain.length - i - 1;
-            var spks = Object.keys(prop.subProps);
-            for(var i=spks.length;i--;){
-                var k = spks[i];
-                if(k[0] === '[' || k === p){
-                    findMatchProps(prop.subProps[k],findLength,matchs);
-                }
-            }
-        }else {
-            matchs.push(prop);
-        }
-
-        
-        //merge
-        for(var i=matchs.length;i--;){
-        	var prop = matchs[i];
-
-        	changeObj.expProps.push(prop);
-        }
-
-	}
-	function findMatchProps(prop,findLength,matchs){
-		if(findLength < 1){
-			matchs.push(prop);
-			return;
-		}
-		for(var k in prop.subProps){
-			findMatchProps(prop.subProps[k],findLength-1,matchs);
-		}
-	}
-
-}
-/**
- * 渲染器
- */
-
-var Renderer = new function() {
-
-	/**
-	 * 渲染组件
-	 */
-	this.render = function(component){
- 		renderExpNodes(component.__expNodes);
-	}
-
-	this.recurRender = function(component){
-		
-		var children = component.children;
- 		renderExpNodes(component.__expNodes);
-
- 		for(var j=children.length;j--;){
- 			Renderer.render(children[j]);
- 		}
-	}
-
-	//表达式节点渲染
-	function renderExpNodes(expNodes){
-		var cache = {};
-		for(var i=expNodes.length;i--;){
-			var expNode = expNodes[i];
-
-			var val = null;
-			if(cache[expNode.origin] && cache[expNode.origin].comp === expNode.component){
-				val = cache[expNode.origin].val;
-			}else{
-				val = calcExpNode(expNode);
-				cache[expNode.origin] = {
-					comp:expNode.component,
-					val:val
-				}
-			}
-			
-			if(expNode.toHTML){
-				var rs = renderHTML(expNode,val,expNode.node,expNode.component);
-				if(rs){
-					continue;
-				}
-			}
-			if(val !== null){
-				// console.log('更新DOM');
-				updateDOM(expNode.node,expNode.attrName,val);
-			}
-		}//over for
-		
-	}
-	this.renderExpNodes = renderExpNodes;
-
-	var propMap = {
-		value:['INPUT']
-	};
-
-	function updateDOM(node,attrName,val){
-		if(node.setAttribute){
-			node.setAttribute(attrName,val);
-			var propOn = propMap[attrName];
-			if(propOn && propOn.indexOf(node.tagName)>-1){
-				node[attrName] = val;
-			}
-		}else{
-			if(node.parentNode)//for IE11
-			//文本节点
-			node.nodeValue = val;
-		}
-	}
-
-	//计算表达式的值，每次都使用从内到外的查找方式
-	function calcExpNode(expNode){
-		var component = expNode.component,
-			origin = expNode.origin,
-			expMap = expNode.expMap;
-		//循环获取每个表达式的值
-		var map = {};
-		for(var exp in expMap){
-			//表达式对象
-			var expObj = expMap[exp];
-			var rs = evalExp(component,expObj);
-
-			var filters = expObj.filters;
-			if(Object.keys(filters).length > 0){
-                if(Util.isObject(rs)){
-                	var tmp = rs;
-                    rs = Util.isArray(rs)?[]:{};
-                    Util.ext(rs,tmp);
-                }
-
-				for(var k in filters){
-					var c = filters[k][0];
-					var params = filters[k][1];
-					var actParams = [];
-					for(var i=params.length;i--;){
-						var v = params[i];
-						if(v.varTree && v.words){
-							v = Renderer.evalExp(component,v);
-						}
-						actParams[i] = v;
-					}
-					c.value = rs;
-					rs = c.to.apply(c,actParams);
-				}
-			}
-
-			map[exp] = rs===undefined?'':rs;
-		}
-
-		//替换原始串中的表达式
-		for(var k in map){
-			origin = origin.replace(EXP_START_TAG +k+ EXP_END_TAG,map[k]+'');
-		}
-		return origin;
-	}
-
-	this.calcExpNode = calcExpNode;
-
-	//计算表达式对象
-	function evalExp(component,expObj){
-		var evalExp = getExpEvalStr(component,expObj);
-		var rs = '';
-		try{
-			rs = eval(evalExp);
-		}catch(e){
-			LOGGER.debug(e.message + ' when eval "' + evalExp+'"');
-		}
-		
-		return rs;
-	}
-
-	this.evalExp = evalExp;
-
-	function getExpEvalStr(component,expObj){
-		var varTree = expObj.varTree;
-		var expVarPath = {};
-		for(var varStr in varTree){
-			var varObj = varTree[varStr];
-
-			var path = buildVarPath(component,varObj,varStr);
-			expVarPath[varStr] = path;
-		}
-
-		var evalExp = joinExpStr(expObj.words,expVarPath);
-		return evalExp;
-	}
-	this.getExpEvalStr = getExpEvalStr;
-
-	//拼接表达式串
-	function joinExpStr(words,vMap){
-		var evalExp = '';
-		for(var i=0;i<words.length;i++){
-			var w = words[i];
-			if(w instanceof Array){
- 				evalExp += vMap[w[0]];
- 			}else{
- 				evalExp += w;
- 			}
-		}
-		return evalExp;
-	}
-
-	function keyWordsMapping(str,component){
-        if(str.indexOf('.this')===0){
-        	return str.replace('.this',component.__getPath());
-        }
-    }
-
-	//提供通用的变量遍历方法 
- 	//用于获取一个变量表达式的全路径
- 	function buildVarPath(component,varObj,varStr){
- 		var subVarPath = {};
- 		for(var subV in varObj.subVars){
- 			var subVar = varObj.subVars[subV];
- 			var subPath = buildVarPath(component,subVar,subV);
- 			subVarPath[subV] = subPath;
- 		}
-
- 		var isKeyword = false;
- 		var fullPath = '';
- 		for(var i=0;i<varObj.words.length;i++){
- 			var w = varObj.words[i];
- 			if(w instanceof Array){
- 				if(subVarPath[w[0]]){
- 					fullPath += subVarPath[w[0]];
- 					continue;
- 				}
-
-				var keywordPath = keyWordsMapping(w[0],component);
-                if(keywordPath){
-                    isKeyword = true;
-                    fullPath += keywordPath;
-                }else{
-                    fullPath += w[0];
-                }
- 			}else{
- 				fullPath += w;
- 			}
- 		}
- 		var watchPath = '';
- 		if(varObj.watchPath){
-	 		watchPath = varObj.watchPath;
- 		}else{
- 			for(var i=0;i<varObj.watchPathWords.length;i++){
-	 			var w = varObj.watchPathWords[i];
-	 			if(w instanceof Array){
-	 				watchPath += subVarPath[w[0]] || w[0];	
-	 			}else{
-	 				watchPath += w;
-	 			}
-	 		}
- 		}
-
- 		if(isKeyword || fullPath.indexOf('impex._cs')===0)return fullPath;
-
- 		var isDataType = true;
- 		if(varStr[varStr.length-1]===')' 
- 			&& /^\.[^(.]+?\(/.test(varStr) //fixed .xx.fn()
- 			){
- 			isDataType = false;
- 		}
- 		
- 		var searchPath = watchPath || fullPath;
- 		var searchStr = null;
- 		var context = component;
- 		if(isDataType){
- 			searchStr = '.state' + searchPath;
- 		}else{
- 			searchStr = '.' + searchPath.substr(1);
- 		}
- 		component = varInComponent(component,searchStr);
- 		if(!component && isDataType){
- 			searchStr = '.' + searchPath.substr(1);
- 			component = varInComponent(context,searchStr);
- 			if(component){
- 				isDataType = false;
- 			}
- 		}
-
- 		if(component){
- 			if(isDataType){
-	 			fullPath = '.state' + fullPath;
-	 		}else{
-	 			fullPath = '.' + fullPath.substr(1);
-	 		}
- 			return component.__getPath() + fullPath;
- 		}else{
- 			if(isDataType){
-	 			searchPath = '.' + searchPath.substr(1);
-	 		}
- 		}
-
- 		return 'self' + fullPath;
- 	}
-
- 	function varInComponent(comp,v){
-		if(getVarByPath(v,comp.__getPath()) !== undefined){
-			return comp;
-		}
-		return null;
-	}
-
-	function getVarByPath(path,mPath){
-		var varExp = mPath + path;
-		var rs = undefined;
-		try{
-			rs = eval(varExp.replace(/^\./,''));
-		}catch(e){}
-		return rs;
-	}
-
-	function renderHTML(expNode,val,node,component){
-		if(!Util.isDOMStr(val)){
-			val = val.replace(/</mg,'&lt;').replace(/>/mg,'&gt;');
-		}
-		if(expNode.__lastVal === val)return;
-		if(node.nodeType != 3)return;
-		if(!expNode.__placeholder){
-			var ph = document.createComment('-- [html] placeholder --');
-			node.parentNode.insertBefore(ph,node);
-			expNode.__lastVal = val;
-			expNode.__placeholder = ph;
-			node.parentNode.removeChild(node);
-		}
-
-		if(expNode.__lastNodes){
-			//release
-			DOMHelper.detach(expNode.__lastNodes);
-
-			//release related objs
-			var list = HTML_EXP_MAP[expNode.id];
-			if(list && list.length>0){
-				releaseObjs(list);
-				CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = null;
-				delete HTML_EXP_MAP[expNode.id];
-			}
-			
-			expNode.__lastNodes = null;
-		}
-
-		var target = document.createComment('-- [html] target --');
-		expNode.__placeholder.parentNode.insertBefore(target,expNode.__placeholder);
-
-		var nodes = DOMHelper.compile(val);
-		expNode.__lastVal = val;
-
-		if(nodes.length<1)return;
-
-		DOMHelper.replace(target,nodes);
-		expNode.__lastNodes = nodes;
-
-
-		HTML_EXP_COMPILING = true;
-		CURRENT_HTML_EXP_LIST = HTML_EXP_MAP[expNode.id] = [];
-		Util.compileViewOf(component,nodes);
-		HTML_EXP_COMPILING = false;
-
-		return true;
-	}
-
-	function releaseObjs(list){
-		for(var i=list.length;i--;){
-			var o = list[i];
-			if(o.destroy){
-				o.destroy();
-			}else{
-				if(o.release)
-					o.release();
-			}
-		}
+        changeMap[comp._uid].changes.push(c);
 	}
 }
-
 
 /**
- * 信号类用来实现impex内部的消息系统
- * @class Signal
+ * 变更信息
  */
-function Signal(data){
-    if(data)Util.ext(this,data);
-    this.__signalMap = {};
-}
-Signal.prototype = {
-    /**
-     * 监听信号。支持原生事件类型或自定义事件类型。<br/>
-     * 如果同一个事件类型两者都有，自定义事件会优先绑定
-     * @param  {String} type 信号类型,多个类型使用空格分割
-     * @param {String | Function} exp 自定义函数表达式，比如  fn(x+1) 。或者回调函数，回调参数e
-     * @param {Object} context 参数/回调函数所属上下文。可以是组件、指令或者任何对象
-     * @see impex.events
-     */
-    on:function(type,exp,context){
-        var ts = type.replace(/\s+/mg,' ').split(' ');
-        for(var i=ts.length;i--;){
-            var t = ts[i];
-            var listeners = this.__signalMap[t];
-            if(!listeners)listeners = this.__signalMap[t] = [];
-            var comp = this instanceof Component?this:this.component;
-            var meta = {
-                id:Date.now() + Math.random(),
-                el:this.el,
-                exp:exp,
-                comp:comp,
-                context:context||this
-            }
-            listeners.push(meta);
-
-            //查找
-            var isDefault = true;
-            for(var l=DISPATCHERS.length;l--;){
-                var events = DISPATCHERS[l][0];
-                if(events.indexOf(t) > -1){
-                    isDefault = false;
-                    break;
-                }
-            }
-
-            if(isDefault){
-                Handler.addDefaultEvent(t,meta);
-            }else{
-                DISPATCHERS[l][1].addEvent(t,meta);
-                DISPATCHERS[l][1].onInit();
-            }
-        }//end for
-        
-    },
-    /**
-     * 解除信号监听<br/>
-     * @param  {String} type 信号类型,多个类型使用空格分割
-     * @param {String | Function} exp 自定义函数表达式，比如  fn(x+1) 。或者回调函数，回调参数e
-     * @param {Object} context 参数/回调函数所属上下文。可以是组件、指令或者任何对象
-     * @see impex.events
-     */
-    off:function(type,exp,context){
-        context = context||this;
-
-        var types = null;
-        if(!type){
-            types = Object.keys(this.__signalMap);
-        }else{
-            types = type.replace(/\s+/mg,' ').split(' ');
-        }
-
-        for(var i=types.length;i--;){
-            var listeners = this.__signalMap[types[i]];
-            if(listeners){
-                var toDel = [];
-                for(var j=listeners.length;j--;){
-                    if(context === listeners[j].context && 
-                        (exp?listeners[j].exp === exp:true)){
-                        toDel.push(listeners[j]);
-                    }
-                }
-                toDel.forEach(function(meta){
-                    var index = listeners.indexOf(meta);
-                    listeners.splice(index,1);
-
-                    //del defautl
-                    Handler.removeDefaultEvent(type,meta);
-
-                    //del custom
-                    if(meta.dispatcher)
-                        meta.dispatcher._delEvent(type,meta);
-                });
-            }
-        }
-    },
-    //type
-    emit:function(){
-        var type = arguments[0];
-        var listeners = this.__signalMap[type];
-        if(!listeners)return;
-
-        var params = [];
-        for(var i=1;i<arguments.length;i++){
-            params.push(arguments[i]);
-        }
-
-        listeners.forEach(function(meta){
-            Handler.emitEventExp(meta,type,params);
-        });
-    }
-}
-/**
- * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
- * 
- * @class 
- * @param {data} 扩展数据
- */
-var Handler = new function() {
-	var EVENTS_MAP = {};
-
-	this.evalEventExp = function(meta,e,type,extra){
-		var originExp = meta.exp;
-		var context = meta.context;
-		var comp = meta.comp;
-		var tmpExp = originExp;
-
-		var ev = new Event(type,e,meta.el);
-		if(extra)
-			Util.ext(ev,extra);
-
-		//如果表达式是函数，计算返回表达式
-		if(originExp instanceof Function && !meta.componentFn/*没有表达式时执行*/){
-			try{
-				tmpExp = originExp.call(context,ev);
-			}catch(error){
-				LOGGER.debug("error in event '"+type +"'",error);
-			}
-
-			if(!tmpExp || typeof(tmpExp) != "string")return tmpExp;//没有表达式直接返回
-		}
-
-		if(!meta.cache && typeof(tmpExp) == "string"){
-			var expObj = lexer(tmpExp);
-
-			var evalStr = Renderer.getExpEvalStr(comp,expObj);
-
-			var tmp = evalStr.replace(/self\.\$event/mg,'$event');
-			tmp = tmp.replace(/self\.arguments/mg,'arguments');
-			var componentFn = new Function('$event','arguments',tmp);
-
-			meta.componentFn = componentFn;//cache
-			meta.cache = true;
-		}
-		
-		try{
-			return meta.componentFn.call(context,ev,[ev]);
-		}catch(error){
-			LOGGER.debug("error in event '"+type +"'",error);
-		}
-	}
-
-	this.emitEventExp = function(meta,type,params){
-		var originExp = meta.exp;
-		var context = meta.context;
-		var comp = meta.comp || context;
-		var tmpExp = originExp;
-		//如果表达式是函数，计算返回表达式
-		if(originExp instanceof Function && !meta.componentFn/*没有表达式时执行*/){
-			try{
-				tmpExp = originExp.apply(context,params);
-			}catch(error){
-				LOGGER.debug("error in event '"+type +"'",error);
-			}
-
-			if(!tmpExp || typeof(tmpExp) != "string")return tmpExp;//没有表达式直接返回
-		}
-		
-		if(!meta.cache && typeof(tmpExp) == "string"){
-			if(!(comp instanceof Component)){
-				LOGGER.error("need a context to parse '"+originExp+"' of type '"+type +"'");
-				return;
-			}
-
-			var expObj = lexer(tmpExp);
-
-			var evalStr = Renderer.getExpEvalStr(comp,expObj);
-
-			var tmp = evalStr.replace(/self\.arguments/mg,'arguments');
-			var componentFn = new Function('arguments',tmp);
-
-			meta.componentFn = componentFn;//cache
-			meta.cache = true;//不在重新计算表达式
-		}
-
-		try{
-			meta.componentFn.call(context,params);
-		}catch(error){
-			LOGGER.debug("error in event '"+type +"'",error);
-		}
-	}
-	this.addDefaultEvent = function(type,meta){
-		if(!EVENTS_MAP[type]){
-			EVENTS_MAP[type] = [];
-		}
-		EVENTS_MAP[type].push(meta);
-		var ref = this.__defaultEventHandler.bind(this);
-		meta.ref = ref;
-
-        if(meta.el)meta.el.addEventListener(type,ref,false);
-	}
-
-	this.removeDefaultEvent = function(type,meta){
-		var metas = EVENTS_MAP[type];
-		for(var i=metas.length;i--;){
-			if(metas[i].id === meta.id){
-				break;
-			}
-		}
-
-		metas.splice(i,1);
-
-        if(meta.el)meta.el.removeEventListener(type,meta.ref,false);
-	}
-
-	this.__defaultEventHandler = function(e){
-		var type = e.type;
-		var t = e.currentTarget;
-		var metas = EVENTS_MAP[type];
-		for(var i=metas.length;i--;){
-			if(metas[i].el === t){
-				break;
-			}
-		}
-		this.evalEventExp(metas[i],e,type);
-	}
-}
-/**
- * @classdesc 事件封装对象
- * 
- * @class 
- * 
- */
-function Event(type,e,ct) {
+function Change(name,newVal,oldVal,path,type,object){
+	this.name = name;
+	this.newVal = newVal;
+	this.oldVal = oldVal;
+	this.path = path;
 	this.type = type;
-	this.e = e;
-	this.target = e && e.target;
-	this.currentTarget = ct;
+	this.object = object;
 }
-/**
- * @classdesc 事件分派器。用来定义原生或自定义事件，以代理方式高效的处理事件。
- * 
- * @class 
- * @param {data} 扩展数据
- */
-function Dispatcher(data) {
-	/**
-	 * 用来存放在当前分派器上注册的事件，优化派发性能
-	 * @type {Object}
-	 */
-	this.__eventMap = {};
-
-	/**
-	 * 初始化回调。由系统自动调用
-	 * @type {Function}
-	 */
-	this.onInit = null;
-
-	Util.ext(this,data);
-};
-Util.ext(Dispatcher.prototype,{
-	/**
-	 * 派发事件
-	 * @param  {String} eventStr 事件名
-	 * @param  {Object} e 事件对象
-	 * @param {Object} extra 事件扩展属性，属性会被扩展到对象属性中
-	 */
-	dispatch:function(eventStr,e,extra){
-		var t = e.target;
-        var events = this.__eventMap[eventStr];
-        if(!events)return;
-        
-        do{
-            if(this.fireEvent(t,events,e,eventStr,extra) === false){
-                break;
-            }
-
-            t = t.parentNode;
-        }while(t.tagName && t.tagName != 'HTML');
-	},
-    fireEvent:function(target,events,e,type,extra){
-        for(var i=events.length;i--;){
-            if(events[i].el === target)break;
-        }
-        if(i < 0)return;
-
-        //callback
-        var bubbles = Handler.evalEventExp(events[i],e,type,extra);
-
-        return bubbles;//是否冒泡
-    },
-	addEvent:function(type,meta){
-		var events = this.__eventMap[type];
-		if(!events)events = this.__eventMap[type] = [];
-		events.push(meta);
-		meta.dispatcher = this;
-	},
-	_delEvent:function(type,meta){
-		var events = this.__eventMap[type];
-		for(var i=events.length;i--;){
-            if(events[i].id === meta.id)break;
-        }
-        events.splice(i,1);
-	}
-});
-
 /**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
  * 组件也可以有属性。
@@ -2201,33 +1827,24 @@ Util.ext(Dispatcher.prototype,{
  * 
  * @class 
  */
-function Component () {
-	var id = 'C_' + im_counter++;
-	this.__id = id;
-	this.__state = Component.state.created;
-
-	Signal.call(this);
+function Component (el) {
+	this._uid = 'C_' + im_counter++;
 
 	/**
 	 * 对顶级元素的引用
 	 * @type {HTMLElement}
 	 */
-	this.el = null;
+	this.el = el;
 	/**
 	 * 对组件内的所有组件槽的引用
 	 * @type {Object}
 	 */
 	this.compSlots = {};
 	/**
-	 * 对子组件的引用
+	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
-	this.comps = {};
-	/**
-	 * 对组件内视图元素的引用
-	 * @type {Object}
-	 */
-	this.els = {};
+	this.refs = {};
 	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
@@ -2247,15 +1864,16 @@ function Component () {
 	 * @type {Array}
 	 */
 	this.children = [];
-	this.__expNodes = [];
-	this.__expDataRoot = new ExpData();
-	this.__eventMap = {};
-	this.__watchProps = [];
-	/**
-	 * 组件域内的指令列表
-	 * @type {Array}
-	 */
-	this.directives = [];
+	//watchs
+	this.__watchMap = {};
+	this.__watchFn;
+	this.__watchOldVal;
+	this.__watchPaths = [];
+	//syncs
+	this.__syncFn = {};
+	this.__syncOldVal = {};
+	this.__syncFnForScope = {};
+
 	/**
 	 * 组件模版，用于生成组件视图
 	 * @type {string}
@@ -2265,94 +1883,41 @@ function Component () {
 	//组件url
 	this.__url;
 	/**
-	 * 组件约束，用于定义组件的使用范围包括上级组件限制
-	 * <p>
-	 * {
-	 * 	parents:'comp name' | 'comp name1,comp name2,comp name3...',
-	 * 	children:'comp name' | 'comp name1,comp name2,comp name3...'
-	 * }
-	 * </p>
-	 * 这些限制可以单个或者同时出现
-	 * @type {Object}
-	 */
-	this.restrict;
-
-	/**
 	 * 组件数据
 	 * @type {Object}
 	 */
 	this.state = {};
 
-	impex._cs[this.__id] = this;
-
-	//bind exp
-	if(HTML_EXP_COMPILING){
-		CURRENT_HTML_EXP_LIST.push(this);
-	}
+	impex._cs[this._uid] = this;
 };
-Component.state = {
-	created : 'created',
-	inited : 'inited',
-	mounted : 'mounted',
-	unmounted : 'unmounted'
-};
-Util.inherits(Component,Signal);
-Util.ext(Component.prototype,{
+Component.prototype = {
 	/**
-	 * 设置或者获取模型值，如果第二个参数为空就是获取模型值<br/>
-	 * 设置模型值时，设置的是当前域的模型，如果当前模型不匹配表达式，则赋值无效<br/>
-	 * @param  {string} path 表达式路径
-	 * @param  {var} val  值
-	 * @return this
+	 * 设置组件状态值
+	 * @param {String} path 状态路径
+	 * @param {Object} v  
 	 */
-	d:function(path,val){
-		if(!path){
-			LOGGER.warn('invalid path \''+ path +'\'');
-			return;
-		}
-		var expObj = lexer(path);
-		var evalStr = Renderer.getExpEvalStr(this,expObj);
-		if(arguments.length > 1){
-			if(Util.isObject(val) || Util.isArray(val)){
-				val = JSON.stringify(val);
-			}else 
-			if(Util.isString(val)){
-				val = '"'+val.replace(/\\/mg,'\\\\').replace(/\r\n|\n/mg,'\\n').replace(/"/mg,'\\"')+'"';
-			}
-			try{
-				eval(evalStr + '= '+ val);
-			}catch(e){
-				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
-			}
-			
-			return this;
-		}else{
-			try{
-				return eval(evalStr);
-			}catch(e){
-				LOGGER.debug("error in eval '"+evalStr + '= '+ val +"'",e);
-			}
-			
-		}
+	setState:function(path,v){
+		v = JSON.stringify(v);
+		var str = 'with(scope){'+path+'='+v+'}';
+		var fn = new Function('scope',str);
+		fn(this.state);
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
-	 * @param  {string} expPath 属性路径，比如a.b.c
-	 * @param  {function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
+	 * @param  {String} path 属性路径，比如a.b.c
+	 * @param  {Function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
 	 */
-	watch:function(expPath,cbk){
-		var expObj = lexer(expPath);
-		var keys = Object.keys(expObj.varTree);
-		if(keys.length < 1)return;
-		if(keys.length > 1){
-			LOGGER.warn('error on parsing watch expression['+expPath+'], only one property can be watched at the same time');
-			return;
+	watch:function(path,cbk){
+		this.__watchPaths.push(path);
+		var str = '';
+		for(var i=this.__watchPaths.length;i--;){
+			var p = this.__watchPaths[i];
+			str += ','+JSON.stringify(p)+':'+p;
 		}
-		
-		var varObj = expObj.varTree[keys[0]];
-		var watch = new Watch(cbk,this,varObj.segments);
-		//监控变量
-		Builder.buildExpModel(this,varObj,watch);
+		str = str.substr(1);
+		var fn = this.__watchFn = new Function('scope','with(scope){return {'+str+'}}');
+		this.__watchOldVal = fn(this.state);
+		this.__watchMap[path] = cbk;
 
 		return this;
 	},
@@ -2361,230 +1926,58 @@ Util.ext(Component.prototype,{
 	 * @param  {Array} nodes 需要编译的顶级节点数组
 	 */
 	compile:function(nodes){
-		Scanner.scan(nodes,this);
-		Builder.build(this);
+		// Scanner.scan(nodes,this);
+		// Builder.build(this);
 
-		//init children
-		for(var i = this.children.length;i--;){
-			this.children[i].init();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].init();
-		}
-	},
-	/**
-	 * 添加子组件到父组件
-	 * @param {Component} child 子组件
-	 */
-	add:function(child){
-		this.children.push(child);
-		child.parent = this;
-	},
-	/**
-	 * 创建一个未初始化的子组件
-	 * @param  {HTMLElement} el 视图
-	 * @return {Component} 子组件
-	 */
-	createSubComponentOf:function(el){
-		var instance = ComponentFactory.newInstanceOf(el.tagName.toLowerCase(),el);
-		this.children.push(instance);
-		instance.parent = this;
-
-		return instance;
-	},
-	/**
-	 * 创建一个匿名子组件
-	 * @param  {Array<HTMLElement>} els 视图
-	 * @return {Component} 子组件
-	 */
-	createSubComponent:function(els){
-		var instance = ComponentFactory.newInstance(els);
-		this.children.push(instance);
-		instance.parent = this;
-
-		return instance;
-	},
-	/**
-	 * 初始化组件，该操作会生成用于显示的所有相关数据，包括表达式等，以做好显示准备
-	 */
-	init:function(){
-		if(this.__state !== Component.state.created)return;
-
-		if(this.__url){
-			var that = this;
-			Util.loadComponent(this.__url,function(data){
-				var tmpl = data[0];
-				that.template = tmpl;
-				var model = data[1];
-				model.template = tmpl;
-				//cache
-				ComponentFactory.register(that.name,model);
-				ComponentFactory.initInstanceOf(that.name,that);
-
-				//init
-				ComponentFactory.parse(tmpl,that);
-				that.__url = null;
-				that.__init();
-				that.mount();
-			});
-			
-		}else{
-			if(this.template){
-				ComponentFactory.parse(this.template,this);
-			}
-			this.__init();
-		}
-		return this;
-	},
-	__init:function(){
-		Scanner.scan(this.__nodes,this);
-		// if(this.__offscreen)
-		// 	Scanner.scan(this.__offscreen,this);
-
-		LOGGER.log(this,'inited');
-
-		//observe state
-		this.state = Observer.observe(this.state,this);
-
-		Builder.build(this);
-
-		this.__state = Component.state.inited;
-
-		if(this.onInit){
-			var services = ComponentFactory.getServices(this,this.name);
-			
-			services ? this.onInit.apply(this,services) : this.onInit();
-		}
-
-		//init children
-		for(var i = this.children.length;i--;){
-			this.children[i].init();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].init();
-		}
-		
-	},
-	/**
-	 * 挂载组件到组件树上
-	 */
-	mount:function(){
-		if(this.__state === Component.state.mounted)return;
-		if(this.__state === Component.state.created)return;
-
-		if(this.__state === Component.state.unmounted && this.__target){
-			DOMHelper.replace(this.__target,this.__nodes);
-			return;
-		}
-
-		Renderer.render(this);
-
-		this.__state = Component.state.mounted;
-		LOGGER.log(this,'mounted');
-
-		//els
-		this.__nodes.forEach(function(el){
-			if(!el.querySelectorAll)return;
-			var els = el.querySelectorAll('*['+ATTR_REF_TAG+']');
-			for(var i=els.length;i--;){
-				var node = els[i];
-				this.els[node.getAttribute(ATTR_REF_TAG)] = node;
-			}
-		},this);
-		
-
-		//mount children
-		for(var i = 0;i<this.children.length;i++){
-			if(!this.children[i].templateURL)
-				this.children[i].mount();
-		}
-
-		for(var i = this.directives.length;i--;){
-			this.directives[i].active();
-		}
-
-		//to DOM
-		// if(this.__offscreen){
-		// 	this.el.innerHTML = '';
-		// 	DOMHelper.attach(this.el,this.__offscreen);
-		// 	this.__offscreen = null;
+		// //init children
+		// for(var i = this.children.length;i--;){
+		// 	this.children[i].init();
 		// }
-		
-		this.onMount && this.onMount();
+
+		// for(var i = this.directives.length;i--;){
+		// 	this.directives[i].init();
+		// }
 	},
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
-		if(this.__state === null)return;
-
-		LOGGER.log(this,'unmount');
-
 		this.onDestroy && this.onDestroy();
 
 		if(this.parent){
-			//check parent watchs
-			var index = -1;
-			var props = this.parent.__watchProps;
-			while(true){
-				index = -1;
-				for(var i=props.length;i--;){
-					var prop = props[i];
-					if(prop.subComp === this){
-						index = i;
-						break;
-					}
-				}
-				if(index > -1){
-					props.splice(index,1);
-					continue;
-				}
-				break;
-			}
-			
-
-
-			index = this.parent.children.indexOf(this);
+			this.parent.__syncFn[this._uid] = null;
+			this.parent.__syncOldVal[this._uid] = null;
+			this.parent.__syncFnForScope[this._uid] = null;
+			delete this.parent.__syncFn[this._uid];
+			delete this.parent.__syncOldVal[this._uid];
+			delete this.parent.__syncFnForScope[this._uid];
+			var index = this.parent.children.indexOf(this);
 			if(index > -1){
 				this.parent.children.splice(index,1);
 			}
 			this.parent = null;
 		}
-		
-		DOMHelper.detach(this.__nodes);
 
 		while(this.children.length > 0){
 			this.children[0].destroy();
 		}
 
-		for(var i = this.directives.length;i--;){
-			this.directives[i].destroy();
-		}
-
-		this.__expDataRoot.release();
-
 		this.children = 
-		this.directives = 
-		this.__expNodes = 
-		this.__expDataRoot = null;
+		impex._cs[this._uid] = null;
+		delete impex._cs[this._uid];
 
-		impex._cs[this.__id] = null;
-		delete impex._cs[this.__id];
-
-		this.els = 
+		this.refs = 
 		this.compSlots = 
-		this.__eventMap = 
 		this.__nodes = 
-		this._signalMap = 
-		this.__watchProps = 
-		this.__state = 
-		this.__id = 
+		this.__syncFn = 
+		this._uid = 
+
 		this.__url = 
 		this.template = 
-		this.restrict = 
 		this.state = null;
+	},
+	remount:function(){
+
 	},
 	/**
 	 * 卸载组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
@@ -2593,15 +1986,9 @@ Util.ext(Component.prototype,{
 	 * 如果为false，则需要注入viewManager，手动插入视图
 	 */
 	unmount:function(hook){
-		if(this.__state !== Component.state.mounted)return;
-
-		LOGGER.log(this,'unmounted');
-		
 		this.__unmount(this,hook===false?false:true);
 
 		this.onUnmount && this.onUnmount();
-
-		this.__state = Component.state.unmounted;
 	},
 	__unmount:function(component,hook){
 		var p = this.__nodes[0].parentNode;
@@ -2615,892 +2002,450 @@ Util.ext(Component.prototype,{
 				this.__nodes[i].parentNode.removeChild(this.__nodes[i]);
 		}
 	},
-	__getPath:function(){
-		return 'impex._cs["'+ this.__id +'"]';
-	},
-	__update:function(changes){
-		var renderable = true;
-		var expNodes = [];
-		var watchs = [];
-		var attrObserveNodes = [];
-		for(var i=changes.length;i--;){
-			var c = changes[i];
-			var expProps = c.expProps;
-			c.expProps = null;
-			for(var k=expProps.length;k--;){
-				var ens = expProps[k].expNodes;
-				for(var j=ens.length;j--;){
-					var en = ens[j];
-					if(expNodes.indexOf(en) < 0)expNodes.push(en);
-				}
-				var aons = expProps[k].attrObserveNodes;
-				for(var j=aons.length;j--;){
-					var aon = aons[j];
-					if(attrObserveNodes.indexOf(aon) < 0)attrObserveNodes.push(aon);
-				}
-				var ws = expProps[k].watchs;
-				for(var j=ws.length;j--;){
-					var w = ws[j];
-					if(watchs.indexOf(w) < 0)watchs.push([w,c]);
-				}
+	onPropChange : function(newProps,oldProps){
+		for(var k in newProps){
+			var v = newProps[k];
+			if(isObject(v)){
+				var copy = v instanceof Array?[]:{};
+				this.state[k] = Object.assign(copy,v);
+			}else if(v !== this.state[k]){
+				this.state[k] = v;
 			}
 		}
-		if(this.onUpdate){
-			renderable = this.onUpdate(changes);
-		}
-		//render view
-		if(renderable !== false){
-			Renderer.renderExpNodes(expNodes);
-		}
-		
-		this.__updateDirective(attrObserveNodes);
-
-		this.__callWatchs(watchs);
-
-		//update children props
-		this.__updateChildrenProps(changes);
-	},
-	__updateChildrenProps:function(changes){
-		var matchMap = {};
-		for(var i=changes.length;i--;){
-			var change = changes[i];
-			var path = change.path;
-			this.__watchProps.forEach(function(prop){
-				var k = this.__isVarMatch(prop.segments,path);
-				if(k<0)return;
-				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = {};
-
-				//duplicate check
-				var list = matchMap[prop.subComp.__id][prop.name];
-				if(list !== undefined)return;
-
-				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id][prop.name] = {
-					name:prop.name,
-					val:rs
-				};
-			},this);
-		}
-		for(var k in matchMap){
-			var cs = matchMap[k];
-			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
-		}
-	},
-	__isVarMatch:function(segments,changePath){
-		for(var k=0;k<segments.length;k++){
-			if(!changePath[k])break;
-
-			if(segments[k][0] !== '[' && 
-				changePath[k][0] !== '[' && 
-				segments[k] !== changePath[k]){
-				return -1;
-			}
-		}
-		return k;
-	},
-	__callWatchs:function (watchs){
-		var invokedWatchs = [];
-		for(var i=watchs.length;i--;){
-			var change = watchs[i][1];
-			var watch = watchs[i][0];
-
-			var newVal = change.newVal;
-			var oldVal = change.oldVal;
-			var name = change.name;
-			var object = change.object;
-			var propChain = change.path.concat();
-			if(!Util.isArray(object))
-				change.path.pop();
-			var changeType = change.type;
-
-			if(watch.segments.length < propChain.length)continue;
-			if(invokedWatchs.indexOf(watch) > -1)continue;
-
-			//compare segs
-			var k = this.__isVarMatch(watch.segments,propChain);
-
-			if(k > -1){
-				var matchLevel = change.path.length+1 - watch.segments.length;
-				watch.cbk && watch.cbk.call(watch.ctrlScope,object,name,changeType,newVal,oldVal,change.path,matchLevel);
-				invokedWatchs.push(watch);
-			}
-		}
-	},
-	__updateDirective:function (attrObserveNodes){
-		for(var j=attrObserveNodes.length;j--;){
-			var aon = attrObserveNodes[j];
-
-			var rs = Renderer.evalExp(aon.directive.component,aon.expObj);
-			aon.directive.onUpdate(rs);
-		}
-	},
-	__childPropChange:function(changes){
-		this.onPropChange && this.onPropChange(changes);
-		
-		var matchMap = {};
-		//update props
-		for(var k in changes){
-			var c = changes[k];
-			var name = c.name;
-
-			//check children which refers to props
-			this.__watchProps.forEach(function(prop){
-				if(!matchMap[prop.subComp.__id])
-					matchMap[prop.subComp.__id] = {};
-
-				//duplicate check
-				var list = matchMap[prop.subComp.__id][prop.name];
-				if(list !== undefined)return;
-
-				var rs = Renderer.evalExp(this,prop.expWords);
-				matchMap[prop.subComp.__id][prop.name] = {
-					name:prop.name,
-					val:rs
-				};
-			},this);
-		}
-
-		for(var k in matchMap){
-			var cs = matchMap[k];
-			impex._cs[k].__childPropChange && impex._cs[k].__childPropChange(cs);
-		}
-	}
-});
-
-/**
- * DOM助手
- */
-var DOMHelper = new function(){
-	this.singleton = true;
-	var compiler = document.createElement('div');
-
-	this.compile = function(template){
-		var nodes = [];
-		compiler.innerHTML = template;
-
-		while(compiler.childNodes.length>0){
-			var tmp = compiler.removeChild(compiler.childNodes[0]);
-			nodes.push(tmp);
-		}
-
-		return nodes;
-	}
-
-	this.detach = function(nodes){
-		var p = nodes[0].parentNode;
-		if(p){
-			for(var i=nodes.length;i--;){
-				nodes[i].parentNode && p.removeChild(nodes[i]);
-			}
-		}
-	}
-
-	this.attach = function(target,nodes){
-		var fragment = null;
-		if(nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<nodes.length;i++){
-				fragment.appendChild(nodes[i]);
-			}
-		}else{
-			fragment = nodes[0];
-		}
-		
-		target.appendChild(fragment);
-		fragment = null;
-	}
-
-	this.replace = function(target,nodes){
-		var fragment = null;
-		if(nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<nodes.length;i++){
-				fragment.appendChild(nodes[i]);
-			}
-		}else{
-			fragment = nodes[0];
-		}
-		
-		target.parentNode.replaceChild(fragment,target);
-		fragment = null;
-	}
-
-	this.insertBefore = function(nodes,target){
-		var p = target.parentNode;
-		var fragment = nodes[0];
-		if(nodes.length > 1){
-			fragment = document.createDocumentFragment();
-			for(var i=0;i<nodes.length;i++){
-				fragment.appendChild(nodes[i]);
-			}
-		}
-		if(p)
-		p.insertBefore(fragment,target);
-	}
-}
-/**
- * @classdesc 指令存在于某个组件域中,表现为一个自定义属性。
- * 组件的生命周期：
- * <p>
- * 	<ul>
- * 		<li>onCreate：当指令被创建时触发</li>
- * 		<li>onInit：当指令初始化时触发</li>
- * 		<li>onActive: 当指令激活时触发</li>
- * 		<li>onUpdate: 当指令条件变更时触发</li>
- * 		<li>onDestroy：当指令被销毁时触发</li>
- * 	</ul>
- * </p>
- * @class 
- */
-function Directive (name,value) {
-	Signal.call(this);
-	/**
-	 * 对顶级元素的引用
-	 * @type {HTMLElement}
-	 */
-	this.el = null;
-	/**
-	 * 指令的字面值
-	 */
-	this.value = value;
-	/**
-	 * 指令名称
-	 */
-	this.name = name;
-	/**
-	 * 参数列表
-	 * @type {Array}
-	 */
-	this.params;
-	/**
-	 * 过滤函数
-	 * @type {Function}
-	 */
-	this.filter;
-	/**
-	 * 指令所在的组件
-	 */
-	this.component;
-
-	/**
-	 * 是否终结<br/>
-	 * 终结指令会告诉扫描器不对该组件的内部进行扫描，包括表达式，指令，子组件都不会生成
-	 * @type {Boolean}
-	 * @default false
-	 */
-	this.final = false;
-	/**
-	 * 指令优先级用于定义同类指令的执行顺序。最大999
-	 * @type {Number}
-	 */
-	this.priority = 0;
-
-	//bind exp
-	if(HTML_EXP_COMPILING){
-		CURRENT_HTML_EXP_LIST.push(this);
-	}
-}
-Util.inherits(Directive,Signal);
-Util.ext(Directive.prototype,{
-	init:function(){
-		if(this.__state == Component.state.inited){
-			return;
-		}
-		//预处理自定义标签中的表达式
-		var expNode = Scanner.getExpNode(this.value,this.component);
-		var calcVal = expNode && Renderer.calcExpNode(expNode);
-		if(calcVal !== undefined)this.value = calcVal;
-
-		LOGGER.log(this,'inited');
-
-		if(this.onInit){
-			this.onInit();
-		}
-
-		this.__state = Component.state.inited;
-	},
-	//component invoke only
-	active:function(){
-		//do observe
-		if(this.onUpdate){
-			var expObj = lexer(this.value);
-			for(var varStr in expObj.varTree){
-				var varObj = expObj.varTree[varStr];
-
-				var aon = new AttrObserveNode(this,expObj);
-
-				//监控变量
-				if(this.component)
-				Builder.buildExpModel(this.component,varObj,aon);
-			}
-			
-			var rs = Renderer.evalExp(this.component,expObj);
-			this.onUpdate(rs);
-		}
-
-		this.onActive && this.onActive(rs);
-
-	},
-	/**
-	 * 销毁指令
-	 */
-	destroy:function(){
-		LOGGER.log(this,'destroy');
-
-		DOMHelper.detach(this.__nodes);
-
-		this.component = 
-		this.params = 
-		this.filter = 
-		this.onUpdate = null;
-
-		this.onDestroy && this.onDestroy();
-	}
-});
-/**
- * @classdesc 过滤器类，提供对表达式结果的转换处理，比如
- * <p>
- * 	{{ exp... => cap}}
- * </p>
- * 过滤器可以连接使用，并以声明的顺序依次执行，比如
- * <p>
- * 	{{ exp... => lower.cap}}
- * </p>
- * 过滤器支持参数，比如
- * <p>
- * 	{{ exp... => currency:'€':4}}
- * </p>
- * @class 
- */
-function Filter (component) {
-	/**
-	 * 所在组件
-	 */
-	this.component = component;
-	/**
-	 * 系统自动计算的表达式结果
-	 */
-	this.value;
-	/**
-	 * 构造函数，在服务被创建时调用
-	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
-	 */
-	this.onCreate;
-};
-Filter.prototype = {
-	/**
-	 * 转变函数，该函数是实际进行转变的入口
-	 * @param  {Object} args 可变参数，根据表达式中书写的参数决定
-	 * @return {string | null} 返回结果会呈现在表达式上，如果没有返回结果，表达式则变为空
-	 */
-	to:function(){
-		return null;
-	}
-}
-/**
- * @classdesc 服务类，提供对系统内部访问的接口，处理组件无法处理的功能
- * 服务可以被注入到组件中，也可以注入其他服务
- * 服务本身和视图、模型都无关，但是可以传递视图、模型到服务中进行处理
- * @class 
- */
-function Service () {
-	/**
-	 * 服务是否为单例模式，如果为true，该服务就不会在注入时被实例化，比如纯函数服务
-	 * @type {Boolean}
-	 * @default false
-	 */
-	this.singleton;
-	/**
-	 * 服务被注入到的宿主，可能是组件，指令或者另一个服务
-	 */
-	this.host;
-	/**
-	 * 构造函数，在服务被创建时调用
-	 * 如果指定了注入服务，系统会在创建时传递被注入的服务
-	 */
-	this.onCreate;
-}
-/**
- * @classdesc 过渡类。用于提供CSS3动画转换或js动画过渡回调接口
- * @class 
- */
-var TRANSITIONS = {
-    "transition"      : "transitionend",
-    "OTransition"     : "oTransitionEnd",
-    "MozTransition"   : "mozTransitionend",
-    "WebkitTransition": "webkitTransitionEnd"
-};
-
-function getStyle(cs,style){
-    var rs = '';
-
-    for(var i=PREFIX.length;i--;){
-        rs = cs[PREFIX[i]+style];
-        if(rs)return rs;
     }
-}
-var PREFIX = ['-webkit-','-moz-','-o-','-ms-',''];
-var TESTNODE;
-function Transition (type,target,hook) {
-    if(!TESTNODE){
-        TESTNODE = document.createElement('div');
-        document.body.appendChild(TESTNODE);
-    }
-    var v = target;
-    if(!hook || hook.css !== false){
-        TESTNODE.className = (type + '-transition');
-        TESTNODE.style.left = '-9999px';
-        var cs = window.getComputedStyle(TESTNODE,null);
-        var durations = getStyle(cs,'transition-duration').split(',');
-        var delay = getStyle(cs,'transition-delay').split(',');
-        var max = -1;
-        for(var i=durations.length;i--;){
-            var du = parseFloat(durations[i]);
-            var de = parseFloat(delay[i]);
-            if(du+de > max)max = du+de;
-        }
-
-        if(max > 0){
-            var expNodes = null;
-            var comp = null;
-            if(target instanceof Directive){
-                expNodes = target.component.__expNodes;
-                comp = target.component;
-            }else{
-                expNodes = target.__expNodes;
-                comp = target;
-            }
-            if(expNodes.length<1 && comp.parent){
-                expNodes = comp.parent.__expNodes;
-            }
-            for(var i=expNodes.length;i--;){
-                var expNode = expNodes[i];
-                if(expNode.attrName === 'class'){
-                    expNode.origin += ' '+ type + '-transition';
-                }
-            }
-            v.el.className += ' ' +type + '-transition';
-
-            this.__longest = max;
-
-            var te = null;
-            for (var t in TRANSITIONS){
-                if (v.el.style[t] !== undefined){
-                    te = TRANSITIONS[t];
-                    break;
-                }
-            }
-            v.el.addEventListener(te,this.__done.bind(this),false);
-
-            this.__css = true;
-        }
-    }else{
-    	this.__css = false;
-    }
-
-    this.__direct = target;
-    this.__view = v;
-    this.__hook = hook || {};
-    this.__type = type;
-    
-}
-Transition.prototype = {
-	enter:function(){
-		this.__start = 'enter';
-
-        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
-        this.__view.el.className = clsName;
-
-		if(this.__css){
-            clsName += ' ' +this.__type + '-enter';
-            this.__view.el.className = clsName;
-        }
-
-        //exec...
-        if(this.__direct.enter){
-        	this.__direct.enter();
-        }
-        if(this.__hook.enter){
-        	this.__hook.enter.call(this.__direct,this.__done.bind(this));
-        }
-
-        if(this.__css){
-            this.__view.el.offsetHeight;
-            var clsName = this.__view.el.className.replace(this.__type + '-enter','');
-            this.__view.el.className = clsName;
-        }
-        
-	},
-	__enterDone:function(){
-		if(this.__direct.postEnter){
-            this.__direct.postEnter();
-        }
-        if(this.__hook.postEnter){
-            this.__hook.postEnter.call(this.__direct,this.__done.bind(this));
-        }
-	},
-	leave:function(){
-		this.__start = 'leave';
-
-        var clsName = this.__view.el.className.replace(this.__type + '-leave','');
-        this.__view.el.className = clsName;
-
-		if(this.__css){
-            clsName += ' ' +this.__type + '-leave';
-            this.__view.el.className = clsName;
-        }
-        //exec...
-        if(this.__direct.leave){
-            this.__direct.leave();
-        }
-        if(this.__hook.leave){
-        	this.__hook.leave.call(this.__direct,this.__done.bind(this));
-        }
-        
-	},
-	__leaveDone:function(){
-		if(this.__direct.postLeave){
-            this.__direct.postLeave();
-        }
-        if(this.__hook.postLeave){
-            this.__hook.postLeave.call(this.__direct,this.__done.bind(this));
-        }
-        if(this.__css){
-            this.__view.el.offsetHeight;
-            var clsName = this.__view.el.className.replace(this.__type + '-leave','');
-            this.__view.el.className = clsName;
-        }
-	},
-	__done:function(e){
-		if(e && e.elapsedTime < this.__longest)return;
-        if(!this.__start)return;
-
-        switch(this.__start){
-        	case 'enter':
-        		this.__enterDone();
-        		break;
-        	case 'leave':
-        		this.__leaveDone();
-        		break;
-        }
-
-        this.__start = '';
-	}
 };
-/**
- * 工厂基类
- */
-function Factory(clazz) {
-	this.types = {};
 
-	this.baseClass = clazz;//基类
-};
-Factory.prototype = {
-	/**
-	 * 注册子类
-	 */
-	register : function(type,param,services){
-		type = type.toLowerCase();
+/*********	component handlers	*********/
+//////	init flow
+function buildOffscreenDOM(vnode,comp){
+	var n,cid = comp._uid;
+	if(isUndefined(vnode.txt)){
+		n = document.createElement(vnode.tag);
+		n._vid = vnode.vid;
+		vnode._cid = cid;
 
-		var state = param.state;
-		delete param.state;
+		if(!vnode._comp){//component dosen't exec directive
+			//directive init
+			var dircts = vnode._directives;
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var dName = di[1][0];
+					var d = DIRECT_MAP[dName];
+					if(!d)return;
+					
+					var params = di[1][1];
+					var v = di[2];
+					var exp = di[3];
+					d.onBind && d.onBind(vnode,{comp:comp,value:v,args:params,exp:exp});
+				});
+			}
+		}
 
-		var props = {};
+		for(var k in vnode.attrNodes){
+			if(k[0] === BIND_AB_PRIFX)continue;
+			n.setAttribute(k,vnode.attrNodes[k]);
+		}
+
+		if(vnode.attrNodes[ATTR_REF_TAG]){
+			comp.refs[vnode.attrNodes[ATTR_REF_TAG]] = n;
+		}
 		
-		if(typeof param == 'string'){
-			state = param;
+		if(vnode._comp){
+			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attrNodes);
+			vnode._comp = c;
 		}else{
-			Util.ext(props,param);
-		}
-
-		//re register
-		if(this.types[type]){
-			this.types[type].state = state;
-			this.types[type].props = props;
-			return;
-		}
-		var clazz = new Function("clazz","var args=[];for(var i=1;i<arguments.length;i++)args.push(arguments[i]);clazz.apply(this,args)");
-		Util.inherits(clazz,this.baseClass);
-
-		this.types[type] = {clazz:clazz,props:props,services:services,state:state};
-	},
-	/**
-	 * 是否存在指定类型
-	 * @return {Boolean} 
-	 */
-	hasTypeOf : function(type){
-		return type in this.types;
-	},
-	getServices : function(comp,type){
-		var services = null;
-		if(this.types[type] && this.types[type].services){
-			services = [];
-			for(var i=0;i<this.types[type].services.length;i++){
-				var serv = ServiceFactory.newInstanceOf(this.types[type].services[i],comp);
-				services.push(serv);
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					var c = buildOffscreenDOM(vnode.children[i],comp);
+					n.appendChild(c);
+				}
 			}
 		}
+		
+	}else{
+		n = document.createTextNode(filterEntity(vnode.txt));
+	}
+	vnode.dom = n;
+	return n;
+}
+function filterEntity(str){
+	return str.replace?str.replace(/&lt;/img,'<').replace(/&gt;/img,'>'):str;
+}
 
-		return services;
-	},
-	//子类调用
-	createCbk : function(comp,type){
-		if(comp.onCreate){
-			//inject
-			var services = this.getServices(comp,type);
-			
-			services ? comp.onCreate.apply(comp,services) : comp.onCreate();
-		}
+function callDirectiveUpdate(vnode,comp){
+	if(isUndefined(vnode.txt)){
+		if(!vnode._comp){//component dosen't exec directive
+			//directive init
+			var dircts = vnode._directives;
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var dName = di[1][0];
+					var d = DIRECT_MAP[dName];
+					if(!d)return;
+					
+					var params = di[1][1];
+					var v = di[2];
+					var exp = di[3];
+					d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+				});
+			}
+
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					callDirectiveUpdate(vnode.children[i],comp);
+				}
+			}//end if
+		}//end if
 	}
 }
 /**
- * 组件工厂用于统一管理系统内所有组件实例
+ * parse component template & to create vdom
  */
-function _ComponentFactory(viewProvider){
-	Factory.call(this,Component);
-
-	this.viewProvider = viewProvider;
-}
-Util.inherits(_ComponentFactory,Factory);
-Util.ext(_ComponentFactory.prototype,{
-	getRestrictOf : function(type){
-		return this.types[type].props['restrict'];
-	},
-	//parse component
-	parse:function(tmpl,component){
-		var el = component.el;
-		//解析属性
-		var propMap = el.attributes;
-		var innerHTML = el.innerHTML;
-
-		var cssStr = null,compileStr = null;
-		if(!this.types[component.name].tmplCache){
-			var tmp = peelCSS(tmpl);
-			compileStr = tmp[1];
-			cssStr = tmp[0];
-			cssStr = cssHandler(component.name,cssStr);
-
-			this.types[component.name].tmplCache = compileStr;
+function parseComponent(comp){
+	if(comp.__url){
+		loadComponent(comp.name,comp.__url,function(model,css){
+			COMP_MAP[comp.name] = model;
+			ext(model,comp);
+			preCompile(comp.template,comp);
 			
-			//attach style
-			if(cssStr.trim().length>0){
-				var target = document.head.children[0];
-				if(target){
-					var nodes = DOMHelper.compile(cssStr);
-					DOMHelper.insertBefore(nodes,target);
-				}else{
-					document.head.innerHTML = cssStr;
-				}
-			}			
-		}else{
-			compileStr = this.types[component.name].tmplCache;
-		}
-		compileStr = slotHandler(compileStr,innerHTML);
-
-		if(component.onBeforeCompile)
-            compileStr = component.onBeforeCompile(compileStr);
-
-		var nodes = DOMHelper.compile(compileStr);
-
-		// component.__offscreen = nodes;
-		el.innerHTML = '';
-		DOMHelper.attach(el,nodes);
-
-		//check props
-		var requires = {};
-		var propTypes = component.propTypes;
-		if(propTypes){
-			for(var k in propTypes){
-				var type = propTypes[k];
-				if(type.require){
-					requires[k] = type;
-				}
-			}
-		}
-
-		if(propMap){
-			//bind props
-			for(var i=propMap.length;i--;){
-				var k = propMap[i].name.toLowerCase();
-				var v = propMap[i].value;
-				if(k == ATTR_REF_TAG){
-					var expNode = Scanner.getExpNode(v,component);
-					var calcVal = expNode && Renderer.calcExpNode(expNode);
-					component.parent.comps[calcVal || v] = component;
-					continue;
-				}
-
-				var instance = null;
-				if(REG_CMD.test(k)){
-					var c = k.replace(CMD_PREFIX,'');
-					var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-					if(CPDI > -1)c = c.substring(0,CPDI);
-					//如果有对应的处理器
-					if(DirectiveFactory.hasTypeOf(c)){
-						instance = DirectiveFactory.newInstanceOf(c,component.el,component,k,v);
+			//css
+			if(css){
+				var cssStr = scopeStyle(comp.name,css);
+				if(!COMP_CSS_MAP[comp.name]){
+					//attach style
+					if(cssStr.trim().length>0){
+						var target = document.head.children[0];
+						if(target){
+							target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
+						}else{
+							document.head.innerHTML = '<style>'+cssStr+'</style>';
+						}
 					}
-				}else if(k.indexOf(CMD_PARAM_DELIMITER) === 0){
-					instance = DirectiveFactory.newInstanceOf('on',component.el,component,k,v);
-				}else{
-					handleProps(k,v,requires,propTypes,component);
-				}
-
-				if(instance){
-					instance.init();
+					COMP_CSS_MAP[comp.name] = true;	
 				}
 			}
+			comp.__url = null;
+			compileComponent(comp);
+			mountComponent(comp);
+		});
+	}else{
+		if(comp.template){
+			preCompile(comp.template,comp);
 		}
-
-		//check requires
-		var ks = Object.keys(requires);
-		if(ks.length > 0){
-			LOGGER.error("props ["+ks.join(',')+"] of component["+component.name+"] are required");
-			return;
-		}
-	},
-	/**
-	 * 创建指定基类实例
-	 */
-	newInstance : function(els,param){
-		var el = null;
-		if(els.length===1){
-			el = els[0];
-		}
-		
-		var rs = new this.baseClass();
-		rs.el = el;
-		rs.__nodes = els;
-
-		if(param){
-			Util.ext(rs,param);
-
-			if(param.state instanceof Function){
-				rs.state = param.state.call(rs);
+		compileComponent(comp);
+	}
+}
+function preCompile(tmpl,comp){
+	if(comp.onBeforeCompile)
+        tmpl = comp.onBeforeCompile(tmpl);
+    
+    comp.compiledTmp = tmpl = tmpl.replace(/^\s+|\s+$/img,'').replace(/>\s([^<]*)\s</,function(a,b){
+            return '>'+b+'<';
+    });
+}
+function doSlot(slotList,slots,slotMap){
+	if(slots || slotMap)
+		slotList.forEach(function(slot){
+			var parent = slot[0];
+			var node = slot[1];
+			var name = slot[2];
+			//update slot position everytime
+			var pos = parent.children.indexOf(node);
+			var params = [pos,1];
+			
+			if(name){
+				params.push(slotMap[name]);
+			}else{
+				params = params.concat(slots);
 			}
-		}
-		
-		return rs;
-	},
-	/**
-	 * 创建指定类型组件实例
-	 * @param  {String} type       		组件类型
-	 * @param  {HTMLElement} target  	组件应用节点
-	 * @return {Component}
-	 */
-	newInstanceOf : function(type,target){
-		if(!this.types[type])return null;
-
-		var rs = new this.types[type].clazz(this.baseClass);
-		rs.name = type;
-		rs.el = target;
-		rs.__nodes = [target];
-
-		var state = this.types[type].state;
-		if(typeof state == 'string'){
-			rs.__url = state;
+			parent.children.splice.apply(parent.children,params);
+		});
+}
+function scopeStyle(host,style){
+	style = style.replace(/\n/img,'').trim()//.replace(/:host/img,host);
+	var isBody = false;
+	var selector = '';
+	var body = '';
+	var lastStyle = {};
+	var styles = [];
+	for(var i=0;i<style.length;i++){
+		var c = style[i];
+		if(isBody){
+			if(c === '}'){
+				isBody = false;
+				lastStyle.body = body.trim();
+				selector = '';
+				styles.push(lastStyle);
+				lastStyle = {};
+			}
+			body += c;
 		}else{
-			this.initInstanceOf(type,rs);
-		}
-
-		this._super.createCbk.call(this,rs,type);
-
-		return rs;
-	},
-	initInstanceOf : function(type,ins){
-		if(!this.types[type])return null;
-		
-		Util.ext(ins,this.types[type].props);
-		var state = this.types[type].state;
-		if(state){
-			if(state instanceof Function){
-				state = state.call(ins);
+			if(c === '{'){
+				isBody = true;
+				lastStyle.selector = selector.trim();
+				body = '';
+				continue;
 			}
-			Util.ext(ins.state,state);
+			selector += c;
 		}
 	}
-});
 
-var ComponentFactory = new _ComponentFactory(DOMHelper);
-
-function slotHandler(tmpl,innerHTML){
-	var slotMap = {};
-	var findList = [];
-    innerHTML.replace(/<(?:\s+)?([a-z](?:.+)?)[^<>]+slot(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>/img,function(a,tag,slot,i){
-    	findList.push([tag,slot,i]);
-    });
-    var matchStr = innerHTML;
-    for(var i=findList.length;i--;){
-    	var tmp = findList[i];
-    	var startPos = tmp[2];
-    	var slot = tmp[1];
-    	var tag = tmp[0];
-    	var stack = 0;
-    	var endPos = -1;
-    	var reg = new RegExp("<(?:(?:\s+)?\/)?(?:\s+)?"+tag+"[^>]*?>",'img');
-        matchStr.replace(reg,function(tag,i){
-        	if(i <= startPos)return;
-
-        	if(/<(?:(?:\s+)?\/)/.test(tag)){
-        		stack--;
-        		if(stack < 0){
-        			endPos = i;
-        		}
-        	}else{
-        		stack++;
-        	}
-        });
-        var tmp = matchStr.substring(startPos,endPos);
-        slotMap[slot] = tmp+'</'+tag+'>';
-        matchStr = matchStr.replace(slotMap[slot],'');
-    }
-
-    if(innerHTML.trim().length>0)
-    tmpl = tmpl.replace(/<(?:\s+)?slot(?:\s+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str){
-    	return innerHTML;
-    });
-
-    tmpl = tmpl.replace(/<(?:\s+)?slot\s+name(?:\s+)?=(?:\s+)?['"]([^<>]+?)?['"](?:[^<>]+)?>(?:[^<>]+)?<\/(?:\s+)?slot(?:\s+)?>/img,function(str,name){
-    	return slotMap[name] || str;
-    });
-
-    return tmpl;
-}
-
-function peelCSS(tmpl){
-	var rs = '';
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str){
-        rs += str;
-        return '';
-    });
-
-    return [rs,tmpl];
-}
-
-function cssHandler(name,tmpl){
-	tmpl = tmpl.replace(/<(?:\s+)?style(?:.+)?>([^<]+)?<\/(?:\s+)?style(?:\s+)?>/img,function(str,style){
-        return '<style>'+filterStyle(name,style)+'</style>';
-    });
-    return tmpl;
-}
-
-function filterStyle(host,style){
-	style = style.replace(/\n/img,'').trim();
-	style = style.replace(/(^|})(?:\s+)?[a-z:_$.>~+](?:[^{]+)?\{/img,function(name){
-		var rs = name.trim();
-		if(!/(^|}|((?:\s+)?,))(?:\s+)?:host/.test(rs)){
-			if(rs[0]==='}'){
-				rs = rs.substr(1);
-				rs = '}'+host + ' ' +rs;
-			}else{
-				rs = host + ' ' +rs;
-			}
+	var css = '';
+	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
+	styles.forEach(function(style){
+		var parts = style.selector.split(',');
+		var tmp = '';
+		for(var i=0;i<parts.length;i++){
+			var name = parts[i].trim();
 			
+			if(name.indexOf(':host')===0){
+				tmp += ','+name.replace(/:host/,host);
+			}else{
+				tmp += ','+host + ' ' + name;
+			}
 		}
-		rs = rs.replace(/:host/img,host);
-		return rs;
+		tmp = tmp.substr(1);
+		css += tmp + '{'+style.body+'}';
 	});
-	return style;
+
+	return css;
+}
+function compileComponent(comp){
+	var vnode = buildVDOMTree(comp);
+	var pv = null;
+	if(comp.vnode){
+		pv = comp.vnode.parent;
+		var cs = pv.children;
+		var i = cs.indexOf(comp.vnode);
+		if(i>-1){
+			cs.splice(i,1,vnode);
+		}
+	}
+	comp.vnode = vnode;
+	vnode.parent = pv;
+
+	//observe state
+	comp.state = Observer.observe(comp.state,comp);
+
+	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
+}
+/**
+ * 准备挂载组件到页面
+ */
+function mountComponent(comp,parentVNode){
+	var dom = buildOffscreenDOM(comp.vnode,comp);
+
+	//beforemount
+	comp.onBeforeMount && comp.onBeforeMount(dom);
+	comp.el.parentNode.replaceChild(dom,comp.el);
+	comp.el = dom;
+
+	//init children
+	for(var i = comp.children.length;i--;){
+		parseComponent(comp.children[i]);
+	}
+	//mount children
+	for(var i = 0;i<comp.children.length;i++){
+		if(!comp.children[i].__url)
+			mountComponent(comp.children[i],comp.vnode);
+	}
+	if(comp.name){
+		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
+		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
+	}
+	comp.onMount && comp.onMount(comp.el);
+
+	comp.vnode.parent = parentVNode;
+
+	callDirectiveUpdate(comp.vnode,comp);
+}
+
+//////	update flow
+function updateComponent(comp,changes){
+	var renderable = true;
+	var syncPropMap = {};
+	
+	if(comp.onBeforeUpdate){
+		renderable = comp.onBeforeUpdate(changes);
+	}
+	if(renderable === false)return;
+
+	//rebuild VDOM tree
+	var vnode = buildVDOMTree(comp);
+	comp.onCompile && comp.onCompile(vnode);
+
+	//diffing
+	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
+
+	//call watchs
+	if(comp.__watchFn){
+		var newVal = comp.__watchFn(comp.state);
+		for(var k in newVal){
+			var nv = newVal[k];
+			var ov = comp.__watchOldVal[k];
+			if(nv !== ov){
+				comp.__watchMap[k].call(comp,nv,ov);
+			}
+		}
+		comp.__watchOldVal = newVal;
+	}	
+
+	//update children props
+	for(var uid in comp.__syncFn){
+		var changeProps = {};
+		var args = [comp.state];
+		if(forScopeQ[uid])comp.__syncFnForScope[uid] = forScopeQ[uid];
+		var sfs = comp.__syncFnForScope[uid];
+	    if(sfs)
+	        for(var i=0;i<sfs.length;i++){
+	            args.push(sfs[i]);
+	        }
+		var rs = comp.__syncFn[uid].apply(comp,args);
+		impex._cs[uid].onPropChange && impex._cs[uid].onPropChange(rs,comp.__syncOldVal[uid]);
+		comp.__syncOldVal[uid] = rs;
+	}
+
+	comp.onUpdate && comp.onUpdate();
+
+	callDirectiveUpdate(comp.vnode,comp);
+}
+
+
+
+function newComponent(tmpl,el,param){
+	var c = new Component(el);
+	c.compiledTmp = tmpl;
+	if(param){
+		ext(param,c);
+
+		if(isFunction(param.state)){
+			c.state = param.state.call(c);
+		}
+	}
+	
+	return c;
+}
+function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
+	var param = COMP_MAP[type];
+	var c = new Component(el);
+	c.name = type;
+	//bind parent
+	parent.children.push(c);
+	c.parent = parent;
+	c.vnode = vnode;
+	//ref
+	if(attrs[ATTR_REF_TAG]){
+		parent.refs[attrs[ATTR_REF_TAG]] = c;
+	}
+	//global
+	if(attrs[ATTR_G_TAG]){
+		impex.g[attrs[ATTR_G_TAG]] = c;
+	}
+
+	if(isString(param)){
+		c.__url = param;
+		return c;
+	}
+	if(param){
+		ext(param,c);
+		
+		if(isFunction(param.state)){
+			c.state = param.state.call(c);
+		}else if(param.state){
+			c.state = {};
+			ext(param.state,c.state);
+		}
+	}
+	c.compiledTmp = param.template;
+	c.__slots = slots;
+	c.__slotMap = slotMap;
+	
+	bindProps(c,parent,attrs);
+	
+	return c;
+}
+
+function bindProps(comp,parent,parentAttrs){
+	//check props
+	var requires = {};
+	var propTypes = comp.propTypes;
+	if(propTypes){
+		for(var k in propTypes){
+			var type = propTypes[k];
+			if(type.require){
+				requires[k] = type;
+			}
+		}
+	}
+
+	if(parentAttrs){
+		handleProps(parentAttrs,comp,parent,propTypes,requires);
+	}
+
+	//check requires
+	var ks = Object.keys(requires);
+	if(ks.length > 0){
+		error("props ["+ks.join(',')+"] of component["+comp.name+"] are required");
+		return;
+	}
+}
+function handleProps(parentAttrs,comp,parent,propTypes,requires){
+	var str = '';
+	for(var k in parentAttrs){
+		var v = parentAttrs[k];
+		if(k == ATTR_REF_TAG){
+			continue;
+		}
+		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+		// xxxx
+		if(k[0] !== PROP_TYPE_PRIFX){
+			if(propTypes && k in propTypes){
+				delete requires[k];
+				checkPropType(k,v,propTypes,comp);
+			}
+			comp.state[k] = v;
+			continue;
+		}
+
+		// .xxxx
+		var n = k.substr(1);
+		str += ','+JSON.stringify(n)+':'+v;
+		
+		if(propTypes && n in propTypes){
+			delete requires[n];
+			checkPropType(n,rs,propTypes,comp);
+		}
+		if(rs instanceof Function){
+			comp[n] = rs.bind(parent);
+			continue;
+		}
+	}//end for
+	str = str.substr(1);
+	var forScopeStart = '',forScopeEnd = '';
+	var vn = comp.vnode;
+	var args = [parent.state];
+	var sfs = parent.__syncFnForScope[comp._uid] = [];
+    if(vn._forScopeQ)
+        for(var i=0;i<vn._forScopeQ.length;i++){
+            forScopeStart += 'with(arguments['+(1+i)+']){';
+            forScopeEnd += '}';
+            args.push(vn._forScopeQ[i]);
+            sfs.push(vn._forScopeQ[i]);
+        }
+	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
+	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+	if(comp.onPropBind){
+		comp.onPropBind(rs);
+	}else{
+		for(var k in rs){
+			var v = rs[k];
+			if(v instanceof Function){
+				comp[k] = v;
+			}else{
+				comp.state[k] = v;
+			}
+		}
+	}//end if	
 }
 
 function checkPropType(k,v,propTypes,component){
@@ -3512,245 +2457,57 @@ function checkPropType(k,v,propTypes,component){
 		vType = 'array';
 	}
 	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-		LOGGER.error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+		error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
 	}
 }
 
-function handleProps(k,v,requires,propTypes,component){
-	k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
-
-	// xxxx
-	if(k[0] !== PROP_TYPE_PRIFX){
-		if(propTypes && k in propTypes){
-			delete requires[k];
-			checkPropType(k,v,propTypes,component);
-		}
-		component.state[k] = v;
-		return;
-	}
-
-	// .xxxx
-	var n = k.substr(1);
-	var tmp = lexer(v);
-	var rs = Renderer.evalExp(component.parent,tmp);
-
-	//call onPropBind
-	if(Util.isObject(rs) && component.onPropBind)
-		rs = component.onPropBind(n,rs);
-
-	//check sync
-	if(PROP_SYNC_SUFX_EXP.test(n)){
-		n = n.replace(PROP_SYNC_SUFX_EXP,'');
-
-		var keys = Object.keys(tmp.varTree);
-		//watch props
-		keys.forEach(function(key){
-			if(tmp.varTree[key].isFunc)return;
-
-			var prop = new Prop(component,n,tmp.varTree[key].segments,tmp);
-			component.parent.__watchProps.push(prop);
-		});
-	}
-	if(propTypes && n in propTypes){
-		delete requires[n];
-		checkPropType(n,rs,propTypes,component);
-	}
-	if(rs instanceof Function){
-		component[n] = rs.bind(component.parent);
-		return;
-	}	
-
-	component.state[n] = rs;
-}
-/**
- * 指令工厂
- */
-function _DirectiveFactory(){
-	Factory.call(this,Directive);
-}
-Util.inherits(_DirectiveFactory,Factory);
-Util.ext(_DirectiveFactory.prototype,{
-	/**
-	 * 检查指定类型指令是否为终结指令
-	 * @param  {string}  type 指令名
-	 * @return {Boolean} 
-	 */
-	isFinal : function(type){
-		return !!this.types[type].props.final;
-	},
-	priority : function(type){
-		return this.types[type].props.priority;
-	},
-	/**
-	 * 创建一个指令实例，并把实例放入指定的域中
-	 * @param  {String} type      指令类型
-	 * @param  {HTMLElement} node 指令作用的元素对象
-	 * @param  {Component} component 指令所在域
-	 * @param  {String} attrName  完整属性名
-	 * @param  {String} attrValue 指令的字面value
-	 * @return {Directive}  指令实例
-	 */
-	newInstanceOf : function(type,node,component,attrName,attrValue){
-		if(!this.types[type])return null;
-
-		var params = null;
-		var filter = null;
-		var i = attrName.indexOf(CMD_PARAM_DELIMITER);
-		if(i > -1){
-			params = attrName.substr(i+1);
-			var fi = params.indexOf(CMD_FILTER_DELIMITER);
-			if(fi > -1){
-				filter = params.substr(fi+1);
-				params = params.substring(0,fi);
-			}
-
-			params = params.split(CMD_PARAM_DELIMITER);
-		}
-
-		var rs = new this.types[type].clazz(this.baseClass,attrName,attrValue,component);
-		Util.ext(rs,this.types[type].props);
-
-		rs.el = node,rs.__nodes = [node];
-		if(node.tagName === 'TEMPLATE'){
-			var c = [];
-			var p = node,children = node.childNodes;
-			if(node.content && node.content.nodeType===11){
-				p = node.content;
-				children = p.childNodes;
-			}
-			while(children.length){
-				var child = p.removeChild(children[0]);
-				if(child.nodeType===3 && child.nodeValue.trim().length<1)continue;
-				
-				c.push(child);
-			}
-			rs.__nodes = c;
-		}
-
-		if(params){
-			rs.params = params;
-		}
-		if(filter){
-			rs.filter = filter;
-		}
-
-		component.directives.push(rs);
-		rs.component = component;
-
-		if(node.tagName !== 'TEMPLATE')
-			rs.__nodes[0].removeAttribute(rs.name);
-		
-		this._super.createCbk.call(this,rs,type);
-
-		return rs;
-	}
-});
-
-var DirectiveFactory = new _DirectiveFactory();
-/**
- * 过滤器工厂
- */
-function _FilterFactory(){
-	Factory.call(this,Filter);
-}
-Util.inherits(_FilterFactory,Factory);
-Util.ext(_FilterFactory.prototype,{
-	newInstanceOf : function(type,component){
-		if(!this.types[type])return null;
-
-		var rs = new this.types[type].clazz(this.baseClass,component);
-		Util.ext(rs,this.types[type].props);
-
-		this._super.createCbk.call(this,rs,type);
-
-		return rs;
-	}
-});
-
-var FilterFactory = new _FilterFactory();
-/**
- * 服务工厂
- */
-function _ServiceFactory(){
-	Factory.call(this,Service);
-}
-Util.inherits(_ServiceFactory,Factory);
-Util.ext(_ServiceFactory.prototype,{
-	newInstanceOf : function(type,host){
-		type = type.toLowerCase();
-		if(!this.types[type])return null;
-
-		var rs = null;
-		if(this.types[type].props.singleton){
-			if(!this.types[type].singleton){
-				this.types[type].singleton = new this.types[type].clazz(this.baseClass);
-			}
-			rs = this.types[type].singleton;
-		}else{
-			rs = new this.types[type].clazz(this.baseClass);
-		}
-		Util.ext(rs,this.types[type].props);
-
-		rs.host = host;
-
-		this._super.createCbk.call(this,rs,type);	
-
-		return rs;
-	}
-});
-
-var ServiceFactory = new _ServiceFactory();
-/**
- * 过渡工厂
- */
-
-var TransitionFactory = {
-	hooks:{},
-	register:function(type,hook){
-		this.hooks[type] = hook;
-	},
-	transitions:{},
-	get:function(type,directive){
-		var tmp = new Transition(type,directive,this.hooks[type]);
-		
-		return tmp;
-	}
-}
-
- 	
 	var CMD_PREFIX = 'x-';//指令前缀
 	var CMD_PARAM_DELIMITER = ':';
 	var CMD_FILTER_DELIMITER = '.';
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
-	var REG_EXP = /\{\{#?(.*?)\}\}/img,
-		REG_CMD = /x-.*/;
+	var REG_CMD = /^x-.*/;
 	var ATTR_REF_TAG = 'ref';
+	var ATTR_G_TAG = 'impex-g';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
-	var PROP_SYNC_SUFX = ':sync';
-	var PROP_SYNC_SUFX_EXP = /:sync$/;
+	// var PROP_SYNC_SUFX = ':sync';
+	// var PROP_SYNC_SUFX_EXP = /:sync$/;
+
+	var EV_AB_PRIFX = ':';
+	var BIND_AB_PRIFX = '.';
 
 	var EXP2HTML_EXP_TAG = '#';
 	var EXP2HTML_START_EXP = /^\s*#/;
-	var FILTER_EXP = /=>\s*(.+?)$/;
 	var FILTER_EXP_START_TAG = '=>';
+	var FILTER_EXP_START_TAG_ENTITY = '=&gt;';
 	var FILTER_EXP_SPLITTER = '|';
-	var LOGGER = {
-	    log : function(){},
-	    debug : function(){},
-	    error : function(){},
-	    warn : function(){}
-	};
+	var FILTER_EXP_PARAM_SPLITTER = ':';
+
+	var DOM_COMP_ATTR = 'data-impex-compoment';
+
+	var SLOT = 'slot';
 
 	var im_counter = 0;
 
 	var DISPATCHERS = [];
+	var FILTER_MAP = {};
+	var DIRECT_MAP = {};
+	var COMP_MAP = {};
+	var EVENT_MAP = {};
+	var COMP_CSS_MAP = {};
+	var SHOW_WARN = true;
 
-	var HTML_EXP_COMPILING = false;
-	var HTML_EXP_MAP = {};
-	var CURRENT_HTML_EXP_LIST = null;
+	function warn(msg){
+		console && console.warn('impex warn :: ' + msg);
+	}
+
+	function error(msg){
+		console && console.error('impex error :: ' + msg);
+	}
+
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -3762,34 +2519,18 @@ var TransitionFactory = {
 	var impex = new function(){
 
 		/**
-		 * 保存注册过的全局组件实例引用。注册全局组件可以使用x-global指令.
+		 * 保存注册过的全局组件实例引用。
+		 * 注册全局组件可以使用impex-g属性.
 		 * <p>
-		 * 		<x-panel x-global="xPanel" >...</x-panel>
+		 * 		<x-panel impex-g="xPanel" >...</x-panel>
 		 * </p>
 		 * <p>
-		 * 		impex.global.xPanel.todo();
+		 * 		impex.g.xPanel.todo();
 		 * </p>
 		 * @type {Object}
 		 */
-		this.global = {};
+		this.g = {};
 
-		/**
-		 * impex事件管理接口
-		 * @type {Object}
-		 */
-		this.events = {
-			/**
-			 * 注册一个事件分派器
-			 * @param  {String | Array} events 支持的事件列表。数组或者以空格分割的字符串
-			 * @param  {Dispatcher} dispatcher 分派器
-			 */
-			registerDispatcher:function(events,dispatcher){
-				if(typeof(events) == 'string'){
-					events = events.split(' ');
-				}
-				DISPATCHERS.push([events,dispatcher]);
-			}
-		}
 
 		/**
 	     * 版本信息
@@ -3799,8 +2540,8 @@ var TransitionFactory = {
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,56,1],
-	        state:'',
+	        v:[0,96,0],
+	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -3816,17 +2557,13 @@ var TransitionFactory = {
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param  {int} cfg.logger 日志器对象，至少实现warn/log/debug/error 4个接口
+		 * @param  {int} cfg.showWarn 是否显示警告信息
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
 			EXP_START_TAG = delimiters[0] || '{{';
 			EXP_END_TAG = delimiters[1] || '}}';
-
-			REG_EXP = new RegExp(EXP_START_TAG+'(.*?)'+EXP_END_TAG,'img');
-
-			if(cfg.logger)LOGGER = cfg.logger;
-			this.logger = LOGGER;
+			SHOW_WARN = cfg.showWarn===false?false:true;
 		};
 
 		/**
@@ -3834,51 +2571,50 @@ var TransitionFactory = {
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object} param 组件参数<br/>
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Object | String} param 组件参数对象，或url地址
 		 * @return this
 		 */
-		this.component = function(name,param,services){
+		this.component = function(name,param){
 			if(typeof(param)!='string' && !param.template){
-				LOGGER.warn("can not find property 'template' of component '"+name+"'");
+				error("can not find property 'template' of component '"+name+"'");
 			}
-			ComponentFactory.register(name,param,services);
+			COMP_MAP[name] = param;
 			return this;
 		}
 
 		/**
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
-		 * @param  {Object} param 指令参数
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Object} data 指令定义
 		 * @return this
 		 */
-		this.directive = function(name,param,services){
-			DirectiveFactory.register(name,param,services);
+		this.directive = function(name,param){
+			DIRECT_MAP[name] = param;
 			return this;
 		}
 
 		/**
-		 * 定义服务
-		 * @param  {string} name  服务名，注入时必须和创建时名称相同
-		 * @param  {Object} param 服务参数
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * 定义过滤器。过滤器可以用在表达式或者指令中
+		 * <p>
+		 * 	{{ exp... => cap}}
+		 * </p>
+		 * 过滤器可以连接使用，并以声明的顺序依次执行，比如
+		 * <p>
+		 * 	{{ exp... => lower|cap}}
+		 * </p>
+		 * 过滤器支持参数，比如
+		 * <p>
+		 * 	{{ exp... => currency:'€':4}}
+		 * </p>
+		 * <p>
+		 * 	x-for="list as item => orderBy:'desc'"
+		 * </p>
+		 * @param  {string} name 过滤器名
+		 * @param  {Function} to 过滤函数。回调参数为 [value,params...]，其中value表示需要过滤的内容
 		 * @return this
 		 */
-		this.service = function(name,param,services){
-			ServiceFactory.register(name,param,services);
-			return this;
-		}
-
-		/**
-		 * 定义过滤器
-		 * @param  {string} name  过滤器名
-		 * @param  {Object} param 过滤器参数
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
-		 * @return this
-		 */
-		this.filter = function(name,param,services){
-			FilterFactory.register(name,param,services);
+		this.filter = function(name,to){
+			FILTER_MAP[name] = to;
 			return this;
 		}
 
@@ -3912,10 +2648,7 @@ var TransitionFactory = {
 	                var lk = links[i];
 	                var type = lk.getAttribute('type');
 	                var href = lk.getAttribute('href');
-	                var services = lk.getAttribute('services');
-	                if(services)
-	                	services = services.split(',');
-	                impex.component(type,href,services);
+	                impex.component(type,href);
 	            }
 
 	            //render
@@ -3924,28 +2657,19 @@ var TransitionFactory = {
 		}
 
 		/**
-		 * 渲染一个组件，比如
+		 * 渲染一段HTML匿名组件到指定容器，比如
 		 * <pre>
-		 * 	<x-stage id="entry"><x-stage>
+		 * 	<div id="entry"></div>
 		 * 	...
-		 * 	impex.render(document.getElementById('entry')...)
+		 * 	impex.renderTo('<x-app></x-app>','#entry'...)
 		 * </pre>
-		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
-		 * impex总会从渲染一个组件作为一切的开始
-		 * @param  {HTMLElement} element DOM节点，可以是组件节点
+		 * @param  {String} tmpl 字符串模板
+		 * @param  {HTMLElement | String} container 匿名组件入口，可以是DOM节点或选择器字符
 		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
 		 */
-		this.render = function(element,param,services){
-			if(!element){
-				LOGGER.error('invalid element, can not render');
-				return;
-			}
-			var name = element.tagName.toLowerCase();
-			if(elementRendered(element)){
-				LOGGER.warn('element ['+name+'] has been rendered');
-				return;
-			}
+		this.renderTo = function(tmpl,container,param){
+			
 			//link comps
 			var links = document.querySelectorAll('link[rel="impex"]');
 
@@ -3954,115 +2678,56 @@ var TransitionFactory = {
                 var lk = links[i];
                 var type = lk.getAttribute('type');
                 var href = lk.getAttribute('href');
-                var services = lk.getAttribute('services');
-                if(services)
-	                	services = services.split(',');
-                impex.component(type,href,services);
+                impex.component(type,href);
             }
 
-			var comp = ComponentFactory.newInstanceOf(name,element);
-			if(!comp){
-				topComponentNodes.push(element);
-				comp = ComponentFactory.newInstance([element],param);
-			}
+            if(isString(container)){
+            	container = document.querySelector(container);
+            }
+            if(container.tagName === 'BODY'){
+            	error("container element must be inside <body> tag");
+            	return;
+            }
 
-			if(comp.onCreate){
-				var svs = null;
-				if(Util.isArray(services)){
-					//inject
-					svs = [];
-					for(var i=0;i<services.length;i++){
-						var serv = ServiceFactory.newInstanceOf(services[i],comp);
-						svs.push(serv);
-					}
-				}
-				svs ? comp.onCreate.apply(comp,svs) : comp.onCreate();
-			}
-			
-			comp.init();
-			comp.mount();
+            tmpl = tmpl.replace(/<!--[\s\S]*?-->/mg,'')
+            		.replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
+            		.trim();
+			var comp = newComponent(tmpl,container,param);
+
+			comp.onCreate && comp.onCreate();
+			parseComponent(comp);
+			mountComponent(comp);
 
 			return comp;
 		}
 
-		var topComponentNodes = [];
-		function elementRendered(element){
-			var p = element;
-			do{
-				if(topComponentNodes.indexOf(p) > -1)return true;
-				p = p.parentNode;
-			}while(p);
-			return false;
+		/**
+		 * 渲染一个DOM节点组件，比如
+		 * <pre>
+		 * 	<x-stage id="entry"><x-stage>
+		 * 	...
+		 * 	impex.render('#entry'...)
+		 * </pre>
+		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
+		 * impex总会从渲染一个组件作为一切的开始
+		 * @param  {HTMLElement | String} node 组件入口，可以是DOM节点或选择器字符
+		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
+		 */
+		this.render = function(node,param){
+			if(isString(node)){
+            	node = document.querySelector(node);
+            }
+            var tmpl = node.outerHTML;
+            return this.renderTo(tmpl,node,param);
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
 
-
-		this.logger = LOGGER;
-		this.util = Util;
-
-
 		//for prototype API
 		this.Component = Component;
-
-		this.Signal = Signal;
-		/**
-		 * 开启基础渲染。用于自动更新父组件参数变更导致的变化。
-		 * 注意：参数传递默认引用方式，这可能会导致父组件的一个对象参数的子属性变更无法通知子组件。
-		 * 如果需要传递不可变对象，可以使用impex.util.immutable()方法
-		 */
-		this.useBasicRender = function(){
-			Util.ext(Component.prototype,{
-				onPropChange : function(changes){
-					for(var k in changes){
-						var c = changes[k];
-						var val = this.state[c.name];
-			            if(c.val !== val){
-			                this.state[c.name] = c.val;
-			            }
-					}
-			    }
-			});
-		}
 	}
 
 
-/**
- * 内建服务，提供基础操作接口
- */
-
-/**
- * 视图管理服务提供额外的视图操作，可以用在指令或组件中。
- * 使用该服务，只需要注入即可
- */
-impex.service('DOMHelper',DOMHelper);
-
-
-/**
- * 组件管理服务提供对组件的额外操作
- * 使用该服务，只需要注入即可
- */
-impex.service('ComponentManager',{
-	/**
-	 * 是否存在指定类型的组件
-	 * @return {Boolean} 
-	 */
-    hasTypeOf : function(type){
-    	return ComponentFactory.hasTypeOf(type);
-    }
-});
-
-/**
- * 组件管理服务提供对组件的额外操作
- * 使用该服务，只需要注入即可
- */
-impex.service('Transitions',new function(){
-	var transitionObjs = [];
-	this.get = function(type,component){
-		type = type||'x';
-		return TransitionFactory.get(type,component);
-	}
-});
 /**
  * 内建指令
  */
@@ -4077,20 +2742,6 @@ impex.service('Transitions',new function(){
         priority:999
     })
     /**
-     * 注册全局组件指令
-     * <br/>使用方式：<x-panel x-global="xPanel" >...</x-panel>
-     */
-    impex.directive('global',{
-        onCreate:function(){
-            var k = this.value;
-            if(impex.global[k]){
-                LOGGER.warn('duplicate name "'+k+'" exists in global');
-                return;
-            }
-            impex.global[k] = this.component;
-        }
-    })
-    /**
      * 内联样式指令
      * <br/>使用方式：
      * <div x-style="{'font-size': valExp}" >...</div>
@@ -4099,34 +2750,33 @@ impex.service('Transitions',new function(){
      * <div x-style="obj" >...</div>
      */
     .directive('style',{
-        onCreate:function(){
-            if(this.value.trim()[0]==='{'){
-                this.value = '('+this.value+')';
-            }
-        },
-        onUpdate:function(map){
-            if(typeof map === 'string'){
+        onBind:function(vnode,data){
+            var v = data.value;
+            if(isString(v)){
                 var rs = {};
-                var tmp = map.split(';');
+                var tmp = v.split(';');
                 for(var i=tmp.length;i--;){
                     if(!tmp[i])continue;
                     var pair = tmp[i].split(':');
                     rs[pair[0]] = pair[1];
                 }
-                map = rs;
+                v = rs;
             }
-            var style = this.el.style;
-            for(var k in map){
+            var style = vnode.getAttribute('style')||'';
+            for(var k in v){
                 var n = this.filterName(k);
-                var v = map[k];
-                if(v.indexOf('!important')){
-                    v = v.replace(/!important\s*;?$/,'');
-                    n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
-                    style.setProperty(n, v, "important");
-                }else{
-                    style[n] = v;
-                }
+                var val = v[k];
+                n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+                style += n+':'+val+';';
+                // if(val.indexOf('!important')){
+                //     val = val.replace(/!important\s*;?$/,'');
+                //     n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+                //     style.setProperty(n, v, "important");
+                // }else{
+                //     style[n] = val;
+                // }
             }
+            vnode.setAttribute('style',style);
         },
         filterName:function(k){
             return k.replace(/-([a-z])/img,function(a,b){
@@ -4142,34 +2792,22 @@ impex.service('Transitions',new function(){
      * <div x-class="{cls1:boolExp,cls2:boolExp,cls3:boolExp}" >...</div>
      */
     .directive('class',{
-        onCreate:function(){
-            if(this.value.trim()[0]==='{'){
-                this.value = '('+this.value+')';
-            }
-        },
-        onUpdate:function(map){
-            var str = '';
-            if(map instanceof Array){
-                map.forEach(function(cls){
-                    str += ' '+ cls;
-                });
-            }else if(typeof map === 'string'){
-                str = map;
+        onBind:function(vnode,data){
+            var v = data.value;
+            var cls = vnode.getAttribute('class')||'';
+            if(isString(v)){
+                cls += ' '+v;
+            }else if(isArray(v)){
+                cls += ' '+ v.join(' ');
             }else{
-                for(var k in map){
-                    var v = map[k];
-                    if(v){
-                        str += ' '+ k;
-                    }
+                for(var k in v){
+                    var val = v[k];
+                    if(val)
+                        cls += ' '+k;
                 }
-            }
-
-            if(this.lastClassStr){
-                this.el.className = this.el.className.replace(this.lastClassStr,'');
-            }
-
-            this.el.className += ' '+str;
-            this.lastClassStr = str;
+            }            
+            
+            vnode.setAttribute('class',cls);
         }
     })
     /**
@@ -4178,19 +2816,11 @@ impex.service('Transitions',new function(){
      * <br/>使用方式2：<img :load:mousedown:touchstart="hi()" :dblclick="hello()">
      */
     .directive('on',{
-        onInit:function(){
-            for(var i=this.params.length;i--;){
-                this.on(this.params[i],this.value);
+        onBind:function(vnode,data){
+            var args = data.args;
+            for(var i=args.length;i--;){
+                vnode.on(args[i],data.value);
             }
-        }
-    })
-    /**
-     * 文本指令，用于防止表达式被渲染前出现在页面上的边界符
-     * <br/>使用方式1：<span x-text="msg"></span>
-     */
-    .directive('text',{
-        onUpdate:function(rs){
-            this.el.innerText = rs;
         }
     })
     /**
@@ -4198,31 +2828,15 @@ impex.service('Transitions',new function(){
      * <br/>使用方式：<img x-bind:src="exp">
      */
     .directive('bind',{
-        onInit:function(){
-            if(!this.params || this.params.length < 1){
-                LOGGER.warn('at least one attribute be binded');
+        onBind:function(vnode,data){
+            var args = data.args;
+            if(!args || args.length < 1){
+                warn('at least one attribute be binded');
             }
-        },
-        onUpdate : function(rs){
-            if(!this.params || this.params.length < 1)return;
-
-            var filter = null;
-            if(this.filter){
-                filter = this.component[this.filter];
+            for(var i=args.length;i--;){
+                var p = args[i];
+                vnode.setAttribute(p,data.value);
             }
-
-            if(filter){
-                var allowed = filter(rs);
-                if(!Util.isUndefined(allowed) && !allowed){
-                    return;
-                }
-            }
-
-            for(var i=this.params.length;i--;){
-                var p = this.params[i];
-                this.el.setAttribute(p,rs);
-            }
-            
         }
     })
     /**
@@ -4230,1049 +2844,190 @@ impex.service('Transitions',new function(){
      * <br/>使用方式：<div x-show="exp"></div>
      */
     .directive('show',{
-        onCreate:function(ts,DOMHelper){
-            if(this.el.tagName === 'TEMPLATE'){
-                DOMHelper.replace(this.el,this.__nodes);
-            }
-
-            var transition = this.el.getAttribute('transition');
-            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
-                this.transition = ts.get(transition,this);
-            }
-            this.lastRs = true;
-            this.compiled = false;
-        },
-        onUpdate : function(rs){
-            if(this.component.__state === Component.state.unmounted)return;
-            if(rs === this.lastRs)return;
-            this.lastRs = rs;
-
-            if(this.transition){
-                if(rs){
-                    this.transition.enter();
-                }else{
-                    this.transition.leave();
-                }
+        onBind:function(vnode,data){
+            var v = data.value;
+            var style = vnode.getAttribute('style')||'';
+            if(v){
+                style += ';display:;'
             }else{
-                this.exec(rs);
+                style += ';display:none;'
             }
-        },
-        enter:function(){
-            this.exec(this.lastRs);
-        },
-        postLeave:function(){
-            this.exec(this.lastRs);
-        },
-        exec:function(rs){
-            if(rs){
-                //显示
-                for(var i=this.__nodes.length;i--;){
-                    this.__nodes[i].style.display = '';
-                }
-            }else{
-                // 隐藏
-                for(var i=this.__nodes.length;i--;){
-                    this.__nodes[i].style.display = 'none';
-                }
-            }
-        }
-    },['Transitions','DOMHelper'])
-    /**
-     * 效果与show相同，但是会移除视图
-     * <br/>使用方式：<div x-if="exp"></div>
-     */
-    .directive('if',{
-        final:true,
-        onCreate:function(ts,DOMHelper){
-            this.DOMHelper = DOMHelper;
-            this.placeholder = document.createComment('-- directive [if] placeholder --');         
-
-            var transition = this.el.getAttribute('transition');
-            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
-                this.transition = ts.get(transition,this);
-            }
-            this.lastRs = false;
-            this.compiled = false;
-            //default false
-            if(this.el.parentNode)
-            this.el.parentNode.replaceChild(this.placeholder,this.el);
-        },
-        onUpdate : function(rs){
-            if(rs && !this.compiled){
-                Util.compileViewOf(this.component,this.__nodes);
-                this.compiled = true;
-            }
-            if(this.elseD){
-                this.elseD.doUpdate(!rs);
-            }
-            if(this.component.__state === Component.state.unmounted)return;
-            if(rs === this.lastRs && !this.el.parentNode)return;
-            this.lastRs = rs;
-
-            if(this.transition){
-                if(rs){
-                    this.transition.enter();
-                }else{
-                    this.transition.leave();
-                }
-            }else{
-                this.exec(rs);
-            }
-        },
-        enter:function(){
-            this.exec(this.lastRs);
-        },
-        postLeave:function(){
-            this.exec(this.lastRs);
-        },
-        exec:function(rs){
-            if(rs){
-                if(this.__nodes[0].parentNode)return;
-                //添加
-                this.DOMHelper.replace(this.placeholder,this.__nodes);
-            }else{
-                if(!this.__nodes[0].parentNode)return;
-                //删除
-                var p = this.__nodes[0].parentNode;
-                p.insertBefore(this.placeholder,this.__nodes[0]);
-                this.DOMHelper.detach(this.__nodes);
-            }
-        }
-    },['Transitions','DOMHelper'])
-    /**
-     * 和x-if成对出现，单独出现无效。并且只匹配前一个if
-     * <br/>使用方式：<div x-if="exp"></div><div x-else></div>
-     */
-    .directive('else',{
-        onCreate:function(ts,DOMHelper){
-            this.DOMHelper = DOMHelper;
-            this.placeholder = document.createComment('-- directive [else] placeholder --');
-
-            //default false
-            this.el.parentNode.replaceChild(this.placeholder,this.el);
-
-            //find if
-            var xif = this.component.directives[this.component.directives.length-2];
-            if(xif.name !== 'x-if'){
-                LOGGER.warn("can not find directive[x-if] to make a pair");
-                return;
-            }
-
-            xif.elseD = this;
-
-            var transition = this.el.getAttribute('transition');
-            if(transition !== null && this.el.tagName !== 'TEMPLATE'){
-                this.transition = ts.get(transition,this);
-            }
-            this.lastRs = false;
-            this.compiled = false;
-        },
-        doUpdate : function(rs){
-            if(rs && !this.compiled){
-                Util.compileViewOf(this.component,this.__nodes);
-                this.compiled = true;
-            }
-            if(this.component.__state === Component.state.unmounted)return;
-            if(rs === this.lastRs && !this.el.parentNode)return;
-            this.lastRs = rs;
-
-            if(this.transition){
-                if(rs){
-                    this.transition.enter();
-                }else{
-                    this.transition.leave();
-                }
-            }else{
-                this.exec(rs);
-            }
-        },
-        enter:function(){
-            this.exec(this.lastRs);
-        },
-        postLeave:function(){
-            this.exec(this.lastRs);
-        },
-        exec:function(rs){
-            if(rs){
-                if(this.__nodes[0].parentNode)return;
-                //添加
-                this.DOMHelper.replace(this.placeholder,this.__nodes);
-            }else{
-                if(!this.__nodes[0].parentNode)return;
-                //删除
-                var p = this.__nodes[0].parentNode;
-                p.insertBefore(this.placeholder,this.__nodes[0]);
-                this.DOMHelper.detach(this.__nodes);
-            }
-        }
-    },['Transitions','DOMHelper'])
-    /**
-     * 用于屏蔽视图初始时的表达式原始样式，需要配合class使用
-     */
-    .directive('cloak',{
-        onCreate:function(){
-            var className = this.el.getAttribute('class');
-            if(!className){
-                LOGGER.warn("can not find attribute[class] of element["+this.el.tagName+"] which directive[cloak] on");
-                return;
-            }
-            className = className.replace('x-cloak','');
             
-            this.__cn = className;
-        },
-        onActive:function(){
-            updateCloakAttr(this.component,this.el,this.__cn);
-            var curr = this.el.getAttribute('class').replace('x-cloak','');
-            this.el.setAttribute('class',curr);
+            vnode.setAttribute('style',style);
         }
     })
-
     ///////////////////// 模型控制指令 /////////////////////
     /**
      * 绑定模型属性，当控件修改值后，模型值也会修改
      * <br/>使用方式：<input x-model="model.prop">
      */
     .directive('model',{
-        onActive:function(){
-            var el = this.el;
-            this.toNum = el.getAttribute('number');
-            this.debounce = el.getAttribute('debounce')>>0;
-
-            switch(el.nodeName.toLowerCase()){
+        onBind:function(vnode,data){
+            vnode.toNum = vnode.getAttribute('number');
+            vnode.debounce = vnode.getAttribute('debounce')>>0;
+            vnode.exp = data.exp;
+            vnode.on('change',this.handleChange);
+            vnode.on('input',handleInput);
+        },
+        handleChange:function(e,vnode){
+            var el = e.target;
+            var tag = el.tagName.toLowerCase();
+            var val = el.value;
+            switch(tag){
                 case 'textarea':
                 case 'input':
                     var type = el.getAttribute('type');
                     switch(type){
                         case 'radio':
-                            this.on('change',this.changeModel);
+                            handleInput(e,vnode,this);
                             break;
                         case 'checkbox':
-                            this.on('change',this.changeModelCheck);
+                            changeModelCheck(e,vnode,this);
                             break;
-                        default:
-                            var hack = document.body.onpropertychange===null?'propertychange':'input';
-                            this.on(hack,this.changeModel);
                     }
-                    
                     break;
                 case 'select':
                     var mul = el.getAttribute('multiple');
                     if(mul !== null){
-                        this.on('change',this.changeModelSelect);
+                        var parts = [];
+                        for(var i=el.options.length;i--;){
+                            var opt = el.options[i];
+                            if(opt.selected){
+                                parts.push(opt.value);
+                            }
+                        }
+                        this.setState(vnode.exp,parts);
                     }else{
-                        this.on('change',this.changeModel);
+                        handleInput(e,vnode,this);
                     }
                     
                     break;
             }
-        },
-        changeModelSelect : function(e){
-            var t = e.target || e.srcElement;
-            var val = t.value;
-            var parts = [];
-            for(var i=t.options.length;i--;){
-                var opt = t.options[i];
-                if(opt.selected){
-                    parts.push(opt.value);
-                }
-            }            
-            this.component.d(this.value,parts);
-        },
-        changeModelCheck : function(e){
-            var t = e.target || e.srcElement;
-            var val = t.value;
-            var parts = this.component.d(this.value);
-            if(!(parts instanceof Array)){
-                parts = [parts];
-            }
-            if(t.checked){
-                parts.push(val);
-            }else{
-                var i = parts.indexOf(val);
-                if(i > -1){
-                    parts.splice(i,1);
-                }
-            }
-        },
-        changeModel : function(e){
-            if(this.debounce){
-                if(this.debounceTimer){
-                    clearTimeout(this.debounceTimer);
-                    this.debounceTimer = null;
-                }
-                var that = this;
-                this.debounceTimer = setTimeout(function(){
-                    clearTimeout(that.debounceTimer);
-                    that.debounceTimer = null;
-                    
-                    that.setVal(e);
-                },this.debounce);
-            }else{
-                this.setVal(e);
-            }
-        },
-        setVal:function(e){
-            var v = (e.target || e.srcElement).value;
-            if(this.toNum !== null){
-                v = parseFloat(v);
-            }
-            this.component.d(this.value,v);
         }
     });
 
-    function updateCloakAttr(component,node,newOrigin){
-        for(var i=component.__expNodes.length;i--;){
-            var expNode = component.__expNodes[i];
-            if(expNode.node == node && expNode.attrName === 'class'){
-                expNode.origin = newOrigin;
-            }
+    function handleInput(e,vnode,comp){
+        var v = (e.target || e.srcElement).value;
+        if(!isUndefined(vnode.toNum)){
+            v = parseFloat(v);
         }
-
-        for(var j=component.children.length;j--;){
-            updateCloakAttr(component.children[j],node,newOrigin);
+        if(vnode.debounce){
+            if(vnode.debounceTimer){
+                clearTimeout(vnode.debounceTimer);
+                vnode.debounceTimer = null;
+            }
+            var that = this;
+            vnode.debounceTimer = setTimeout(function(){
+                clearTimeout(vnode.debounceTimer);
+                vnode.debounceTimer = null;
+                
+                that.setState(vnode.exp,v);
+            },vnode.debounce);
+        }else{
+            if(!this){
+                comp.setState(vnode.exp,v);
+            }else{
+                this.setState(vnode.exp,v);
+            }
         }
     }
-    function eachModel(){
-        this.onCreate = function(DOMHelper,ts){
-            this.eachExp = /^(.+?)\s+as\s+((?:[a-zA-Z0-9_$]+?\s*,)?\s*[a-zA-Z0-9_$]+?)\s*(?:=>\s*(.+?))?$/;
-            this.forExp = /^\s*(\d+|[a-zA-Z_$](.+)?)\s+to\s+(\d+|[a-zA-Z_$](.+)?)\s*$/;
-            this.DOMHelper = DOMHelper;
-            this.expInfo = this.parseExp(this.value);
-            this.cache = [];
-            this.__comp = this.component;
-
-            this.placeholder = document.createComment('-- directive [each] placeholder --');
-            this.el.parentNode.replaceChild(this.placeholder,this.el);
-
-            if(this.el.tagName !== 'TEMPLATE'){
-                this.__tagName = this.el.tagName.toLowerCase();
-                this.__isComp = ComponentFactory.hasTypeOf(this.__tagName);
-            }
-
-            this.subComponents = [];
-
-            this.cacheSize = 20;
-
-            this.step = this.el?this.el.getAttribute('step'):this.__nodes[0].getAttribute('step');
-
-            this.over = this.el?this.el.getAttribute('over'):this.__nodes[0].getAttribute('over');
-
-            var transition = this.el.tagName !== 'TEMPLATE'?this.el.getAttribute('transition'):this.__nodes[0].getAttribute('transition');
-            if(transition !== null){
-                this.trans = transition;
-                this.ts = ts;
+    function changeModelCheck(e,vnode,comp){
+        var t = e.target || e.srcElement;
+        var val = t.value;
+        var str = 'with(scope){return '+vnode.exp+'}';
+        var fn = new Function('scope',str);
+        var parts = null;
+        if(!this){
+            parts = fn(comp.state);
+        }else{
+            parts = fn(this.state);
+        }
+        if(!isArray(parts)){
+            parts = [parts];
+        }
+        if(t.checked){
+            parts.push(val);
+        }else{
+            var i = parts.indexOf(val);
+            if(i > -1){
+                parts.splice(i,1);
             }
         }
-        this.onInit = function(){
-            var that = this;
-            var ds = null;
-            //获取数据源
-            if(this.forExp.test(this.expInfo.ds)){
-                var begin = RegExp.$1,
-                    end = RegExp.$3,
-                    step = parseFloat(this.step);
-                if(step < 0){
-                    LOGGER.error('step <= 0 : '+step);
-                    return;
-                }
-                step = step || 1;
-                if(isNaN(begin)){
-                    var path = begin;
-                    this.component.watch(begin,function(object,name,type,newVal,oldVal){
-                        if(isNaN(newVal)){
-                            newVal = this.d(path);
-                        }
-                        var ds = getForDs(newVal>>0,end,step);
-                        ds = that.doFilter(ds);
-                        var diff = compareDiff(that.lastDS,ds);
-
-                        that.lastDS = ds;
-                        that.rebuild(diff,that.expInfo.k,that.expInfo.v);
-                    });
-                    begin = this.component.d(begin);
-                }
-                if(isNaN(end)){
-                    var path = end;
-                    this.component.watch(end,function(object,name,type,newVal,oldVal){
-                        if(isNaN(newVal)){
-                            newVal = this.d(path);
-                        }
-                        var ds = getForDs(begin,newVal>>0,step);
-                        ds = that.doFilter(ds);
-                        var diff = compareDiff(that.lastDS,ds);
-
-                        that.lastDS = ds;
-                        that.rebuild(diff,that.expInfo.k,that.expInfo.v);
-                    });
-                    end = this.component.d(end);
-                }
-                begin = parseFloat(begin);
-                end = parseFloat(end);
-                
-                ds = getForDs(begin,end,step);
-            }else{
-                ds = this.component.d(this.expInfo.ds);
-                this.component.watch(this.expInfo.ds,
-                    function(object,name,type,newVal,oldVal){
-                    // if(!that.ds){
-                    //     that.ds = that.__comp.d(that.expInfo.ds);
-                    //     that.lastDS = that.ds;
-                    //     that.build(that.ds,that.expInfo.k,that.expInfo.v);
-                    //     return;
-                    // }
-
-                    var ds = that.__comp.d(that.expInfo.ds);
-                    ds = that.doFilter(ds);
-                    var diff = compareDiff(that.lastDS,ds);
-                    
-                    that.lastDS = ds;
-                    that.rebuild(diff,that.expInfo.k,that.expInfo.v);
-                });
-            }
-
-            if(this.over){
-                var tmp = lexer(this.over);
-                var rs = Renderer.evalExp(this.__comp,tmp);
-                this.over = rs;
-            }
-            
-            //parse props
-            this.__props = parseProps(this.el,this.component);
-
-            if(ds){
-                if(!(ds instanceof Array)){
-                    LOGGER.error('only support array!');
-                    return;
-                }
-
-                var ds = this.doFilter(ds);
-                this.lastDS = ds.concat();
-
-                this.build(ds,this.expInfo.k,this.expInfo.v);
-            }
-            //更新视图
-            this.destroy();
-        }
-        function parseProps(el,comp){
-            var props = {
-                str:{},
-                type:{},
-                sync:{}
-            };
-            var ks = ['cache','over','step','transition'];
-            for(var i=el.attributes.length;i--;){
-                var attr = el.attributes[i];
-                var k = attr.nodeName;
-                if(ks.indexOf(k) > -1)continue;
-                k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
-                
-                var v = attr.nodeValue;
-
-                if(k[0] === PROP_TYPE_PRIFX){
-                    var tmp = lexer(v);
-                    var rs = Renderer.evalExp(comp,tmp);
-                    var n = k.substr(1);
-                    
-                    if(PROP_SYNC_SUFX_EXP.test(n)){
-                        var keys = Object.keys(tmp.varTree);
-                        var propName = n.replace(PROP_SYNC_SUFX_EXP,'');
-                        props.sync[propName] = [tmp,rs,keys];
-                    }else{
-                        props.type[n] = rs;
-                    }
-                }else{
-                    props.str[k] = v;
-                }
-            }
-            return props;
-        }
-        function getForDs(begin,end,step){
-            var dir = end - begin < 0?-1:1;
-            var ds = [];
-            for(var i=begin;i<=end;i+=step){
-                ds.push(i);
-            }
-            return ds;
-        }
-        this.rebuild = function(diff,ki,vi){
-
-            if(diff.del < 0){
-                var tmp = this.subComponents.splice(this.subComponents.length+diff.del,-diff.del);
-                for(var i=tmp.length;i--;){
-                    var comp = tmp[i];
-                    if(this.trans && !comp.__leaving){
-                        comp.__leaving = true;
-                        comp.transition.leave();
-                    }else{
-                        // comp.unmount(false);
-                        comp.destroy();
-                    }
-                }
-            }
-            if(diff.add.length>0){
-                this.build(diff.add,ki,vi);
-            }
-
-            if(diff.update.length>0){
-                for(var i=diff.update.length;i--;){
-                    var index = diff.update[i];
-
-                    var subComp = this.subComponents[index];
-                    var data = subComp.state.__im__target || subComp.state;
-
-                    data[vi] = this.lastDS[index];
-
-                    Renderer.recurRender(subComp);
-                }
-            }
-        }
-        function compareDiff(oldDs,newDs){
-            var rs = {
-                update:[],
-                add:[],
-                del:0
-            };
-            var diffSize = newDs.length - oldDs.length;
-            if(diffSize > 0){
-                for(var i=0;i<diffSize;i++){
-                    rs.add.push(newDs[i+oldDs.length]);
-                }
-            }else if(diffSize < 0){
-                rs.del = diffSize;
-            }
-
-            var len = newDs.length < oldDs.length?newDs.length:oldDs.length;
-            for(var i=0;i<len;i++){
-                var nv = newDs[i];
-                var ov = oldDs[i];
-                if(nv !== ov){
-                    rs.update.push(i);
-                }
-            }
-
-            return rs;
-        }
-        this.createSubComp = function(){
-            var comp = this.__comp;
-            var subComp = null;
-            //视图
-            var copyNodes = [];
-            for(var i=this.__nodes.length;i--;){
-                var c = this.__nodes[i].cloneNode(true);
-                copyNodes.unshift(c);
-            }
-
-            //创建子组件
-            if(this.__isComp){
-                subComp = comp.createSubComponentOf(copyNodes[0]);
-            }else{
-                subComp = comp.createSubComponent(copyNodes);
-            }
-
-            this.subComponents.push(subComp);
-
-            //bind callback first
-            for(var n in this.__props.type){
-                var v = this.__props.type[n];
-                if(v instanceof Function){
-                    subComp[n] = v.bind(this.__comp);
-                }
-            }
-
-            //bind props
-            for(var n in this.__props.sync){
-                var prop = this.__props.sync[n];
-                var tmp = prop[0];
-                var rs = prop[1];
-                //call onPropBind
-                if(Util.isObject(rs) && subComp.onPropBind)
-                    rs = subComp.onPropBind(n,rs);
-
-                var keys = prop[2];
-                //watch props
-                keys.forEach(function(key){
-                    if(tmp.varTree[key].isFunc)return;
-
-                    var prop = new Prop(subComp,n,tmp.varTree[key].segments,tmp);
-                    comp.__watchProps.push(prop);
-                });
-                subComp.state[n] = rs;
-            }
-            //bind state
-            for(var n in this.__props.str){
-                subComp.state[n] = this.__props.str[n];
-            }
-            for(var n in this.__props.type){
-                var v = this.__props.type[n];
-                if(!(v instanceof Function)){
-                    //call onPropBind
-                    if(Util.isObject(v) && subComp.onPropBind)
-                        v = subComp.onPropBind(n,v);
-                    subComp.state[n] = v;
-                }
-            }
-            
-            if(this.trans){
-                var that = this;
-                
-                subComp.onInit = function(){
-                    if(!this.transition){
-                        this.transition = that.ts.get(that.trans,this);
-                    }
-                };
-                subComp.onMount = function(){
-                    this.transition.enter();
-                };
-                subComp.postLeave = function(){
-                    this.unmount(false);
-                    this.__leaving = false;
-                }
-            }
-                
-            return subComp;
-        }
-        this.doFilter = function(ds){
-            if(!this.filters)return ds;
-            var filters = this.filters;
-            if(Object.keys(filters).length > 0 && ds){
-                var rs = ds;
-
-                for(var k in filters){
-                    var c = filters[k][0];
-                    var params = filters[k][1];
-                    var actParams = [];
-                    for(var i=params.length;i--;){
-                        var v = params[i];
-                        if(v.varTree && v.words){
-                            v = Renderer.evalExp(this.__comp,v);
-                        }
-                        actParams[i] = v;
-                    }
-                    c.value = rs;
-                    rs = c.to.apply(c,actParams);
-                }
-                return rs;
-            }
-        }
-        this.build = function(ds,ki,vi){
-
-            //bind each
-            if(ds.__im__extPropChain)
-                ds.__im__extPropChain.push([this,vi]);
-
-            var queue = [];
-
-
-            for(var k=0;k<ds.length;k++){
-                var subComp = this.createSubComp();
-                queue.push(subComp);
-                
-                //模型
-                var v = ds[k];
-
-                //k,index,each
-                if(typeof v === 'object' && v != null){
-                    v.__im__extPropChain.push([this,vi,k]);
-                }
-
-                var data = subComp.state.__im__target || subComp.state;
-
-                data[vi] = v;
-                data['$index'] = k;
-                if(ki)data[ki] = k;
-            }
-
-            mergeEach(queue,this);
-        }
-        function mergeEach(queue,xeach){
-            if(queue.length<1)return;
-
-            setTimeout(function(){
-                var list = queue.splice(0,500);
-                var fragment = document.createDocumentFragment();
-                for(var i=0;i<list.length;i++){
-                    var comp = list[i];
-
-                    for(var j=0;j<comp.__nodes.length;j++){
-                        fragment.appendChild(comp.__nodes[j]);
-                    }
-                    
-                    comp.__init();
-                    comp.mount();
-                }
-
-                var p = xeach.placeholder.parentNode;
-                p.insertBefore(fragment,xeach.placeholder);
-
-                if(queue.length > 0){
-                    mergeEach(queue,xeach);
-                }else{
-                    //complete callback
-                    if(xeach.over)
-                        xeach.over();
-                }
-            },0);
-        }
-        this.parseExp = function(exp){
-            var ds,k,v;
-            var that = this;
-            exp.replace(this.eachExp,function(a,attrName,subAttr,filterExp){
-                ds = attrName;
-                var tmp = subAttr.replace(/\s/mg,'');
-                var kv = tmp.split(',');
-                if(kv.length>1){
-                    k = kv[0];
-                    v = kv[1];
-                }else{
-                    v = kv[0];
-                }
-
-                if(filterExp){
-                    var filters = {};
-                    var varMap = Scanner.parseFilters(lexer(filterExp),filters,that.parent);
-                    that.filters = filters;
-
-                    for(var i in varMap){
-                        that.component.watch(i,function(){
-                            if(that.lastDS)
-                            that.rebuild(that.lastDS,that.expInfo.k,that.expInfo.v);
-                        });
-                    }
-                }
-                
-            });
-            if(!ds){
-                //each语法错误
-                LOGGER.error('invalid each expression : '+exp);
-                return;
-            }
-
-            return {
-                ds:ds,
-                k:k,
-                v:v
-            };
-        }
-    };
-    var each = new eachModel();
-    each.final = true;
-    each.priority = 998;
-    /**
-     * each指令用于根据数据源，动态生成列表视图。数据源可以是数组或者对象
-     * <br/>使用方式：
-     * <br/> &lt;li x-each="datasource as k , v"&gt;{{k}} {{v}}&lt;/li&gt;
-     * <br/> &lt;li x-each="datasource as v"&gt;{{v}}&lt;/li&gt;
-     * 
-     * datasource可以是一个变量表达式如a.b.c，也可以是一个常量[1,2,3]
-     */
-    impex.directive('each',each,['DOMHelper','Transitions']);
+    }
 
 }(impex);
-impex.filter('json',{
-    to:function(){
-        return JSON.stringify(this.value);
-    }
+impex.filter('json',function(v){
+    return JSON.stringify(v);
 })
 
 //filterBy:'xxx'
 //filterBy:'xxx':'name'
 //filterBy:filter
-.filter('filterBy',{
-    to:function(key,inName){
-        var ary = this.value;
-        if(!(ary instanceof Array)){
-            LOGGER.warn('can only filter array');
-            return this.value;
-        }
-        var rs = [];
-        if(key instanceof Function){
-            for(var i=ary.length;i--;){
-                var need = key.call(this,ary[i]);
-                if(need){
-                    rs.unshift(ary[i]);
-                }
-            }
-        }else{
-            for(var i=ary.length;i--;){
-                var item = ary[i];
-                if(inName){
-                    if(!key || (item[inName]+'').indexOf(key) > -1){
-                        rs.unshift(item);
-                    }
-                }else{
-                    if(!key || item.indexOf && item.indexOf(key) > -1){
-                        rs.unshift(item);
-                    }
-                }
-            }
-        }
-        return rs;
+.filter('filterBy',function(v,key,inName){
+    var ary = v;
+    if(!isArray(ary)){
+        warn('can only filter array');
+        return v;
     }
+    var rs = [];
+    if(isFunction(key)){
+        for(var i=ary.length;i--;){
+            var need = key.call(this,ary[i]);
+            if(need){
+                rs.unshift(ary[i]);
+            }
+        }
+    }else{
+        for(var i=ary.length;i--;){
+            var item = ary[i];
+            if(inName){
+                if(!key || (item[inName]+'').indexOf(key) > -1){
+                    rs.unshift(item);
+                }
+            }else{
+                if(!key || item.indexOf && item.indexOf(key) > -1){
+                    rs.unshift(item);
+                }
+            }
+        }
+    }
+    return rs;
 })
 
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
-.filter('limitBy',{
-    to:function(count,start){
-        if(!(this.value instanceof Array)){
-            LOGGER.warn('can only filter array');
-            return this.value;
-        }
-        if(!count)return this.value;
-        return this.value.splice(start||0,count);
+.filter('limitBy',function(v,count,start){
+    if(!isArray(v)){
+        warn('can only filter array');
+        return v;
     }
+    if(!count)return v;
+    return v.splice(start||0,count);
 })
 
 //[1,2,3,4,5] => orderBy:'':'desc'   ----> [5,4,3,2,1]
-.filter('orderBy',{
-    to:function(key,dir){
-        if(!key && !dir)return this.value;
-        if(!(this.value instanceof Array)){
-            LOGGER.warn('can only filter array');
-            return this.value;
-        }
-        this.value.sort(function(a,b){
-            var x = key?a[key]:a,
-                y = key?b[key]:b;
-
-            if(typeof x === "string"){
-                return x.localeCompare(y);
-            }else if(typeof x === "number"){
-                return x - y;
-            }else{
-                return (x+'').localeCompare(y);
-            }
-        });
-        if(dir === 'desc'){
-            this.value.reverse();
-        }
-        return this.value;
+.filter('orderBy',function(v,key,dir){
+    if(!key && !dir)return v;
+    if(!isArray(v)){
+        warn('can only filter array');
+        return v;
     }
+    v.sort(function(a,b){
+        var x = key?a[key]:a,
+            y = key?b[key]:b;
+
+        if(typeof x === "string"){
+            return x.localeCompare(y);
+        }else if(typeof x === "number"){
+            return x - y;
+        }else{
+            return (x+'').localeCompare(y);
+        }
+    });
+    if(dir === 'desc'){
+        v.reverse();
+    }
+    return v;
 });
-/**
- * 内建分派器
- */
-!function(impex){
-    var userAgent = self.navigator.userAgent.toLowerCase();
-
-    var isAndroid = userAgent.indexOf('android')>0?true:false;
-    var isIphone = userAgent.indexOf('iphone')>0?true:false;
-    var isIpad = userAgent.indexOf('ipad')>0?true:false;
-    var isWphone = userAgent.indexOf('windows phone')>0?true:false;
-
-    var isMobile = isIphone || isIpad || isAndroid || isWphone;
-    if(isMobile){
-        ///////////////////// 触摸事件分派器 /////////////////////
-        var touchDispatcher = new Dispatcher({
-            onInit:function() {
-                if(this.inited)return;
-
-                document.addEventListener('touchstart',this.doStart.bind(this),true);
-                document.addEventListener('touchmove',this.doMove.bind(this),true);
-                document.addEventListener('touchend',this.doEnd.bind(this),true);
-                document.addEventListener('touchcancel',this.doCancel.bind(this),true);
-
-                this.inited = true;
-                this.lastTapTime = 0;
-
-                this.FLING_INTERVAL = 200;
-            },
-            doStart:function(e){
-                this.dispatch('touchstart',e);
-                this.dispatch('pointerdown',e);
-
-                //start timer
-                var that = this;
-                this.timer = setTimeout(function(){
-                    that.dispatch('press',e);
-                },800);
-
-                this.hasMoved = false;
-                this.canceled = false;
-
-                //handle fling
-                var touch = e.touches[0];
-                this.fling_data = {
-                    x:touch.clientX,
-                    y:touch.clientY,
-                    t:Date.now()
-                };
-            },
-            doMove:function(e){
-                clearTimeout(this.timer);
-
-                this.dispatch('touchmove',e);
-                this.dispatch('pointermove',e);
-
-                this.hasMoved = true;
-            },
-            doCancel:function(e){
-                clearTimeout(this.timer);
-
-                this.canceled = true;
-                this.dispatch('touchcancel',e);
-                this.dispatch('pointercancel',e);
-            },
-            doEnd:function(e){
-                clearTimeout(this.timer);
-                
-                this.dispatch('touchend',e);
-                this.dispatch('pointerup',e);
-
-                if(this.canceled)return;
-
-                if(!this.hasMoved){
-                    this.dispatch('tap',e);
-
-                    if(Date.now() - this.lastTapTime < 300){
-                        this.dispatch('dbltap',e);
-                    }
-
-                    this.lastTapTime = Date.now();
-                }else{
-                    var touch = e.changedTouches[0];
-                    var dx = touch.clientX,
-                        dy = touch.clientY;
-
-                    var data = this.fling_data;
-                    var sx = data.x,
-                        sy = data.y,
-                        st = data.t;
-
-                    var long = Date.now() - st;
-                    var s = Math.sqrt((dx-sx)*(dx-sx)+(dy-sy)*(dy-sy)) >> 0;
-                    //时间小于interval并且位移大于20px才触发fling
-                    if(long <= this.FLING_INTERVAL && s > 20){
-                        var r = Math.atan2(dy-sy,dx-sx);
-
-                        var extra = {
-                            slope:r,
-                            interval:long,
-                            distance:s
-                        }
-
-                        this.dispatch('fling',e,extra);
-                    }
-                }
-            }
-        });
-        impex.events.
-        registerDispatcher(
-            'touchstart touchend touchcancel touchmove fling'+
-            'pointerdown pointerup pointermove pointercancel press tap dbltap',touchDispatcher);
-    }else{
-        ///////////////////// 鼠标事件分派器 /////////////////////
-        var mouseDispatcher = new Dispatcher({
-            listeningEventMap:{},
-            onInit:function() {
-                if(this.inited)return;
-
-                document.addEventListener('mousedown',this.doMousedown.bind(this),true);
-                document.addEventListener('mousemove',this.doMousemove.bind(this),true);
-                document.addEventListener('mouseup',this.doMouseup.bind(this),true);
-                window.addEventListener('blur',this.doMouseCancel.bind(this),true);
-                var type = document.body.onmousewheel == null?'mousewheel':'DOMMouseScroll';
-                document.addEventListener(type,this.doMousewheel.bind(this),true);
-
-                document.addEventListener('mouseout',this.doMouseout.bind(this),true);
-
-                this.inited = true;
-                this.lastClickTime = 0;
-            },
-            doMousedown:function(e){
-                this.dispatch('mousedown',e);
-                this.dispatch('pointerdown',e);
-
-                //start timer
-                var that = this;
-                this.timer = setTimeout(function(){
-                    that.dispatch('press',e);
-                },800);
-            },
-            doMousemove:function(e){
-                clearTimeout(this.timer);
-
-                this.dispatch('mousemove',e);
-                this.dispatch('pointermove',e);
-            },
-            doMouseup:function(e){
-                clearTimeout(this.timer);
-
-                this.dispatch('mouseup',e);
-                this.dispatch('pointerup',e);
-
-                if(e.button === 0){
-                    this.dispatch('click',e);
-                    this.dispatch('tap',e);
-                    if(Date.now() - this.lastClickTime < 300){
-                        this.dispatch('dblclick',e);
-                        this.dispatch('dbltap',e);
-                    }
-
-                    this.lastClickTime = Date.now();
-                }
-            },
-            doMouseCancel:function(e){
-                clearTimeout(this.timer);
-
-                this.dispatch('pointercancel',e);                
-            },
-            doMouseout:function(e){
-                this.dispatch('mouseout',e);
-
-                //check leave
-                var t = e.target;
-                var events = this.__eventMap['mouseleave'];
-                if(!events)return;
-                
-                do{
-                    if(this.fireMouseleave(t,events,e) === false){
-                        break;
-                    }
-
-                    t = t.parentNode;
-                }while(t.tagName && t.tagName != 'HTML');
-            },
-            fireMouseleave:function(t,events,e){
-                for(var i=events.length;i--;){
-                    if(events[i].el === t){
-                        break;
-                    }
-                }
-                if(i < 0)return;
-
-                var currentTarget = t;
-                var target = e.target;
-
-                if(!this.contains(currentTarget,target))return;
-
-                var toElement = e.toElement || e.relatedTarget;
-                if(this.contains(currentTarget,toElement))return;
-                
-                return this.fireEvent(t,events,e,'mouseleave');
-            },
-            contains:function(a,b){
-                if(a.contains){
-                    return a.contains(b);
-                }
-                do{
-                    if(a == b)return true;
-                    b = b.parentNode;
-                }while(b && b.tagName != 'BODY');
-                return false;
-            },
-            doMousewheel:function(e){
-                this.dispatch('mousewheel',e);
-            }
-        });
-
-        impex.events.
-        registerDispatcher(
-            'mousedown mouseup click dblclick mousemove mousewheel mouseout mouseleave'+
-            'pointerdown pointerup pointermove pointercancel press tap dbltap',mouseDispatcher);
-    }
-    
-    
-}(impex);
 
  	if ( typeof module === "object" && typeof module.exports === "object" ) {
  		module.exports = impex;

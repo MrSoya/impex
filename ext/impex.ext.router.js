@@ -10,7 +10,7 @@
 	 * @type {String}
 	 */
 	impex.component('x-router-view',{
-		template:'<!-- impex router -->'
+		template:' '
 	});
 
 	var routerMap = {};

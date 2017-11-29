@@ -1,118 +1,94 @@
 /**
- * 工具类，为系统提供基础服务
- * 该类来自于soya2d.js
+ * utils
  */
-var Util = new function () {
-	/**
-     * 继承
-     * @param {function} child 子类
-     * @param {function} parent 父类
-     */
-	this.inherits = function(child,parent){
-        child.prototype = Object.create(parent.prototype);
-        child.prototype.constructor = child;
-        child.prototype._super = parent.prototype;
-	}
-
-    this.ext = function(to,from){
+    function ext(from,to){
         var keys = Object.keys(from);
         for (var i=keys.length;i--;) {
             var k = keys[i];
             to[k] = from[k];
         }
     }
-
-    this.isObject = function(obj){
+    function isObject(obj){
         return typeof(obj) === 'object' && obj !== null;
     }
-
-    /**
-     * 验证对象是不是数组
-     * @param  {Object}  obj 
-     * @return {Boolean}
-     */
-    this.isArray = function(obj){
+    function isArray(obj){
         return obj instanceof Array;
     }
-
-    this.isString = function(obj){
-        return typeof(obj) === 'string';
+    function isString(obj){
+        return typeof obj === 'string';
     }
-
-    this.isUndefined = function(obj){
+    function isUndefined(obj){
         return obj === undefined;
     }
-
-    this.isFunction = function(obj){
+    function isFunction(obj){
         return obj instanceof Function;
     }
 
-    var compiler = document.createElement('div');
-
-    this.isDOMStr = function(template){
-        compiler.innerHTML = template;
-        if(compiler.children[0])return true;
-        return false;
-    }
-
-    /**
-     * 验证对象是不是DOM节点
-     * @param  {Object}  obj 
-     * @type {Boolean}
-     */
-    this.isDOM = typeof HTMLElement === 'object' ?
-                function(obj){
-                    return obj instanceof HTMLElement;
-                } :
-                function(obj){
-                    return obj && typeof obj === 'object' && obj.nodeType && typeof obj.nodeName === 'string';
-                }
-
     function loadError(){
-        LOGGER.error('can not fetch remote data of : '+this.url);
+        error('can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        LOGGER.error('load timeout : '+this.url);
+        error('load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
             var txt = this.responseText;
-            compiler.innerHTML = txt;
-            var tmpl = compiler.querySelector('template').innerHTML;
-            var comp = compiler.querySelector('script#impex').innerHTML;
-            var links = compiler.querySelectorAll('link[rel="impex"]');
+            var obj = requirements[this.url];
+            var cbks = obj.cbks;
+            var name = obj.name;
 
-            //register requires
-            for(var i=links.length;i--;){
-                var lk = links[i];
-                var type = lk.getAttribute('type');
-                var href = lk.getAttribute('href');
-                impex.component(type,href);
+            txt = txt.replace(/<!--[\s\S]*?-->/mg,'').trim();
+            txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
+            var tmpl = RegExp.$1;
+            if(!tmpl){
+                error('can not find tag <template> in component file');
+                return;
             }
 
-            var cbks = requirements[this.url];
+            var css = '';
+            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
+                css += b;
+                return '';
+            });
+
+            txt.match(/<\s*script[^<>]*\s*id\s*=\s*['"]impex['"][^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
+            var modelStr = RegExp.$1;
+            var links = txt.match(/<link[^<>]+rel\s*=\s*['"]impex['"][^<>]+>/img);
+            var registerComp = {};
+            for(var i=links.length;i--;){
+                var tmp = links[i];
+                tmp.match(/href=['"](.*?)['"]/)[0];
+                var href = RegExp.$1;
+                tmp.match(/type=['"](.*?)['"]/)[0];
+                var type = RegExp.$1;
+                registerComp[type] = href;
+            }
+
+            var model = new Function('return ('+modelStr+')()')();
+
+            //register
+            for(var k in registerComp){
+                impex.component(k,registerComp[k]);
+            }
+
+            model.template = tmpl.trim();
+            
             var url = this.url;
             cbks.forEach(function(cbk){
-                var __impex_comp_eval = null;
-                var evl = eval;
-                evl('__impex_comp_eval = '+comp);//scope call
-                if(!window.__impex_comp_eval)
-                    LOGGER.error('can not find component defination of : '+url);
-                var data = window.__impex_comp_eval();
-                cbk([tmpl,data]);
+                cbk(model,css.trim());
             });
             requirements[this.url] = null;
         }
     }
 
     var requirements = {};
-    this.loadComponent = function(url,cbk,timeout){
+    function loadComponent(name,url,cbk,timeout){
         if(!requirements[url]){
-            requirements[url] = [];
-            requirements[url].push(cbk);
+            requirements[url] = {name:name,cbks:[]};
+            requirements[url].cbks.push(cbk);
         }else{
-            requirements[url].push(cbk);
+            requirements[url].cbks.push(cbk);
             return;
         }        
 
@@ -126,44 +102,6 @@ var Util = new function () {
         }else{
             xhr.onreadystatechange = onload;
         }
-        // xhr.cbk = cbk;
         xhr.url = url;
         xhr.send(null);
     }
-
-    this.immutable = function(v){
-        if(typeof v === 'object'){
-            var o = JSON.parse(JSON.stringify(v));
-            return o;
-        }
-        return v;
-    }
-
-
-    this.compileViewOf = function(component,__nodes){
-        var data = Scanner.scan(__nodes,component);
-        //link exp & obj
-        Builder.link(component,data.exps);
-        //render exps
-        Renderer.renderExpNodes(data.exps);
-        //init children
-        var children = data.comps;
-        for(var i = children.length;i--;){
-            children[i].init();
-        }
-        //init directs
-        var directs = data.directs;
-        for(var i = directs.length;i--;){
-            directs[i].init();
-        }
-        //display children
-        for(var i = 0;i<children.length;i++){
-            if(!children[i].__url)
-                children[i].mount();
-        }
-        //active directs
-        for(var i = directs.length;i--;){
-            directs[i].active();
-        }
-    }
-}

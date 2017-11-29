@@ -8,9 +8,10 @@
         <p>
             组件参数可以设置类型和是否必须，如果不满足条件会报错
         </p>
-
-        <x-comp .content="s">
-        </x-comp>
+        <div id="demo">
+            <x-comp .content="s"></x-comp>
+        </div>
+        
 
         按F12打开控制台，会看到error信息
         
@@ -37,7 +38,7 @@
             });
 
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     n:123456,
                     s:'string'

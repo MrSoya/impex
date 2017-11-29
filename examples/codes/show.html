@@ -17,19 +17,18 @@
         </style>
     </head>
     <body>
-        <div id="entry">
-        	<p>x &gt; 4 <i  x-show="a.x > 4" transition="show">true</i></p>
+        <div id="demo">
+            <p>x &gt; 4 <i  x-show="a.x > 4" transition="show">true</i></p>
             <br>
             <p>x &lt; 4 <i  x-show="a.x < 4" transition="show">true</i></p>
             <br>
             x:<input x-model="a.x" >
         </div>
-
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            impex.render(document.getElementById('entry'),{
+            impex.render('#demo',{
                 state:{
                     a : {
                         x:0

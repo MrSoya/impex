@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
+    </head>
+    <body>
+        
+        <div id="demo">
+            mod:<input x-model="mod" .value="mod">
+            <x-a x-for="1 to 100 as i" x-if="i%mod==0" .data-x="i" .msg="10" .mod="mod">
+                <x-b .x="dataX"></x-b><br>
+                <x-c ></x-c><br/>
+            </x-a>
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            impex.component('x-a',{
+                template:'<p><a ref="xa"><slot></slot></a></p>',
+                state:{
+                    msg:111,
+                    v:true
+                },
+                propTypes:{
+                    msg:{
+                        type:'number',
+                        require:true
+                    },
+                    value:{
+                        type:['boolean','string']
+                    }
+                },
+                changeV:function(){
+                    this.state.v = !this.state.v;
+                },
+                func:function(){
+                    return 12;
+                }
+            });
+            impex.component('x-b',{
+                template:'<b ref="xxb">xb{{x}}</b>',
+                onMount:function(){
+                    console.log(this.state.x)
+                }
+            });
+            impex.component('x-c',{
+                template:'<b>xc</b>'
+            });
+            impex.render('#demo',{
+                state:{
+                    mod:2
+                }
+            });
+            buildFilterStr
+            
+        </script>
+    </body>
+</html>

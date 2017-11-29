@@ -7,79 +7,55 @@
         </style>
     </head>
     <body>
-        <x-a .items:sync="items">
-            <x-c .items:sync="items"></x-c>
-        </x-a>
+        <div id="demo">
+            <x-a .items="items" .odd="3">
+                <x-c .items="items"></x-c>
+            </x-a>
 
-        <x-b .items:sync="items"></x-b>
-        <p>
-            items[0].name:<input type="text" x-model="items[0].name" value="50">
-        </p>
-        <p>
-        items[0].children[0].name:<input type="text" x-model="items[0].children[0].name" value="50">
-        </p>
+            <x-b .items="items"></x-b>
+            <p>
+                items[0].name:<input type="text" x-model="items[0].name" value="50">
+            </p>
+            <p>
+            items[0].children[0].name:<input type="text" x-model="items[0].children[0].name" value="50">
+            </p>
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             impex.component('x-a',{
-                onPropBind:function(k,v){
-                    console.log(k,v,this.__id);
-                    return impex.util.immutable(v);
+            	onPropBind:function(props){
+                    //回调内修改state并不会触发onUpdate
+            		this.state.items = props.items;
+                    console.log(props)
+            	},
+                onPropChange:function(newProps,oldProps){
+                    //手动处理参数变更
+                    console.log(arguments)
                 },
-                onPropChange:function(changes){
-                    for(var name in changes){
-                        var c = changes[name];
-                        var val = this.state[name];
-                        if(c.val !== val){
-                            this.state[name] = impex.util.immutable(c.val);
-                        }
-                    }
-                },
-                template:`
+                template:`<div>
                     <b>x-a</b>:  {{items =>json}}
                     <p style="text-indent:2rem;"><slot></slot></p>
+                    </div>
                 `
             });
             impex.component('x-b',{
-                onPropBind:function(k,v){
-                    console.log(k,v,this.__id);
-                    return v;
-                },
-                onPropChange:function(changes){
-                    for(var name in changes){
-                        var c = changes[name];
-                        var val = this.state[name];
-                        if(c.val !== val){
-                            this.state[name] = impex.util.immutable(c.val);
-                        }
-                    }
-                },
+                //自动处理参数变更
+                // onPropChange:function(newProps,oldProps){
+                // },
                 template:`
-                    <b>x-b</b>:  {{items =>json}}
+                    <div><b>x-b</b>:  {{items =>json}}</div>
                 `
             });
             impex.component('x-c',{
-                onPropBind:function(k,v){
-                    console.log(k,v,this.__id);
-                    return v;
-                },
-                onPropChange:function(changes){
-                    for(var name in changes){
-                        var c = changes[name];
-                        var val = this.state[name];
-                        if(c.val !== val){
-                            this.state[name] = impex.util.immutable(c.val);
-                        }
-                    }
-                },
                 template:`
-                    <b>x-c</b>:  {{items =>json}}
+                    <div><b>x-c</b>:  {{items =>json}}</div>
                 `
             })
 
             
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 begin:function(){
                     return 1;
                 },
@@ -93,7 +69,7 @@
                     ]
                 }
             });
-            
+            // buildFilterStr
         </script>
     </body>
 </html>

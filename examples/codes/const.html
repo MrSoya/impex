@@ -7,19 +7,21 @@
         </style>
     </head>
     <body>
-        常量遍历
-        <ul>
-            <li x-each="[1,2,3,4,5,6,7,8,9,0] as i" >
-                {{$index + ':' + i}}
-            </li>   
-        </ul>
+        <div id="demo">
+            常量遍历
+            <ul>
+                <li x-for="[1,2,3,4,5,6,7,8,9,0] as i" >
+                    {{$index + ':' + i}}
+                </li>   
+            </ul>
+        </div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render(document.body,{
-                onDisplay : function(){
+            var debug = impex.render('#demo',{
+                onMount : function(){
                     var that = this;
                     setTimeout(function(){
                         that.state.list.info = [1,2];

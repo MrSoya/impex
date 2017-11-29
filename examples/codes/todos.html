@@ -75,47 +75,42 @@
     <body>
         <section class="todos">
             <header>
-                <input x-keydown="addTodo($event)" placeholder="What needs to be done?">
+                <input :keydown="addTodo($event)" placeholder="What needs to be done?">
             </header>
             <section>
                 <ul class="todolist">
-                    <li x-each="todos as v => filterBy:filterType:'type' " 
-                        transition="todo" .done="this.done.bind(this)"
-                        class="{{v.type=='completed'?'completed':''}}"
+                    <li x-for="todos as v => filterBy:filterType:'type' " 
+                        transition="todo"
+                        x-class="{'completed':v.type=='completed'}"
                     >
                         <input type="checkbox" x-checked="v.type=='completed'" :change="done($event,v)">
-                        {{v.val}} <i :click="this.parent.removeTodo(v)" class="close">&times;</i>
+                        {{v.val}} <i :click="removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
             </section>
             <footer>
                 <span>{{activeTodos}} item left</span>
-                <a class="btn {{filterType===''?'active':''}}" :click="filterTodos('')">All</a>
-                <a class="btn {{filterType==='active'?'active':''}}" :click="filterTodos('active')">Active</a>
-                <a class="btn {{filterType==='completed'?'active':''}}" :click="filterTodos('completed')">Completed</a>
+                <a class="btn" .class="filterType===''?'active':''" :click="filterTodos('')">All</a>
+                <a class="btn" .class="filterType==='active'?'active':''" :click="filterTodos('active')">Active</a>
+                <a class="btn" .class="filterType==='completed'?'active':''" :click="filterTodos('completed')">Completed</a>
             </footer>
         </section>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
-        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
         <script type="text/javascript">
-            imLog.level = 3;
-            impex.config({
-                logger:imLog
-            });
             impex.directive('keydown',{
-                onCreate:function(){
+                onActive:function(){
                     this.on('keydown',this.value);
                 }
             })
             impex.directive('checked',{
-                observe:function(rs){
+                onUpdate:function(rs){
                     this.el.checked = rs;
                 }
             })
 
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('.todos',{
                 state:{
                     todos:[],
                     filterType:'',
@@ -130,9 +125,16 @@
                 },
                 addTodo:function(e){
                     var t = e.target;
-                    if(e.e.keyCode === 13 && t.value.trim()){
+                    if(e.keyCode === 13 && t.value.trim()){
 
-                        this.state.todos.push({id:Math.random()+'',val:t.value,type:'active'});
+                        this.state.todos.push({
+                            id:Math.random()+'',
+                            val:t.value,
+                            type:'active'
+                            // ,ary:[
+                            //     {a:10},{a:20}
+                            // ]
+                        });
                         t.value = '';
 
                         this.state.activeTodos = this.state.todos.filter(function(td){
@@ -165,7 +167,7 @@
                 
             });
 
-            impex.useBasicRender();
+            buildFilterStr
             
         </script>
     </body>

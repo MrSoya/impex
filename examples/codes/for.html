@@ -5,27 +5,35 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
         <style type="text/css" media="screen"> 
         </style>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     </head>
     <body>
-        <ul>
-            <li x-each="begin() to end as k , v =>orderBy::'desc'" step="5">{{k + ':' +v}}</li>
-        </ul>
+        
+        <div id="container">
+            <ul>
+                <li x-for="begin() to end as k,v =>orderBy::orderDir" step="5">
+                    {{$index+":"+k}}
+                </li>
+            </ul>
 
-        1-<input type="text" x-model="end" value="50">
-
-        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+            1-<input type="text" x-model="end" .value="end">
+        </div>
         <script type="text/javascript">
-
-            
+            var s = Date.now();
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#container',{
                 begin:function(){
                     return 1;
                 },
+                show:function(v,i){
+                    console.log(v+":"+i)
+                },
                 state:{
-                    end:50
+                    end:5,
+                    orderDir:'desc'
                 }
             });
+            console.log(Date.now() - s);
             
         </script>
     </body>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    </head>
+    <body>
+        <div id="demo">
+            <input type="text" x-model="x" .value="x">
+            <div x-for="1 to 200 as i">
+                <span x-for="1 to 100 as k">
+                    {{k / x}}
+                </span>
+            </div>
+        </div>
+        
+
+        <script type="text/javascript">
+            var s = Date.now();
+            impex.render(
+                '#demo',{
+                state:{
+                    x:2
+                },
+                onCompile:function(){
+                    console.log('compile time:',Date.now()-s);
+                    this.s = Date.now();
+                },
+                onMount:function(argument) {
+                    
+                }
+            });
+            console.log('render time:',Date.now() - this.s);
+
+        </script>
+    </body>
+</html>

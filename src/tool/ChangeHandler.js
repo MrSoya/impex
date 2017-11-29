@@ -32,25 +32,20 @@ var ChangeHandler = new function() {
 				combineChange = false;
 
 				changeQ.forEach(function(change){
+					var comp = change.comp;
+
 					var newVal = change.newVal;
 					var oldVal = change.oldVal;
 					var pc = change.pc;
-					var xpc = change.xpc;
-					var comp = change.comp;
 					var type = change.type;
 					var name = change.name;
 					var object = change.object;
 					
 					handlePath(newVal,oldVal,comp,type,name,object,pc);
-
-					xpc.forEach(function(pc){
-						handlePath(newVal,oldVal,comp,type,name,object,pc);
-					});
-
 				});//end for
 				var tmp = changeMap;
 				for(var k in tmp){
-					tmp[k].comp.__update(tmp[k].changes);
+					updateComponent(tmp[k].comp,tmp[k].changes);
 				}
 			},20);
 		}
@@ -58,85 +53,31 @@ var ChangeHandler = new function() {
 	
 	function handlePath(newVal,oldVal,comp,type,name,object,pc){
         var chains = [];
-        if(pc[0] instanceof Directive){
-        	var index = pc[2] === undefined?name:pc[2];
-
-	        comp = pc[0].subComponents[parseInt(index)];
-	        chains.push(pc[1]);
-	        if(Util.isUndefined(pc[2]) && comp instanceof Component){
-	        	comp.state.__im__target && (comp.state.__im__target[pc[1]] = newVal);
-	        }
-        }else{
-        	chains = pc.concat();
-			if(!Util.isArray(object))
-	        chains.push(name);
-        }
+    	chains = pc.concat();
+		if(!isArray(object))
+        	chains.push(name);
         
         if(!comp)return;
 
-        if(!changeMap[comp.__id]){
-        	changeMap[comp.__id] = {
+        if(!changeMap[comp._uid]){
+        	changeMap[comp._uid] = {
         		changes:[],
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
-        changeMap[comp.__id].changes.push(c);
-
-        mergeExpProp(comp,chains,c);
+        changeMap[comp._uid].changes.push(c);
 	}
+}
 
-	var sqbExp = /(^\[)|(,\[)/;
-	function mergeExpProp(component,propChain,changeObj){
-		var props = component.__expDataRoot.subProps;
-		var prop;
-		var hasSqb = false;
-		for(var i=0;i<propChain.length;i++){
-			var p = propChain[i];
-			if(sqbExp.test(Object.keys(props).join(','))){
-				hasSqb = true;
-				break;
-			}
-			if(props[p]){
-				prop = props[p];
-				props = props[p].subProps;
-				continue;
-			}
-			break;
-		}
-		if(!prop)return;
-
-        var matchs = [];
-        if(hasSqb){
-            var findLength = propChain.length - i - 1;
-            var spks = Object.keys(prop.subProps);
-            for(var i=spks.length;i--;){
-                var k = spks[i];
-                if(k[0] === '[' || k === p){
-                    findMatchProps(prop.subProps[k],findLength,matchs);
-                }
-            }
-        }else {
-            matchs.push(prop);
-        }
-
-        
-        //merge
-        for(var i=matchs.length;i--;){
-        	var prop = matchs[i];
-
-        	changeObj.expProps.push(prop);
-        }
-
-	}
-	function findMatchProps(prop,findLength,matchs){
-		if(findLength < 1){
-			matchs.push(prop);
-			return;
-		}
-		for(var k in prop.subProps){
-			findMatchProps(prop.subProps[k],findLength-1,matchs);
-		}
-	}
-
+/**
+ * 变更信息
+ */
+function Change(name,newVal,oldVal,path,type,object){
+	this.name = name;
+	this.newVal = newVal;
+	this.oldVal = oldVal;
+	this.path = path;
+	this.type = type;
+	this.object = object;
 }

@@ -5,34 +5,28 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        <div id="entry">
-            edge here::{{# ' HELLO IMPEX ' + version => trim:'side' |lower |cap}}::here edge
+        <div id="demo">
+            edge here::{{ ' HELLO IMPEX ' + version => trim:'side' |lower |cap:1}}::here edge
         </div>
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             //过滤器
-            impex.filter('trim',{
-                to:function(type){
+            impex.filter('trim',function(v,type){
                     if(type === 'side'){
-                        return this.value.replace(/^\s*|\s*$/,'');
+                        return v.replace(/^\s*|\s*$/,'');
                     }
-                    return this.value.replace(/\s/mg,'');
-                }
-            }).filter('lower',{
-                to:function(){
-                    return this.value.toLowerCase();
-                }
-            }).filter('cap',{
-                html:true,
-                to:function(){
-                    var cap = this.value[0].toUpperCase();
-                    return (cap + this.value.substr(1)).big();
-                }
+                    return v.replace(/\s/mg,'');
+            }).filter('lower',function(v){
+                    return v.toLowerCase();
+                
+            }).filter('cap',function(v){
+                    var cap = v[0].toUpperCase();
+                    return (cap + v.substr(1)).big();
             });
 
             //渲染
-            var comp = impex.render(document.getElementById('entry'),{
+            var comp = impex.render('#demo',{
                 state:{
                     version : impex.version.toString()
                 }

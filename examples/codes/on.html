@@ -5,17 +5,20 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        打开控制台查看
-    	<button 
-            :mousedown="console.log($event)"
-            :click:mouseup="console.log(root,$event)" 
-            x-on:dblclick="return showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！</button>
+        <div id="demo">
+            打开控制台查看
+            <button 
+                :mousedown="onmouse($event)"
+                :mouseup="onmouse(root,$event)" 
+                x-on:dblclick="showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！
+            </button>
+        </div>
     
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     root:{
                         tip:''
@@ -24,8 +27,12 @@
                 xx:function(e){
                     console.log('manual bind',e);
                 },
+                onmouse:function(){
+                    console.log(arguments)
+                },
                 onInit:function(){
-                    this.on('click',this.xx)
+                    //方法绑定事件
+                    this.on('click',this.xx);
                 },
                 showMe : function(e){
                     console.log('show me the impex! ',e);

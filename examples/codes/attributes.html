@@ -5,20 +5,22 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-        Content1 : {{value1}} {{typeof value1}}<br/>
-        Content2 : {{value2}} {{typeof value2}}
-        <p>
-            debounce & number input : <input type="text" x-model="value1" number debounce="500" >
-        </p>
-        <p>
-            debounce input : <input type="text" x-model="value2" debounce="500" >
-        </p>
+        <div id="demo">
+            Content1 : {{value1}} {{typeof value1}}<br/>
+            Content2 : {{value2}} {{typeof value2}}
+            <p>
+                debounce & number input : <input type="text" x-model="value1" number debounce="500" >
+            </p>
+            <p>
+                debounce input : <input type="text" x-model="value2" debounce="500" >
+            </p>
+        </div>
     
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     value1 : '1',
                     value2 : '1'

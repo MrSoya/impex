@@ -24,53 +24,52 @@
             </code></li>
         </ul>
 
-        <p> 
-            <h3>demo 1</h3>
-            <code>
-                &lt;div x-style=" {'color':color,'font-size':size}"&gt;
-                    ...
-                &lt;/div&gt;
-            </code>
-            <div x-style=" {'color':color,'font-size':size}">
-                color:{{color}} &nbsp;&nbsp;&nbsp;&nbsp; size:{{size}}
-            </div>
-            color:<input type="text" x-model="color" value="{{color}}">
-            size:<input type="text" x-model="size" value="{{size}}">
-        </p>
-        <p> 
-            <h3>demo 2</h3>
-            <code>
-                &lt;div x-style=" style"&gt;
-                    ...
-                &lt;/div&gt;
-            </code>
-            <div x-style=" style">
-                {{style => json}}
-            </div>
-            style.color:<input type="text" x-model="style.color" value="{{style.color}}">
-            style.fontSize:<input type="text" x-model="style.fontSize" value="{{style.fontSize}}">
-        </p>
-        <p> 
-            <h3>demo 3</h3>
-            <code>
-                &lt;div x-style=" css"&gt;
-                    ...
-                &lt;/div&gt;
-            </code>
-            <div x-style="css">
-                {{css => json}}
-            </div>
-            css:<input type="text" x-model="css" value="{{css}}">
-        </p>
         
-        
-        
-
+        <div id="demo">
+            <p> 
+                <h3>demo 1</h3>
+                <code>
+                    &lt;div x-style=" {'color':color,'font-size':size}"&gt;
+                        ...
+                    &lt;/div&gt;
+                </code>
+                <div x-style=" {'color':color,'font-size':size}">
+                    color:{{color}}    size:{{size}}
+                </div>
+                color:<input type="text" x-model="color" .value="color">
+                size:<input type="text" x-model="size" .value="size">
+            </p>
+            <p> 
+                <h3>demo 2</h3>
+                <code>
+                    &lt;div x-style=" style"&gt;
+                        ...
+                    &lt;/div&gt;
+                </code>
+                <div x-style=" style">
+                    {{style => json}}
+                </div>
+                style.color:<input type="text" x-model="style.color" .value="style.color">
+                style.fontSize:<input type="text" x-model="style.fontSize" .value="style.fontSize">
+            </p>
+            <p> 
+                <h3>demo 3</h3>
+                <code>
+                    &lt;div x-style=" css"&gt;
+                        ...
+                    &lt;/div&gt;
+                </code>
+                <div x-style="css">
+                    {{css => json}}
+                </div>
+                css:<input type="text" x-model="css" .value="css">
+            </p>
+        </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 state:{
                     color:'red',
                     size:'16px !important',

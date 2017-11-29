@@ -5,21 +5,23 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
-    	Number:<input type="text" 
-            x-on:focus="bindWheel(this)" 
-            x-on:blur="unbindWheel(this)" 
+    	<div id="demo">
+            Number:<input type="text" 
+            :focus="bindWheel(this)" 
+            :blur="unbindWheel(this)" 
             x-model="value" 
-            value="{{value||0}}">响应鼠标滚动
+            .value="value||0">响应鼠标滚动
+        </div>
     
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     value:10
                 },
-                onInit : function(){
+                onCompile : function(){
                     this.watch('value',function(object,name,type,newVal,oldVal){
                         var nv = /^-?[0-9]+$/.test(newVal);
                         if(!nv && nv!==''){
@@ -42,7 +44,6 @@
                         }else{
                             dir = d>0?1:-1;
                         }
-
 
                         if(dir>0){
                             that.state.value = parseFloat(that.state.value) + 1;

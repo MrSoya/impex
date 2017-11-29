@@ -12,44 +12,45 @@
             <ul>
                 <li><code>param</code>:字符串参数，直接绑定到子组件的state中，不可变更，不区分类型</li>
                 <li><code>.param</code>:类型参数，直接绑定到子组件的state中，不可变更，区分类型</li>
-                <li><code>.param:sync</code>:同步类型参数，直接绑定到子组件的state中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新state。除非onPropUpdate返回false</li>
+                <li><code>.param</code>:同步类型参数，直接绑定到子组件的state中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新state。除非onPropUpdate返回false</li>
             </ul>
             <p>
                 示例：<br/>
                 <code>
-                &lt;x-comp .content="msg" date="Date.now()" .time:sync="time"&gt;
+                &lt;x-comp .content="msg" date="Date.now()" .time="time"&gt;
                 &lt;/x-comp&gt;
             </code>
             </p>
         </p>
-        <p>
-            父组件:
-            <p>content:{{msg}}</p>
-            修改组件参数:<input type="text" x-model="msg">
-            <p style="text-indent: 2rem;">
-                子组件：
-                <x-comp .content="msg" date="Date.now()" .time:sync="time">
-                </x-comp>
+        <div id="demo">
+            <p >
+                父组件:
+                <p>content:{{msg}}</p>
+                修改组件参数:<input type="text" x-model="msg">
+                <p style="text-indent: 2rem;">
+                    子组件：
+                    <x-comp .content="msg" date="Date.now()" .time="time">
+                    </x-comp>
+                </p>
             </p>
-        </p>
-        
+        </div>
         
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
         
             //自定义组件
             impex.component('x-comp',{
-                template:"<p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
+                template:"<div><p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
                 <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
-                <p>time:{{time}}   ——同步类型参数，会触发更新</p>",
+                <p>time:{{time}}   ——同步类型参数，会触发更新</p></div>",
                 onPropChange:function(changes){
                     //手动同步
-                    this.state.time = changes.time.val;
+                    this.state.time = changes.time.newVal;
                 }
             });
 
             //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
                     msg:'这是参数',
                     time:new Date().getTime()

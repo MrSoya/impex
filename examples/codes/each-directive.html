@@ -3,19 +3,23 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen"> 
+        </style>
     </head>
     <body>
-        <div x-text="msg"></div>
-        msg:<input type="text" x-model="msg">
+        <div id="demo">
+            mod:<input x-model="mod" .value="mod">
+            <div x-for="1 to 100 as i" x-if="i%mod==0" .mod="mod">{{i}}</div>
+        </div>
+
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
-
-            //渲染
-            impex.render(document.body,{
+            impex.render('#demo',{
                 state:{
-                    msg:'x-text'
+                    mod:2
                 }
             });
+            buildFilterStr
             
         </script>
     </body>

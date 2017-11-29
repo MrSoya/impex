@@ -3,20 +3,21 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     </head>
     <body>
-        {{money => currency:'¥':2}}
-        <p>
-        {{money => currency:'$':3}}
-        </p>
-        {{money => currency:'€':4}}
+        <div id="demo">
+            {{money => currency:'¥':len}}
+            <br>
+            {{money => currency:'$':3}}
+            <br>
+            {{money => currency:'€':4}}
+        </div>
 
-        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">
             //过滤器
-            impex.filter('currency',{
-                to:function(sym,decimal){
-                    var pair = this.value.split('.');
+            impex.filter('currency',function(value,sym,decimal){
+                    var pair = value.split('.');
                     var inte = pair[0].replace(/\s/g,'');
                     var integer = '';
                     for(var i=0;i<inte.length;i++){
@@ -26,14 +27,14 @@
                         }
                     }
                     return sym + ' ' + integer + parseFloat('0.'+pair[1]).toFixed(decimal).substr(1);
-                }
             });
             
 
             //渲染
-            var debug = impex.render(document.body,{
+            var debug = impex.render('#demo',{
                 state:{
-                    money : '4321234.5678'
+                    money : '4321234.5678',
+                    len:3
                 }
                 
             });
