@@ -1,21 +1,3 @@
-/**
- * 测试
- * @type {String}
- */
-// var EXP_START_TAG = '{{',
-//     EXP_END_TAG = '}}';
-// var REG_CMD = /x-.*/;
-
-// var FILTER_EXP_START_TAG = '=>';
-// var FILTER_EXP_SPLITTER = '|';
-// var FILTER_EXP_PARAM_SPLITTER = ':';
-// var CMD_PREFIX = 'x-';//指令前缀
-// var CMD_PARAM_DELIMITER = ':';
-// var CMD_FILTER_DELIMITER = '.';
-// var EV_AB_PRIFX = ':';
-// var BIND_AB_PRIFX = '.';
-
-
 function pNode(type,tag,txtQ){
     this.type = type;//1 node 3 text
     this.tag = tag;

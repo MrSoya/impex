@@ -28,7 +28,7 @@
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
 			
 			var p = new Proxy(t, handler);
-			Object.defineProperty(p,'__im__target',{enumerable: false,writable: false,value:t});
+			
 			var id = Date.now() + Math.random();
 			Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
 			return p;
@@ -155,7 +155,6 @@
 
 			Object.defineProperties(t,props);
 			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__target',{enumerable: false,writable: false,value:t.__im__innerProps});
 			Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
 
 			var id = Date.now() + Math.random();
