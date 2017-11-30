@@ -16,11 +16,9 @@
 </div>
 <script>
 	//过滤器
-    impex.filter('cap',{
-        to:function(){
-            var cap = this.value[0].toUpperCase();
-            return cap + this.value.substr(1);
-        }
+    impex.filter('cap',function(v){
+        var cap = v[0].toUpperCase();
+        return cap + v.substr(1);
     });
     //组件
     impex.component('x-subtitle',{
@@ -28,7 +26,7 @@
     });
 
     //渲染
-    impex.render(document.getElementById('entry'),{
+    impex.render('#entry',{
         state:{
             title:'impex',
             version:impex.version.toString()
