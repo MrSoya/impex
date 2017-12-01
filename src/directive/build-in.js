@@ -3,14 +3,6 @@
  */
 ///////////////////// 视图控制指令 /////////////////////
 /**
- * impex会忽略指令所在的视图，视图不会被impex解析
- * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
- */
-impex.directive('ignore',{
-    final:true,
-    priority:999
-})
-/**
  * 内联样式指令
  * <br/>使用方式：
  * <div x-style="{'font-size': valExp}" >...</div>
@@ -18,7 +10,7 @@ impex.directive('ignore',{
  * <div x-style="'color:red;font-size:20px;'" >...</div>
  * <div x-style="obj" >...</div>
  */
-.directive('style',{
+impex.directive('style',{
     onBind:function(vnode,data){
         var v = data.value;
         if(isString(v)){

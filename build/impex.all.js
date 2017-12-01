@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-11-29
+ * last build: 2017-12-01
  */
 !function (global) {
 	'use strict';
@@ -1817,11 +1817,6 @@ function Component (el) {
 	 */
 	this.el = el;
 	/**
-	 * 对组件内的所有组件槽的引用
-	 * @type {Object}
-	 */
-	this.compSlots = {};
-	/**
 	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
@@ -1903,23 +1898,6 @@ Component.prototype = {
 		return this;
 	},
 	/**
-	 * 在已经初始化过的组件中编译动态增加的DOM节点
-	 * @param  {Array} nodes 需要编译的顶级节点数组
-	 */
-	compile:function(nodes){
-		// Scanner.scan(nodes,this);
-		// Builder.build(this);
-
-		// //init children
-		// for(var i = this.children.length;i--;){
-		// 	this.children[i].init();
-		// }
-
-		// for(var i = this.directives.length;i--;){
-		// 	this.directives[i].init();
-		// }
-	},
-	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	destroy:function(){
@@ -1948,7 +1926,6 @@ Component.prototype = {
 		delete impex._cs[this._uid];
 
 		this.refs = 
-		this.compSlots = 
 		this.__nodes = 
 		this.__syncFn = 
 		this._uid = 
@@ -1956,32 +1933,6 @@ Component.prototype = {
 		this.__url = 
 		this.template = 
 		this.state = null;
-	},
-	remount:function(){
-
-	},
-	/**
-	 * 卸载组件，组件视图会从文档流中脱离，组件模型会从组件树中脱离，组件模型不再响应数据变化，
-	 * 但数据都不会销毁
-	 * @param {boolean} hook 是否保留视图占位符，如果为true，再次调用mount时，可以在原位置还原组件，
-	 * 如果为false，则需要注入viewManager，手动插入视图
-	 */
-	unmount:function(hook){
-		this.__unmount(this,hook===false?false:true);
-
-		this.onUnmount && this.onUnmount();
-	},
-	__unmount:function(component,hook){
-		var p = this.__nodes[0].parentNode;
-		if(hook){
-			this.__target =  document.createComment("-- view unmounted of ["+(component.name||'anonymous')+"] --");
-			if(p)p.insertBefore(this.__target,this.__nodes[0]);
-		}
-
-		for(var i=this.__nodes.length;i--;){
-			if(this.__nodes[i].parentNode)
-				this.__nodes[i].parentNode.removeChild(this.__nodes[i]);
-		}
 	},
 	onPropChange : function(newProps,oldProps){
 		for(var k in newProps){
@@ -2599,17 +2550,6 @@ function checkPropType(k,v,propTypes,component){
 		}
 
 		/**
-		 * 定义过渡器
-		 * @param  {string} name  过渡器名
-		 * @param  {Object} hook 过渡器钩子，可以在过渡的各个周期进行调用
-		 * @return this
-		 */
-		this.transition = function(name,hook){
-			TransitionFactory.register(name,hook);
-			return this;
-		}
-
-		/**
 		 * 对单个组件进行测试渲染
 		 */
 		this.unitTest = function(compName,entry,model){
@@ -2713,14 +2653,6 @@ function checkPropType(k,v,propTypes,component){
  */
 ///////////////////// 视图控制指令 /////////////////////
 /**
- * impex会忽略指令所在的视图，视图不会被impex解析
- * <br/>使用方式：<div x-ignore >{{ignore prop}}</div>
- */
-impex.directive('ignore',{
-    final:true,
-    priority:999
-})
-/**
  * 内联样式指令
  * <br/>使用方式：
  * <div x-style="{'font-size': valExp}" >...</div>
@@ -2728,7 +2660,7 @@ impex.directive('ignore',{
  * <div x-style="'color:red;font-size:20px;'" >...</div>
  * <div x-style="obj" >...</div>
  */
-.directive('style',{
+impex.directive('style',{
     onBind:function(vnode,data){
         var v = data.value;
         if(isString(v)){

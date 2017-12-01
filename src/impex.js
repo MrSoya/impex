@@ -156,17 +156,6 @@
 		}
 
 		/**
-		 * 定义过渡器
-		 * @param  {string} name  过渡器名
-		 * @param  {Object} hook 过渡器钩子，可以在过渡的各个周期进行调用
-		 * @return this
-		 */
-		this.transition = function(name,hook){
-			TransitionFactory.register(name,hook);
-			return this;
-		}
-
-		/**
 		 * 对单个组件进行测试渲染
 		 */
 		this.unitTest = function(compName,entry,model){
