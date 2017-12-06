@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-01
+ * last build: 2017-12-06
  */
 !function (global) {
 	'use strict';
@@ -1703,6 +1703,17 @@ document.addEventListener('focus',function(e){
 document.addEventListener('blur',function(e){
     dispatch('blur',e);
 },true);
+
+//mousewheel
+var mousewheel = self.onwheel==null?'wheel':'mousewheel';
+document.addEventListener(mousewheel,function(e){
+    dispatch('wheel',e);
+},true);
+
+//scroll
+document.addEventListener('scroll',function(e){
+    dispatch('scroll',e);
+},true);
 /**
  * 变更处理器，处理所有变量变更，并触发渲染
  */
@@ -2030,6 +2041,22 @@ function callDirectiveUpdate(vnode,comp){
 		}//end if
 	}
 }
+function bindScopeStyle(name,css){
+	if(!css)return;
+	var cssStr = scopeStyle(name,css);
+	if(!COMP_CSS_MAP[name]){
+		//attach style
+		if(cssStr.trim().length>0){
+			var target = document.head.children[0];
+			if(target){
+				target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
+			}else{
+				document.head.innerHTML = '<style>'+cssStr+'</style>';
+			}
+		}
+		COMP_CSS_MAP[name] = true;	
+	}
+}
 /**
  * parse component template & to create vdom
  */
@@ -2041,21 +2068,7 @@ function parseComponent(comp){
 			preCompile(comp.template,comp);
 			
 			//css
-			if(css){
-				var cssStr = scopeStyle(comp.name,css);
-				if(!COMP_CSS_MAP[comp.name]){
-					//attach style
-					if(cssStr.trim().length>0){
-						var target = document.head.children[0];
-						if(target){
-							target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
-						}else{
-							document.head.innerHTML = '<style>'+cssStr+'</style>';
-						}
-					}
-					COMP_CSS_MAP[comp.name] = true;	
-				}
-			}
+			bindScopeStyle(comp.name,css);
 			comp.__url = null;
 			compileComponent(comp);
 			mountComponent(comp);
@@ -2342,15 +2355,6 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		// .xxxx
 		var n = k.substr(1);
 		str += ','+JSON.stringify(n)+':'+v;
-		
-		if(propTypes && n in propTypes){
-			delete requires[n];
-			checkPropType(n,rs,propTypes,comp);
-		}
-		if(rs instanceof Function){
-			comp[n] = rs.bind(parent);
-			continue;
-		}
 	}//end for
 	str = str.substr(1);
 	var forScopeStart = '',forScopeEnd = '';
@@ -2366,6 +2370,20 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
         }
 	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
 	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+	var objs = [];
+	for(var k in rs){
+		var v = rs[k];
+		if(isObject(v) && v.__im__oid){
+			objs.push(k);
+		}
+		if(propTypes && k in propTypes){
+			delete requires[k];
+			checkPropType(k,v,propTypes,comp);
+		}
+	}
+	if(objs.length>0){
+		warn("ref parameters '"+objs.join(',')+"' should be read only");
+	}
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
 	}else{
@@ -2558,9 +2576,17 @@ function checkPropType(k,v,propTypes,component){
 	            
                 var subModel = component();
                 var tmpl = document.querySelector('template');
-                subModel.template = tmpl.innerHTML;
+                tmpl = tmpl.innerHTML;
+                var css = '';
+	            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
+	                css += b;
+	                return '';
+	            });
+	            subModel.template = tmpl;
 	            //register
 	            impex.component(compName,subModel);
+
+	            bindScopeStyle(compName,css);
 
 	            //register requires
 	            var links = document.querySelectorAll('link[rel="impex"]');

@@ -211,3 +211,14 @@ document.addEventListener('focus',function(e){
 document.addEventListener('blur',function(e){
     dispatch('blur',e);
 },true);
+
+//mousewheel
+var mousewheel = self.onwheel==null?'wheel':'mousewheel';
+document.addEventListener(mousewheel,function(e){
+    dispatch('wheel',e);
+},true);
+
+//scroll
+document.addEventListener('scroll',function(e){
+    dispatch('scroll',e);
+},true);

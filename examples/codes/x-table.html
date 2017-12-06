@@ -1,0 +1,375 @@
+    <!-- 视图  -->
+    <template>
+        <style>
+        :host{
+            flex-direction: column;
+            position: relative;
+            display: flex;
+            color: #656565;
+
+            background-color: #fff;
+            width: 100%;
+
+            /* test */
+            
+            height: 500px;
+        }
+
+        td,th{
+            min-width: 50px;
+        }
+
+        header{
+            display: flex;
+            flex-direction: row;
+            color: #656565;
+            background-color:#f6f6f6;
+            padding-right: 17px;
+        }
+        .grid-body{
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            vertical-align: top;
+            white-space: normal;
+            position: relative;
+        }
+
+        /**
+         * 锁定列的容器
+         */
+        .grid-container-locked{
+            vertical-align: top;
+            overflow: hidden;
+            display: inline-block;
+            position: relative;
+        }
+
+        .grid-container{
+            display: inline-block;
+            vertical-align: top;
+            position: relative;
+            flex: 1;
+        }
+        .grid-header{
+            overflow: hidden;
+        }
+
+        table{
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+
+            empty-cells: show;
+            table-layout: fixed;
+
+            max-width: none;
+            border-style: solid;
+            border-width: 0;
+
+            border-color:rgba(0,0,0,.08);
+
+            border-collapse: separate;
+
+            border-spacing: 0;
+
+            empty-cells: show;
+
+            outline: 0;
+
+        }
+
+        .grid-body .grid-container{
+            overflow-x: auto;
+            overflow-y: scroll;
+        }
+
+
+        th,td{
+            padding: 8px 12px;
+
+            border-style: solid;
+
+            border-color: inherit;
+
+            outline: 0;
+
+            font-weight: inherit;
+
+            text-align: inherit;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+
+            height: 38px;
+
+            border: 1px solid;
+            border-width: 1px 1px 0 0;
+            border-color:rgba(0,0,0,.08);
+        }
+    </style>
+    <section>
+        <header>
+            <div class="grid-container-locked" ref="lockedHeadContainer" x-style="{width:lockedWidth+'px'}">
+                <table cellpadding="0" cellspacing="0">
+                    <colgroup>
+                        <col x-for="lockedFieldQ as field" .style="field[1]">
+                    </colgroup>
+                    <tr x-for="lockedHeader as row">
+                        <th x-for="row as col" 
+                        .rowspan="col.group?0:(headerRowSize - col.rowNo+1)"
+                        .colspan="col.colspan || 0">
+                            {{col.name}}
+                        </th>
+                    </tr>
+                </table>
+            </div>
+            <div class="grid-container grid-header" ref="scrollHeader">
+                <table class="table" cellpadding="0" cellspacing="0">
+                    <colgroup>
+                        <col x-for="fieldQ as field" .style="field[1]">
+                    </colgroup>
+                    <tr x-for="header as row">
+                        <th x-for="row as col" 
+                        .rowspan="col.group?0:(headerRowSize - col.rowNo+1)"
+                        .colspan="col.colspan || 0">
+                            {{col.name}}
+                        </th>
+                    </tr>
+                </table>
+            </div>
+        </header>
+        <div class="grid-body" :wheel="syncWheel($event)" :scroll="syncScroll($event)">
+            <div class="grid-container-locked" ref="lockedList" x-style="{width:lockedWidth+'px'}">
+                <table cellpadding="0" cellspacing="0">
+                    <colgroup>
+                        <col x-for="lockedFieldQ as field" .style="field[1]">
+                    </colgroup>
+                    <tr x-for="dataList as item">
+                        <td x-for="lockedFieldQ as field" 
+                        .rowspan="item.rowspan"
+                        .colspan="item.colspan">
+                        {{item[field[0]]}}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="grid-container" ref="scrollList">
+                <table class="locked" >
+                    <colgroup>
+                        <col x-for="fieldQ as field" .style="field[1]">
+                    </colgroup>
+                    <tr x-for="dataList as item">
+                        <td x-for="fieldQ as field" 
+                        .rowspan="item.rowspan"
+                        .colspan="item.colspan">
+                        {{item[field[0]]}}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <footer>
+
+        </footer>
+    </section>
+</template>
+<!-- 模型  -->
+<script type="text/javascript" id="impex">
+    function component(){
+        function immutable(obj){
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        return {
+            state:{
+            },
+            onPropBind:function(props){
+                //以行为单位，生成表头
+                var header = [],
+                lockedHeader = [];
+                header.rowSize = 0;
+                var fieldQ = [],
+                lockedFieldQ = [];
+                this.getHeaderRows(fieldQ,header,lockedFieldQ,lockedHeader,props.dataHeader,header.rowSize+1);
+                
+                this.state.header = header;
+                this.state.lockedHeader = lockedHeader;
+                this.state.headerRowSize = header.rowSize;
+                this.state.dataList = props.dataList;
+                this.state.fieldQ = fieldQ;
+                this.state.lockedFieldQ = lockedFieldQ;
+
+                this.state.lockedWidth = props.dataLockedWidth;
+            },
+            onMount:function(){
+                var oh = this.refs.lockedList.offsetHeight;
+                this.refs.lockedList.style.height = oh-18+'px';
+
+                this.refs.lockedHeadContainer.children[0].style.height = this.refs.lockedHeadContainer.offsetHeight +'px';
+
+                
+            },
+            fullScreen:function(){
+                this.el.webkitRequestFullscreen();
+            },
+            getHeaderRows:function(fieldQ,header,lockedFieldQ,lockedHeader,ds,rowSize){
+                var rows = header[rowSize];
+                var lockedRows = lockedHeader[rowSize];
+                if(!rows){
+                    header[rowSize] = rows = [];
+                    lockedHeader[rowSize] = lockedRows = [];
+                }
+                
+                var rowNo = header.rowSize = rowSize;
+                var colSize = 0;
+                //group为新行
+                for(var i=0;i<ds.length;i++){
+                    //直接修改父组件的引用会导致父组件触发update，然后又触发子组件的onPropChange，然后又触发子组件的update重绘，出现问题
+                    var col = immutable(ds[i]);
+                    if(col.group){
+                        var tmpCols = [];
+
+                        var tmp = this.getHeaderRows(fieldQ,header,lockedFieldQ,lockedHeader,col.children,rowSize+1);
+                        colSize += tmp;
+                        col.rowNo = rowNo;
+                        col.colspan = tmp;
+                    }else{
+                        colSize++;
+                        if(col.locked){
+                            lockedFieldQ.push([col.field,col.style||'']);
+                        }else{
+                            fieldQ.push([col.field,col.style||'']);
+                        }
+                        
+                    }
+                    col.rowNo = rowNo;//所在行号，用来计算非group的rowspan
+                    if(col.locked){
+                        lockedRows.push(col);
+                    }else{
+                        rows.push(col);
+                    }
+                    
+                }
+                
+                return colSize;
+            },
+            syncWheel:function(e){
+                var sl = this.refs.scrollList;
+                var ll = this.refs.lockedList;
+                var st = sl.scrollTop;
+                var dy = e.deltaY;
+                st += dy;
+
+                ll.scrollTop = st;
+                sl.scrollTop = st;
+            },
+            syncScroll:function(e){
+                var sl = this.refs.scrollList;
+                var ll = this.refs.lockedList;
+                var sh = this.refs.scrollHeader;
+                var st = sl.scrollTop;
+                var sl = sl.scrollLeft;
+                if(ll.scrollTop !== st){
+                    ll.scrollTop = st;
+                }
+                if(sh.scrollLeft !== sl){
+                    sh.scrollLeft = sl;
+                }
+            }
+        };
+    }
+    </script>
+    <!-- 单元测试  -->
+    <div id="test">
+        <x-table .data-header="header" .data-locked-width="lockedWidth" .data-list="list">
+        </x-table>
+    </div>
+    
+    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    <script type="text/javascript">
+        impex.unitTest('x-table','#test',{
+            state:{
+                lockedWidth:300,
+                header:[
+                {field:'a',name:"A",locked:true,style:'width:50px'},
+                {field:'b',name:"B",locked:true,style:'width:150px'},
+                {group:true,name:"Group",children:[
+                    {group:true,name:'SubGroup1',children:[
+                        {field:'c',name:"S1",style:'width:50px'},
+                        {field:'d',name:"S2",style:''},
+                    ]},
+                    {field:'e',name:"G2",style:'width:50px'},
+                    {group:true,name:'SubGroup2',children:[
+                        {field:'f',name:"S1",style:'width:auto'},
+                        {field:'g',name:"S2",style:'width:50px'},
+                    ]}
+                ]},
+                {field:'h',name:"B",width:50},
+                ],
+                list:[
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                },
+                {
+                    a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17
+                }
+                ]
+            }
+        });
+    </script>

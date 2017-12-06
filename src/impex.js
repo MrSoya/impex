@@ -164,9 +164,17 @@
 	            
                 var subModel = component();
                 var tmpl = document.querySelector('template');
-                subModel.template = tmpl.innerHTML;
+                tmpl = tmpl.innerHTML;
+                var css = '';
+	            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
+	                css += b;
+	                return '';
+	            });
+	            subModel.template = tmpl;
 	            //register
 	            impex.component(compName,subModel);
+
+	            bindScopeStyle(compName,css);
 
 	            //register requires
 	            var links = document.querySelectorAll('link[rel="impex"]');
