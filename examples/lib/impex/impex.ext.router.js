@@ -21,11 +21,12 @@
                 type:'function'
             }
 		},
-		_updateView:function(path){
+		_updateView:function(path,propstr){
 			var isMath = this.match(path);
 			if(isMath && this.state.component){
 				var tag = this.state.component;
-				this.state.comp = '<'+tag+'></'+tag+'>';
+				propstr = propstr||'';
+				this.state.comp = '<'+tag+' '+propstr+'></'+tag+'>';
 			}else if(isMath && this.render){
 				this.state.comp = this.render()||'';
 			}else{
@@ -34,7 +35,6 @@
 		},
 		match:function(url){
 			/**
-			 * /page/1/demos/2
 			 * /a/:b/:c
 			 * /a/*
 			 * /a/**
@@ -131,22 +131,28 @@
 			// 		return '/'+url;
 			// 	});
 			// }
-
+			var props = link.prop;
+			var propstr = '';
+			if(props){
+				for(var k in props){
+					propstr += '.'+k+'="this.parent.state.'+props[k]+'" ';
+				}
+			}
 			if(router.lastTo != url){
 				router.lastTo = url;
 			}else{
 				return;
 			}
-			router.direct(url,title);
+			router.direct(url,title,propstr);
 		},
-		direct:function(url,title){
+		direct:function(url,title,propstr){
 			history.pushState({url:url,title:title}, null, url);
 			if(title){
 				document.title = title;
 			}
 			for(var k in impex.router.routes){
 				var route = impex.router.routes[k];
-				route._updateView(url);
+				route._updateView(url,propstr);
 			}
 		}
 	}

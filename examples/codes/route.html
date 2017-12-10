@@ -15,7 +15,7 @@
         <div id="demo">
             <section>
                 <a x-link="'/list/1'">列表</a>
-                <button x-link="{to:'/form/a/b',title:'表单'}">表单</button>
+                <button x-link="{to:'/form/a/b',title:'表单',prop:{name:'formData.name',type:'formData.type'}}">表单</button>
             </section>
             <header>
                 <x-route path="/list/:id" component="x-nav"></x-route>
@@ -45,13 +45,20 @@
             });
 
             impex.component('x-form',{
-                template:"<form><input ></form>"
+                template:"<form><label>name:<input .value='name'></label><label>type:<input .value='type'></label></form>"
             });
 
             
 
             //渲染
-            impex.render('#demo');
+            impex.render('#demo',{
+                state:{
+                    formData:{
+                        name:'impex',
+                        type:'route'
+                    }
+                }
+            });
             
         </script>
     </body>

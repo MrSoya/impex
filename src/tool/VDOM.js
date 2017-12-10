@@ -788,7 +788,7 @@ function buildVDOMTree(comp){
     try{
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error('compile error on '+e.message);
+        error('compile error : '+e.message);
     }
     return root;
 }

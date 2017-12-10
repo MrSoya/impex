@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-9
+ * last build: 2017-12-10
  */
 !function (global) {
 	'use strict';
@@ -1204,7 +1204,7 @@ function buildVDOMTree(comp){
     try{
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error('compile error on '+e.message);
+        error('compile error : '+e.message);
     }
     return root;
 }
