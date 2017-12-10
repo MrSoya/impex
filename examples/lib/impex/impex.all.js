@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-06
+ * last build: 2017-12-9
  */
 !function (global) {
 	'use strict';
@@ -1432,7 +1432,6 @@ function insertChildren(parent,children,comp){
         if(vn._comp){
             parseComponent(vn._comp);
             compAry.push(vn._comp);
-            // mountComponent(vn._comp);
         }
         fragment.appendChild(dom);
     }
@@ -1440,7 +1439,7 @@ function insertChildren(parent,children,comp){
 
     for(var i=0;i<compAry.length;i++){
         var tmp = compAry[i];
-        mountComponent(tmp);
+        mountComponent(tmp,parent);
     }
 }
 function isSameVNode(nv,ov){

@@ -1016,7 +1016,6 @@ function insertChildren(parent,children,comp){
         if(vn._comp){
             parseComponent(vn._comp);
             compAry.push(vn._comp);
-            // mountComponent(vn._comp);
         }
         fragment.appendChild(dom);
     }
@@ -1024,7 +1023,7 @@ function insertChildren(parent,children,comp){
 
     for(var i=0;i<compAry.length;i++){
         var tmp = compAry[i];
-        mountComponent(tmp);
+        mountComponent(tmp,parent);
     }
 }
 function isSameVNode(nv,ov){
