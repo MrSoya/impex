@@ -1,0 +1,54 @@
+[
+    {
+        "id": "file",
+        "children":
+        [
+            {
+                "caption": "-"
+            },
+            {
+                "caption": "New Impex template file",
+                "command": "new_impex_template"
+            },   
+            {
+                "caption": "-"
+            }
+        ]
+    },
+    {
+
+        "id": "preferences",
+        "children":
+        [
+            {
+                "id": "package-settings",
+                "children":
+                [
+                    {
+                        "caption": "Impex",
+                        "children":
+                        [
+                            {
+                                "caption": "README",
+                                "command": "open_file", "args":
+                                {
+                                    "file": "${packages}/impex/README.md"
+                                }
+                            },
+                            {
+                                "caption": "-"
+                            },
+                            {
+                                "caption": "Settings – Default",
+                                "command": "open_file", "args":
+                                {
+                                    "file": "${packages}/impex/impex.sublime-settings"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

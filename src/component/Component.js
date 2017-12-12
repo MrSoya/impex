@@ -89,11 +89,13 @@ Component.prototype = {
 		var str = 'with(scope){'+path+'='+v+'}';
 		var fn = new Function('scope',str);
 		fn(this.state);
+		
+		return this;
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
-	 * @param  {Function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
+	 * @param  {Function} cbk      回调函数，[newVal,oldVal]
 	 */
 	watch:function(path,cbk){
 		this.__watchPaths.push(path);

@@ -1,0 +1,21 @@
+{
+   "scope": "text.html.basic source.js.embedded.html meta.block.js,text.html.basic source.js.embedded.html meta.function-call.method.js,source.js meta.block.js",
+
+   "completions":
+   [
+   		//component 
+        { "trigger":"onCreate\tlifecycle com", "contents":"onCreate:function(){\n\t${1://todo...}\n}"},
+        { "trigger":"onBeforeCompile\tlifecycle com", "contents":"onBeforeCompile:function(tmpl){\n\t${1://todo...}\n}"},
+        { "trigger":"onCompile\tlifecycle com", "contents":"onCompile:function(vnode){\n\t${1://todo...}\n}"},
+        { "trigger":"onBeforeMount\tlifecycle com", "contents":"onBeforeMount:function(dom){\n\t${1://todo...}\n}"},
+        { "trigger":"onMount\tlifecycle com", "contents":"onMount:function(dom){\n\t${1://todo...}\n}"},
+        { "trigger":"onPropBind\tlifecycle com", "contents":"onPropBind:function(props){\n\t${1://todo...}\n}"},
+        { "trigger":"onPropChange\tlifecycle com", "contents":"onPropChange:function(newProps,oldProps){\n\t${1://todo...}\n}"},
+        { "trigger":"onUpdate\tlifecycle com", "contents":"onUpdate:function(){\n\t${1://todo...}\n}"},
+        { "trigger":"onBeforeUpdate\tlifecycle com", "contents":"onBeforeUpdate:function(changes){\n\t${1://todo...}\n}"},
+      
+   		//directive
+   		{ "trigger":"onBind\tlifecycle di", "contents":"onBind:function(vnode,data){\n\t${1://todo...}\n}"},
+      { "trigger":"onUpdate\tlifecycle di", "contents":"onUpdate:function(vnode,data){\n\t${1://todo...}\n}"},
+   ]
+}

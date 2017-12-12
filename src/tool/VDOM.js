@@ -31,6 +31,8 @@ function VNode(tag,attrNodes,directives){
 VNode.prototype = {
     /**
      * 绑定事件到该节点
+     * @param {String} type 事件类型
+     * @param {String|Function} exp 表达式或回调函数
      */
     on:function(type,exp){
         var evMap = EVENT_MAP[type];

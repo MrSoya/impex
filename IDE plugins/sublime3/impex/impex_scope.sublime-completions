@@ -1,0 +1,27 @@
+{
+   "scope": "text.html.basic source.js.embedded.html meta.function-call.method.js,source.js meta.block.js meta.function-call.method.js",
+
+   "completions":
+   [
+   		//component attr
+        { "trigger":"el\timpex Comp", "contents":"el"},
+        { "trigger":"state\timpex Comp", "contents":"state"},
+        { "trigger":"refs\timpex Comp", "contents":"refs"},
+        { "trigger":"name\timpex Comp", "contents":"name"},
+        { "trigger":"parent\timpex Comp", "contents":"parent"},
+        { "trigger":"children\timpex Comp", "contents":"children"},
+      { "trigger":"setState(\timpex Comp", "contents":"setState(\"${1:path}\",${2:val})"},
+      { "trigger":"watch(\timpex Comp", "contents":"watch(\"${1:path}\",function(newVal,oldVal){\n\t${2://todo...}\n})"},
+
+      //vnode attr
+      { "trigger":"on(\timpex VNode", "contents":"on(\"${1:type}\",${2:expOrFn})"},
+      { "trigger":"setAtt..(\timpex VNode", "contents":"setAttribute(${1:k},${2:v})"},
+      { "trigger":"getAtt..(\timpex VNode", "contents":"getAttribute(${1:k})"},
+      
+   		//directive data attr
+   		{ "trigger":"comp\timpex Di data", "contents":"comp"},
+      	{ "trigger":"value\timpex Di data", "contents":"value"},
+      	{ "trigger":"args\timpex Di data", "contents":"args"},
+      	{ "trigger":"exp\timpex Di data", "contents":"exp"},
+   ]
+}

@@ -1,0 +1,5 @@
+{
+  "use_current_file_syntax": true,
+
+  "auto_complete_triggers": [ {"selector": "source.html,source.js", "characters": "."} ],
+}

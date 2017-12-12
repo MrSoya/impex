@@ -1,0 +1,18 @@
+{
+   "scope": "text.html.basic source.js.embedded.html, source.js",
+
+   "completions":
+   [
+   		//global attr
+   		"impex",
+      	{ "trigger":"g\timpex", "contents":"g"},
+      	{ "trigger":"version\timpex", "contents":"version"},
+      	{ "trigger":"config(\timpex", "contents":"config(${1:cfg})"},
+      	{ "trigger":"component(\timpex", "contents":"component(\"x-${1:name}\",{${2:...}})"},
+      	{ "trigger":"directive(\timpex", "contents":"directive(\"${1:name}\",{\n\tonBind:function(vnode,data){\n\t\t${2://todo...}\n\t}\n})"},
+      	{ "trigger":"filter(\timpex", "contents":"filter(\"${1:name}\",function(v,arg){\n\t${2://todo...}\n})"},
+      	{ "trigger":"render(\timpex", "contents":"render(${1:node},{${2:...}})"},
+    
+      	
+   ]
+}
