@@ -539,6 +539,7 @@ function bindProps(comp,parent,parentAttrs){
 }
 function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	var str = '';
+	var strMap = {};
 	for(var k in parentAttrs){
 		var v = parentAttrs[k];
 		if(k == ATTR_REF_TAG){
@@ -547,11 +548,7 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
 		// xxxx
 		if(k[0] !== PROP_TYPE_PRIFX){
-			if(propTypes && k in propTypes){
-				delete requires[k];
-				checkPropType(k,v,propTypes,comp);
-			}
-			comp.state[k] = v;
+			strMap[k] = v;
 			continue;
 		}
 
@@ -574,6 +571,7 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
 	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
 	var objs = [];
+	ext(strMap,rs);
 	for(var k in rs){
 		var v = rs[k];
 		if(isObject(v) && v.__im__oid){

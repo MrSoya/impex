@@ -96,8 +96,18 @@ impex.directive('style',{
         }
         for(var i=args.length;i--;){
             var p = args[i];
-            vnode.setAttribute(p,data.value);
-        }
+
+            switch(p){
+                case 'style':
+                    DIRECT_MAP[p].onBind(vnode,data);
+                    break;
+                case 'class':
+                    DIRECT_MAP[p].onBind(vnode,data);
+                    break;
+                default:
+                    vnode.setAttribute(p,data.value);
+            }//end switch
+        }//end for
     }
 })
 /**

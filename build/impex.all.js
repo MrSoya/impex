@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-10
+ * last build: 2017-12-13
  */
 !function (global) {
 	'use strict';
@@ -447,6 +447,8 @@ function VNode(tag,attrNodes,directives){
 VNode.prototype = {
     /**
      * 绑定事件到该节点
+     * @param {String} type 事件类型
+     * @param {String|Function} exp 表达式或回调函数
      */
     on:function(type,exp){
         var evMap = EVENT_MAP[type];
@@ -1887,11 +1889,13 @@ Component.prototype = {
 		var str = 'with(scope){'+path+'='+v+'}';
 		var fn = new Function('scope',str);
 		fn(this.state);
+		
+		return this;
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
-	 * @param  {Function} cbk      回调函数，[object,name,变动类型add/delete/update,新值，旧值]
+	 * @param  {Function} cbk      回调函数，[newVal,oldVal]
 	 */
 	watch:function(path,cbk){
 		this.__watchPaths.push(path);
@@ -2335,6 +2339,7 @@ function bindProps(comp,parent,parentAttrs){
 }
 function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	var str = '';
+	var strMap = {};
 	for(var k in parentAttrs){
 		var v = parentAttrs[k];
 		if(k == ATTR_REF_TAG){
@@ -2343,11 +2348,7 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
 		// xxxx
 		if(k[0] !== PROP_TYPE_PRIFX){
-			if(propTypes && k in propTypes){
-				delete requires[k];
-				checkPropType(k,v,propTypes,comp);
-			}
-			comp.state[k] = v;
+			strMap[k] = v;
 			continue;
 		}
 
@@ -2370,6 +2371,7 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
 	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
 	var objs = [];
+	ext(strMap,rs);
 	for(var k in rs){
 		var v = rs[k];
 		if(isObject(v) && v.__im__oid){
@@ -2771,8 +2773,18 @@ impex.directive('style',{
         }
         for(var i=args.length;i--;){
             var p = args[i];
-            vnode.setAttribute(p,data.value);
-        }
+
+            switch(p){
+                case 'style':
+                    DIRECT_MAP[p].onBind(vnode,data);
+                    break;
+                case 'class':
+                    DIRECT_MAP[p].onBind(vnode,data);
+                    break;
+                default:
+                    vnode.setAttribute(p,data.value);
+            }//end switch
+        }//end for
     }
 })
 /**

@@ -3,12 +3,42 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .cls{
+                text-decoration: underline;
+            }
+            .cls2{
+                color: blue;
+                font-weight: bold;
+            }
+        </style>
     </head>
     <body>
+
         <div id="demo">
-            <a x-bind:href:title.validate="address">Hello impex ! <br/>website:{{address}}</a>
+            绑定title属性
             <p>
-                other address:<input type="text" x-model="address">
+                <a x-bind:title="address">Hello impex ! <br/>website:{{address}}</a>
+                <br>
+                    change address:<input type="text" x-model="address">
+            </p>
+            
+            绑定style属性(style属性支持x-style指令相同语法)
+            <p>
+                <div 
+                style="font-size: 20px;font-style: italic;" 
+                .style="{'color':'red'}">
+                    style here
+                </div>
+            </p>
+
+            绑定class属性(class属性支持x-class指令相同语法)
+            <p>
+                <div 
+                class="cls2" 
+                .class="{'cls':true}">
+                    class here
+                </div>
             </p>
         </div>
 
