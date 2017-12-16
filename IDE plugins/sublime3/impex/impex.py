@@ -37,4 +37,4 @@ class NewImpexTemplateCommand(sublime_plugin.TextCommand):
       # print(syntax)
       newView.set_syntax_file("Packages/HTML/HTML.sublime-syntax")
       newView.insert(edit, 0, 
-      "<!-- view -->\n<template>\n\t<style>\n\t\t/*scoped css*/\n\t</style>\n\n\t<!-- single node root -->\n\n</template>\n\n<!-- model -->\n<script type=\"text/javascript\" id=\"impex\">\n\tfunction component(){\n\t\treturn {};\n\t}\n</script>\n\n<!-- external libs/links -->\n\n<!-- unit test -->\n<div id=\"test\">\n\t<!-- test code -->\n</div>\n<script type=\"text/javascript\">\n\timpex.unitTest(/*comp name*/,'#test');\n</script>")
+      "<!-- view -->\n<template>\n\t<style>\n\t\t/*scoped css*/\n\t</style>\n\n\t<!-- single node root -->\n\n</template>\n\n<!-- model -->\n<script>\n\tcomponent = {\n\t\tstate:{},\n\t\tonCompile:function(vnode){};\n\t}\n</script>")

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-13
+ * last build: 2017-12-16
  */
 !function (global) {
 	'use strict';
@@ -65,26 +65,10 @@
                 return '';
             });
 
-            txt.match(/<\s*script[^<>]*\s*id\s*=\s*['"]impex['"][^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
+            txt.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
             var modelStr = RegExp.$1;
-            var links = txt.match(/<link[^<>]+rel\s*=\s*['"]impex['"][^<>]+>/img);
-            var registerComp = {};
-            for(var i=links.length;i--;){
-                var tmp = links[i];
-                tmp.match(/href=['"](.*?)['"]/)[0];
-                var href = RegExp.$1;
-                tmp.match(/type=['"](.*?)['"]/)[0];
-                var type = RegExp.$1;
-                registerComp[type] = href;
-            }
-
-            var model = new Function('return ('+modelStr+')()')();
-
-            //register
-            for(var k in registerComp){
-                impex.component(k,registerComp[k]);
-            }
-
+            console.log(modelStr)
+            var model = new Function('return ('+modelStr+')')();
             model.template = tmpl.trim();
             
             var url = this.url;
@@ -2566,41 +2550,6 @@ function checkPropType(k,v,propTypes,component){
 		this.filter = function(name,to){
 			FILTER_MAP[name] = to;
 			return this;
-		}
-
-		/**
-		 * 对单个组件进行测试渲染
-		 */
-		this.unitTest = function(compName,entry,model){
-			window.onload = function(){
-	            'use strict';
-	            
-                var subModel = component();
-                var tmpl = document.querySelector('template');
-                tmpl = tmpl.innerHTML;
-                var css = '';
-	            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
-	                css += b;
-	                return '';
-	            });
-	            subModel.template = tmpl;
-	            //register
-	            impex.component(compName,subModel);
-
-	            bindScopeStyle(compName,css);
-
-	            //register requires
-	            var links = document.querySelectorAll('link[rel="impex"]');
-	            for(var i=links.length;i--;){
-	                var lk = links[i];
-	                var type = lk.getAttribute('type');
-	                var href = lk.getAttribute('href');
-	                impex.component(type,href);
-	            }
-
-	            //render
-	            impex.render(document.querySelector(entry),model);
-	        }
 		}
 
 		/**

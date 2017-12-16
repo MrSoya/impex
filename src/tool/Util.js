@@ -52,26 +52,10 @@
                 return '';
             });
 
-            txt.match(/<\s*script[^<>]*\s*id\s*=\s*['"]impex['"][^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
+            txt.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
             var modelStr = RegExp.$1;
-            var links = txt.match(/<link[^<>]+rel\s*=\s*['"]impex['"][^<>]+>/img);
-            var registerComp = {};
-            for(var i=links.length;i--;){
-                var tmp = links[i];
-                tmp.match(/href=['"](.*?)['"]/)[0];
-                var href = RegExp.$1;
-                tmp.match(/type=['"](.*?)['"]/)[0];
-                var type = RegExp.$1;
-                registerComp[type] = href;
-            }
-
-            var model = new Function('return ('+modelStr+')()')();
-
-            //register
-            for(var k in registerComp){
-                impex.component(k,registerComp[k]);
-            }
-
+            console.log(modelStr)
+            var model = new Function('return ('+modelStr+')')();
             model.template = tmpl.trim();
             
             var url = this.url;

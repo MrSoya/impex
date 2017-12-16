@@ -156,41 +156,6 @@
 		}
 
 		/**
-		 * 对单个组件进行测试渲染
-		 */
-		this.unitTest = function(compName,entry,model){
-			window.onload = function(){
-	            'use strict';
-	            
-                var subModel = component();
-                var tmpl = document.querySelector('template');
-                tmpl = tmpl.innerHTML;
-                var css = '';
-	            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
-	                css += b;
-	                return '';
-	            });
-	            subModel.template = tmpl;
-	            //register
-	            impex.component(compName,subModel);
-
-	            bindScopeStyle(compName,css);
-
-	            //register requires
-	            var links = document.querySelectorAll('link[rel="impex"]');
-	            for(var i=links.length;i--;){
-	                var lk = links[i];
-	                var type = lk.getAttribute('type');
-	                var href = lk.getAttribute('href');
-	                impex.component(type,href);
-	            }
-
-	            //render
-	            impex.render(document.querySelector(entry),model);
-	        }
-		}
-
-		/**
 		 * 渲染一段HTML匿名组件到指定容器，比如
 		 * <pre>
 		 * 	<div id="entry"></div>

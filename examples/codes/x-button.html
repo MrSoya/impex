@@ -16,30 +16,14 @@
         </a>
     </template>
     <!-- 模型  -->
-    <script type="text/javascript" id="impex">
-        function component(){
-            return {
-                onInit:function(){
-                },
-                tip : function(e){
-                    console.log(e)
-                    alert('clicked '+(this.state.times++)+' times');
-                },
-                state:{
-                    times:0
-                }
-            };
+    <script>
+        component = {
+            tip : function(e){
+                console.log(e)
+                alert('clicked '+(this.state.times++)+' times');
+            },
+            state:{
+                times:0
+            }
         }
-    </script>
-    <link href="core/components/menu.html" type="ss-menu" rel="impex" >
-    <link href="core/components/xxx.html" type="ss-xxx" rel="impex" >
-    <!-- 单元测试  -->
-    <x-button id="test">
-        <span slot="txt" style="width:100px;color:#fff">
-            XButton
-        </span>
-    </x-button>
-    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
-    <script type="text/javascript">
-        impex.unitTest('x-button','#test');
     </script>
