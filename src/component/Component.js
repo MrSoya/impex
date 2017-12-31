@@ -34,6 +34,11 @@ function Component (el) {
 	 */
 	this.refs = {};
 	/**
+	 * 组件标签引用
+	 * @type {Object}
+	 */
+	this.compTags = {};
+	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
 	 */
@@ -474,7 +479,16 @@ function newComponent(tmpl,el,param){
 	return c;
 }
 function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
+	//handle component
+	if(type == 'component'){
+		type = attrs.is;
+		if(attrs['.is']){//.is value can only be a var
+			type = attrs['.is'];
+			type = new Function('scope',"with(scope){return "+type+"}")(parent.state);
+		}
+	}
 	var param = COMP_MAP[type];
+	if(!param)return;
 	var c = new Component(el);
 	c.name = type;
 	//bind parent

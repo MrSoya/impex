@@ -75,11 +75,13 @@ function createElement(comp,condition,tag,props,directives,children,html,forScop
     var fsq = null;
     if(forScope)
         fsq = rs._forScopeQ = [forScope];
-    if (COMP_MAP[tag]) {
+    if (COMP_MAP[tag] || tag == 'component') {
         rs._comp = true;
         var slotData = children[0];
-        rs._slots = slotData[0];
-        rs._slotMap = slotData[1];
+        if(slotData){
+            rs._slots = slotData[0];
+            rs._slotMap = slotData[1];       
+        }
         return rs;
     }
     if(html != null){
@@ -895,7 +897,8 @@ function compareChildren(nc,oc,op,comp){
                 //插入ov之前，并删除ov
                 insertBefore(ns,os,oc,op,comp);
                 removeVNode(os);
-                nsp++;
+                os = oc[++osp],
+                ns = nc[++nsp];
             }
         }
     }
@@ -966,6 +969,11 @@ function insertBefore(nv,target,list,targetParent,comp){
             dom = fragment;
         }else{
             dom = buildOffscreenDOM(nv,comp);
+            //bind vdom
+            if(nv._comp){
+                parseComponent(nv._comp);
+                compAry.push(nv._comp);
+            }
         }
     }else{
         dom.parentNode.removeChild(dom);
@@ -1029,7 +1037,10 @@ function insertChildren(parent,children,comp){
     }
 }
 function isSameVNode(nv,ov){
-    if(nv._comp && ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
+    if(nv._comp){
+        if(ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
+        return false;
+    }
     return ov.tag === nv.tag;
 }
 function updateTxt(nv,ov){

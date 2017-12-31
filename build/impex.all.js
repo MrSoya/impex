@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2017-12-16
+ * last build: 2017-12-31
  */
 !function (global) {
 	'use strict';
@@ -475,11 +475,13 @@ function createElement(comp,condition,tag,props,directives,children,html,forScop
     var fsq = null;
     if(forScope)
         fsq = rs._forScopeQ = [forScope];
-    if (COMP_MAP[tag]) {
+    if (COMP_MAP[tag] || tag == 'component') {
         rs._comp = true;
         var slotData = children[0];
-        rs._slots = slotData[0];
-        rs._slotMap = slotData[1];
+        if(slotData){
+            rs._slots = slotData[0];
+            rs._slotMap = slotData[1];       
+        }
         return rs;
     }
     if(html != null){
@@ -1295,7 +1297,8 @@ function compareChildren(nc,oc,op,comp){
                 //插入ov之前，并删除ov
                 insertBefore(ns,os,oc,op,comp);
                 removeVNode(os);
-                nsp++;
+                os = oc[++osp],
+                ns = nc[++nsp];
             }
         }
     }
@@ -1366,6 +1369,11 @@ function insertBefore(nv,target,list,targetParent,comp){
             dom = fragment;
         }else{
             dom = buildOffscreenDOM(nv,comp);
+            //bind vdom
+            if(nv._comp){
+                parseComponent(nv._comp);
+                compAry.push(nv._comp);
+            }
         }
     }else{
         dom.parentNode.removeChild(dom);
@@ -1429,7 +1437,10 @@ function insertChildren(parent,children,comp){
     }
 }
 function isSameVNode(nv,ov){
-    if(nv._comp && ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
+    if(nv._comp){
+        if(ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
+        return false;
+    }
     return ov.tag === nv.tag;
 }
 function updateTxt(nv,ov){
@@ -1817,6 +1828,11 @@ function Component (el) {
 	 * @type {Object}
 	 */
 	this.refs = {};
+	/**
+	 * 组件标签引用
+	 * @type {Object}
+	 */
+	this.compTags = {};
 	/**
 	 * 用于指定属性的类型，如果类型不符会报错
 	 * @type {Object}
@@ -2258,7 +2274,16 @@ function newComponent(tmpl,el,param){
 	return c;
 }
 function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
+	//handle component
+	if(type == 'component'){
+		type = attrs.is;
+		if(attrs['.is']){//.is value can only be a var
+			type = attrs['.is'];
+			type = new Function('scope',"with(scope){return "+type+"}")(parent.state);
+		}
+	}
 	var param = COMP_MAP[type];
+	if(!param)return;
 	var c = new Component(el);
 	c.name = type;
 	//bind parent
@@ -2429,7 +2454,7 @@ function checkPropType(k,v,propTypes,component){
 	var DISPATCHERS = [];
 	var FILTER_MAP = {};
 	var DIRECT_MAP = {};
-	var COMP_MAP = {};
+	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
 	var SHOW_WARN = true;

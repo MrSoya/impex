@@ -32,7 +32,7 @@
 	var DISPATCHERS = [];
 	var FILTER_MAP = {};
 	var DIRECT_MAP = {};
-	var COMP_MAP = {};
+	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
 	var SHOW_WARN = true;
