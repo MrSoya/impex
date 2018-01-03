@@ -21,7 +21,7 @@
     <div id="demo">
         firstTextNode:{{start}}
         <br>
-        <x-demo .pa="x">
+        <x-demo .pa="x" .op="open">
             <div>test</div>
             <span slot="ss">content</span>
         </x-demo>
@@ -42,6 +42,9 @@
             add:function() {
                 this.state.y ++;
             },
+            onMount:function(argument) {
+            	this.op();
+            },
             state:{
                 show:true,
                 y:100
@@ -57,6 +60,9 @@
                         console.log(arguments)
                     })
                 },
+                open:function(){
+                	console.log(3434)
+                },
                 state:{
                     show:true,
                     x:10,
@@ -70,7 +76,6 @@
                     end:'the end'
                 }
             });
-        buildFilterStr
         //测试项
         //1. 组件的正确解析 OK
         //2. slot OK

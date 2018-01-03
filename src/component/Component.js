@@ -568,6 +568,9 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 
 		// .xxxx
 		var n = k.substr(1);
+		if(parent[v] instanceof Function){
+			v = 'this.'+v;
+		}
 		str += ','+JSON.stringify(n)+':'+v;
 	}//end for
 	str = str.substr(1);
