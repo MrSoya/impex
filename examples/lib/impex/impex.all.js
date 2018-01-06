@@ -2260,8 +2260,8 @@ function updateComponent(comp,changes){
 		for(var k in newVal){
 			var nv = newVal[k];
 			var ov = comp.__watchOldVal[k];
-			if(nv !== ov){
-				comp.__watchMap[k].call(comp,nv,ov);
+			if(nv !== ov || isObject(nv)){
+				comp.__watchMap[k].call(comp,nv,ov,k);
 			}
 		}
 		comp.__watchOldVal = newVal;
