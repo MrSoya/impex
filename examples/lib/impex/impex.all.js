@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-01-03
+ * last build: 2018-1-6
  */
 !function (global) {
 	'use strict';
@@ -1794,6 +1794,29 @@ function Change(name,newVal,oldVal,path,type,object){
 	this.object = object;
 }
 /**
+ * @classdesc 事件类，为所有组件提供自定义事件接口
+ * 
+ * @class 
+ */
+function EventEmitter(){
+	this.__eeMap = {};
+}
+EventEmitter.prototype = {
+	on:function(type,handler) {
+		this.__eeMap[type] = handler;
+	},
+	emit:function(type){
+		var fn = this.__eeMap[type];
+		if(!fn)return;
+
+		var args = [];
+		for(var i=1;i<arguments.length;i++){
+			args.push(arguments[i]);
+		}
+		fn.apply(this,args);
+	}
+}
+/**
  * @classdesc 组件类，包含视图、模型、控制器，表现为一个自定义标签。同内置标签样，
  * 组件也可以有属性。
  * <br/>
@@ -1816,6 +1839,8 @@ function Change(name,newVal,oldVal,path,type,object){
  * @class 
  */
 function Component (el) {
+	EventEmitter.call(this);
+
 	this._uid = 'C_' + im_counter++;
 
 	/**
@@ -1878,7 +1903,11 @@ function Component (el) {
 
 	impex._cs[this._uid] = this;
 };
-Component.prototype = {
+function F(){}
+F.prototype = EventEmitter.prototype;  
+Component.prototype = new F();  
+Component.prototype.constructor = Component.constructor; 
+ext({
 	/**
 	 * 设置组件状态值
 	 * @param {String} path 状态路径
@@ -1959,7 +1988,7 @@ Component.prototype = {
 			}
 		}
     }
-};
+},Component.prototype);
 
 /*********	component handlers	*********/
 //////	init flow
@@ -2298,6 +2327,20 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	if(attrs[ATTR_G_TAG]){
 		impex.g[attrs[ATTR_G_TAG]] = c;
 	}
+	//custome even
+	vnode._directives.forEach(function(di){
+		var dName = di[1][0];
+		if(dName !== 'on')return;
+		
+		var type = di[1][1][0];
+		var exp = di[2];
+		exp.match(/(?:^|this\.)([a-zA-Z_][a-zA-Z0-9_$]*)(?:\(|$)/);
+		var fnName = RegExp.$1;
+		
+
+        var fn = parent[fnName];
+		c.on(type,fn);
+	});
 
 	if(isString(param)){
 		c.__url = param;
@@ -2649,6 +2692,8 @@ function checkPropType(k,v,propTypes,component){
 
 		//for prototype API
 		this.Component = Component;
+
+		this.EventEmitter = EventEmitter;
 	}
 
 

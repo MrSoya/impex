@@ -28,6 +28,7 @@ var gulp = require('gulp'),
             'src/tool/Delegator.js',
             'src/tool/ChangeHandler.js',
 
+            'src/component/EventEmitter.js',
             'src/component/Component.js',
 
     		'src/impex.js',

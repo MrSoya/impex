@@ -21,6 +21,8 @@
  * @class 
  */
 function Component (el) {
+	EventEmitter.call(this);
+
 	this._uid = 'C_' + im_counter++;
 
 	/**
@@ -83,7 +85,11 @@ function Component (el) {
 
 	impex._cs[this._uid] = this;
 };
-Component.prototype = {
+function F(){}
+F.prototype = EventEmitter.prototype;  
+Component.prototype = new F();  
+Component.prototype.constructor = Component.constructor; 
+ext({
 	/**
 	 * 设置组件状态值
 	 * @param {String} path 状态路径
@@ -164,7 +170,7 @@ Component.prototype = {
 			}
 		}
     }
-};
+},Component.prototype);
 
 /*********	component handlers	*********/
 //////	init flow
@@ -503,6 +509,20 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	if(attrs[ATTR_G_TAG]){
 		impex.g[attrs[ATTR_G_TAG]] = c;
 	}
+	//custome even
+	vnode._directives.forEach(function(di){
+		var dName = di[1][0];
+		if(dName !== 'on')return;
+		
+		var type = di[1][1][0];
+		var exp = di[2];
+		exp.match(/(?:^|this\.)([a-zA-Z_][a-zA-Z0-9_$]*)(?:\(|$)/);
+		var fnName = RegExp.$1;
+		
+
+        var fn = parent[fnName];
+		c.on(type,fn);
+	});
 
 	if(isString(param)){
 		c.__url = param;

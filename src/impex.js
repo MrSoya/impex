@@ -224,5 +224,7 @@
 
 		//for prototype API
 		this.Component = Component;
+
+		this.EventEmitter = EventEmitter;
 	}
 
