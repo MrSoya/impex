@@ -54,7 +54,7 @@
 
             txt.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
             var modelStr = RegExp.$1;
-            console.log(modelStr)
+            
             var model = new Function('return ('+modelStr+')')();
             model.template = tmpl.trim();
             

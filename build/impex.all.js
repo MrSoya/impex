@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-1-6
+ * last build: 2018-1-8
  */
 !function (global) {
 	'use strict';
@@ -67,7 +67,7 @@
 
             txt.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
             var modelStr = RegExp.$1;
-            console.log(modelStr)
+            
             var model = new Function('return ('+modelStr+')')();
             model.template = tmpl.trim();
             
@@ -1225,6 +1225,8 @@ function compareSame(newVNode,oldVNode,comp){
                 break;
             }
         }
+        if(Object.keys(newVNode.attrNodes).length != Object.keys(oldVNode.attrNodes).length)
+            rebindDis = true;
         if(rebindDis){
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
@@ -2097,6 +2099,13 @@ function parseComponent(comp){
 		loadComponent(comp.name,comp.__url,function(model,css){
 			COMP_MAP[comp.name] = model;
 			ext(model,comp);
+			if(isFunction(model.state)){
+				comp.state = model.state.call(comp);
+			}else if(model.state){
+				comp.state = {};
+				ext(model.state,comp.state);
+			}
+
 			preCompile(comp.template,comp);
 			
 			//css
@@ -2116,7 +2125,7 @@ function preCompile(tmpl,comp){
 	if(comp.onBeforeCompile)
         tmpl = comp.onBeforeCompile(tmpl);
     
-    comp.compiledTmp = tmpl = tmpl.replace(/^\s+|\s+$/img,'').replace(/>\s([^<]*)\s</,function(a,b){
+    comp.compiledTmp = tmpl = tmpl.replace(/^\s+|\s+$/img,' ').replace(/>\s([^<]*)\s</,function(a,b){
             return '>'+b+'<';
     });
 }
@@ -2168,7 +2177,7 @@ function scopeStyle(host,style){
 	}
 
 	var css = '';
-	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
+	host = '.'+host;
 	styles.forEach(function(style){
 		var parts = style.selector.split(',');
 		var tmp = '';
@@ -2227,6 +2236,12 @@ function mountComponent(comp,parentVNode){
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
+		var cls = comp.el.className.replace(/\s+$/,'');
+		if(cls.split(' ').indexOf(comp.name)<0){
+			comp.el.className = cls+' '+comp.name;
+		}
+		comp.vnode.setAttribute('class',comp.el.className);
+		//bind id
 		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
 		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
 	}
@@ -2342,6 +2357,13 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		c.on(type,fn);
 	});
 
+	c.onCreate && c.onCreate();
+
+	bindProps(c,parent,attrs);
+
+	c.__slots = slots;
+	c.__slotMap = slotMap;
+	
 	if(isString(param)){
 		c.__url = param;
 		return c;
@@ -2355,12 +2377,11 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			c.state = {};
 			ext(param.state,c.state);
 		}
+
 	}
 	c.compiledTmp = param.template;
-	c.__slots = slots;
-	c.__slotMap = slotMap;
 	
-	bindProps(c,parent,attrs);
+	
 	
 	return c;
 }

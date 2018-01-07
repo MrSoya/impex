@@ -825,6 +825,8 @@ function compareSame(newVNode,oldVNode,comp){
                 break;
             }
         }
+        if(Object.keys(newVNode.attrNodes).length != Object.keys(oldVNode.attrNodes).length)
+            rebindDis = true;
         if(rebindDis){
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
