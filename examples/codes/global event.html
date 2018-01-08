@@ -21,68 +21,42 @@
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
-
-            var store = new impex.Store({
-                state:{
-                    x:999,
-                    y:0,
-                    z:{x:[1,2,3]}
-                },
-                actions:{
-                    addx:function(){
-                        this.state.x--;
-                    },
-                    addy:function(){
-                        this.state.y++;
-                    }
-                },
-                getNum:function(){
-                    return {x:this.state.x,y:this.state.y};
-                }
-            });
+            var eventbus = new impex.EventEmitter;
 
             impex.component('x-total',{
                 template:'<div>x+y = {{x+y}}</div>',
-                state:function(){
-                    return store.getNum();
+                state:{
+                    x:999,
+                    y:1
                 },
                 onCompile:function(){
-                    store.on('addx addy',this);
+                    var that = this;
+                    eventbus
+                    .on('addx',function(x){
+                        that.state.x = x;
+                    })
+                    .on('addy',function(y){
+                        that.state.y = y;
+                    })
                 }
             });
             impex.component('x-addx',{
                 template:'<label><button :click="add()">Addx</button>x={{x}}</label>',
                 state:{
-                    x:store.getNum().x
+                    x:999
                 },
                 add:function(){
-                    store.emit('addx')
-                },
-                _changeState:function(action){
-                    var changes = action.changes;
-                    var c = changes[0];
-                    this.state.x = c.newVal;
-                },
-                onCompile:function(){
-                    store.on('addx',this);
+                    eventbus.emit('addx',++this.state.x);
                 }
             });
 
             impex.component('x-addy',{
                 template:'<label><button :click="add()">Addy</button>y={{y}}</label>',
                 state:{
-                    y:store.getNum().y
+                    y:1
                 },
                 add:function(){
-                    store.emit('addy')
-                },
-                _changeState:function(action){
-                    var changes = action.changes;
-                    var c = changes[0];
-                    this.state.y = c.newVal;
-                },
-                onCompile:function(){
-                    store.on('addy',this._changeState.bind(this));
+                    eventbus.emit('addy',++this.state.y);
                 }
             });
 

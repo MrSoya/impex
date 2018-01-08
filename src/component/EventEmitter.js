@@ -9,6 +9,7 @@ function EventEmitter(){
 EventEmitter.prototype = {
 	on:function(type,handler) {
 		this.__eeMap[type] = handler;
+		return this;
 	},
 	emit:function(type){
 		var fn = this.__eeMap[type];
