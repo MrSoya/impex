@@ -23,7 +23,7 @@
 	var FILTER_EXP_SPLITTER = '|';
 	var FILTER_EXP_PARAM_SPLITTER = ':';
 
-	var DOM_COMP_ATTR = 'data-impex-compoment';
+	var DOM_COMP_ATTR = 'impex-component';
 
 	var SLOT = 'slot';
 

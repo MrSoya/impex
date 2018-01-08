@@ -159,13 +159,14 @@ ext({
 		this.template = 
 		this.state = null;
 	},
+	/**
+	 * 如果一个引用参数发生了改变，那么子组件必须重载该方法，
+	 * 并自行判断是否真的修改了。但是更好的方案是，调用子组件的某个方法比如刷新之类
+	 */
 	onPropChange : function(newProps,oldProps){
 		for(var k in newProps){
 			var v = newProps[k];
-			if(isObject(v)){
-				var copy = v instanceof Array?[]:{};
-				this.state[k] = Object.assign(copy,v);
-			}else if(v !== this.state[k]){
+			if(v !== this.state[k]){
 				this.state[k] = v;
 			}
 		}
@@ -287,10 +288,13 @@ function parseComponent(comp){
 			}
 
 			preCompile(comp.template,comp);
-			
+
+			//同步父组件变量
+			bindProps(comp,comp.parent,comp.__attrs);
+
 			//css
 			bindScopeStyle(comp.name,css);
-			comp.__url = null;
+			comp.__attrs = comp.__url = null;
 			compileComponent(comp);
 			mountComponent(comp);
 		});
@@ -357,7 +361,7 @@ function scopeStyle(host,style){
 	}
 
 	var css = '';
-	host = '.'+host;
+	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
 	styles.forEach(function(style){
 		var parts = style.selector.split(',');
 		var tmp = '';
@@ -416,12 +420,6 @@ function mountComponent(comp,parentVNode){
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
-		var cls = comp.el.className.replace(/\s+$/,'');
-		if(cls.split(' ').indexOf(comp.name)<0){
-			comp.el.className = cls+' '+comp.name;
-		}
-		comp.vnode.setAttribute('class',comp.el.className);
-		//bind id
 		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
 		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
 	}
@@ -539,8 +537,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 
 	c.onCreate && c.onCreate();
 
-	bindProps(c,parent,attrs);
-
+	c.__attrs = attrs;
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
@@ -561,7 +558,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	}
 	c.compiledTmp = param.template;
 	
-	
+	bindProps(c,parent,attrs);
 	
 	return c;
 }

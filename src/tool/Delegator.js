@@ -12,6 +12,13 @@ function dispatch(type,e) {
         if(!tmp)continue;
 
         var vnode = tmp[0];
+        if(type == 'mouseleave'){
+            var t = e.target;
+            if(!contains(vnode.dom,t))return;
+            var toElement = e.toElement || e.relatedTarget;
+            if(contains(vnode.dom,toElement))return;
+        }
+
         var fn = tmp[1];
         var cid = tmp[2];
         var isFn = tmp[3];
@@ -28,6 +35,16 @@ function dispatch(type,e) {
         }
         
     }while((p = p.parentNode) && p.tagName != 'BODY');
+}
+function contains(a,b){
+    if(a.contains){
+        return a.contains(b);
+    }
+    do{
+        if(a == b)return true;
+        b = b.parentNode;
+    }while(b && b.tagName != 'BODY');
+    return false;
 }
 //touch/mouse/pointer events
 var userAgent = self.navigator.userAgent.toLowerCase();
@@ -135,6 +152,7 @@ if(isMobile){
     document.addEventListener(type,doMousewheel,true);
 
     document.addEventListener('mouseout',doMouseout,true);
+    document.addEventListener('mouseover',doMouseover,true);
 
     var inited = true;
     var lastClickTime = 0;
@@ -179,6 +197,10 @@ if(isMobile){
     }
     function doMouseout(e){
         dispatch('mouseout',e);
+        dispatch('mouseleave',e);
+    }
+    function doMouseover(e){
+        dispatch('mouseover',e);
     }
     function doMousewheel(e){
         dispatch('mousewheel',e);

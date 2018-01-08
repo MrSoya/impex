@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-1-8
+ * last build: 2018-01-08
  */
 !function (global) {
 	'use strict';
@@ -1391,7 +1391,9 @@ function insertBefore(nv,target,list,targetParent,comp){
     //comp
     for(var i=0;i<compAry.length;i++){
         var tmp = compAry[i];
-        mountComponent(tmp,targetParent);
+        if(!tmp.__url){
+            mountComponent(tmp,targetParent);
+        }        
     }
 }
 function next(nv){
@@ -1502,6 +1504,13 @@ function dispatch(type,e) {
         if(!tmp)continue;
 
         var vnode = tmp[0];
+        if(type == 'mouseleave'){
+            var t = e.target;
+            if(!contains(vnode.dom,t))return;
+            var toElement = e.toElement || e.relatedTarget;
+            if(contains(vnode.dom,toElement))return;
+        }
+
         var fn = tmp[1];
         var cid = tmp[2];
         var isFn = tmp[3];
@@ -1518,6 +1527,16 @@ function dispatch(type,e) {
         }
         
     }while((p = p.parentNode) && p.tagName != 'BODY');
+}
+function contains(a,b){
+    if(a.contains){
+        return a.contains(b);
+    }
+    do{
+        if(a == b)return true;
+        b = b.parentNode;
+    }while(b && b.tagName != 'BODY');
+    return false;
 }
 //touch/mouse/pointer events
 var userAgent = self.navigator.userAgent.toLowerCase();
@@ -1625,6 +1644,7 @@ if(isMobile){
     document.addEventListener(type,doMousewheel,true);
 
     document.addEventListener('mouseout',doMouseout,true);
+    document.addEventListener('mouseover',doMouseover,true);
 
     var inited = true;
     var lastClickTime = 0;
@@ -1669,6 +1689,10 @@ if(isMobile){
     }
     function doMouseout(e){
         dispatch('mouseout',e);
+        dispatch('mouseleave',e);
+    }
+    function doMouseover(e){
+        dispatch('mouseover',e);
     }
     function doMousewheel(e){
         dispatch('mousewheel',e);
@@ -1979,13 +2003,14 @@ ext({
 		this.template = 
 		this.state = null;
 	},
+	/**
+	 * 如果一个引用参数发生了改变，那么子组件必须重载该方法，
+	 * 并自行判断是否真的修改了。但是更好的方案是，调用子组件的某个方法比如刷新之类
+	 */
 	onPropChange : function(newProps,oldProps){
 		for(var k in newProps){
 			var v = newProps[k];
-			if(isObject(v)){
-				var copy = v instanceof Array?[]:{};
-				this.state[k] = Object.assign(copy,v);
-			}else if(v !== this.state[k]){
+			if(v !== this.state[k]){
 				this.state[k] = v;
 			}
 		}
@@ -2107,10 +2132,13 @@ function parseComponent(comp){
 			}
 
 			preCompile(comp.template,comp);
-			
+
+			//同步父组件变量
+			bindProps(comp,comp.parent,comp.__attrs);
+
 			//css
 			bindScopeStyle(comp.name,css);
-			comp.__url = null;
+			comp.__attrs = comp.__url = null;
 			compileComponent(comp);
 			mountComponent(comp);
 		});
@@ -2177,7 +2205,7 @@ function scopeStyle(host,style){
 	}
 
 	var css = '';
-	host = '.'+host;
+	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
 	styles.forEach(function(style){
 		var parts = style.selector.split(',');
 		var tmp = '';
@@ -2236,12 +2264,6 @@ function mountComponent(comp,parentVNode){
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
-		var cls = comp.el.className.replace(/\s+$/,'');
-		if(cls.split(' ').indexOf(comp.name)<0){
-			comp.el.className = cls+' '+comp.name;
-		}
-		comp.vnode.setAttribute('class',comp.el.className);
-		//bind id
 		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
 		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
 	}
@@ -2359,8 +2381,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 
 	c.onCreate && c.onCreate();
 
-	bindProps(c,parent,attrs);
-
+	c.__attrs = attrs;
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
@@ -2381,7 +2402,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	}
 	c.compiledTmp = param.template;
 	
-	
+	bindProps(c,parent,attrs);
 	
 	return c;
 }
@@ -2512,7 +2533,7 @@ function checkPropType(k,v,propTypes,component){
 	var FILTER_EXP_SPLITTER = '|';
 	var FILTER_EXP_PARAM_SPLITTER = ':';
 
-	var DOM_COMP_ATTR = 'data-impex-compoment';
+	var DOM_COMP_ATTR = 'impex-component';
 
 	var SLOT = 'slot';
 

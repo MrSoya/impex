@@ -991,7 +991,9 @@ function insertBefore(nv,target,list,targetParent,comp){
     //comp
     for(var i=0;i<compAry.length;i++){
         var tmp = compAry[i];
-        mountComponent(tmp,targetParent);
+        if(!tmp.__url){
+            mountComponent(tmp,targetParent);
+        }        
     }
 }
 function next(nv){
