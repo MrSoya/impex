@@ -7,7 +7,7 @@
 		EXP_END_TAG = '}}';
 	var REG_CMD = /^x-.*/;
 	var ATTR_REF_TAG = 'ref';
-	var ATTR_G_TAG = 'impex-g';
+	var ATTR_ID_TAG = 'id';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
 	// var PROP_SYNC_SUFX = ':sync';
@@ -58,16 +58,16 @@
 
 		/**
 		 * 保存注册过的全局组件实例引用。
-		 * 注册全局组件可以使用impex-g属性.
+		 * 注册全局组件可以使用id属性.
 		 * <p>
-		 * 		<x-panel impex-g="xPanel" >...</x-panel>
+		 * 		<x-panel id="xPanel" >...</x-panel>
 		 * </p>
 		 * <p>
-		 * 		impex.g.xPanel.todo();
+		 * 		impex.id.xPanel.todo();
 		 * </p>
 		 * @type {Object}
 		 */
-		this.g = {};
+		this.id = {};
 
 		/**
 	     * 版本信息

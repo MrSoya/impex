@@ -324,7 +324,8 @@ function doSlot(slotList,slots,slotMap){
 			var params = [pos,1];
 			
 			if(name){
-				params.push(slotMap[name]);
+				if(slotMap[name])
+					params.push(slotMap[name]);
 			}else{
 				params = params.concat(slots);
 			}
@@ -517,8 +518,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		parent.refs[attrs[ATTR_REF_TAG]] = c;
 	}
 	//global
-	if(attrs[ATTR_G_TAG]){
-		impex.g[attrs[ATTR_G_TAG]] = c;
+	if(attrs[ATTR_ID_TAG]){
+		impex.id[attrs[ATTR_ID_TAG]] = c;
 	}
 	//custome even
 	vnode._directives.forEach(function(di){

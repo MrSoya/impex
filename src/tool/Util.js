@@ -56,6 +56,7 @@
             var modelStr = RegExp.$1;
             
             var model = new Function('return ('+modelStr+')')();
+            model = model();
             model.template = tmpl.trim();
             
             var url = this.url;

@@ -16,7 +16,7 @@
     <body>
         <div id="demo">
             全局变量注册 <button :click="togglePanel()">toggle</button>
-            <x-panel impex-g="xPanel">2222222222222222</x-panel>
+            <x-panel id="xPanel">2222222222222222</x-panel>
             <x-panel >111111111</x-panel>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
@@ -38,7 +38,7 @@
             //渲染
             var debug = impex.render('#demo',{
                 togglePanel:function(){
-                    impex.g.xPanel.showPanel();
+                    impex.id.xPanel.showPanel();
                 }
             });
             

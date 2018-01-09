@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-01-08
+ * last build: 2018-01-09
  */
 !function (global) {
 	'use strict';
@@ -69,6 +69,7 @@
             var modelStr = RegExp.$1;
             
             var model = new Function('return ('+modelStr+')')();
+            model = model();
             model.template = tmpl.trim();
             
             var url = this.url;
@@ -2169,7 +2170,8 @@ function doSlot(slotList,slots,slotMap){
 			var params = [pos,1];
 			
 			if(name){
-				params.push(slotMap[name]);
+				if(slotMap[name])
+					params.push(slotMap[name]);
 			}else{
 				params = params.concat(slots);
 			}
@@ -2362,8 +2364,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		parent.refs[attrs[ATTR_REF_TAG]] = c;
 	}
 	//global
-	if(attrs[ATTR_G_TAG]){
-		impex.g[attrs[ATTR_G_TAG]] = c;
+	if(attrs[ATTR_ID_TAG]){
+		impex.id[attrs[ATTR_ID_TAG]] = c;
 	}
 	//custome even
 	vnode._directives.forEach(function(di){
@@ -2518,7 +2520,7 @@ function checkPropType(k,v,propTypes,component){
 		EXP_END_TAG = '}}';
 	var REG_CMD = /^x-.*/;
 	var ATTR_REF_TAG = 'ref';
-	var ATTR_G_TAG = 'impex-g';
+	var ATTR_ID_TAG = 'id';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
 	// var PROP_SYNC_SUFX = ':sync';
@@ -2569,16 +2571,16 @@ function checkPropType(k,v,propTypes,component){
 
 		/**
 		 * 保存注册过的全局组件实例引用。
-		 * 注册全局组件可以使用impex-g属性.
+		 * 注册全局组件可以使用id属性.
 		 * <p>
-		 * 		<x-panel impex-g="xPanel" >...</x-panel>
+		 * 		<x-panel id="xPanel" >...</x-panel>
 		 * </p>
 		 * <p>
-		 * 		impex.g.xPanel.todo();
+		 * 		impex.id.xPanel.todo();
 		 * </p>
 		 * @type {Object}
 		 */
-		this.g = {};
+		this.id = {};
 
 		/**
 	     * 版本信息

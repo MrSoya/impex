@@ -12,18 +12,20 @@
             }
         </style>
         <a :pointerdown="tip($event)">
-            <slot>按钮{{times}}</slot>
+            <slot></slot>
         </a>
     </template>
     <!-- 模型  -->
     <script>
-        component = {
-            tip : function(e){
-                console.log(e)
-                alert('clicked '+(this.state.times++)+' times');
-            },
-            state:{
-                times:0
-            }
+        function component(){
+            return {
+                tip : function(e){
+                    console.log(e)
+                    alert('clicked '+(this.state.times++)+' times');
+                },
+                state:{
+                    times:0
+                }
+            }            
         }
     </script>
