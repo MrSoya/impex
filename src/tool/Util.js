@@ -38,7 +38,6 @@
             var cbks = obj.cbks;
             var name = obj.name;
 
-            txt = txt.replace(/<!--[\s\S]*?-->/mg,'').trim();
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
             if(!tmpl){

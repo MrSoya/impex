@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-01-09
+ * last build: 2018-01-12
  */
 !function (global) {
 	'use strict';
@@ -51,7 +51,6 @@
             var cbks = obj.cbks;
             var name = obj.name;
 
-            txt = txt.replace(/<!--[\s\S]*?-->/mg,'').trim();
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
             if(!tmpl){
@@ -469,9 +468,7 @@ VNode.prototype = {
 /**
  * funcs for build VNode
  */
-function createElement(comp,condition,tag,props,directives,children,html,forScope){
-    if(!condition)return;
-
+function createElement(comp,tag,props,directives,children,html,forScope){
     var rs = new VNode(tag,props,directives);
     var fsq = null;
     if(forScope)
@@ -534,9 +531,7 @@ function createElement(comp,condition,tag,props,directives,children,html,forScop
     
     return rs;
 }
-function createTemplate(condition,children,forScope){
-    if(!condition)return;
-
+function createTemplate(children,forScope){
     var fsq = null;
     if(forScope)
         fsq = [forScope];
@@ -629,7 +624,7 @@ function isDirectiveVNode(attrName,comp){
 
         //如果有对应的处理器
         if(!DIRECT_MAP[c]){
-            warn("指令 '"+c+"' 没有对应的处理器");
+            warn("there is no handler of directive '"+c+"' ");
             return;
         }
     }else if(attrName[0] === EV_AB_PRIFX){
@@ -742,7 +737,7 @@ function parseHTML(str){
                     expStartPoint = strQueue.length;
                     if(op==='a'){
                         var n = lastAttrNode.name;
-                        error("属性'"+n+"'不能包含表达式，动态内容请使用 'x-bind:"+n+" / ."+n+"'替代");
+                        throw new Error("to bind a dynamic attribute '"+n+"' using x-bind:"+n+" / ."+n+", instead of expressions");
                         return;
                     }
                 }
@@ -1081,9 +1076,9 @@ function buildEvalStr(pm){
         var dirStr = pair[1];
         var ifStr = pm.if || 'true';
         var innerHTML = pm.html || 'null';
-        var nodeStr = '_ce(this,'+ifStr+',"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
+        var nodeStr = '('+ifStr+')?_ce(this,"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
         if(pm.tag == 'template'){
-            nodeStr = '_tmp('+ifStr+',['+children+']';
+            nodeStr = '('+ifStr+')?_tmp(['+children+']';
         }
         if(pm.for){
             var k = (pm.for[0]||'').trim();
@@ -1106,9 +1101,9 @@ function buildEvalStr(pm){
             if(filter){
                 dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+")";
             }
-            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope)}},this,"'+k+'","'+v+'")';
+            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope):null}},this,"'+k+'","'+v+'")';
         }else{
-            str += nodeStr+')';
+            str += nodeStr+'):null';
         }
     }else{
         var tmp = buildTxtStr(pm.txtQ);
@@ -1164,21 +1159,28 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var pair = parseHTML(str);
-    var roots = pair[0];
+    var pair = null;
+    var roots = null;
+    try{
+        pair = parseHTML(str);
+        roots = pair[0];
+    }catch(e){
+        error("parse error in component '"+comp.name+"': "+e.message);
+        return;
+    }    
+    
     if(roots.length>1){
-        warn('组件只能有唯一的顶级节点');
+        warn("the component '"+comp.name+"' should only have one root");
     }
     var rs = roots[0];
     if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        error('组件顶级标签不能是template / slot');
+        error("parse error in component '"+comp.name+"': root element cannot be <template> or <slot>");
         return;
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
 
     rs = buildVDOMStr(rs);
-    // console.log(rs);
     rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
     VDOM_CACHE[str] = rs;
     return rs;
@@ -1193,7 +1195,7 @@ function buildVDOMTree(comp){
     try{
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error('compile error : '+e.message);
+        error("compile error in component '"+comp.name+"': "+e.message);
     }
     return root;
 }
@@ -2135,6 +2137,9 @@ function parseComponent(comp){
 
 			preCompile(comp.template,comp);
 
+
+			comp.onCreate && comp.onCreate();
+
 			//同步父组件变量
 			bindProps(comp,comp.parent,comp.__attrs);
 
@@ -2142,7 +2147,7 @@ function parseComponent(comp){
 			bindScopeStyle(comp.name,css);
 			comp.__attrs = comp.__url = null;
 			compileComponent(comp);
-			mountComponent(comp);
+			mountComponent(comp,comp.parent?comp.parent.vnode:null);
 		});
 	}else{
 		if(comp.template){
@@ -2155,7 +2160,12 @@ function preCompile(tmpl,comp){
 	if(comp.onBeforeCompile)
         tmpl = comp.onBeforeCompile(tmpl);
     
-    comp.compiledTmp = tmpl = tmpl.replace(/^\s+|\s+$/img,' ').replace(/>\s([^<]*)\s</,function(a,b){
+    comp.compiledTmp = 
+    tmpl.trim()
+    .replace(/<!--[\s\S]*?-->/mg,'')
+    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
+    .replace(/^\s+|\s+$/img,' ')
+    .replace(/>\s([^<]*)\s</,function(a,b){
             return '>'+b+'<';
     });
 }
@@ -2294,6 +2304,17 @@ function updateComponent(comp,changes){
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
 
+	//mount non async subcomponents which created by VDOM 
+	
+	for(var i = 0;i<comp.children.length;i++){
+		var c = comp.children[i];
+		if(!c.compiledTmp){
+			parseComponent(c);
+			if(!c.__url)
+				mountComponent(comp.children[i],comp.vnode);
+		}
+	}
+
 	//call watchs
 	if(comp.__watchFn){
 		var newVal = comp.__watchFn(comp.state);
@@ -2331,7 +2352,7 @@ function updateComponent(comp,changes){
 
 function newComponent(tmpl,el,param){
 	var c = new Component(el);
-	c.compiledTmp = tmpl;
+	c.template = tmpl;
 	if(param){
 		ext(param,c);
 
@@ -2339,6 +2360,8 @@ function newComponent(tmpl,el,param){
 			c.state = param.state.call(c);
 		}
 	}
+
+	c.onCreate && c.onCreate();
 	
 	return c;
 }
@@ -2346,7 +2369,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	//handle component
 	if(type == 'component'){
 		type = attrs.is;
-		if(attrs['.is']){//.is value can only be a var
+		if(attrs['.is']){//'.is' value can only be a var
 			type = attrs['.is'];
 			type = new Function('scope',"with(scope){return "+type+"}")(parent.state);
 		}
@@ -2379,10 +2402,9 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		
 
         var fn = parent[fnName];
-		c.on(type,fn);
+        if(fn)
+			c.on(type,fn.bind(parent));
 	});
-
-	c.onCreate && c.onCreate();
 
 	c.__attrs = attrs;
 	c.__slots = slots;
@@ -2401,10 +2423,11 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			c.state = {};
 			ext(param.state,c.state);
 		}
-
 	}
-	c.compiledTmp = param.template;
+	// c.compiledTmp = param.template;
 	
+	c.onCreate && c.onCreate();
+
 	bindProps(c,parent,attrs);
 	
 	return c;
@@ -2457,19 +2480,22 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		str += ','+JSON.stringify(n)+':'+v;
 	}//end for
 	str = str.substr(1);
-	var forScopeStart = '',forScopeEnd = '';
-	var vn = comp.vnode;
-	var args = [parent.state];
-	var sfs = parent.__syncFnForScope[comp._uid] = [];
-    if(vn._forScopeQ)
-        for(var i=0;i<vn._forScopeQ.length;i++){
-            forScopeStart += 'with(arguments['+(1+i)+']){';
-            forScopeEnd += '}';
-            args.push(vn._forScopeQ[i]);
-            sfs.push(vn._forScopeQ[i]);
-        }
-	var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
-	var rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+	var rs = {};
+	if(str){
+		var forScopeStart = '',forScopeEnd = '';
+		var vn = comp.vnode;
+		var args = [parent.state];
+		var sfs = parent.__syncFnForScope[comp._uid] = [];
+	    if(vn._forScopeQ)
+	        for(var i=0;i<vn._forScopeQ.length;i++){
+	            forScopeStart += 'with(arguments['+(1+i)+']){';
+	            forScopeEnd += '}';
+	            args.push(vn._forScopeQ[i]);
+	            sfs.push(vn._forScopeQ[i]);
+	        }
+		var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
+		rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+	}	
 	var objs = [];
 	ext(strMap,rs);
 	for(var k in rs){
@@ -2483,7 +2509,7 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		}
 	}
 	if(objs.length>0){
-		warn("ref parameters '"+objs.join(',')+"' should be read only");
+		warn("dynamic attribute '"+objs.join(',')+"' of component '"+comp.name+"' should be read only");
 	}
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
@@ -2701,12 +2727,8 @@ function checkPropType(k,v,propTypes,component){
             	return;
             }
 
-            tmpl = tmpl.replace(/<!--[\s\S]*?-->/mg,'')
-            		.replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-            		.trim();
 			var comp = newComponent(tmpl,container,param);
 
-			comp.onCreate && comp.onCreate();
 			parseComponent(comp);
 			mountComponent(comp);
 

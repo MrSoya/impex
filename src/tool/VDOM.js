@@ -68,9 +68,7 @@ VNode.prototype = {
 /**
  * funcs for build VNode
  */
-function createElement(comp,condition,tag,props,directives,children,html,forScope){
-    if(!condition)return;
-
+function createElement(comp,tag,props,directives,children,html,forScope){
     var rs = new VNode(tag,props,directives);
     var fsq = null;
     if(forScope)
@@ -133,9 +131,7 @@ function createElement(comp,condition,tag,props,directives,children,html,forScop
     
     return rs;
 }
-function createTemplate(condition,children,forScope){
-    if(!condition)return;
-
+function createTemplate(children,forScope){
     var fsq = null;
     if(forScope)
         fsq = [forScope];
@@ -228,7 +224,7 @@ function isDirectiveVNode(attrName,comp){
 
         //如果有对应的处理器
         if(!DIRECT_MAP[c]){
-            warn("指令 '"+c+"' 没有对应的处理器");
+            warn("there is no handler of directive '"+c+"' ");
             return;
         }
     }else if(attrName[0] === EV_AB_PRIFX){
@@ -341,7 +337,7 @@ function parseHTML(str){
                     expStartPoint = strQueue.length;
                     if(op==='a'){
                         var n = lastAttrNode.name;
-                        error("属性'"+n+"'不能包含表达式，动态内容请使用 'x-bind:"+n+" / ."+n+"'替代");
+                        throw new Error("to bind a dynamic attribute '"+n+"' using x-bind:"+n+" / ."+n+", instead of expressions");
                         return;
                     }
                 }
@@ -680,9 +676,9 @@ function buildEvalStr(pm){
         var dirStr = pair[1];
         var ifStr = pm.if || 'true';
         var innerHTML = pm.html || 'null';
-        var nodeStr = '_ce(this,'+ifStr+',"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
+        var nodeStr = '('+ifStr+')?_ce(this,"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
         if(pm.tag == 'template'){
-            nodeStr = '_tmp('+ifStr+',['+children+']';
+            nodeStr = '('+ifStr+')?_tmp(['+children+']';
         }
         if(pm.for){
             var k = (pm.for[0]||'').trim();
@@ -705,9 +701,9 @@ function buildEvalStr(pm){
             if(filter){
                 dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+")";
             }
-            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope)}},this,"'+k+'","'+v+'")';
+            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope):null}},this,"'+k+'","'+v+'")';
         }else{
-            str += nodeStr+')';
+            str += nodeStr+'):null';
         }
     }else{
         var tmp = buildTxtStr(pm.txtQ);
@@ -763,21 +759,28 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var pair = parseHTML(str);
-    var roots = pair[0];
+    var pair = null;
+    var roots = null;
+    try{
+        pair = parseHTML(str);
+        roots = pair[0];
+    }catch(e){
+        error("parse error in component '"+comp.name+"': "+e.message);
+        return;
+    }    
+    
     if(roots.length>1){
-        warn('组件只能有唯一的顶级节点');
+        warn("the component '"+comp.name+"' should only have one root");
     }
     var rs = roots[0];
     if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        error('组件顶级标签不能是template / slot');
+        error("parse error in component '"+comp.name+"': root element cannot be <template> or <slot>");
         return;
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
 
     rs = buildVDOMStr(rs);
-    // console.log(rs);
     rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
     VDOM_CACHE[str] = rs;
     return rs;
@@ -792,7 +795,7 @@ function buildVDOMTree(comp){
     try{
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error('compile error : '+e.message);
+        error("compile error in component '"+comp.name+"': "+e.message);
     }
     return root;
 }

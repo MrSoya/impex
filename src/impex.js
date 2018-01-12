@@ -188,12 +188,8 @@
             	return;
             }
 
-            tmpl = tmpl.replace(/<!--[\s\S]*?-->/mg,'')
-            		.replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-            		.trim();
 			var comp = newComponent(tmpl,container,param);
 
-			comp.onCreate && comp.onCreate();
 			parseComponent(comp);
 			mountComponent(comp);
 
