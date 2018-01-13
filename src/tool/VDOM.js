@@ -869,6 +869,11 @@ function compareSame(newVNode,oldVNode,comp){
 }
 
 function compareChildren(nc,oc,op,comp){
+    if(nc.length<1){
+        if(oc.length>0)
+            removeVNode(oc);
+        return;
+    }
     var osp = 0,oep = oc.length-1,
         nsp = 0,nep = nc.length-1,
         os = oc[0],oe = oc[oep],

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-01-12
+ * last build: 2018-01-13
  */
 !function (global) {
 	'use strict';
@@ -1269,6 +1269,11 @@ function compareSame(newVNode,oldVNode,comp){
 }
 
 function compareChildren(nc,oc,op,comp){
+    if(nc.length<1){
+        if(oc.length>0)
+            removeVNode(oc);
+        return;
+    }
     var osp = 0,oep = oc.length-1,
         nsp = 0,nep = nc.length-1,
         os = oc[0],oe = oc[oep],
@@ -2424,7 +2429,6 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			ext(param.state,c.state);
 		}
 	}
-	// c.compiledTmp = param.template;
 	
 	c.onCreate && c.onCreate();
 
@@ -2900,8 +2904,8 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.toNum = vnode.getAttribute('number');
-        vnode.debounce = vnode.getAttribute('debounce')>>0;
+        // vnode.toNum = vnode.getAttribute('number');
+        // vnode.debounce = vnode.getAttribute('debounce')>>0;
         vnode.exp = data.exp;
         vnode.on('change',this.handleChange);
         vnode.on('input',handleInput);
@@ -2945,10 +2949,12 @@ impex.directive('style',{
 
 function handleInput(e,vnode,comp){
     var v = (e.target || e.srcElement).value;
-    if(!isUndefined(vnode.toNum)){
+    var toNum = vnode.getAttribute('number');
+    if(!isUndefined(toNum)){
         v = parseFloat(v);
     }
-    if(vnode.debounce){
+    var debounce = vnode.getAttribute('debounce');
+    if(debounce){
         if(vnode.debounceTimer){
             clearTimeout(vnode.debounceTimer);
             vnode.debounceTimer = null;
@@ -2959,7 +2965,7 @@ function handleInput(e,vnode,comp){
             vnode.debounceTimer = null;
             
             that.setState(vnode.exp,v);
-        },vnode.debounce);
+        },debounce);
     }else{
         if(!this){
             comp.setState(vnode.exp,v);

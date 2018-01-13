@@ -134,8 +134,8 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.toNum = vnode.getAttribute('number');
-        vnode.debounce = vnode.getAttribute('debounce')>>0;
+        // vnode.toNum = vnode.getAttribute('number');
+        // vnode.debounce = vnode.getAttribute('debounce')>>0;
         vnode.exp = data.exp;
         vnode.on('change',this.handleChange);
         vnode.on('input',handleInput);
@@ -179,10 +179,12 @@ impex.directive('style',{
 
 function handleInput(e,vnode,comp){
     var v = (e.target || e.srcElement).value;
-    if(!isUndefined(vnode.toNum)){
+    var toNum = vnode.getAttribute('number');
+    if(!isUndefined(toNum)){
         v = parseFloat(v);
     }
-    if(vnode.debounce){
+    var debounce = vnode.getAttribute('debounce');
+    if(debounce){
         if(vnode.debounceTimer){
             clearTimeout(vnode.debounceTimer);
             vnode.debounceTimer = null;
@@ -193,7 +195,7 @@ function handleInput(e,vnode,comp){
             vnode.debounceTimer = null;
             
             that.setState(vnode.exp,v);
-        },vnode.debounce);
+        },debounce);
     }else{
         if(!this){
             comp.setState(vnode.exp,v);
