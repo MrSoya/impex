@@ -451,7 +451,6 @@ function updateComponent(comp,changes){
 
 	//rebuild VDOM tree
 	var vnode = buildVDOMTree(comp);
-	comp.onCompile && comp.onCompile(vnode);
 
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
