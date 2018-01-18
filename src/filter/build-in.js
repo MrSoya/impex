@@ -8,7 +8,7 @@ impex.filter('json',function(v){
 .filter('filterBy',function(v,key,inName){
     var ary = v;
     if(!isArray(ary)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     var rs = [];
@@ -39,7 +39,7 @@ impex.filter('json',function(v){
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
 .filter('limitBy',function(v,count,start){
     if(!isArray(v)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     if(!count)return v;
@@ -50,7 +50,7 @@ impex.filter('json',function(v){
 .filter('orderBy',function(v,key,dir){
     if(!key && !dir)return v;
     if(!isArray(v)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     v.sort(function(a,b){

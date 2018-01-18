@@ -41,10 +41,10 @@ function Component (el) {
 	 */
 	this.compTags = {};
 	/**
-	 * 用于指定属性的类型，如果类型不符会报错
+	 * 用于指定输入参数的限制
 	 * @type {Object}
 	 */
-	this.propTypes = null;
+	this.input = null;
 	/**
 	 * 组件名，在创建时由系统自动注入
 	 */
@@ -462,7 +462,7 @@ function updateComponent(comp,changes){
 		if(!c.compiledTmp){
 			parseComponent(c);
 			if(!c.__url)
-				mountComponent(comp.children[i],comp.vnode);
+				mountComponent(c,comp.vnode);
 		}
 	}
 
@@ -494,7 +494,7 @@ function updateComponent(comp,changes){
 		comp.__syncOldVal[uid] = rs;
 	}
 
-	comp.onUpdate && comp.onUpdate();
+	comp.onUpdate && comp.onUpdate(changes);
 
 	callDirectiveUpdate(comp.vnode,comp);
 }
@@ -504,6 +504,7 @@ function updateComponent(comp,changes){
 function newComponent(tmpl,el,param){
 	var c = new Component(el);
 	c.template = tmpl;
+	c.name = 'ROOT';
 	if(param){
 		ext(param,c);
 
@@ -586,28 +587,31 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 function bindProps(comp,parent,parentAttrs){
 	//check props
 	var requires = {};
-	var propTypes = comp.propTypes;
-	if(propTypes){
-		for(var k in propTypes){
-			var type = propTypes[k];
-			if(type.require){
+	var input = comp.input;
+	if(input){
+		for(var k in input){
+			var arg = input[k];
+			if(arg.require){
 				requires[k] = type;
+			}
+			if(!isUndefined(arg.value) && isUndefined(comp.state[k])){
+				comp.state[k] = arg.value;
 			}
 		}
 	}
 
 	if(parentAttrs){
-		handleProps(parentAttrs,comp,parent,propTypes,requires);
+		handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
 	//check requires
 	var ks = Object.keys(requires);
 	if(ks.length > 0){
-		error("props ["+ks.join(',')+"] of component["+comp.name+"] are required");
+		error(comp.name,"input args ["+ks.join(',')+"] are required");
 		return;
 	}
 }
-function handleProps(parentAttrs,comp,parent,propTypes,requires){
+function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
 	for(var k in parentAttrs){
@@ -653,13 +657,13 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		if(isObject(v) && v.__im__oid){
 			objs.push(k);
 		}
-		if(propTypes && k in propTypes){
+		if(input && k in input){
 			delete requires[k];
-			checkPropType(k,v,propTypes,comp);
+			checkPropType(k,v,input,comp);
 		}
 	}
 	if(objs.length>0){
-		warn("dynamic attribute '"+objs.join(',')+"' of component '"+comp.name+"' should be read only");
+		warn(comp.name,"dynamic attribute '"+objs.join(',')+"' should be read only");
 	}
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
@@ -675,15 +679,15 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	}//end if	
 }
 
-function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k] || !propTypes[k].type)return;
-	var checkType = propTypes[k].type;
+function checkPropType(k,v,input,component){
+	if(!input[k] || !input[k].type)return;
+	var checkType = input[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
 	if(v instanceof Array){
 		vType = 'array';
 	}
 	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-		error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+		error(component.name,"invalid type ["+vType+"] of input arg ["+k+"];should be ["+checkType.join(',')+"]");
 	}
 }

@@ -25,10 +25,12 @@
     }
 
     function loadError(){
-        error('can not fetch remote data of : '+this.url);
+        var name = requirements[this.url].name;
+        error(name,'can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        error('load timeout : '+this.url);
+        var name = requirements[this.url].name;
+        error(name,'load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
@@ -41,7 +43,7 @@
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
             if(!tmpl){
-                error('can not find tag <template> in component file');
+                error(name,'can not find tag <template> in component file');
                 return;
             }
 

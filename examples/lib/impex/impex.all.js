@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-01-13
+ * last build: 2018-01-18
  */
 !function (global) {
 	'use strict';
@@ -38,10 +38,12 @@
     }
 
     function loadError(){
-        error('can not fetch remote data of : '+this.url);
+        var name = requirements[this.url].name;
+        error(name,'can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
-        error('load timeout : '+this.url);
+        var name = requirements[this.url].name;
+        error(name,'load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
@@ -54,7 +56,7 @@
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
             if(!tmpl){
-                error('can not find tag <template> in component file');
+                error(name,'can not find tag <template> in component file');
                 return;
             }
 
@@ -484,13 +486,13 @@ function createElement(comp,tag,props,directives,children,html,forScope){
     }
     if(html != null){
         //这里需要更新children
-        var pair = parseHTML(html);
-        var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
+        // var pair = parseHTML(html);
         var root;
         try{
+            var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
             root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
         }catch(e){
-            error('[x-html] compile error on '+e.message);
+            error(comp.name,'[x-html] compile error on '+e.message);
             return;
         }
         children = root.children || [];
@@ -657,7 +659,7 @@ function parseDirectFor(name,attrNode){
     var filters = attrNode.exp[1];
     if(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/)){
         //each语法错误
-        error('invalid each expression : '+forExpStr);
+        throw new Error('invalid each expression : '+forExpStr);
         return;
     }
     var alias = RegExp.$2;
@@ -761,7 +763,7 @@ function parseHTML(str){
                 if(c===' '||c==='\n'|| c==='\t' || c==='>'){
                     if(!strQueue)break;//<  div 这种场景，过滤前面的空格
                     if(strQueue.indexOf('<')>-1){
-                        error("unexpected identifier '<' in tagName '"+strQueue+"'");
+                        throw new Error("unexpected identifier '<' in tagName '"+strQueue+"'");
                         return;
                     }
 
@@ -1159,23 +1161,18 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var pair = null;
-    var roots = null;
-    try{
-        pair = parseHTML(str);
-        roots = pair[0];
-    }catch(e){
-        error("parse error in component '"+comp.name+"': "+e.message);
-        return;
-    }    
-    
+    var pair = parseHTML(str);
+    var roots = pair[0];
+        
     if(roots.length>1){
-        warn("the component '"+comp.name+"' should only have one root");
+        throw new Error("should only have one root");
     }
     var rs = roots[0];
     if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        error("parse error in component '"+comp.name+"': root element cannot be <template> or <slot>");
-        return;
+        throw new Error("root element cannot be <template> or <slot>");
+    }
+    if(COMP_MAP[rs.tag]){
+        throw new Error("root element <"+rs.tag+"> should be a non-component tag");
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
@@ -1189,13 +1186,12 @@ function compileVDOM(str,comp){
  * get vdom tree for component
  */
 function buildVDOMTree(comp){
-    var fn = compileVDOM(comp.compiledTmp,comp);
-
     var root = null;
     try{
+        var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error("compile error in component '"+comp.name+"': "+e.message);
+        error(comp.name,"compile error on "+e.message);
     }
     return root;
 }
@@ -1219,7 +1215,7 @@ function compareSame(newVNode,oldVNode,comp){
 
     if(newVNode.tag){
         var rebindDis = false;
-        //先比较指令列表
+        //compare dirs
         for(var i=newVNode._directives.length;i--;){
             var ndi = newVNode._directives[i];
             var odi = oldVNode._directives[i];
@@ -1228,8 +1224,20 @@ function compareSame(newVNode,oldVNode,comp){
                 break;
             }
         }
-        if(Object.keys(newVNode.attrNodes).length != Object.keys(oldVNode.attrNodes).length)
+        //compare attrs
+        var ks = Object.keys(newVNode.attrNodes);
+        if(ks.length != Object.keys(oldVNode.attrNodes).length){
             rebindDis = true;
+        }else{
+            for(var i=ks.length;i--;){
+                var k = ks[i];
+                if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
+                    rebindDis = true;
+                    break;
+                }
+            }
+        }        
+
         if(rebindDis){
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
@@ -1894,10 +1902,10 @@ function Component (el) {
 	 */
 	this.compTags = {};
 	/**
-	 * 用于指定属性的类型，如果类型不符会报错
+	 * 用于指定输入参数的限制
 	 * @type {Object}
 	 */
-	this.propTypes = null;
+	this.input = null;
 	/**
 	 * 组件名，在创建时由系统自动注入
 	 */
@@ -2304,7 +2312,6 @@ function updateComponent(comp,changes){
 
 	//rebuild VDOM tree
 	var vnode = buildVDOMTree(comp);
-	comp.onCompile && comp.onCompile(vnode);
 
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
@@ -2316,7 +2323,7 @@ function updateComponent(comp,changes){
 		if(!c.compiledTmp){
 			parseComponent(c);
 			if(!c.__url)
-				mountComponent(comp.children[i],comp.vnode);
+				mountComponent(c,comp.vnode);
 		}
 	}
 
@@ -2348,7 +2355,7 @@ function updateComponent(comp,changes){
 		comp.__syncOldVal[uid] = rs;
 	}
 
-	comp.onUpdate && comp.onUpdate();
+	comp.onUpdate && comp.onUpdate(changes);
 
 	callDirectiveUpdate(comp.vnode,comp);
 }
@@ -2358,6 +2365,7 @@ function updateComponent(comp,changes){
 function newComponent(tmpl,el,param){
 	var c = new Component(el);
 	c.template = tmpl;
+	c.name = 'ROOT';
 	if(param){
 		ext(param,c);
 
@@ -2440,28 +2448,31 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 function bindProps(comp,parent,parentAttrs){
 	//check props
 	var requires = {};
-	var propTypes = comp.propTypes;
-	if(propTypes){
-		for(var k in propTypes){
-			var type = propTypes[k];
-			if(type.require){
+	var input = comp.input;
+	if(input){
+		for(var k in input){
+			var arg = input[k];
+			if(arg.require){
 				requires[k] = type;
+			}
+			if(!isUndefined(arg.value) && isUndefined(comp.state[k])){
+				comp.state[k] = arg.value;
 			}
 		}
 	}
 
 	if(parentAttrs){
-		handleProps(parentAttrs,comp,parent,propTypes,requires);
+		handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
 	//check requires
 	var ks = Object.keys(requires);
 	if(ks.length > 0){
-		error("props ["+ks.join(',')+"] of component["+comp.name+"] are required");
+		error(comp.name,"input args ["+ks.join(',')+"] are required");
 		return;
 	}
 }
-function handleProps(parentAttrs,comp,parent,propTypes,requires){
+function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
 	for(var k in parentAttrs){
@@ -2507,13 +2518,13 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 		if(isObject(v) && v.__im__oid){
 			objs.push(k);
 		}
-		if(propTypes && k in propTypes){
+		if(input && k in input){
 			delete requires[k];
-			checkPropType(k,v,propTypes,comp);
+			checkPropType(k,v,input,comp);
 		}
 	}
 	if(objs.length>0){
-		warn("dynamic attribute '"+objs.join(',')+"' of component '"+comp.name+"' should be read only");
+		warn(comp.name,"dynamic attribute '"+objs.join(',')+"' should be read only");
 	}
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
@@ -2529,16 +2540,16 @@ function handleProps(parentAttrs,comp,parent,propTypes,requires){
 	}//end if	
 }
 
-function checkPropType(k,v,propTypes,component){
-	if(!propTypes[k] || !propTypes[k].type)return;
-	var checkType = propTypes[k].type;
+function checkPropType(k,v,input,component){
+	if(!input[k] || !input[k].type)return;
+	var checkType = input[k].type;
 	checkType = checkType instanceof Array?checkType:[checkType];
 	var vType = typeof v;
 	if(v instanceof Array){
 		vType = 'array';
 	}
 	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-		error("invalid type ["+vType+"] of prop ["+k+"] of component["+component.name+"];should be ["+checkType.join(',')+"]");
+		error(component.name,"invalid type ["+vType+"] of input arg ["+k+"];should be ["+checkType.join(',')+"]");
 	}
 }
 
@@ -2580,12 +2591,12 @@ function checkPropType(k,v,propTypes,component){
 	var COMP_CSS_MAP = {};
 	var SHOW_WARN = true;
 
-	function warn(msg){
-		console && console.warn('impex warn :: ' + msg);
+	function warn(compName,msg){
+		console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
 
-	function error(msg){
-		console && console.error('impex error :: ' + msg);
+	function error(compName,msg){
+		console && console.error('XERROR C[' + compName +'] - ' + msg);
 	}
 
 
@@ -2656,7 +2667,7 @@ function checkPropType(k,v,propTypes,component){
 		 */
 		this.component = function(name,param){
 			if(typeof(param)!='string' && !param.template){
-				error("can not find property 'template' of component '"+name+"'");
+				error(name,"can not find property 'template'");
 			}
 			COMP_MAP[name] = param;
 			return this;
@@ -2727,7 +2738,7 @@ function checkPropType(k,v,propTypes,component){
             	container = document.querySelector(container);
             }
             if(container.tagName === 'BODY'){
-            	error("container element must be inside <body> tag");
+            	error('ROOT',"container element must be inside <body> tag");
             	return;
             }
 
@@ -3007,7 +3018,7 @@ impex.filter('json',function(v){
 .filter('filterBy',function(v,key,inName){
     var ary = v;
     if(!isArray(ary)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     var rs = [];
@@ -3038,7 +3049,7 @@ impex.filter('json',function(v){
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
 .filter('limitBy',function(v,count,start){
     if(!isArray(v)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     if(!count)return v;
@@ -3049,7 +3060,7 @@ impex.filter('json',function(v){
 .filter('orderBy',function(v,key,dir){
     if(!key && !dir)return v;
     if(!isArray(v)){
-        warn('can only filter array');
+        console.warn('can only filter array');
         return v;
     }
     v.sort(function(a,b){

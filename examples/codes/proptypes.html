@@ -9,39 +9,35 @@
             组件参数可以设置类型和是否必须，如果不满足条件会报错
         </p>
         <div id="demo">
-            <x-comp .content="s"></x-comp>
+            传递参数：<x-input .value="s"></x-input>
+            默认参数：<x-input .type="12"></x-input>
         </div>
         
 
         按F12打开控制台，会看到error信息
         
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
-        <script type="text/javascript" src="../lib/impex/impex.ext.console.js"></script>
         <script type="text/javascript">
-            imLog.level = 3;
-            impex.config({
-                logger:imLog
-            });
-        
             //自定义组件
-            impex.component('x-comp',{
-                propTypes:{
-                    n:{
-                        type:'number',
+            impex.component('x-input',{
+                input:{
+                    type:{
+                        type:'string',
                         require:true
                     },
-                    content:{
-                        type:['boolean','number']
+                    value:{
+                        type:['boolean','string'],
+                        value:'111'
                     }
                 },
-                template:"<p style='border:1px solid red'>{{content}}</p>"
+                template:"<p style='border:1px solid red'>{{value}}</p>"
             });
 
             //渲染
             impex.render('#demo',{
                 state:{
                     n:123456,
-                    s:'string'
+                    s:'content string'
                 }
             });
             

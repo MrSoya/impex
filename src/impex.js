@@ -37,12 +37,12 @@
 	var COMP_CSS_MAP = {};
 	var SHOW_WARN = true;
 
-	function warn(msg){
-		console && console.warn('impex warn :: ' + msg);
+	function warn(compName,msg){
+		console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
 
-	function error(msg){
-		console && console.error('impex error :: ' + msg);
+	function error(compName,msg){
+		console && console.error('XERROR C[' + compName +'] - ' + msg);
 	}
 
 
@@ -113,7 +113,7 @@
 		 */
 		this.component = function(name,param){
 			if(typeof(param)!='string' && !param.template){
-				error("can not find property 'template' of component '"+name+"'");
+				error(name,"can not find property 'template'");
 			}
 			COMP_MAP[name] = param;
 			return this;
@@ -184,7 +184,7 @@
             	container = document.querySelector(container);
             }
             if(container.tagName === 'BODY'){
-            	error("container element must be inside <body> tag");
+            	error('ROOT',"container element must be inside <body> tag");
             	return;
             }
 

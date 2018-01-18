@@ -84,13 +84,13 @@ function createElement(comp,tag,props,directives,children,html,forScope){
     }
     if(html != null){
         //这里需要更新children
-        var pair = parseHTML(html);
-        var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
+        // var pair = parseHTML(html);
         var root;
         try{
+            var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
             root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
         }catch(e){
-            error('[x-html] compile error on '+e.message);
+            error(comp.name,'[x-html] compile error on '+e.message);
             return;
         }
         children = root.children || [];
@@ -257,7 +257,7 @@ function parseDirectFor(name,attrNode){
     var filters = attrNode.exp[1];
     if(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/)){
         //each语法错误
-        error('invalid each expression : '+forExpStr);
+        throw new Error('invalid each expression : '+forExpStr);
         return;
     }
     var alias = RegExp.$2;
@@ -361,7 +361,7 @@ function parseHTML(str){
                 if(c===' '||c==='\n'|| c==='\t' || c==='>'){
                     if(!strQueue)break;//<  div 这种场景，过滤前面的空格
                     if(strQueue.indexOf('<')>-1){
-                        error("unexpected identifier '<' in tagName '"+strQueue+"'");
+                        throw new Error("unexpected identifier '<' in tagName '"+strQueue+"'");
                         return;
                     }
 
@@ -759,23 +759,18 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var pair = null;
-    var roots = null;
-    try{
-        pair = parseHTML(str);
-        roots = pair[0];
-    }catch(e){
-        error("parse error in component '"+comp.name+"': "+e.message);
-        return;
-    }    
-    
+    var pair = parseHTML(str);
+    var roots = pair[0];
+        
     if(roots.length>1){
-        warn("the component '"+comp.name+"' should only have one root");
+        throw new Error("should only have one root");
     }
     var rs = roots[0];
     if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        error("parse error in component '"+comp.name+"': root element cannot be <template> or <slot>");
-        return;
+        throw new Error("root element cannot be <template> or <slot>");
+    }
+    if(COMP_MAP[rs.tag]){
+        throw new Error("root element <"+rs.tag+"> should be a non-component tag");
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
@@ -789,13 +784,12 @@ function compileVDOM(str,comp){
  * get vdom tree for component
  */
 function buildVDOMTree(comp){
-    var fn = compileVDOM(comp.compiledTmp,comp);
-
     var root = null;
     try{
+        var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error("compile error in component '"+comp.name+"': "+e.message);
+        error(comp.name,"compile error on "+e.message);
     }
     return root;
 }
@@ -819,7 +813,7 @@ function compareSame(newVNode,oldVNode,comp){
 
     if(newVNode.tag){
         var rebindDis = false;
-        //先比较指令列表
+        //compare dirs
         for(var i=newVNode._directives.length;i--;){
             var ndi = newVNode._directives[i];
             var odi = oldVNode._directives[i];
@@ -828,8 +822,20 @@ function compareSame(newVNode,oldVNode,comp){
                 break;
             }
         }
-        if(Object.keys(newVNode.attrNodes).length != Object.keys(oldVNode.attrNodes).length)
+        //compare attrs
+        var ks = Object.keys(newVNode.attrNodes);
+        if(ks.length != Object.keys(oldVNode.attrNodes).length){
             rebindDis = true;
+        }else{
+            for(var i=ks.length;i--;){
+                var k = ks[i];
+                if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
+                    rebindDis = true;
+                    break;
+                }
+            }
+        }        
+
         if(rebindDis){
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
