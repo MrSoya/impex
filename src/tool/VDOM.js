@@ -219,12 +219,12 @@ function isDirectiveVNode(attrName,comp){
         }
 
         switch(c){
-            case 'if':case 'for':case 'html':return c;
+            case 'if':case 'else':case 'for':case 'html':return c;
         }
 
         //如果有对应的处理器
         if(!DIRECT_MAP[c]){
-            warn("there is no handler of directive '"+c+"' ");
+            warn(comp.name,"there is no handler of directive '"+c+"' ");
             return;
         }
     }else if(attrName[0] === EV_AB_PRIFX){
@@ -485,7 +485,7 @@ function parseHTML(str){
                                 if(lastAttrNode.directive){
                                     var tmp = null;
                                     var dName = lastAttrNode.directive;
-                                    if(dName === 'for' || dName === 'if' || dName === 'html'){
+                                    if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
                                         if(tmp = parseDirectFor(dName,lastAttrNode)){
                                             lastNode.for = tmp;
                                         }
@@ -494,6 +494,9 @@ function parseHTML(str){
                                         }
                                         if(tmp = parseDirectHTML(dName,lastAttrNode)){
                                             lastNode.html = tmp;
+                                        }
+                                        if(dName === 'else'){
+                                            lastNode.else = true;
                                         }
                                         lastNode.attrNodes[lastAttrNode.name] = null;
                                         delete lastNode.attrNodes[lastAttrNode.name];
@@ -659,7 +662,7 @@ function buildVDOMStr(pm){
     var str = buildEvalStr(pm);
     return 'with(scope){return '+str+'}';
 }
-function buildEvalStr(pm){
+function buildEvalStr(pm,prevIfStr){
     var str = '';
     if(pm.type === 1){
         var children = '';
@@ -667,7 +670,8 @@ function buildEvalStr(pm){
             children = JSON.stringify([pm.children,pm.slotMap]);
         }else{
             for(var i=0;i<pm.children.length;i++){
-                children += ','+buildEvalStr(pm.children[i]);
+                var prevPm = pm.children[i-1];
+                children += ','+buildEvalStr(pm.children[i],prevPm?prevPm.if:null);
             }
             if(children.length>0)children = children.substr(1);
         }            
@@ -675,10 +679,14 @@ function buildEvalStr(pm){
         var attrStr = pair[0];
         var dirStr = pair[1];
         var ifStr = pm.if || 'true';
+        ifStr = '('+ifStr+')';
+        if(prevIfStr && pm.else){
+            ifStr = '!('+prevIfStr+')'
+        }
         var innerHTML = pm.html || 'null';
-        var nodeStr = '('+ifStr+')?_ce(this,"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
+        var nodeStr = ifStr+'?_ce(this,"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
         if(pm.tag == 'template'){
-            nodeStr = '('+ifStr+')?_tmp(['+children+']';
+            nodeStr = ifStr+'?_tmp(['+children+']';
         }
         if(pm.for){
             var k = (pm.for[0]||'').trim();

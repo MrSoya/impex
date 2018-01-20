@@ -20,9 +20,8 @@
     
         
         <div id="demo">
-            <code>x &gt; 4 <i x-if="a.x > 4" transition="test">true </i></code>
-            <br>
-            <code>x &lt; 4 <i x-if="a.x < 4" transition="test">true </i></code>
+            <i x-if="a.x > 4" transition="test">if </i>
+            <i x-else transition="test">else </i>
             <br>
             x:<input x-model="a.x" >
         </div>
