@@ -127,6 +127,17 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     }
 })
+/**
+ * 隐藏视图显示指令，用于屏蔽指定渲染模块
+ * <br/>使用方式：
+ * <style>
+ *     [x-cloak]{
+            display: none;
+        }
+ * </style>
+ * <div x-cloak></div>
+ */
+.directive('cloak',{})
 ///////////////////// 模型控制指令 /////////////////////
 /**
  * 绑定模型属性，当控件修改值后，模型值也会修改

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-1-21
+ * last build: 2018-02-02
  */
 !function (global) {
 	'use strict';
@@ -486,7 +486,6 @@ function createElement(comp,tag,props,directives,children,html,forScope){
     }
     if(html != null){
         //这里需要更新children
-        // var pair = parseHTML(html);
         var root;
         try{
             var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
@@ -626,7 +625,7 @@ function isDirectiveVNode(attrName,comp){
 
         //如果有对应的处理器
         if(!DIRECT_MAP[c]){
-            warn(comp.name,"there is no handler of directive '"+c+"' ");
+            warn(comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
             return;
         }
     }else if(attrName[0] === EV_AB_PRIFX){
@@ -1227,7 +1226,7 @@ function compareSame(newVNode,oldVNode,comp){
         for(var i=newVNode._directives.length;i--;){
             var ndi = newVNode._directives[i];
             var odi = oldVNode._directives[i];
-            if(ndi[2] !== odi[2]){
+            if(!odi || ndi[2] !== odi[2]){
                 rebindDis = true;
                 break;
             }
@@ -2916,6 +2915,17 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     }
 })
+/**
+ * 隐藏视图显示指令，用于屏蔽指定渲染模块
+ * <br/>使用方式：
+ * <style>
+ *     [x-cloak]{
+            display: none;
+        }
+ * </style>
+ * <div x-cloak></div>
+ */
+.directive('cloak',{})
 ///////////////////// 模型控制指令 /////////////////////
 /**
  * 绑定模型属性，当控件修改值后，模型值也会修改
