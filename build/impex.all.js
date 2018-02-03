@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-02-02
+ * last build: 2018-2-3
  */
 !function (global) {
 	'use strict';
@@ -2095,7 +2095,11 @@ function buildOffscreenDOM(vnode,comp){
 	return n;
 }
 function filterEntity(str){
-	return str.replace?str.replace(/&lt;/img,'<').replace(/&gt;/img,'>'):str;
+	return str.replace?str
+	.replace(/&lt;/img,'<')
+	.replace(/&gt;/img,'>')
+	.replace(/&nbsp;/img,'\u00a0')
+	.replace(/&amp;/img,'&'):str;
 }
 
 function callDirectiveUpdate(vnode,comp){

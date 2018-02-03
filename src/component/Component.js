@@ -227,7 +227,11 @@ function buildOffscreenDOM(vnode,comp){
 	return n;
 }
 function filterEntity(str){
-	return str.replace?str.replace(/&lt;/img,'<').replace(/&gt;/img,'>'):str;
+	return str.replace?str
+	.replace(/&lt;/img,'<')
+	.replace(/&gt;/img,'>')
+	.replace(/&nbsp;/img,'\u00a0')
+	.replace(/&amp;/img,'&'):str;
 }
 
 function callDirectiveUpdate(vnode,comp){
