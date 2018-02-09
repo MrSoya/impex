@@ -68,11 +68,10 @@ VNode.prototype = {
 /**
  * funcs for build VNode
  */
-function createElement(comp,tag,props,directives,children,html,forScope){
+function createElement(comp,tag,props,directives,children,html,forScopeAry){
     var rs = new VNode(tag,props,directives);
-    var fsq = null;
-    if(forScope)
-        fsq = rs._forScopeQ = [forScope];
+    if(forScopeAry.length>0)
+        rs._forScopeQ = forScopeAry;
     if (COMP_MAP[tag] || tag == 'component') {
         rs._comp = true;
         var slotData = children[0];
@@ -83,15 +82,31 @@ function createElement(comp,tag,props,directives,children,html,forScope){
         return rs;
     }
     if(html != null){
-        //这里需要更新children
-        var root;
+        var forScopeStart = '',forScopeEnd = '';
+        var root,str;
+        var args = [comp,createElement,createTemplate,createText,createElementList,doFilter];
+        //build for scope
+        var scopeAry = [];
+        var argCount = args.length;
+        if(rs._forScopeQ)
+            for(var i=0;i<rs._forScopeQ.length;i++){
+                var tmp = 'forScope'+FORSCOPE_COUNT++;
+                forScopeStart += 'with('+tmp+'){';
+                forScopeEnd += '}';
+                args.push(rs._forScopeQ[i]);
+                scopeAry.push(tmp);
+            }
         try{
-            var fn = compileVDOM('<'+tag+'>'+html+'</'+tag+'>',comp);
-            root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+            str = compileVDOMStr('<'+type+'>'+html+'</'+type+'>',comp,scopeAry);
         }catch(e){
             error(comp.name,'[x-html] compile error on '+e.message);
             return;
         }
+
+        var argStr = scopeAry.length>0?','+scopeAry.toString():'';
+        
+        var fn = new Function('scope,_ce,_tmp,_ct,_li,_fi'+argStr,'with(scope){'+forScopeStart+'return '+str+';'+forScopeEnd+'}');
+        root = fn.apply(comp,args);
         children = root.children || [];
     }
     
@@ -103,26 +118,10 @@ function createElement(comp,tag,props,directives,children,html,forScope){
                     node.forEach(function(c){
                         c.parent = rs;
                         rs.children.push(c);
-                        if(fsq){
-                            var cfsq = c._forScopeQ;
-                            if(cfsq){
-                                c._forScopeQ = fsq.concat(cfsq);
-                            }else{
-                                c._forScopeQ = fsq;
-                            }
-                        }
                     });
                 }else{
                     node.parent = rs;
                     rs.children.push(node);
-                    if(fsq){
-                        var cfsq = node._forScopeQ;
-                        if(cfsq){
-                            node._forScopeQ = fsq.concat(cfsq);
-                        }else{
-                            node._forScopeQ = fsq;
-                        }
-                    }
                 }//end if
             }//end if
         });
@@ -202,7 +201,7 @@ function doFilter(v,filters){
 }
 var VDOM_CACHE = [];
 //解析属性名，如果是指令，返回指令name,参数
-function isDirectiveVNode(attrName,comp){
+function isDirectiveVNode(attrName,comp,isCompNode){
     var rs = null;
     var params = null;
     var filter = null;
@@ -229,7 +228,7 @@ function isDirectiveVNode(attrName,comp){
     }else if(attrName[0] === EV_AB_PRIFX){
         rs = 'on';
         params = attrName.substr(1);
-    }else if(attrName[0] === BIND_AB_PRIFX && !comp){
+    }else if(attrName[0] === BIND_AB_PRIFX && !isCompNode){/* 区分指令参数和bind */
         rs = 'bind';
         params = attrName.substr(1);
     }
@@ -446,7 +445,7 @@ function parseHTML(str){
                     if(c === '=' || noValueAttr){
                         //创建VAttrNode
                         var aName = strQueue.trim();
-                        lastAttrNode = new pNodeAttr(aName,isDirectiveVNode(aName,compNode));
+                        lastAttrNode = new pNodeAttr(aName,isDirectiveVNode(aName,lastNode,compNode == lastNode));
                         lastNode.attrNodes[aName] = lastAttrNode;
 
                         strQueue = '';
@@ -658,19 +657,27 @@ function parseHTML(str){
     return [roots,slotList];
 }
 function buildVDOMStr(pm){
-    var str = buildEvalStr(pm);
+    var str = buildEvalStr(pm,null,[]);
     return 'with(scope){return '+str+'}';
 }
-function buildEvalStr(pm,prevIfStr){
+var FORSCOPE_COUNT = 0;
+function buildEvalStr(pm,prevIfStr,forScopeAry){
     var str = '';
     if(pm.type === 1){
+        var forScopeStr,forScopeChainStr;
+        if(pm.for){
+            forScopeStr = 'forScope'+FORSCOPE_COUNT++;
+            forScopeAry = forScopeAry.concat(forScopeStr);
+        }
+        forScopeChainStr = '['+forScopeAry.toString()+']';
+
         var children = '';
         if(COMP_MAP[pm.tag]){
             children = JSON.stringify([pm.children,pm.slotMap]);
         }else{
             for(var i=0;i<pm.children.length;i++){
                 var prevPm = pm.children[i-1];
-                children += ','+buildEvalStr(pm.children[i],prevPm?prevPm.if:null);
+                children += ','+buildEvalStr(pm.children[i],prevPm?prevPm.if:null,forScopeAry);
             }
             if(children.length>0)children = children.substr(1);
         }            
@@ -708,9 +715,9 @@ function buildEvalStr(pm,prevIfStr){
             if(filter){
                 dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+")";
             }
-            str += '_li('+dsStr+',function(forScope){ with(forScope){return '+nodeStr+',forScope):null}},this,"'+k+'","'+v+'")';
+            str += '_li('+dsStr+',function('+forScopeStr+'){ with('+forScopeStr+'){return '+nodeStr+','+forScopeChainStr+'):null}},this,"'+k+'","'+v+'")';
         }else{
-            str += nodeStr+'):null';
+            str += nodeStr+','+forScopeChainStr+'):null';
         }
     }else{
         var tmp = buildTxtStr(pm.txtQ);
@@ -766,6 +773,12 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
+    var rs = 'with(scope){return '+compileVDOMStr(str,comp,[])+'}';
+    rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
+    VDOM_CACHE[str] = rs;
+    return rs;
+}
+function compileVDOMStr(str,comp,forScopeAry){
     var pair = parseHTML(str);
     var roots = pair[0];
         
@@ -782,10 +795,8 @@ function compileVDOM(str,comp){
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
 
-    rs = buildVDOMStr(rs);
-    rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
-    VDOM_CACHE[str] = rs;
-    return rs;
+    var str = buildEvalStr(rs,null,forScopeAry);
+    return str;
 }
 /**
  * get vdom tree for component

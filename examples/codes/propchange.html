@@ -11,10 +11,11 @@
                 <b>放开代码中的注释，尝试编写一个手动更新</b>
             </p>
 
-            <x-comp .content="msg">
+            <x-comp .content="msg" .xx="obj">
+                <input .value="xx.id">
             </x-comp>
-
             修改组件参数:<input type="text" x-model="msg">
+            <input type="text" x-model="obj.id">
         </div>
         
 
@@ -24,21 +25,26 @@
             //自定义组件
             impex.component('x-comp',{
                 state:{
-                    auto:true
+                    auto:true,
+                    content:'',
+                    xx:{}
                 },
-                // onPropChange:function(changes) {
-                //     if(true)this.state[changes[0].name] = changes[0].val;
-                     
-                // },
-                template:'<p style="border:1px solid red">{{content}}</p>'
+                onPropChange:function(newProps,oldProps) {
+                    console.log(newProps)  
+                    this.state.content = newProps.content;
+                    this.state.xx = JSON.parse(JSON.stringify(newProps.xx));
+                },
+                template:'<p style="border:1px solid red">{{content}}<slot></slot></p>'
             });
 
             //渲染
             impex.render('#demo',{
                 state:{
+                    obj:{x:111111},
                     msg:'这是参数'
                 }
             });
+            //slot插入的input 没有指令？
             
         </script>
     </body>
