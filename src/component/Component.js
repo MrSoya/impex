@@ -194,6 +194,7 @@ function buildOffscreenDOM(vnode,comp){
 					var params = di[1][1];
 					var v = di[2];
 					var exp = di[3];
+
 					d.onBind && d.onBind(vnode,{comp:comp,value:v,args:params,exp:exp});
 				});
 			}
@@ -234,7 +235,7 @@ function filterEntity(str){
 	.replace(/&amp;/img,'&'):str;
 }
 
-function callDirectiveUpdate(vnode,comp){
+function callDirective(vnode,comp,type){
 	if(isUndefined(vnode.txt)){
 		if(!vnode._comp){//component dosen't exec directive
 			//directive init
@@ -248,13 +249,23 @@ function callDirectiveUpdate(vnode,comp){
 					var params = di[1][1];
 					var v = di[2];
 					var exp = di[3];
-					d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+					
+					if(type == 0){
+						//last v
+						DIRECT_EXP_VALUE_MAP[dName+'.'+exp] = v;
+						d.onActive && d.onActive(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+					}else{
+						if(DIRECT_EXP_VALUE_MAP[dName+'.'+exp] != v){
+							d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+							DIRECT_EXP_VALUE_MAP[dName+'.'+exp] = v;
+						}
+					}
 				});
 			}
 
 			if(vnode.children && vnode.children.length>0){
 				for(var i=0;i<vnode.children.length;i++){
-					callDirectiveUpdate(vnode.children[i],comp);
+					callDirective(vnode.children[i],comp,type);
 				}
 			}//end if
 		}//end if
@@ -440,7 +451,7 @@ function mountComponent(comp,parentVNode){
 
 	comp.vnode.parent = parentVNode;
 
-	callDirectiveUpdate(comp.vnode,comp);
+	callDirective(comp.vnode,comp,0);
 }
 
 //////	update flow
@@ -500,7 +511,7 @@ function updateComponent(comp,changes){
 
 	comp.onUpdate && comp.onUpdate(changes);
 
-	callDirectiveUpdate(comp.vnode,comp);
+	callDirective(comp.vnode,comp);
 }
 
 

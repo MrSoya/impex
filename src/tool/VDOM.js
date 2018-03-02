@@ -807,7 +807,7 @@ function buildVDOMTree(comp){
         var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error(comp.name,"compile error on "+e.message);
+        error(comp.name,"compile error -> "+e.message);
     }
     return root;
 }
@@ -840,19 +840,21 @@ function compareSame(newVNode,oldVNode,comp){
                 break;
             }
         }
-        //compare attrs
-        var ks = Object.keys(newVNode.attrNodes);
-        if(ks.length != Object.keys(oldVNode.attrNodes).length){
-            rebindDis = true;
-        }else{
-            for(var i=ks.length;i--;){
-                var k = ks[i];
-                if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
-                    rebindDis = true;
-                    break;
+        if(!rebindDis){
+            //compare attrs
+            var ks = Object.keys(newVNode.attrNodes);
+            if(ks.length != Object.keys(oldVNode.attrNodes).length){
+                rebindDis = true;
+            }else{
+                for(var i=ks.length;i--;){
+                    var k = ks[i];
+                    if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
+                        rebindDis = true;
+                        break;
+                    }
                 }
             }
-        }        
+        }             
 
         if(rebindDis){
             newVNode._directives.forEach(function(di){
@@ -1091,14 +1093,22 @@ function updateAttr(nv,ov){
     var nvasKs = Object.keys(nvas);
     var ovasKs = Object.keys(ovas);
     var odom = ov.dom;
+    var isInputNode = ov.tag === 'input'; 
     for(var i=nvasKs.length;i--;){
         var k = nvasKs[i];
         var index = ovasKs.indexOf(k);
         if(index<0){
             odom.setAttribute(k,nvas[k]);
+            if(isInputNode && k === 'value'){
+                odom.value = nvas[k];
+            }
         }else{
-            if(nvas[k] != ovas[k])
+            if(nvas[k] != ovas[k]){
                 odom.setAttribute(k,nvas[k]);
+                if(isInputNode && k === 'value'){
+                    odom.value = nvas[k];
+                }
+            }
             ovasKs.splice(index,1);
         }
     }
