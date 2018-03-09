@@ -49,10 +49,10 @@ VNode.prototype = {
             var forScopeStart = '',forScopeEnd = '';
             if(this._forScopeQ)
                 for(var i=0;i<this._forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(3+i)+']){';
+                    forScopeStart += 'with(arguments['+(5/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
-            evMap[this.vid] = [this,new Function('scope,$event,$vnode','with(scope){'+forScopeStart+exp+forScopeEnd+'}'),this._cid];
+            evMap[this.vid] = [this,new Function('$global,comp,state,$event,$vnode','with($global){with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}}'),this._cid];
         }
     },
     setAttribute:function(k,v){
@@ -84,7 +84,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
     if(html != null){
         var forScopeStart = '',forScopeEnd = '';
         var root,str;
-        var args = [comp,createElement,createTemplate,createText,createElementList,doFilter];
+        var args = [impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
         //build for scope
         var scopeAry = [];
         var argCount = args.length;
@@ -105,7 +105,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
 
         var argStr = scopeAry.length>0?','+scopeAry.toString():'';
         
-        var fn = new Function('scope,_ce,_tmp,_ct,_li,_fi'+argStr,'with(scope){'+forScopeStart+'return '+str+';'+forScopeEnd+'}');
+        var fn = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with($global){with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}}');
         root = fn.apply(comp,args);
         children = root.children || [];
     }
@@ -286,375 +286,169 @@ function replaceGtLt(str){
 
 //https://www.w3.org/TR/html5/syntax.html#void-elements
 var VOIDELS = ['br','hr','img','input','link','meta','area','base','col','embed','keygen','param','source','track','wbr'];
+// var TAG_START_EXP = /^<([-a-z0-9]+)((?:\s+[a-zA-Z_:.][-a-zA-Z0-9_:.]*(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(?:\/?)>/im;
+var TAG_START_EXP = /<([-a-z0-9]+)((?:\s+[-a-zA-Z0-9_:.]+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')))?)*)\s*(?:\/?)>/im;
+var TAG_ATTR_EXP = /[a-zA-Z_:.][-a-zA-Z0-9_:.]*(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?/img;
+var TAG_END_EXP = /<\/([-a-z0-9]+)>/im;
+var TAG_END_EXP_G = /<\/([-a-z0-9]+)>/img;
+
 function parseHTML(str){
-    var op = null;
-    var strQueue = '';
-    var lastNode = null;
-    var lastAttrNode = null;
-    var delimiter = null;
-    var escape = false;
+    var startNodeData = null;
+    var endNodeData;
+    var stack = [];
     var roots = [];
-    var nodeStack = [];
-    var startTagLen = EXP_START_TAG.length;
-    var endTagLen = EXP_END_TAG.length;
-    var inExp = false;//在表达式内部
-    var delimiterInExp = null;
-    var escapeInExp = null;
-    var expStartPoint = 0;
-    var expEndPoint = 0;
-    var filterStartTagLen = FILTER_EXP_START_TAG.length;
-    var filterStartEntityLen = FILTER_EXP_START_TAG_ENTITY.length;
-    var filterStartPoint = 0;
-    var lastFilter = '';
-    var lastOp = null;
-    var lastFilterList = [];
-    var lastFilterParam = '';
-    var lastFilterParamList = [];
-    var textQ = [];
-    var compNode;
-    var slotNode;
     var slotList = [];
-
-    for(var i=0;i<=str.length;i++){
-        var c = str[i];
-
-        if(!op && c==='<'){//开始解析新节点
-            op = 'n';
-            continue;
-        }else if(!op){
-            op = 't';
+    while(str.length>0){
+        if(!startNodeData){
+            startNodeData = TAG_START_EXP.exec(str);
+            var index = startNodeData.index + startNodeData[0].length;
+            str = str.substr(index);
         }
-
-        if(op==='a' || op==='t' || op==='efp'){
-            if(strQueue.length>=startTagLen && !inExp){
-                var expStart = strQueue.substr(strQueue.length-startTagLen);
-                if(expStart == EXP_START_TAG){
-                    var sp = expEndPoint===0?expEndPoint:expEndPoint+endTagLen;
-                    textQ.push(strQueue.substr(sp).replace(EXP_START_TAG,''));
-                    inExp = true;
-                    expStartPoint = strQueue.length;
-                    if(op==='a'){
-                        var n = lastAttrNode.name;
-                        throw new Error("to bind a dynamic attribute '"+n+"' using x-bind:"+n+" / ."+n+", instead of expressions");
-                        return;
-                    }
-                }
-            }
-            escape = false;
-            if(c === '\\'){
-                escape = true;
-            }
-            if(inExp && (c === '\'' || c === '"')){
-                if(!delimiterInExp)delimiterInExp = c;
-                else{
-                    if(c === delimiterInExp && !escape){
-                        delimiterInExp = null;
-                    }
-                }
-            }
+        //build pNode
+        var tagName = startNodeData[1];
+        var node = new pNode(1,tagName);
+        var parentNode = stack[stack.length-1];
+        if(parentNode){
+            parentNode.children.push(node);
+        }else{
+            roots.push(node);
         }
+        var attrStr = startNodeData[2].trim();
+        var attrAry = attrStr.match(TAG_ATTR_EXP);
+        if(attrAry)parseHTML_attrs(attrAry,node);
 
-        switch(op){
-            case 'n':
-                if(c===' '||c==='\n'|| c==='\t' || c==='>'){
-                    if(!strQueue)break;//<  div 这种场景，过滤前面的空格
-                    if(strQueue.indexOf('<')>-1){
-                        throw new Error("unexpected identifier '<' in tagName '"+strQueue+"'");
-                        return;
-                    }
+        if(VOIDELS.indexOf(tagName)<0)stack.push(node);
 
-                    //创建VNode
-                    var node = new pNode(1,strQueue);
-                    lastNode = nodeStack[nodeStack.length-1];
-                    //handle slot
-                    if(COMP_MAP[strQueue]){
-                        compNode = node;
-                    }
-                    if(strQueue === SLOT){
-                        slotNode = [lastNode,node];
-                        slotList.push(slotNode);
-                    }
+        //check
+        var nextNodeData = TAG_START_EXP.exec(str);
+        if(nextNodeData){
+            startNodeData = nextNodeData;
+        }
+        endNodeData = TAG_END_EXP.exec(str);
+        var endIndex = endNodeData?endNodeData.index:-1;
+        var nextIndex = nextNodeData?nextNodeData.index:-1;
+        parentNode = stack[stack.length-1];
+        if(nextIndex>-1 && nextIndex < endIndex){
+            parseHTML_txt(str.substr(0,nextIndex),parentNode);
 
-                    if(lastNode){
-                        lastNode.children.push(node);
-                    }
-                    if(VOIDELS.indexOf(strQueue)>-1){
-                        node.isVoid = true;
-                    }
-                    if(nodeStack.length<1){
-                        roots.push(node);
-                    }
-                    lastNode = node;
-                    if(!node.isVoid)
-                        nodeStack.push(lastNode);
+            str = str.substr(nextIndex + nextNodeData[0].length);
+        }else{
+            parseHTML_txt(str.substr(0,endIndex),parentNode);
 
-                    
-
-                    if(c==='>'){
-                        if(node.isVoid){
-                            lastNode = nodeStack[nodeStack.length-1];
-                        }
-                        op = 't';
-                    }else{
-                        op = 'a';
-                    }
-                    
-                    strQueue = '';
-                    break;
-                }
-                if(c === '\/'){//终结节点，这里要判断是否和当前解析的元素节点相同
-                    //如果不做非法语法验证，只需要跳过即可
-                    op = 'e';
-                    break;
-                }
-                strQueue += c;break;
-            case 'e':
-                if(c===' '|| c==='\t')break;
-                if(c === '>'){
-                    nodeStack.pop();
-                    lastNode = nodeStack[nodeStack.length-1];
-
-                    if(compNode && compNode.tag === strQueue){
-                        compNode = null;
-                    }
-                    if(strQueue === SLOT){
-                        slotNode = null;
-                    }
-                    
-                    op = 't';
-                    strQueue = '';
-                    break;
-                }
-                strQueue += c;break;
-            case 'a':
-                if(!delimiter && strQueue.length<1 && (c === ' '|| c==='\t'))break;
-                if(!delimiter && c === '>'){//结束节点解析
-                    //check component or directive
-                    // if(ComponentFactory.hasTypeOf(lastNode.tag)){
-                    //     node.comp = lastNode.tag;
-                    // }
-
-                    if(lastNode.isVoid){
-                        lastNode = nodeStack[nodeStack.length-1];
-                    }
-                    op = 't';
-                    break;
-                }
-                if(!lastAttrNode){//解析属性名
-                    var noValueAttr = strQueue.length>0 && (c === ' '|| c==='\t');
-                    if(c === '=' || noValueAttr){
-                        //创建VAttrNode
-                        var aName = strQueue.trim();
-                        lastAttrNode = new pNodeAttr(aName,isDirectiveVNode(aName,lastNode,compNode == lastNode));
-                        lastNode.attrNodes[aName] = lastAttrNode;
-
-                        strQueue = '';
-
-                        if(noValueAttr){
-                            lastAttrNode = null;
-                        }
-                        break;
-                    }
-                    strQueue += c;break;
-                }else{
-                    if(c === '\'' || c === '"'){
-                        if(!delimiter){
-                            delimiter = c;
-
-                            if(lastAttrNode.directive){
-                                //进入表达式解析
-                                inExp = true;
-                                expStartPoint = 0;
-                            }
-
-                            break;
-                        }else{
-                            if(c === delimiter && !escape){
-                                lastAttrNode.value = strQueue;
-                                if(lastAttrNode.name === SLOT){
-                                    compNode.slotMap[strQueue] = lastNode;
-                                }
-
-                                if(slotNode && lastAttrNode.name === 'name'){
-                                    slotNode.push(strQueue);
-                                }
-
-                                //parse for
-                                if(lastAttrNode.directive){
-                                    var tmp = null;
-                                    var dName = lastAttrNode.directive;
-                                    if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
-                                        if(tmp = parseDirectFor(dName,lastAttrNode)){
-                                            lastNode.for = tmp;
-                                        }
-                                        if(tmp = parseDirectIf(dName,lastAttrNode)){
-                                            lastNode.if = tmp;
-                                        }
-                                        if(tmp = parseDirectHTML(dName,lastAttrNode)){
-                                            lastNode.html = tmp;
-                                        }
-                                        if(dName === 'else'){
-                                            lastNode.else = true;
-                                        }
-                                        lastNode.attrNodes[lastAttrNode.name] = null;
-                                        delete lastNode.attrNodes[lastAttrNode.name];
-                                    }
-                                }
-
-                                lastAttrNode = null;
-                                delimiter = null;
-                                strQueue = '';
-                                break;
-                            }
+            var lastEndIndex = endIndex + endNodeData[0].length;
+            TAG_END_EXP_G.lastIndex = 0;
+            TAG_END_EXP_G.exec(str);
+            do{
+                stack.pop();
+                if(stack.length<1)break;
+                endNodeData = TAG_END_EXP_G.exec(str);
+                endIndex = endNodeData.index;
+                var txt = str.substring(lastEndIndex,endNodeData.index);
+                if(txt.trim()){
+                    if(endIndex>nextIndex){
+                        var tmp = TAG_START_EXP.exec(txt);
+                        if(tmp){
+                            txt = txt.substr(0,tmp.index).trim();
                         }
                     }
-                    strQueue += c;break;
+                    if(txt.trim()){
+                        node = stack[stack.length-1];
+                        parseHTML_txt(txt,node);
+                    }                    
                 }
-                break;
-            case 't':
-                if(!inExp && (c === '<' || !c)){
-                    var tmp = strQueue.replace(/^\s*|\s*$/,'');
-                    if(tmp){
-                        var txt = strQueue;
-                        if(textQ.length>0)txt = txt.substr(expEndPoint+endTagLen,strQueue.length-startTagLen);
-                        if(txt){
-                            textQ.push(txt);
-                        }
-                        var tn = new pNode(3,null,textQ);
-                        textQ = [];
-                        if(lastNode){
-                            lastNode.children.push(tn);
-                        }
-                        expEndPoint = 0;
-                    }
-                    op = 'n';
-                    strQueue = '';
-                    break;
-                }
-                strQueue += c;
-                break;
-            case 'ef':
-                if(c === ' '|| c==='\t')break;
-                var append = true;
-                if(c===FILTER_EXP_PARAM_SPLITTER){
-                    // => xxx:
-                    // => xxx:yy: 
-                    // 这里只会出现第一种情况，第二种需要在efp中处理
-                    lastFilter = {name:lastFilter,param:[]};
-                    lastFilterList.push(lastFilter);
-                    // lastFilter = '';
-                    op='efp';
-                    append = false;
-                }else if(c===FILTER_EXP_SPLITTER){
-                    // => xxx |
-                    // => xxx:yy |
-                    // 这里只会出现第一种情况，第二种需要在efp中处理
-                    lastFilter = {name:lastFilter,param:[]};
-                    lastFilterList.push(lastFilter);
-                    lastFilter = '';
-                    append = false;
-                }
-                
-                strQueue += c;
-                if(append)lastFilter += c;
-                break;
-            case 'efp':
-                var append = true;
-                if(!delimiterInExp){
-                    if(c === ' '|| c==='\t')break;
-                    if(lastFilter && (c===FILTER_EXP_PARAM_SPLITTER ||c===FILTER_EXP_SPLITTER)){
-                        lastFilter.param.push(lastFilterParam);
-                        lastFilterParam = '';
-                        append = false;
-                        if(c===FILTER_EXP_SPLITTER){
-                            op = 'ef';
-                            lastFilter = '';
-                        }
-                    }
-                }
-
-                if(append)lastFilterParam += c;
-                strQueue += c;
-        }//end switch
-
-        if((op==='a' || op==='t' || op==='ef' || op==='efp') && inExp){
-            var filterStart = strQueue.substr(strQueue.length-filterStartTagLen);
-            var filterEntityStart = strQueue.substr(strQueue.length-filterStartEntityLen);
-            if((filterStart===FILTER_EXP_START_TAG || filterEntityStart===FILTER_EXP_START_TAG_ENTITY) 
-                && op!=='ef' && !delimiterInExp){
-                // inFilter = true;
-                lastOp = op;
-                op = 'ef';
-                if(filterStart===FILTER_EXP_START_TAG){
-                    filterStartPoint = strQueue.length - filterStartTagLen;
-                }else{
-                    filterStartPoint = strQueue.length - filterStartEntityLen;
-                }
-                
-            }else if(inExp){
-                var expEnd = strQueue.substr(strQueue.length-endTagLen);
-                var doEnd = expEnd===EXP_END_TAG;//大括号表达式结束
-                var isDi = false;
-                //对于指令表达式结束
-                if(lastAttrNode && lastAttrNode.directive && delimiter 
-                    && (!delimiterInExp && !escape) 
-                    && str[i+1]==delimiter){
-                    isDi = doEnd = true;
-                }
-                if(doEnd){
-                    switch(op){
-                        case 't':
-                            if(delimiterInExp)continue;
-                            break;
-                        case 'ef':
-                            if(lastFilter){
-                                var tmp = new RegExp(EXP_END_TAG+'$');
-                                lastFilter = lastFilter.replace(tmp,'');
-                                lastFilter = {name:lastFilter,param:[]};
-                                lastFilterList.push(lastFilter);
-                            }
-                            break;
-                        case 'efp':
-                            if(lastFilterParam){
-                                var tmp = new RegExp(EXP_END_TAG+'$');
-                                lastFilterParam = lastFilterParam.replace(tmp,'');                            
-
-                                lastFilter.param.push(lastFilterParam);
-                            }
-                            break;
-                    }
-                    inExp = false;
-                    var withoutFilterStr = strQueue.substring(expStartPoint,filterStartPoint||(strQueue.length-endTagLen));
-                    expEndPoint = strQueue.length-endTagLen;
-                    
-                    if(isDi){
-                        withoutFilterStr = strQueue.substring(0,filterStartPoint||strQueue.length);
-                    }
-                    
-                    filterStartPoint = 0;
-                    if(lastOp==='t' || op==='t'){
-                        textQ.push(['('+replaceGtLt(withoutFilterStr)+')',lastFilterList]);
-                    }else if(lastOp==='a' || op==='a'){
-                        lastAttrNode.exp = [withoutFilterStr,lastFilterList];
-                        expEndPoint = 0;
-                    }
-                    
-                    
-                    lastFilter = '';
-                    lastFilterList = [];
-                    if(lastOp){
-                        lastFilter = '';
-                        lastFilterParam = '';
-                        op = lastOp;
-                        lastOp = null;
-                    }
-                }
-            }
+                lastEndIndex = endIndex + endNodeData[0].length;
+            }while(endIndex < nextIndex);
             
-        }//end if
-    }// end for
+            if(!nextNodeData)break;
+
+            str = str.substr(nextIndex + nextNodeData[0].length);
+        }
+    }
 
     return [roots,slotList];
+}
+function parseHTML_attrs(attrs,node){
+    for(var i=attrs.length;i--;){
+        var attrStr = attrs[i];
+        var splitIndex = attrStr.indexOf('=');
+        var value=null,aName;
+        if(splitIndex<0){
+            aName = attrStr;
+        }else{
+            aName = attrStr.substring(0,splitIndex);
+            value = attrStr.substring(splitIndex+2,attrStr.length-1);
+        }
+        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node));
+        node.attrNodes[aName] = attrNode;
+        attrNode.value = value;
+        if(attrNode.directive){
+            //handle filter
+            var splitIndex = value.indexOf('=>');
+            var expStr,filterStr;
+            if(splitIndex<0){
+                expStr = value;
+            }else{
+                expStr = value.substring(0,splitIndex);
+                filterStr = value.substring(splitIndex+2,value.length);
+            }
+            attrNode.exp = parseHTML_exp(expStr,filterStr);
+            var tmp = null;
+            var dName = attrNode.directive;
+            if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
+                if(tmp = parseDirectFor(dName,attrNode)){
+                    node.for = tmp;
+                }
+                if(tmp = parseDirectIf(dName,attrNode)){
+                    node.if = tmp;
+                }
+                if(tmp = parseDirectHTML(dName,attrNode)){
+                    node.html = tmp;
+                }
+                if(dName === 'else'){
+                    node.else = true;
+                }
+                node.attrNodes[attrNode.name] = null;
+                delete node.attrNodes[attrNode.name];
+            }
+        }
+    }
+}
+function parseHTML_txt(txt,node){
+    txt = txt.trim();
+    var txtQ = [];
+    if(txt){
+        var expData = null;
+        var lastIndex = 0;
+        while(expData = EXP_EXP.exec(txt)){
+            var t = txt.substring(lastIndex,expData.index);
+            if(t)txtQ.push(t);
+            txtQ.push(parseHTML_exp(expData[1],expData[2]));
+            lastIndex = expData.index + expData[0].length;
+        }
+        if(lastIndex < txt.length){
+
+        }
+        if(txtQ.length<1)txtQ.push(txt);
+        var tn = new pNode(3,null,txtQ);
+        node.children.push(tn);
+    }
+}
+function parseHTML_exp(expStr,filterStr){
+    var rs = [];
+    rs[0] = expStr.trim();
+    var filterAry = [];
+    if(filterStr){
+        var filters = filterStr.split('|');
+        for(var i=0;i<filters.length;i++){
+            var parts = filters[i].split(':');
+            filterAry.push({
+                name:parts[0].trim(),
+                param:parts.slice(1)
+            });
+        }
+    }
+    rs[1] = filterAry;
+    return rs;
 }
 function buildVDOMStr(pm){
     var str = buildEvalStr(pm,null,[]);
@@ -702,14 +496,6 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
             var ds2 = pm.for[4];
             var dsStr = ds1;
             if(ds2){
-                ds1 = ds1.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
-                    if(a.indexOf('this')===0)return a;
-                    return 'this.'+a;
-                });
-                ds2 = ds2.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
-                    if(a.indexOf('this')===0)return a;
-                    return 'this.'+a;
-                });
                 dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
             }
             if(filter){
@@ -732,10 +518,7 @@ function buildAttrs(map){
     for(var k in map){
         var attr = map[k];
         if(attr.directive){
-            var exp = attr.value.replace(/(this[.a-z_$0-9]+)?[_$a-z][_$a-z0-9]*\(/img,function(a){
-                if(a.indexOf('this')===0)return a;
-                return 'this.'+a;
-            });
+            var exp = attr.value;
             dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(attr.directive[0] === 'on'?JSON.stringify(exp):exp)+","+JSON.stringify(exp)+"]";
         }else{
             rs[k] = attr.value;
@@ -773,13 +556,15 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var rs = 'with(scope){return '+compileVDOMStr(str,comp,[])+'}';
-    rs = new Function('scope,_ce,_tmp,_ct,_li,_fi',rs);
+    var rs = 'with($global){with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}}';
+    rs = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi',rs);
     VDOM_CACHE[str] = rs;
     return rs;
 }
 function compileVDOMStr(str,comp,forScopeAry){
+    var s = Date.now();
     var pair = parseHTML(str);
+    console.log('parse time',Date.now()-s)
     var roots = pair[0];
         
     if(roots.length>1){
@@ -794,8 +579,9 @@ function compileVDOMStr(str,comp,forScopeAry){
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
-
+    var s = Date.now();
     var str = buildEvalStr(rs,null,forScopeAry);
+    console.log('build time',Date.now()-s)
     return str;
 }
 /**
@@ -805,7 +591,7 @@ function buildVDOMTree(comp){
     var root = null;
     try{
         var fn = compileVDOM(comp.compiledTmp,comp);
-        root = fn.call(comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+        root = fn.call(comp,impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
         error(comp.name,"compile error -> "+e.message);
     }

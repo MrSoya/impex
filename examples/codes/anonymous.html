@@ -23,8 +23,8 @@ impex.render(document.body,{
 </pre>
     <div id="demo"></div>
     <script type="text/tmpl" id="tmpl">
-        <div x="10" x-style="{color:red?'red':'blue','font-size':fs+'px'}">
-            name: {{nameStr => cap|json}} xx:{{x=>json}}
+        <div x="10" x-cloak x-style="{color:red?'red':'blue','font-size':fs+'px'}">
+            name: {{nameStr => cap:1:'23'|json:x}} xx:{{x=>json}}
             <p>
                 <button :click="attach($event,1+x,atty())">click</button>
             </p>

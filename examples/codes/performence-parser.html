@@ -8,17 +8,19 @@
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
     </head>
     <body>
+        显示解析性能
         <div id="demo">
-            <input type="text" x-model="x" .value="x">
-            <div x-for="1 to 400 as i">
-                <span x-for="1 to 400 as k">
-                    {{k / x}}
-                </span>
-            </div>
+            
         </div>
         
 
         <script type="text/javascript">
+            var html = '';
+            for(var i=10000;i--;){//
+                html += '<div x-style="{color:\'red\'}" x="'+i+'">{{'+i+'/Math.random()}}</div>';
+            }
+            document.getElementById('demo').innerHTML = html;
+
             var s = Date.now();
             impex.render(
                 '#demo',{

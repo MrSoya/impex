@@ -11,7 +11,7 @@
                 display: inline-block;
             }
         </style>
-        <a :pointerdown="tip($event)">
+        <a :pointerdown="tip($event)" x-cloak>
             <slot></slot>
         </a>
     </template>

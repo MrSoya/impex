@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            label{
+                display: block;
+                text-indent: 2em;
+            }
+        </style>
+    </head>
+    <body >
+        <div id="demo">
+            <x-child1>
+                <label>
+                    <i>getGlobal() => json</i> --> {{getGlobal() => json}}
+                </label>
+                <i x-for="ary.length to (getNumber()+4) as i">
+                    {{i}}
+                </i>
+            </x-child1>
+            <x-child2>
+                <!-- global var -->
+                <label>
+                    <i>info / $global.info</i> --> {{info}} / {{$global.info}}
+                </label>
+                <!-- global function -->
+                <button :click="show($event);alert($vnode)">
+                    {{getName()}}
+                </button>
+            </x-child2>
+        </div>
+        
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
+        <script type="text/javascript">
+            impex.component('x-child1',{
+                template:'<div>child1 :{{info}}<slot></slot></div>',
+                state:{
+                    info:" in local 1"
+                }
+            });
+            impex.component('x-child2',{
+                template:'<div>child2 :{{info}}<slot></slot></div>',
+                state:{
+                    info:" in local 2"
+                },
+                show:function(argument) {
+                    alert(argument)
+                },
+                getName:function() {
+                    return 'click'
+                }
+            });
+
+            //渲染
+            var debug = impex.render('#demo',{
+                state:{
+                    ary:[1,2,3,4,5]
+                },
+                onCreate:function(){
+                    //register global var
+                    impex.$global.info = "in global";
+                    impex.$global.alert = function(msg){alert(msg)};
+                    impex.$global.getGlobal = this.getGlobal;
+                    impex.$global.ary = this.state.ary;
+                    impex.$global.getNumber = this.getNumber.bind(this);
+                },
+                getGlobal:function(){
+                    return impex.$global;
+                },
+                getNumber:function(){
+                    return this.state.ary.length;
+                }
+            });
+
+            
+        </script>
+    </body>
+</html>

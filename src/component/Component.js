@@ -568,7 +568,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		var fnName = RegExp.$1;
 		
 
-        var fn = parent[fnName];
+        var fn = parent[fnName] || impex.$global[fnName];
         if(fn)
 			c.on(type,fn.bind(parent));
 	});
