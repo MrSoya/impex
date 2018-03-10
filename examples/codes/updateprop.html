@@ -26,7 +26,7 @@
             impex.component('x-a',{
             	onPropBind:function(props){
                     //回调内修改state并不会触发onUpdate
-            		this.state.items = props.items;
+            		this.state.items = JSON.parse(JSON.stringify(props.items));
                     console.log(props)
             	},
                 onPropChange:function(newProps,oldProps){
@@ -69,7 +69,6 @@
                     ]
                 }
             });
-            // buildFilterStr
         </script>
     </body>
 </html>

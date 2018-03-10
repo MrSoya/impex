@@ -104,8 +104,8 @@
                 }
             })
             impex.directive('checked',{
-                onUpdate:function(rs){
-                    this.el.checked = rs;
+                onUpdate:function(vnode,data,dom){
+                    dom.checked = data.value;
                 }
             })
 
@@ -166,8 +166,6 @@
                 }
                 
             });
-
-            buildFilterStr
             
         </script>
     </body>

@@ -10,8 +10,6 @@
 	var ATTR_ID_TAG = 'id';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
-	// var PROP_SYNC_SUFX = ':sync';
-	// var PROP_SYNC_SUFX_EXP = /:sync$/;
 
 	var EV_AB_PRIFX = ':';
 	var BIND_AB_PRIFX = '.';
@@ -35,16 +33,10 @@
 	function warn(compName,msg){
 		console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
-
-	function error(compName,msg){
-		console && console.error('XERROR C[' + compName +'] - ' + msg);
+	//phase --> compile --> mount
+	function error(compName,phase,e){
+		console && console.error('XERROR C[' + compName +'] - L['+phase+'] - ',e);
 	}
-
-	var FILTER_EXP_START_TAG = '=>';
-	var FILTER_EXP_START_TAG_ENTITY = '=&gt;';
-	var FILTER_EXP_SPLITTER = '|';
-	var FILTER_EXP_PARAM_SPLITTER = ':';
-
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -85,7 +77,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,96,0],
+	        v:[0,97,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;

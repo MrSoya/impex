@@ -11,6 +11,7 @@
                 <span slot="name" ref="name">name</span>
                 <span slot="age" ref="age">13</span>
             </x-panel>
+            <span slot="age" ref="age">invalid slot</span>
             <x-button2 name="来自name的内容" ref="btn">
                 来自slot的内容
             </x-button2>
@@ -27,7 +28,7 @@
             });
 
             impex.component('x-button2',{
-                template:"<div><slot></slot></div>"
+                template:"<div><button><slot></slot></button></div>"
             });
             
             //渲染

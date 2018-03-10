@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-03-09
+ * last build: 2018-3-10
  */
 !function (global) {
 	'use strict';
@@ -700,6 +700,7 @@ function parseHTML(str){
     var stack = [];
     var roots = [];
     var slotList = [];
+    var compNode;
     while(str.length>0){
         if(!startNodeData){
             startNodeData = TAG_START_EXP.exec(str);
@@ -715,9 +716,22 @@ function parseHTML(str){
         }else{
             roots.push(node);
         }
+        if(COMP_MAP[tagName]){
+            compNode = node;
+        }
         var attrStr = startNodeData[2].trim();
         var attrAry = attrStr.match(TAG_ATTR_EXP);
-        if(attrAry)parseHTML_attrs(attrAry,node);
+        if(attrAry)parseHTML_attrs(attrAry,node,compNode);
+
+        //handle void el root
+        if(str.length<1)break;
+
+        //handle slot
+        if(tagName === SLOT){
+            slotList.push([parentNode,node,node.attrNodes.name?node.attrNodes.name.value:null]);
+        }else if(node.attrNodes.slot){
+            if(compNode)compNode.slotMap[node.attrNodes.slot.value] = node;
+        }        
 
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
 
@@ -741,7 +755,8 @@ function parseHTML(str){
             TAG_END_EXP_G.lastIndex = 0;
             TAG_END_EXP_G.exec(str);
             do{
-                stack.pop();
+                var tmp = stack.pop();
+                if(tmp === compNode)compNode = null;
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
                 endIndex = endNodeData.index;
@@ -769,7 +784,7 @@ function parseHTML(str){
 
     return [roots,slotList];
 }
-function parseHTML_attrs(attrs,node){
+function parseHTML_attrs(attrs,node,compNode){
     for(var i=attrs.length;i--;){
         var attrStr = attrs[i];
         var splitIndex = attrStr.indexOf('=');
@@ -780,20 +795,23 @@ function parseHTML_attrs(attrs,node){
             aName = attrStr.substring(0,splitIndex);
             value = attrStr.substring(splitIndex+2,attrStr.length-1);
         }
-        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node));
+        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode));
         node.attrNodes[aName] = attrNode;
         attrNode.value = value;
         if(attrNode.directive){
-            //handle filter
-            var splitIndex = value.indexOf('=>');
-            var expStr,filterStr;
-            if(splitIndex<0){
-                expStr = value;
-            }else{
-                expStr = value.substring(0,splitIndex);
-                filterStr = value.substring(splitIndex+2,value.length);
+            if(value){
+                //handle filter
+                var splitIndex = value.indexOf('=>');
+                var expStr,filterStr;
+                if(splitIndex<0){
+                    expStr = value;
+                }else{
+                    expStr = value.substring(0,splitIndex);
+                    filterStr = value.substring(splitIndex+2,value.length);
+                }
+                attrNode.exp = parseHTML_exp(expStr,filterStr);    
             }
-            attrNode.exp = parseHTML_exp(expStr,filterStr);
+            
             var tmp = null;
             var dName = attrNode.directive;
             if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
@@ -824,7 +842,7 @@ function parseHTML_txt(txt,node){
         while(expData = EXP_EXP.exec(txt)){
             var t = txt.substring(lastIndex,expData.index);
             if(t)txtQ.push(t);
-            txtQ.push(parseHTML_exp(expData[1],expData[2]));
+            txtQ.push(parseHTML_exp(expData[1],expData[2],true));
             lastIndex = expData.index + expData[0].length;
         }
         if(lastIndex < txt.length){
@@ -835,9 +853,10 @@ function parseHTML_txt(txt,node){
         node.children.push(tn);
     }
 }
-function parseHTML_exp(expStr,filterStr){
+function parseHTML_exp(expStr,filterStr,isTxt){
     var rs = [];
     rs[0] = expStr.trim();
+    if(isTxt)rs[0] = '('+rs[0]+')';
     var filterAry = [];
     if(filterStr){
         var filters = filterStr.split('|');
@@ -964,9 +983,7 @@ function compileVDOM(str,comp){
     return rs;
 }
 function compileVDOMStr(str,comp,forScopeAry){
-    var s = Date.now();
     var pair = parseHTML(str);
-    console.log('parse time',Date.now()-s)
     var roots = pair[0];
         
     if(roots.length>1){
@@ -981,9 +998,7 @@ function compileVDOMStr(str,comp,forScopeAry){
     }
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
-    var s = Date.now();
     var str = buildEvalStr(rs,null,forScopeAry);
-    console.log('build time',Date.now()-s)
     return str;
 }
 /**
@@ -995,7 +1010,7 @@ function buildVDOMTree(comp){
         var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error(comp.name,"compile error -> "+e.message);
+        error(comp.name,"compile",e);
     }
     return root;
 }
@@ -2402,8 +2417,6 @@ function checkPropType(k,v,input,component){
 	var ATTR_ID_TAG = 'id';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
-	// var PROP_SYNC_SUFX = ':sync';
-	// var PROP_SYNC_SUFX_EXP = /:sync$/;
 
 	var EV_AB_PRIFX = ':';
 	var BIND_AB_PRIFX = '.';
@@ -2427,16 +2440,10 @@ function checkPropType(k,v,input,component){
 	function warn(compName,msg){
 		console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
-
-	function error(compName,msg){
-		console && console.error('XERROR C[' + compName +'] - ' + msg);
+	//phase --> compile --> mount
+	function error(compName,phase,e){
+		console && console.error('XERROR C[' + compName +'] - L['+phase+'] - ',e);
 	}
-
-	var FILTER_EXP_START_TAG = '=>';
-	var FILTER_EXP_START_TAG_ENTITY = '=&gt;';
-	var FILTER_EXP_SPLITTER = '|';
-	var FILTER_EXP_PARAM_SPLITTER = ':';
-
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -2477,7 +2484,7 @@ function checkPropType(k,v,input,component){
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,96,0],
+	        v:[0,97,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
