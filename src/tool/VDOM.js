@@ -70,6 +70,7 @@ VNode.prototype = {
  */
 function createElement(comp,tag,props,directives,children,html,forScopeAry){
     var rs = new VNode(tag,props,directives);
+    rs._isEl = true;
     if(forScopeAry.length>0)
         rs._forScopeQ = forScopeAry;
     if (COMP_MAP[tag] || tag == 'component') {
@@ -393,7 +394,7 @@ function parseHTML_attrs(attrs,node,compNode){
             aName = attrStr.substring(0,splitIndex);
             value = attrStr.substring(splitIndex+2,attrStr.length-1);
         }
-        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode));
+        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode && node == compNode));
         node.attrNodes[aName] = attrNode;
         attrNode.value = value;
         if(attrNode.directive){
@@ -444,7 +445,7 @@ function parseHTML_txt(txt,node){
             lastIndex = expData.index + expData[0].length;
         }
         if(lastIndex < txt.length){
-
+            txtQ.push(txt.substr(lastIndex));
         }
         if(txtQ.length<1)txtQ.push(txt);
         var tn = new pNode(3,null,txtQ);

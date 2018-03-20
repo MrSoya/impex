@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-3-10
+ * last build: 2018-03-20
  */
 !function (global) {
 	'use strict';
@@ -472,6 +472,7 @@ VNode.prototype = {
  */
 function createElement(comp,tag,props,directives,children,html,forScopeAry){
     var rs = new VNode(tag,props,directives);
+    rs._isEl = true;
     if(forScopeAry.length>0)
         rs._forScopeQ = forScopeAry;
     if (COMP_MAP[tag] || tag == 'component') {
@@ -795,7 +796,7 @@ function parseHTML_attrs(attrs,node,compNode){
             aName = attrStr.substring(0,splitIndex);
             value = attrStr.substring(splitIndex+2,attrStr.length-1);
         }
-        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode));
+        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode && node == compNode));
         node.attrNodes[aName] = attrNode;
         attrNode.value = value;
         if(attrNode.directive){
@@ -846,7 +847,7 @@ function parseHTML_txt(txt,node){
             lastIndex = expData.index + expData[0].length;
         }
         if(lastIndex < txt.length){
-
+            txtQ.push(txt.substr(lastIndex));
         }
         if(txtQ.length<1)txtQ.push(txt);
         var tn = new pNode(3,null,txtQ);
@@ -1876,7 +1877,7 @@ ext({
 //////	init flow
 function buildOffscreenDOM(vnode,comp){
 	var n,cid = comp._uid;
-	if(isUndefined(vnode.txt)){
+	if(vnode._isEl){
 		n = document.createElement(vnode.tag);
 		n._vid = vnode.vid;
 		vnode._cid = cid;
@@ -1927,7 +1928,7 @@ function buildOffscreenDOM(vnode,comp){
 	return n;
 }
 function filterEntity(str){
-	return str.replace?str
+	return str && str.replace?str
 	.replace(/&lt;/img,'<')
 	.replace(/&gt;/img,'>')
 	.replace(/&nbsp;/img,'\u00a0')

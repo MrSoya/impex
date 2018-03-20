@@ -177,7 +177,7 @@ ext({
 //////	init flow
 function buildOffscreenDOM(vnode,comp){
 	var n,cid = comp._uid;
-	if(isUndefined(vnode.txt)){
+	if(vnode._isEl){
 		n = document.createElement(vnode.tag);
 		n._vid = vnode.vid;
 		vnode._cid = cid;
@@ -228,7 +228,7 @@ function buildOffscreenDOM(vnode,comp){
 	return n;
 }
 function filterEntity(str){
-	return str.replace?str
+	return str && str.replace?str
 	.replace(/&lt;/img,'<')
 	.replace(/&gt;/img,'>')
 	.replace(/&nbsp;/img,'\u00a0')
