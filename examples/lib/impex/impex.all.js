@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-03-20
+ * last build: 2018-03-22
  */
 !function (global) {
 	'use strict';
@@ -1679,7 +1679,7 @@ EventEmitter.prototype = {
 	 * @param  {String} type   事件类型
 	 * @param  {Function} handler 回调函数
 	 * @param  {Object} [context] 上下文
-	 * @return {[type]}         [description]
+	 * @return {Object}   返回事件函数返回值
 	 */
 	on:function(type,handler,context) {
 		this.__eeMap[type] = [handler,context||this];
@@ -1687,6 +1687,7 @@ EventEmitter.prototype = {
 	},
 	emit:function(type){
 		var pair = this.__eeMap[type];
+		if(!pair)return;
 		var fn = pair[0],
 			ctx = pair[1];
 		if(!fn)return;
@@ -1695,7 +1696,7 @@ EventEmitter.prototype = {
 		for(var i=1;i<arguments.length;i++){
 			args.push(arguments[i]);
 		}
-		fn.apply(ctx,args);
+		return fn.apply(ctx,args);
 	}
 }
 /**

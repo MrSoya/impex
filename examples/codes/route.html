@@ -14,19 +14,18 @@
     <body >
         <div id="demo">
             <section>
-                <a x-link="'/list/1'">列表</a>
-                <button x-link="{to:'/form/a/b',title:'表单',prop:{name:'formData.name',type:'formData.type'}}">表单</button>
+                <a x-link="'/list/1'" http="true">列表</a>
+                <button x-link="{to:'/form/a/b',title:'表单'}">表单</button>
             </section>
             <header>
-                <x-route path="/list/:id" component="x-nav"></x-route>
+                <x-route path="/list/:id" :render="routeNav" :end="endRoute"></x-route>
             </header>
             <section>
                 <x-route path="/list/*" component="x-list"></x-route>
-                <x-route path="/form/**" component="x-form"></x-route>
+                <x-route path="/form/**" :end="endRoute" component="x-form"></x-route>
             </section>
             
         </div>
-        
 
 
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
@@ -41,17 +40,28 @@
             });
 
             impex.component('x-list',{
-                template:"<ul><li x-for='1 to 20 as i'>{{i}}</li></ul>"
+                template:"<ul><li x-for='1 to 120 as i'>{{i}}</li></ul>"
             });
 
             impex.component('x-form',{
-                template:"<form><label>name:<input .value='name'></label><label>type:<input .value='type'></label></form>"
+                template:"<form><p>/form/**</p><label>name:<input .value='name'></label><label>type:<input .value='type'></label></form>",
+                state:{
+                	type:'',
+                	name:''
+                }
             });
-
-            
 
             //渲染
             impex.render('#demo',{
+            	routeNav:function(viewFn,props,path){
+            		setTimeout(function(){
+            			viewFn('<x-nav></x-nav>');
+            		},5000);
+            		console.log('load view after 5 sec');
+            	},
+            	endRoute:function(comp,props) {
+            		console.log(comp);
+            	},
                 state:{
                     formData:{
                         name:'impex',
@@ -59,6 +69,11 @@
                     }
                 }
             });
+
+            /**
+             * 需求
+             * 
+             */
             
         </script>
     </body>
