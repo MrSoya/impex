@@ -199,7 +199,7 @@
 
 	window.addEventListener('load',function(e){
 		var url = location.pathname;
-		Router.goto(url,'');
+		Router.goto(url,'',getParams());
 	},false);
 	window.addEventListener('popstate', function(e) {
         var state = e.state || {};

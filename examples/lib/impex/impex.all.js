@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-03-22
+ * last build: 2018-03-31
  */
 !function (global) {
 	'use strict';
@@ -2528,6 +2528,15 @@ function checkPropType(k,v,input,component){
 			}
 			COMP_MAP[name] = param;
 			return this;
+		}
+
+		/**
+		 * 查询是否定义了指定组件
+		 * @param  {String}  name 组件名称
+		 * @return {Boolean}
+		 */
+		this.hasComponentOf = function(name){
+			return !!COMP_MAP[name];
 		}
 
 		/**

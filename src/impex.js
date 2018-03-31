@@ -122,6 +122,15 @@
 		}
 
 		/**
+		 * 查询是否定义了指定组件
+		 * @param  {String}  name 组件名称
+		 * @return {Boolean}
+		 */
+		this.hasComponentOf = function(name){
+			return !!COMP_MAP[name];
+		}
+
+		/**
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
 		 * @param  {Object} data 指令定义
