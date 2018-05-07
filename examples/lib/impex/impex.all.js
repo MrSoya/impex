@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-03-31
+ * last build: 2018-05-04
  */
 !function (global) {
 	'use strict';
@@ -801,6 +801,8 @@ function parseHTML_attrs(attrs,node,compNode){
         attrNode.value = value;
         if(attrNode.directive){
             if(value){
+                //convert
+                value = value.replace(/&amp;/mg,'&');
                 //handle filter
                 var splitIndex = value.indexOf('=>');
                 var expStr,filterStr;

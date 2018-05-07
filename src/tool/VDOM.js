@@ -399,6 +399,8 @@ function parseHTML_attrs(attrs,node,compNode){
         attrNode.value = value;
         if(attrNode.directive){
             if(value){
+                //convert
+                value = value.replace(/&amp;/mg,'&');
                 //handle filter
                 var splitIndex = value.indexOf('=>');
                 var expStr,filterStr;
