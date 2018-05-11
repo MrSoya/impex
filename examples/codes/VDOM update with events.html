@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen">
+            /* 必需 */
+            .test-transition {
+                transition: all .3s;
+                font-size:2rem;
+            }
+
+            .test-enter, .test-leave {
+                font-size:1rem;
+                opacity: 0;
+            }
+        </style>
+    </head>
+    <body>
+    
+        <!--
+			故障场景演示：
+			当d2被d1替换时，第一个div不应该还保留有click事件，而应该是pointerdown事件
+        -->
+        <div id="demo">
+            <div x-for="list2 as item" id="d1">
+            	<div x-for="list as xx" .id="xx" :pointerdown="show(xx)">{{xx}}</div>
+            </div>
+            <div x-if="list2.length==0" id="d2">
+            	<div :click="alert(3434)">123213213</div>
+            </div>
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            var debug = impex.render('#demo',{
+            	state:{
+            		aaa : 10,
+	                a : {
+	                    x:0
+	                },
+	                b : {
+	                    y:4
+	                },
+	                list2: [],
+	                list : [1]
+            	},
+            	show:function(xx){
+            		console.log(xx)
+            	},
+                change:function(){
+                	this.state.list = [2,1];
+                	this.state.list2 = [3];
+                }
+            });
+            
+        </script>
+    </body>
+</html>

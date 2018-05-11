@@ -55,6 +55,21 @@ VNode.prototype = {
             evMap[this.vid] = [this,new Function('$global,comp,state,$event,$vnode','with($global){with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}}'),this._cid];
         }
     },
+    /**
+     * 卸载事件
+     * @param {String} [type] 事件类型。为空时，卸载所有事件
+     */
+    off:function(type){
+        var evMap = EVENT_MAP[type];
+        if(evMap){
+            evMap[this.vid] = null;
+        }else if(!type){
+            for(var k in EVENT_MAP){
+                evMap = EVENT_MAP[k];
+                if(evMap)evMap[this.vid] = null;
+            }
+        }
+    },
     setAttribute:function(k,v){
         this.attrNodes[k] = v;
         return this;
@@ -658,29 +673,31 @@ function compareSame(newVNode,oldVNode,comp){
                     }
                 }
             }
-        }             
+        }
 
         if(rebindDis){
+            //unbind old events
+            oldVNode.off();
+            //update events forscope
+            oldVNode._forScopeQ = newVNode._forScopeQ;
+
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
-                if(dName === 'on')return;
                 var d = DIRECT_MAP[dName];
                 if(!d)return;
                 
                 var params = di[1][1];
                 var v = di[2];
                 var exp = di[3];
-                d.onBind && d.onBind(newVNode,{value:v,args:params,exp:exp});
+
+                var t = newVNode;
+                if(dName === 'on')t = oldVNode;
+                d.onBind && d.onBind(t,{value:v,args:params,exp:exp});
             });
         }
 
         //for unstated change like x-html
         updateAttr(newVNode,oldVNode);
-
-        //update events forscope
-        if(oldVNode._forScopeQ){
-            oldVNode._forScopeQ = newVNode._forScopeQ;
-        }
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);
