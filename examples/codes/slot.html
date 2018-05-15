@@ -8,12 +8,13 @@
         
         <div id="demo">
             <x-panel>
-                <span slot="name" ref="name">name</span>
-                <span slot="age" ref="age">13</span>
+                <span slot="age" ref="name">name</span>
+                <span slot="name" ref="age">13</span>
             </x-panel>
             <span slot="age" ref="age">invalid slot</span>
             <x-button2 name="来自name的内容" ref="btn">
                 来自slot的内容
+                <span slot="age" ref="age">13</span>
             </x-button2>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
@@ -33,6 +34,9 @@
             
             //渲染
             impex.render('#demo',{
+                state:{
+                    no:1
+                },
                 onMount:function(){
                     console.log(this.refs.btn)
                 }

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-05-08
+ * last build: 2018-05-15
  */
 !function (global) {
 	'use strict';
@@ -429,6 +429,7 @@ function VNode(tag,attrNodes,directives){
     this.dom;
     this._forScopeQ;
     this._slotMap;
+    this._hasEvent;
 }
 VNode.prototype = {
     /**
@@ -456,6 +457,8 @@ VNode.prototype = {
                 }
             evMap[this.vid] = [this,new Function('$global,comp,state,$event,$vnode','with($global){with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}}'),this._cid];
         }
+
+        this._hasEvent = true;
     },
     /**
      * 卸载事件
@@ -1093,8 +1096,12 @@ function compareSame(newVNode,oldVNode,comp){
                 var exp = di[3];
 
                 var t = newVNode;
-                if(dName === 'on')t = oldVNode;
-                d.onBind && d.onBind(t,{value:v,args:params,exp:exp});
+                if(d.onBind){
+                    d.onBind(t,{value:v,args:params,exp:exp});
+                    if(t._hasEvent){
+                        d.onBind(oldVNode,{value:v,args:params,exp:exp});
+                    }
+                }
             });
         }
 
@@ -2732,7 +2739,7 @@ impex.directive('style',{
                 if(val)
                     cls += ' '+k;
             }
-        }            
+        }
         
         vnode.setAttribute('class',cls);
     }
@@ -2816,6 +2823,9 @@ impex.directive('style',{
         vnode.exp = data.exp;
         vnode.on('change',this.handleChange);
         vnode.on('input',handleInput);
+    },
+    onUpdate:function(){
+        console.log(arguments)
     },
     handleChange:function(e,vnode){
         var el = e.target;

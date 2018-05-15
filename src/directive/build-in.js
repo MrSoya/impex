@@ -66,7 +66,7 @@ impex.directive('style',{
                 if(val)
                     cls += ' '+k;
             }
-        }            
+        }
         
         vnode.setAttribute('class',cls);
     }
