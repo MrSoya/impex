@@ -96,7 +96,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
         var slotData = children[0];
         if(slotData){
             rs._slots = slotData[0];
-            rs._slotMap = slotData[1];       
+            rs._slotMap = slotData[1];     
         }
         return rs;
     }
@@ -373,7 +373,8 @@ function parseHTML(str){
             TAG_END_EXP_G.exec(str);
             do{
                 var tmp = stack.pop();
-                if(tmp === compNode)compNode = null;
+                if(tmp === compNode)
+                    compNode = null;
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
                 endIndex = endNodeData.index;
@@ -678,11 +679,12 @@ function compareSame(newVNode,oldVNode,comp){
             }
         }
 
+        //update events forscope
+        oldVNode._forScopeQ = newVNode._forScopeQ;
+
         if(rebindDis){
             //unbind old events
             oldVNode.off();
-            //update events forscope
-            oldVNode._forScopeQ = newVNode._forScopeQ;
 
             newVNode._directives.forEach(function(di){
                 var dName = di[1][0];
