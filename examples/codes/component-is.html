@@ -10,9 +10,12 @@
             <button :click="change('x-check')">x-check</button>
             <button :click="change('x-radio')">x-radio</button>
 
-            <component is="x-check" name="attr"></component>
+            <p>
+            	x-check: <component is="x-check" name="attr"></component>
+            </p>
+            
 
-            <component .is="type"></component>
+            dynamic: <component .is="type"></component>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript">

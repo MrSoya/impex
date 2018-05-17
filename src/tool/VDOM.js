@@ -315,6 +315,7 @@ function parseHTML(str){
     var startNodeData = null;
     var endNodeData;
     var stack = [];
+    var compStack = [];
     var roots = [];
     var slotList = [];
     var compNode;
@@ -335,6 +336,7 @@ function parseHTML(str){
         }
         if(COMP_MAP[tagName]){
             compNode = node;
+            compStack.push(node);
         }
         var attrStr = startNodeData[2].trim();
         var attrAry = attrStr.match(TAG_ATTR_EXP);
@@ -348,7 +350,7 @@ function parseHTML(str){
             slotList.push([parentNode,node,node.attrNodes.name?node.attrNodes.name.value:null]);
         }else if(node.attrNodes.slot){
             if(compNode)compNode.slotMap[node.attrNodes.slot.value] = node;
-        }        
+        }
 
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
 
@@ -373,8 +375,10 @@ function parseHTML(str){
             TAG_END_EXP_G.exec(str);
             do{
                 var tmp = stack.pop();
-                if(tmp === compNode)
-                    compNode = null;
+                if(tmp === compNode){
+                    compStack.pop();
+                    compNode = compStack[compStack.length-1];
+                }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
                 endIndex = endNodeData.index;

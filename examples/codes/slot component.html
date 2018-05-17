@@ -7,10 +7,10 @@
     <body >
         
         <div id="demo">
-            <x-panel>
-                <!-- <h4 slot="head" ref="name">head</h4> -->
+            <x-panel .no="no">
+                <div slot="head" ref="name">head {{no}}</div>
                 <div slot="body" ref="body">
-                    <x-button2></x-button2>
+                    <x-button2>body</x-button2>
                 </div>
                 <div slot="foot" ref="foot">foot</div>
             </x-panel>
@@ -21,21 +21,17 @@
             impex.component('x-panel',{
                 template:`<div><header><slot name='head'></slot></header>
                            <section><slot name='body'></slot></section>
-                           <footer><slot name='foot'></slot></footer></div>` ,
-                onMount:function(){
-                    console.log(this.state.name)
-                    console.log(this.state.age)
-                }
+                           <footer><slot name='foot'></slot></footer></div>` 
             });
 
             impex.component('x-button2',{
-                template:"<div><button><slot>1212</slot></button></div>"
+                template:"<div><button><slot></slot></button></div>"
             });
             
             //渲染
             impex.render('#demo',{
                 state:{
-                    no:1
+                    no:1 
                 },
                 onMount:function(){
                     console.log(this.refs.btn)
