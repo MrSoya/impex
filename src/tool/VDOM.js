@@ -657,60 +657,65 @@ function compareSame(newVNode,oldVNode,comp){
     }
 
     if(newVNode.tag){
-        var rebindDis = false;
-        //compare dirs
-        for(var i=newVNode._directives.length;i--;){
-            var ndi = newVNode._directives[i];
-            var odi = oldVNode._directives[i];
-            if(!odi || ndi[2] !== odi[2]){
-                rebindDis = true;
-                break;
-            }
-        }
-        if(!rebindDis){
-            //compare attrs
-            var ks = Object.keys(newVNode.attrNodes);
-            if(ks.length != Object.keys(oldVNode.attrNodes).length){
-                rebindDis = true;
-            }else{
-                for(var i=ks.length;i--;){
-                    var k = ks[i];
-                    if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
-                        rebindDis = true;
-                        break;
-                    }
-                }
-            }
-        }
-
         //update events forscope
         oldVNode._forScopeQ = newVNode._forScopeQ;
-
-        if(rebindDis){
-            //unbind old events
-            oldVNode.off();
-
-            newVNode._directives.forEach(function(di){
-                var dName = di[1][0];
-                var d = DIRECT_MAP[dName];
-                if(!d)return;
-                
-                var params = di[1][1];
-                var v = di[2];
-                var exp = di[3];
-
-                var t = newVNode;
-                if(d.onBind){
-                    d.onBind(t,{value:v,args:params,exp:exp});
-                    if(t._hasEvent){
-                        d.onBind(oldVNode,{value:v,args:params,exp:exp});
-                    }
-                }
-            });
+        
+        var allOldAttrs = oldVNode.attrNodes;
+        var nvdis = newVNode._directives,
+            ovdis = oldVNode._directives;
+        var nvDiMap = getDirectiveMap(nvdis),
+            ovDiMap = getDirectiveMap(ovdis);
+        var add=[],del=[];
+        //compare dirs
+        for(var i=ovdis.length;i--;){
+            var odi = ovdis[i];
+            var odiStr = odi[0]+odi[3];
+            if(!nvDiMap[odiStr]){
+                del.push(odi);
+            }
         }
+        for(var i=nvdis.length;i--;){
+            var ndi = nvdis[i];
+            var ndiStr = ndi[0]+ndi[3];
+            if(ovDiMap[ndiStr]){
+                ovDiMap[ndiStr][2] = ndi[2];
+            }else{
+                add.push(ndi);
+            }
+        }
+        //reset attrs
+        oldVNode.attrNodes = newVNode.attrNodes;
+        //do del
+        for(var i=del.length;i--;){
+            var index = oldVNode._directives.indexOf(del[i]);
+            oldVNode._directives.splice(index,1);
+
+            var params = del[i][1][1];
+            var v = del[i][2];
+            var exp = del[i][3];
+            del[i].onDestroy && del[i].onDestroy(oldVNode,{value:v,args:params,exp:exp});
+        }
+        //add
+        for(var i=add.length;i--;){
+            oldVNode._directives.push(add[i]);
+        }
+        //unbind old events
+        oldVNode.off();
+        //do bind
+        oldVNode._directives.forEach(function(di){
+            var dName = di[1][0];
+            var d = DIRECT_MAP[dName];
+            if(!d)return;
+            
+            var params = di[1][1];
+            var v = di[2];
+            var exp = di[3];
+
+            d.onBind && d.onBind(oldVNode,{value:v,args:params,exp:exp});
+        });
 
         //for unstated change like x-html
-        updateAttr(newVNode,oldVNode);
+        updateAttr(oldVNode.attrNodes,allOldAttrs,oldVNode.dom,oldVNode.tag);
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);
@@ -726,6 +731,16 @@ function compareSame(newVNode,oldVNode,comp){
         //删除旧的整个子树
         removeVNode(oldVNode.children);
     }
+}
+
+function getDirectiveMap(directives){
+    var map = {};
+    for(var i=directives.length;i--;){
+        var di = directives[i];
+        var diStr = di[0]+di[3];
+        map[diStr] = di;
+    }
+    return map;
 }
 
 function compareChildren(nc,oc,op,comp){
@@ -920,27 +935,26 @@ function updateTxt(nv,ov){
     var dom = ov.dom;
     dom.textContent = nv.txt;
 }
-function updateAttr(nv,ov){
+function updateAttr(newAttrs,oldAttrs,dom,tag){
     //比较节点属性
-    var nvas = nv.attrNodes;
-    var ovas = ov.attrNodes;
+    var nvas = newAttrs;
+    var ovas = oldAttrs;
     var nvasKs = Object.keys(nvas);
     var ovasKs = Object.keys(ovas);
-    var odom = ov.dom;
-    var isInputNode = ov.tag === 'input'; 
+    var isInputNode = tag === 'input'; 
     for(var i=nvasKs.length;i--;){
         var k = nvasKs[i];
         var index = ovasKs.indexOf(k);
         if(index<0){
-            odom.setAttribute(k,nvas[k]);
+            dom.setAttribute(k,nvas[k]);
             if(isInputNode && k === 'value'){
-                odom.value = nvas[k];
+                dom.value = nvas[k];
             }
         }else{
             if(nvas[k] != ovas[k]){
-                odom.setAttribute(k,nvas[k]);
+                dom.setAttribute(k,nvas[k]);
                 if(isInputNode && k === 'value'){
-                    odom.value = nvas[k];
+                    dom.value = nvas[k];
                 }
             }
             ovasKs.splice(index,1);
@@ -948,20 +962,13 @@ function updateAttr(nv,ov){
     }
     for(var i=ovasKs.length;i--;){
         if(ovasKs[i] === DOM_COMP_ATTR)continue;
-        odom.removeAttribute(ovasKs[i]);
+        dom.removeAttribute(ovasKs[i]);
     }
 
     //update new attrs
-    var comp_attr = ov.attrNodes[DOM_COMP_ATTR];
-    ov.attrNodes = nv.attrNodes;
-    if(comp_attr)ov.attrNodes[DOM_COMP_ATTR] = comp_attr;
-    //update new directive exp value
-    ov._directives = nv._directives;
-    ov._directives.forEach(function(dir){
-        if(isArray(dir[2]) || isObject(dir[2])){
-            dir[2] = JSON.parse(JSON.stringify(dir[2]));
-        }
-    });
+    var comp_attr = oldAttrs[DOM_COMP_ATTR];
+    if(comp_attr)newAttrs[DOM_COMP_ATTR] = comp_attr;
+
 }
 
 

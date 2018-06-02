@@ -119,7 +119,7 @@ impex.directive('style',{
         var v = data.value;
         var style = vnode.getAttribute('style')||'';
         if(v){
-            style += ';display:;'
+            style = style.replace(/display\s*:\s*none\s*;?/,'');
         }else{
             style += ';display:none;'
         }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            div div{
+                border:1px solid #aaa;
+            }
+        </style>
+    </head>
+    <body>
+        <p>
+            演示两个相同元素节点更新
+        </p>
+        
+        <div id="demo">
+            <p>
+            <div x-if="show" :click="alert('show d1')" name="d1" .sid="sid">click me</div>
+            <div x-else :mouseup="alert('show d2')" name="d2" id="d2" .sid="sid">click me 2</div>
+            </p>
+            <button :click="change()">change</button>
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+
+            //渲染
+            var debug = impex.render('#demo',{
+            	state:{
+            		sid:1,
+                    show:true
+            	},
+                change:function(){
+                	this.state.show = !this.state.show;
+                    this.state.sid++;
+                }
+            });
+            
+        </script>
+    </body>
+</html>

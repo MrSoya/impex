@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-05-17
+ * last build: 2018-06-02
  */
 !function (global) {
 	'use strict';
@@ -1059,60 +1059,65 @@ function compareSame(newVNode,oldVNode,comp){
     }
 
     if(newVNode.tag){
-        var rebindDis = false;
-        //compare dirs
-        for(var i=newVNode._directives.length;i--;){
-            var ndi = newVNode._directives[i];
-            var odi = oldVNode._directives[i];
-            if(!odi || ndi[2] !== odi[2]){
-                rebindDis = true;
-                break;
-            }
-        }
-        if(!rebindDis){
-            //compare attrs
-            var ks = Object.keys(newVNode.attrNodes);
-            if(ks.length != Object.keys(oldVNode.attrNodes).length){
-                rebindDis = true;
-            }else{
-                for(var i=ks.length;i--;){
-                    var k = ks[i];
-                    if(newVNode.attrNodes[k] != oldVNode.attrNodes[k]){
-                        rebindDis = true;
-                        break;
-                    }
-                }
-            }
-        }
-
         //update events forscope
         oldVNode._forScopeQ = newVNode._forScopeQ;
-
-        if(rebindDis){
-            //unbind old events
-            oldVNode.off();
-
-            newVNode._directives.forEach(function(di){
-                var dName = di[1][0];
-                var d = DIRECT_MAP[dName];
-                if(!d)return;
-                
-                var params = di[1][1];
-                var v = di[2];
-                var exp = di[3];
-
-                var t = newVNode;
-                if(d.onBind){
-                    d.onBind(t,{value:v,args:params,exp:exp});
-                    if(t._hasEvent){
-                        d.onBind(oldVNode,{value:v,args:params,exp:exp});
-                    }
-                }
-            });
+        
+        var allOldAttrs = oldVNode.attrNodes;
+        var nvdis = newVNode._directives,
+            ovdis = oldVNode._directives;
+        var nvDiMap = getDirectiveMap(nvdis),
+            ovDiMap = getDirectiveMap(ovdis);
+        var add=[],del=[];
+        //compare dirs
+        for(var i=ovdis.length;i--;){
+            var odi = ovdis[i];
+            var odiStr = odi[0]+odi[3];
+            if(!nvDiMap[odiStr]){
+                del.push(odi);
+            }
         }
+        for(var i=nvdis.length;i--;){
+            var ndi = nvdis[i];
+            var ndiStr = ndi[0]+ndi[3];
+            if(ovDiMap[ndiStr]){
+                ovDiMap[ndiStr][2] = ndi[2];
+            }else{
+                add.push(ndi);
+            }
+        }
+        //reset attrs
+        oldVNode.attrNodes = newVNode.attrNodes;
+        //do del
+        for(var i=del.length;i--;){
+            var index = oldVNode._directives.indexOf(del[i]);
+            oldVNode._directives.splice(index,1);
+
+            var params = del[i][1][1];
+            var v = del[i][2];
+            var exp = del[i][3];
+            del[i].onDestroy && del[i].onDestroy(oldVNode,{value:v,args:params,exp:exp});
+        }
+        //add
+        for(var i=add.length;i--;){
+            oldVNode._directives.push(add[i]);
+        }
+        //unbind old events
+        oldVNode.off();
+        //do bind
+        oldVNode._directives.forEach(function(di){
+            var dName = di[1][0];
+            var d = DIRECT_MAP[dName];
+            if(!d)return;
+            
+            var params = di[1][1];
+            var v = di[2];
+            var exp = di[3];
+
+            d.onBind && d.onBind(oldVNode,{value:v,args:params,exp:exp});
+        });
 
         //for unstated change like x-html
-        updateAttr(newVNode,oldVNode);
+        updateAttr(oldVNode.attrNodes,allOldAttrs,oldVNode.dom,oldVNode.tag);
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);
@@ -1128,6 +1133,16 @@ function compareSame(newVNode,oldVNode,comp){
         //删除旧的整个子树
         removeVNode(oldVNode.children);
     }
+}
+
+function getDirectiveMap(directives){
+    var map = {};
+    for(var i=directives.length;i--;){
+        var di = directives[i];
+        var diStr = di[0]+di[3];
+        map[diStr] = di;
+    }
+    return map;
 }
 
 function compareChildren(nc,oc,op,comp){
@@ -1322,27 +1337,26 @@ function updateTxt(nv,ov){
     var dom = ov.dom;
     dom.textContent = nv.txt;
 }
-function updateAttr(nv,ov){
+function updateAttr(newAttrs,oldAttrs,dom,tag){
     //比较节点属性
-    var nvas = nv.attrNodes;
-    var ovas = ov.attrNodes;
+    var nvas = newAttrs;
+    var ovas = oldAttrs;
     var nvasKs = Object.keys(nvas);
     var ovasKs = Object.keys(ovas);
-    var odom = ov.dom;
-    var isInputNode = ov.tag === 'input'; 
+    var isInputNode = tag === 'input'; 
     for(var i=nvasKs.length;i--;){
         var k = nvasKs[i];
         var index = ovasKs.indexOf(k);
         if(index<0){
-            odom.setAttribute(k,nvas[k]);
+            dom.setAttribute(k,nvas[k]);
             if(isInputNode && k === 'value'){
-                odom.value = nvas[k];
+                dom.value = nvas[k];
             }
         }else{
             if(nvas[k] != ovas[k]){
-                odom.setAttribute(k,nvas[k]);
+                dom.setAttribute(k,nvas[k]);
                 if(isInputNode && k === 'value'){
-                    odom.value = nvas[k];
+                    dom.value = nvas[k];
                 }
             }
             ovasKs.splice(index,1);
@@ -1350,20 +1364,13 @@ function updateAttr(nv,ov){
     }
     for(var i=ovasKs.length;i--;){
         if(ovasKs[i] === DOM_COMP_ATTR)continue;
-        odom.removeAttribute(ovasKs[i]);
+        dom.removeAttribute(ovasKs[i]);
     }
 
     //update new attrs
-    var comp_attr = ov.attrNodes[DOM_COMP_ATTR];
-    ov.attrNodes = nv.attrNodes;
-    if(comp_attr)ov.attrNodes[DOM_COMP_ATTR] = comp_attr;
-    //update new directive exp value
-    ov._directives = nv._directives;
-    ov._directives.forEach(function(dir){
-        if(isArray(dir[2]) || isObject(dir[2])){
-            dir[2] = JSON.parse(JSON.stringify(dir[2]));
-        }
-    });
+    var comp_attr = oldAttrs[DOM_COMP_ATTR];
+    if(comp_attr)newAttrs[DOM_COMP_ATTR] = comp_attr;
+
 }
 
 
@@ -1738,18 +1745,6 @@ EventEmitter.prototype = {
  * 组件可以设置事件或者修改视图样式等<br/>
  * 组件实例为组件视图提供了数据和控制
  * 组件可以包含组件，所以子组件视图中的表达式可以访问到父组件模型中的值
- * <p>
- * 	组件生命周期
- * 	<ul>
- * 		<li>onCreate：当组件被创建时，该事件被触发，系统会把指定的服务注入到参数中</li>
- * 		<li>onPropChange：当参数要绑定到组件时，该事件被触发，可以手动clone参数或者传递引用</li>
- * 		<li>onUpdate: 当state中任意属性变更时触发。</li>
- * 		<li>onInit：当组件初始化时，该事件被触发，系统会扫描组件中的所有表达式并建立数据模型</li>
- * 		<li>onMount：当组件被挂载到组件树中时，该事件被触发，此时组件已经完成数据构建和绑定，DOM可用</li>
- * 		<li>onUnmount：当组件被卸载时，该事件被触发</li>
- * 		<li>onDestroy: 当组件被销毁时，该事件被触发</li>
- * 	</ul>
- * </p>
  * 
  * @class 
  */
@@ -2472,7 +2467,7 @@ function checkPropType(k,v,input,component){
 	var SHOW_WARN = true;
 
 	function warn(compName,msg){
-		console && console.warn('XWARN C[' + compName +'] - ' + msg);
+		SHOW_WARN && console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
 	//phase --> compile --> mount
 	function error(compName,phase,e){
@@ -2551,14 +2546,14 @@ function checkPropType(k,v,input,component){
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | String} param 组件参数对象，或url地址
+		 * @param  {Object | String} model 组件模型对象，或url地址
 		 * @return this
 		 */
-		this.component = function(name,param){
-			if(typeof(param)!='string' && !param.template){
+		this.component = function(name,model){
+			if(typeof(model)!='string' && !model.template){
 				error(name,"can not find property 'template'");
 			}
-			COMP_MAP[name] = param;
+			COMP_MAP[name] = model;
 			return this;
 		}
 
@@ -2574,11 +2569,11 @@ function checkPropType(k,v,input,component){
 		/**
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
-		 * @param  {Object} data 指令定义
+		 * @param  {Object} model 指令模型
 		 * @return this
 		 */
-		this.directive = function(name,param){
-			DIRECT_MAP[name] = param;
+		this.directive = function(name,model){
+			DIRECT_MAP[name] = model;
 			return this;
 		}
 
@@ -2616,10 +2611,9 @@ function checkPropType(k,v,input,component){
 		 * </pre>
 		 * @param  {String} tmpl 字符串模板
 		 * @param  {HTMLElement | String} container 匿名组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
-		this.renderTo = function(tmpl,container,param){
+		this.renderTo = function(tmpl,container,model){
 			
 			//link comps
 			var links = document.querySelectorAll('link[rel="impex"]');
@@ -2640,7 +2634,7 @@ function checkPropType(k,v,input,component){
             	return;
             }
 
-			var comp = newComponent(tmpl,container,param);
+			var comp = newComponent(tmpl,container,model);
 
 			parseComponent(comp);
 			mountComponent(comp);
@@ -2658,14 +2652,14 @@ function checkPropType(k,v,input,component){
 		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
 		 * impex总会从渲染一个组件作为一切的开始
 		 * @param  {HTMLElement | String} node 组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
+		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
-		this.render = function(node,param){
+		this.render = function(node,model){
 			if(isString(node)){
             	node = document.querySelector(node);
             }
             var tmpl = node.outerHTML;
-            return this.renderTo(tmpl,node,param);
+            return this.renderTo(tmpl,node,model);
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
@@ -2798,7 +2792,7 @@ impex.directive('style',{
         var v = data.value;
         var style = vnode.getAttribute('style')||'';
         if(v){
-            style += ';display:;'
+            style = style.replace(/display\s*:\s*none\s*;?/,'');
         }else{
             style += ';display:none;'
         }

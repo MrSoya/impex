@@ -14,7 +14,7 @@
     </head>
     <body>
         <div id="demo">
-            <input type="text" x-model="x" .value="x">
+            <input type="text" x-model="x" .value="x" debounce="200">
             <div x-for="1 to 100 as i">
                 <span x-for="1 to 100 as k">
                     {{k / x * i}}
@@ -34,8 +34,12 @@
                     console.log('compile time:',Date.now()-s);
                     this.s = Date.now();
                 },
-                onMount:function(argument) {
-                    
+                onBeforeUpdate:function(changes){
+                    this.s = Date.now();
+                    return true;
+                },
+                onUpdate:function(dom){
+                    console.log('update time:',Date.now() - this.s);
                 }
             });
             console.log('render time:',Date.now() - this.s);

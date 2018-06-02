@@ -31,7 +31,7 @@
 	var SHOW_WARN = true;
 
 	function warn(compName,msg){
-		console && console.warn('XWARN C[' + compName +'] - ' + msg);
+		SHOW_WARN && console && console.warn('XWARN C[' + compName +'] - ' + msg);
 	}
 	//phase --> compile --> mount
 	function error(compName,phase,e){
@@ -110,14 +110,14 @@
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | String} param 组件参数对象，或url地址
+		 * @param  {Object | String} model 组件模型对象，或url地址
 		 * @return this
 		 */
-		this.component = function(name,param){
-			if(typeof(param)!='string' && !param.template){
+		this.component = function(name,model){
+			if(typeof(model)!='string' && !model.template){
 				error(name,"can not find property 'template'");
 			}
-			COMP_MAP[name] = param;
+			COMP_MAP[name] = model;
 			return this;
 		}
 
@@ -133,11 +133,11 @@
 		/**
 		 * 定义指令
 		 * @param  {string} name  指令名，不带前缀
-		 * @param  {Object} data 指令定义
+		 * @param  {Object} model 指令模型
 		 * @return this
 		 */
-		this.directive = function(name,param){
-			DIRECT_MAP[name] = param;
+		this.directive = function(name,model){
+			DIRECT_MAP[name] = model;
 			return this;
 		}
 
@@ -175,10 +175,9 @@
 		 * </pre>
 		 * @param  {String} tmpl 字符串模板
 		 * @param  {HTMLElement | String} container 匿名组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
-		 * @param  {Array} [services] 需要注入的服务，服务名与注册时相同，比如['ViewManager']
+		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
-		this.renderTo = function(tmpl,container,param){
+		this.renderTo = function(tmpl,container,model){
 			
 			//link comps
 			var links = document.querySelectorAll('link[rel="impex"]');
@@ -199,7 +198,7 @@
             	return;
             }
 
-			var comp = newComponent(tmpl,container,param);
+			var comp = newComponent(tmpl,container,model);
 
 			parseComponent(comp);
 			mountComponent(comp);
@@ -217,14 +216,14 @@
 		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
 		 * impex总会从渲染一个组件作为一切的开始
 		 * @param  {HTMLElement | String} node 组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} param 组件参数，如果节点本身已经是组件，该参数会覆盖原有参数 
+		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
-		this.render = function(node,param){
+		this.render = function(node,model){
 			if(isString(node)){
             	node = document.querySelector(node);
             }
             var tmpl = node.outerHTML;
-            return this.renderTo(tmpl,node,param);
+            return this.renderTo(tmpl,node,model);
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
