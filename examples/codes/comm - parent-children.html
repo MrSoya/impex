@@ -11,8 +11,10 @@
     <body>
         <div id="demo">
             <x-a .data="data">
-                <x-b .value="data.entity.name">
-                    <x-c .value="value" ></x-c>
+                <x-b .data="data">
+                    <x-c .value="data.entity.name" >
+                        <input .value="value">
+                    </x-c>
                 </x-b>
             </x-a>
             
@@ -29,7 +31,7 @@
                 template:'<div><slot></slot></div>'
             });
             impex.component('x-c',{
-                template:'<input .value="value">'
+                template:'<div><slot></slot></div>'
             });
             
             //渲染
@@ -42,7 +44,10 @@
                     }
                 },
                 change:function(argument) {
-                    this.state.data = {entity:{name:2}};
+                    //can change
+                    this.state.data = {entity:{name:Math.random()}};
+                    //can not change
+                    // this.state.data.entity.name = Math.random();
                 }
             });
         </script>

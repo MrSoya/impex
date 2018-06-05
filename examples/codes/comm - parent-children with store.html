@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+        
+    </head>
+    <body>
+        <div id="demo">
+            <x-a>
+                <x-b>
+                    <x-c .value:compute="data.entity.name" >
+                        <input .value="value">
+                    </x-c>
+                </x-b>
+            </x-a>
+            
+            <button :click="change()">change</button>
+        </div>
+        
+
+        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript">
+            impex.component('x-a',{
+                template:'<div><slot></slot></div>'
+            });
+            impex.component('x-b',{
+                template:'<div><slot></slot></div>'
+            });
+            impex.component('x-c',{
+                template:'<div><slot></slot></div>'
+            });
+            var store = new impex.Store({
+                state:{
+                    value:1
+                },
+                actions:{
+                    change:function(delta){
+                        this.state.value = delta+Math.random();
+                    }
+                }
+            });
+            
+            //渲染
+            var debug = impex.render('#demo',{
+                state:{
+                    data:{
+                        entity:{
+                            name:1
+                        }
+                    }
+                },
+                change:function(argument) {
+                    store.commit('change',Math.random()*100);
+                }
+            });
+        </script>
+    </body>
+</html>

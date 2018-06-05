@@ -232,5 +232,7 @@
 		this.Component = Component;
 
 		this.EventEmitter = EventEmitter;
+
+		this._Observer = Observer;
 	}
 

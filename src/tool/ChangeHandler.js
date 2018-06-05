@@ -41,17 +41,21 @@ var ChangeHandler = new function() {
 					var name = change.name;
 					var object = change.object;
 					
-					handlePath(newVal,oldVal,comp,type,name,object,pc);
+					handlePath(newVal,oldVal,comp,type,name,object,pc,change.action);
 				});//end for
 				var tmp = changeMap;
 				for(var k in tmp){
-					updateComponent(tmp[k].comp,tmp[k].changes);
+					if(tmp[k].comp instanceof Component){
+						updateComponent(tmp[k].comp,tmp[k].change);
+					}else{
+						tmp[k].comp.__update(tmp[k].change);
+					}					
 				}
 			},20);
 		}
 	}
 	
-	function handlePath(newVal,oldVal,comp,type,name,object,pc){
+	function handlePath(newVal,oldVal,comp,type,name,object,pc,action){
         var chains = [];
     	chains = pc.concat();
 		if(!isArray(object))
@@ -61,12 +65,17 @@ var ChangeHandler = new function() {
 
         if(!changeMap[comp._uid]){
         	changeMap[comp._uid] = {
-        		changes:[],
+        		change:{},
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
-        changeMap[comp._uid].changes.push(c);
+        if(action){
+        	changeMap[comp._uid].change[name] = [c,action];
+        }else{
+        	changeMap[comp._uid].change[name] = c;
+        }
+        
 	}
 }
 

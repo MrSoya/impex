@@ -11,86 +11,71 @@
     </head>
     <body >
         <div id="demo">
-            <x-total></x-total>
-            <p>
-                <x-addx></x-addx>
-                <x-addy></x-addy>
-            </p>
+            storeX({{x}}) + storeY({{y}}) 
+            <x-panel>
+                <input type="number" .value="x" x-model="x" number>
+            </x-panel>
+            <button :click="addx()">addx</button>
+            <button :click="addy()">addy</button>
         </div>
         
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
-
+            //store 不能直接修改state，必须通过action
             var store = new impex.Store({
                 state:{
-                    x:999,
-                    y:0,
-                    z:{x:[1,2,3]}
+                    x:1,
+                    y:2
                 },
                 actions:{
                     addx:function(){
-                        this.state.x--;
+                        this.state.x++;
                     },
                     addy:function(){
                         this.state.y++;
                     }
-                },
-                getNum:function(){
-                    return {x:this.state.x,y:this.state.y};
                 }
             });
 
-            impex.component('x-total',{
-                template:'<div>x+y = {{x+y}}</div>',
-                state:function(){
-                    return store.getNum();
-                },
-                onCompile:function(){
-                    store.on('addx addy',this);
-                }
-            });
-            impex.component('x-addx',{
-                template:'<label><button :click="add()">Addx</button>x={{x}}</label>',
+            impex.component('x-panel',{
+                template:'<span> + x({{x}}) = {{z}} <p><slot></slot></p></span>',
                 state:{
-                    x:store.getNum().x
+                    x:store.state.x
                 },
-                add:function(){
-                    store.emit('addx')
+                computedState:{
+                    z:function(){
+                        return this.state.x + store.state.x + store.state.y;
+                    }
                 },
-                _changeState:function(action){
-                    var changes = action.changes;
-                    var c = changes[0];
-                    this.state.x = c.newVal;
+                onUpdate:function(argument) {
+                    console.log('state: ',argument)
                 },
-                onCompile:function(){
-                    store.on('addx',this);
-                }
-            });
-
-            impex.component('x-addy',{
-                template:'<label><button :click="add()">Addy</button>y={{y}}</label>',
-                state:{
-                    y:store.getNum().y
-                },
-                add:function(){
-                    store.emit('addy')
-                },
-                _changeState:function(action){
-                    var changes = action.changes;
-                    var c = changes[0];
-                    this.state.y = c.newVal;
+                callback:function(argument) {
+                    console.log('store: ',argument)
                 },
                 onCompile:function(){
-                    store.on('addy',this._changeState.bind(this));
+                    store.subscribe('addx addy',this.callback);
                 }
             });
 
             //渲染
             var debug = impex.render('#demo',{
-                
+                addx:function() {
+                    store.commit('addx');
+                },
+                addy:function() {
+                    store.commit('addy');
+                },
+                computedState:{
+                    x:function () {
+                        return store.state.x;
+                    },
+                    y:function () {
+                        return store.state.y;
+                    }
+                }
             });
-
             
         </script>
     </body>

@@ -56,6 +56,8 @@ function Component (el) {
 	this.__syncFn = {};
 	this.__syncOldVal = {};
 	this.__syncFnForScope = {};
+	//computedstate
+	this.__dependence = {};
 
 	/**
 	 * 组件模版，用于生成组件视图
@@ -392,7 +394,21 @@ function scopeStyle(host,style){
 
 	return css;
 }
+
+var g_computedState,
+	g_computedComp;
 function compileComponent(comp){
+	//init 
+	for(var k in comp.computedState){
+		var cs = comp.computedState[k];
+		if(cs instanceof Function){
+			var v = cs.call(comp);
+			comp.state[k] = v;
+		}else{
+			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
+		}
+	}
+
 	var vnode = buildVDOMTree(comp);
 	var pv = null;
 	if(comp.vnode){
@@ -408,6 +424,18 @@ function compileComponent(comp){
 
 	//observe state
 	comp.state = Observer.observe(comp.state,comp);
+
+	//compute state
+	for(var k in comp.computedState){
+		var cs = comp.computedState[k];
+		g_computedState = k;
+		g_computedComp = comp;
+		if(cs instanceof Function){
+			var v = cs.call(comp);
+			comp.state[k] = v;
+		}
+	}
+	g_computedComp = g_computedState = null;
 
 	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
 }
@@ -443,12 +471,12 @@ function mountComponent(comp,parentVNode){
 }
 
 //////	update flow
-function updateComponent(comp,changes){
+function updateComponent(comp,changeMap){
 	var renderable = true;
 	var syncPropMap = {};
 	
 	if(comp.onBeforeUpdate){
-		renderable = comp.onBeforeUpdate(changes);
+		renderable = comp.onBeforeUpdate(changeMap);
 	}
 	if(renderable === false)return;
 
@@ -497,7 +525,7 @@ function updateComponent(comp,changes){
 		comp.__syncOldVal[uid] = rs;
 	}
 
-	comp.onUpdate && comp.onUpdate(changes);
+	comp.onUpdate && comp.onUpdate(changeMap);
 
 	callDirective(comp.vnode,comp);
 }

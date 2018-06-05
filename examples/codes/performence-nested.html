@@ -25,20 +25,21 @@
 
         <script type="text/javascript">
             var s = Date.now();
-            impex.render(
+            var debug = impex.render(
                 '#demo',{
                 state:{
-                    x:2
+                    x:2,
+                    xx:[1,2,3]
                 },
                 onCompile:function(){
                     console.log('compile time:',Date.now()-s);
                     this.s = Date.now();
                 },
-                onBeforeUpdate:function(changes){
+                onBeforeUpdate:function(changeMap){
                     this.s = Date.now();
                     return true;
                 },
-                onUpdate:function(dom){
+                onUpdate:function(changeMap){
                     console.log('update time:',Date.now() - this.s);
                 }
             });

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-06-02
+ * last build: 2018-06-05
  */
 !function (global) {
 	'use strict';
@@ -147,9 +147,27 @@
 				//build handler
 				var handler = {
 					comp:component,
-				    // get: function(target, name){
-				    //     return target[name];
-				    // },
+				    get: function(target, name){
+				    	if(g_computedState){
+				    		var comp = this.comp;
+				    		if(comp instanceof Component){
+				    			var deps = comp.__dependence[name];
+					    		if(!deps){
+					    			deps = comp.__dependence[name] = [];
+					    		}
+					    		if(deps instanceof Array)deps.push(g_computedState);
+				    		}else 	    		
+				    		//store
+				    		if(impex.Store){
+				    			var notices = comp.__noticeMap[name];
+				    			if(!notices){
+				    				notices = comp.__noticeMap[name] = [];
+				    			}
+				    			notices.push([g_computedComp,g_computedState]);
+				    		}
+				    	}
+				        return target[name];
+				    },
 				    set: function(target,name,value) {
 				    	var isAdd = !(name in target);
 
@@ -157,10 +175,12 @@
 				    	var v = value;
 				    	if(old === v)return true;
 
+				    	var comp = this.comp;
+
 				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
-				    		v = observeData(this,pcs,v,this.comp);
+				    		v = observeData(this,pcs,v,comp);
 				    	}
 				    	if(isArray(target)){
 				    		setArray(target,name,v);
@@ -168,9 +188,26 @@
 					    	target[name] = v;
 				    	}
 
-				    	var path = target.__im__propChain;//.concat();
+				    	//check computedstate
+				    	if(comp.__dependence && comp.__dependence[name]){
+				    		comp.__dependence[name].forEach(function(k) {
+				    			var nv = comp.computedState[k].call(comp);
+				    			comp.state[k] = nv;
+				    		});
+				    	}else 
+				    	//store
+			    		if(impex.Store){
+			    			comp.__noticeMap[name].forEach(function(pair) {
+			    				var target = pair[0];
+			    				var k = pair[1];
+				    			var nv = target.computedState[k].call(target);
+				    			target.state[k] = nv;
+				    		});
+			    		}
 
-				    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
+				    	var path = target.__im__propChain;
+
+				    	var changeObj = {action:comp.__action,object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
 				    	ChangeHandler.handle(changeObj);
 				    	
@@ -185,7 +222,7 @@
 				    		delete target[name];
 				    	}
 
-					    var path = target.__im__propChain;//.concat();
+					    var path = target.__im__propChain;
 
 					    var changeObj = {object:target,name:name,pc:path,oldVal:old,comp:this.comp,type:'delete'};
 				    	ChangeHandler.handle(changeObj);
@@ -1664,17 +1701,21 @@ var ChangeHandler = new function() {
 					var name = change.name;
 					var object = change.object;
 					
-					handlePath(newVal,oldVal,comp,type,name,object,pc);
+					handlePath(newVal,oldVal,comp,type,name,object,pc,change.action);
 				});//end for
 				var tmp = changeMap;
 				for(var k in tmp){
-					updateComponent(tmp[k].comp,tmp[k].changes);
+					if(tmp[k].comp instanceof Component){
+						updateComponent(tmp[k].comp,tmp[k].change);
+					}else{
+						tmp[k].comp.__update(tmp[k].change);
+					}					
 				}
 			},20);
 		}
 	}
 	
-	function handlePath(newVal,oldVal,comp,type,name,object,pc){
+	function handlePath(newVal,oldVal,comp,type,name,object,pc,action){
         var chains = [];
     	chains = pc.concat();
 		if(!isArray(object))
@@ -1684,12 +1725,17 @@ var ChangeHandler = new function() {
 
         if(!changeMap[comp._uid]){
         	changeMap[comp._uid] = {
-        		changes:[],
+        		change:{},
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
-        changeMap[comp._uid].changes.push(c);
+        if(action){
+        	changeMap[comp._uid].change[name] = [c,action];
+        }else{
+        	changeMap[comp._uid].change[name] = c;
+        }
+        
 	}
 }
 
@@ -1796,6 +1842,8 @@ function Component (el) {
 	this.__syncFn = {};
 	this.__syncOldVal = {};
 	this.__syncFnForScope = {};
+	//computedstate
+	this.__dependence = {};
 
 	/**
 	 * 组件模版，用于生成组件视图
@@ -2132,7 +2180,21 @@ function scopeStyle(host,style){
 
 	return css;
 }
+
+var g_computedState,
+	g_computedComp;
 function compileComponent(comp){
+	//init 
+	for(var k in comp.computedState){
+		var cs = comp.computedState[k];
+		if(cs instanceof Function){
+			var v = cs.call(comp);
+			comp.state[k] = v;
+		}else{
+			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
+		}
+	}
+
 	var vnode = buildVDOMTree(comp);
 	var pv = null;
 	if(comp.vnode){
@@ -2148,6 +2210,18 @@ function compileComponent(comp){
 
 	//observe state
 	comp.state = Observer.observe(comp.state,comp);
+
+	//compute state
+	for(var k in comp.computedState){
+		var cs = comp.computedState[k];
+		g_computedState = k;
+		g_computedComp = comp;
+		if(cs instanceof Function){
+			var v = cs.call(comp);
+			comp.state[k] = v;
+		}
+	}
+	g_computedComp = g_computedState = null;
 
 	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
 }
@@ -2183,12 +2257,12 @@ function mountComponent(comp,parentVNode){
 }
 
 //////	update flow
-function updateComponent(comp,changes){
+function updateComponent(comp,changeMap){
 	var renderable = true;
 	var syncPropMap = {};
 	
 	if(comp.onBeforeUpdate){
-		renderable = comp.onBeforeUpdate(changes);
+		renderable = comp.onBeforeUpdate(changeMap);
 	}
 	if(renderable === false)return;
 
@@ -2237,7 +2311,7 @@ function updateComponent(comp,changes){
 		comp.__syncOldVal[uid] = rs;
 	}
 
-	comp.onUpdate && comp.onUpdate(changes);
+	comp.onUpdate && comp.onUpdate(changeMap);
 
 	callDirective(comp.vnode,comp);
 }
@@ -2668,6 +2742,8 @@ function checkPropType(k,v,input,component){
 		this.Component = Component;
 
 		this.EventEmitter = EventEmitter;
+
+		this._Observer = Observer;
 	}
 
 

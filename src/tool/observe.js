@@ -41,9 +41,27 @@
 				//build handler
 				var handler = {
 					comp:component,
-				    // get: function(target, name){
-				    //     return target[name];
-				    // },
+				    get: function(target, name){
+				    	if(g_computedState){
+				    		var comp = this.comp;
+				    		if(comp instanceof Component){
+				    			var deps = comp.__dependence[name];
+					    		if(!deps){
+					    			deps = comp.__dependence[name] = [];
+					    		}
+					    		if(deps instanceof Array)deps.push(g_computedState);
+				    		}else 	    		
+				    		//store
+				    		if(impex.Store){
+				    			var notices = comp.__noticeMap[name];
+				    			if(!notices){
+				    				notices = comp.__noticeMap[name] = [];
+				    			}
+				    			notices.push([g_computedComp,g_computedState]);
+				    		}
+				    	}
+				        return target[name];
+				    },
 				    set: function(target,name,value) {
 				    	var isAdd = !(name in target);
 
@@ -51,10 +69,12 @@
 				    	var v = value;
 				    	if(old === v)return true;
 
+				    	var comp = this.comp;
+
 				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
-				    		v = observeData(this,pcs,v,this.comp);
+				    		v = observeData(this,pcs,v,comp);
 				    	}
 				    	if(isArray(target)){
 				    		setArray(target,name,v);
@@ -62,9 +82,26 @@
 					    	target[name] = v;
 				    	}
 
-				    	var path = target.__im__propChain;//.concat();
+				    	//check computedstate
+				    	if(comp.__dependence && comp.__dependence[name]){
+				    		comp.__dependence[name].forEach(function(k) {
+				    			var nv = comp.computedState[k].call(comp);
+				    			comp.state[k] = nv;
+				    		});
+				    	}else 
+				    	//store
+			    		if(impex.Store){
+			    			comp.__noticeMap[name].forEach(function(pair) {
+			    				var target = pair[0];
+			    				var k = pair[1];
+				    			var nv = target.computedState[k].call(target);
+				    			target.state[k] = nv;
+				    		});
+			    		}
 
-				    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
+				    	var path = target.__im__propChain;
+
+				    	var changeObj = {action:comp.__action,object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
 				    	ChangeHandler.handle(changeObj);
 				    	
@@ -79,7 +116,7 @@
 				    		delete target[name];
 				    	}
 
-					    var path = target.__im__propChain;//.concat();
+					    var path = target.__im__propChain;
 
 					    var changeObj = {object:target,name:name,pc:path,oldVal:old,comp:this.comp,type:'delete'};
 				    	ChangeHandler.handle(changeObj);
