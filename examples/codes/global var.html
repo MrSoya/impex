@@ -14,20 +14,20 @@
         <div id="demo">
             <x-child1>
                 <label>
-                    <i>getGlobal() => json</i> --> {{getGlobal() => json}}
+                    <i>getG() => json</i> --> {{getG() => json}}
                 </label>
-                <i x-for="ary.length to (getNumber()+4) as i">
+                <i x-for="ary.length to (ary.length+4) as i">
                     {{i}}
                 </i>
             </x-child1>
             <x-child2>
                 <!-- global var -->
                 <label>
-                    <i>info / $global.info</i> --> {{info}} / {{$global.info}}
+                    <i>info / g.info</i> --> {{info}} / {{g.info}}
                 </label>
                 <!-- global function -->
-                <button :click="show($event);alert($vnode)">
-                    {{getName()}}
+                <button :click="show($event)">
+                    {{g.name}}
                 </button>
             </x-child2>
         </div>
@@ -45,34 +45,25 @@
                 template:'<div>child2 :{{info}}<slot></slot></div>',
                 state:{
                     info:" in local 2"
-                },
-                show:function(argument) {
-                    alert(argument)
-                },
-                getName:function() {
-                    return 'click'
                 }
             });
 
+            var g = {
+                name:'a global funciton',
+                info:'here we are '
+            };
+            var ary = [1,2,3,4,5];
+
+            function show(argument) {
+                alert('you clicked on a global function');
+            }
+
+            function getG(argument) {
+                return g;
+            }
+
             //渲染
             var debug = impex.render('#demo',{
-                state:{
-                    ary:[1,2,3,4,5]
-                },
-                onCreate:function(){
-                    //register global var
-                    impex.$global.info = "in global";
-                    impex.$global.alert = function(msg){alert(msg)};
-                    impex.$global.getGlobal = this.getGlobal;
-                    impex.$global.ary = this.state.ary;
-                    impex.$global.getNumber = this.getNumber.bind(this);
-                },
-                getGlobal:function(){
-                    return impex.$global;
-                },
-                getNumber:function(){
-                    return this.state.ary.length;
-                }
             });
 
             

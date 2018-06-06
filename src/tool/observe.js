@@ -71,6 +71,14 @@
 
 				    	var comp = this.comp;
 
+				    	//computedState setter
+				    	if(comp.computedState && comp.computedState[name]){
+				    		var setter = comp.computedState[name].set;
+				    		if(setter instanceof Function){
+				    			setter.call(comp,v);
+				    		}
+				    	}
+
 				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
@@ -90,11 +98,12 @@
 				    		});
 				    	}else 
 				    	//store
-			    		if(impex.Store){
+			    		if(impex.Store && comp.__noticeMap && comp.__noticeMap[name]){
 			    			comp.__noticeMap[name].forEach(function(pair) {
 			    				var target = pair[0];
 			    				var k = pair[1];
-				    			var nv = target.computedState[k].call(target);
+			    				var getter = target.computedState[k].get || target.computedState[k];
+				    			var nv = getter.call(target);
 				    			target.state[k] = nv;
 				    		});
 			    		}

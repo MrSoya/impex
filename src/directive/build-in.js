@@ -145,11 +145,20 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        // vnode.toNum = vnode.getAttribute('number');
-        // vnode.debounce = vnode.getAttribute('debounce')>>0;
         vnode.exp = data.exp;
-        vnode.on('change',this.handleChange);
-        vnode.on('input',handleInput);
+        switch(vnode.tag){
+            case 'select':
+                vnode.on('change',this.handleChange);
+                break;
+            case 'input':
+                var type = vnode.attrNodes.type;
+                if(type == 'radio' || type == 'checkbox'){
+                    vnode.on('change',this.handleChange);
+                    break;
+                }
+            default:
+                vnode.on('input',handleInput);
+        }
     },
     handleChange:function(e,vnode){
         var el = e.target;
@@ -182,7 +191,6 @@ impex.directive('style',{
                 }else{
                     handleInput(e,vnode,this);
                 }
-                
                 break;
         }
     }
@@ -226,7 +234,9 @@ function changeModelCheck(e,vnode,comp){
     }else{
         parts = fn(this.state);
     }
-    if(!isArray(parts)){
+    if(isArray(parts)){
+        parts = parts.concat();
+    }else{
         parts = [parts];
     }
     if(t.checked){
@@ -237,4 +247,5 @@ function changeModelCheck(e,vnode,comp){
             parts.splice(i,1);
         }
     }
+    comp.setState(vnode.exp,parts);
 }

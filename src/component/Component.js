@@ -398,13 +398,12 @@ function scopeStyle(host,style){
 var g_computedState,
 	g_computedComp;
 function compileComponent(comp){
-	//init 
+	//init computedstate to state
 	for(var k in comp.computedState){
 		var cs = comp.computedState[k];
-		if(cs instanceof Function){
-			var v = cs.call(comp);
-			comp.state[k] = v;
-		}else{
+		var fn = cs.get || cs;
+		comp.state[k] = cs;
+		if(!(fn instanceof Function)){
 			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
 		}
 	}
@@ -428,10 +427,11 @@ function compileComponent(comp){
 	//compute state
 	for(var k in comp.computedState){
 		var cs = comp.computedState[k];
+		var fn = cs.get || cs;
 		g_computedState = k;
 		g_computedComp = comp;
-		if(cs instanceof Function){
-			var v = cs.call(comp);
+		if(fn instanceof Function){
+			var v = fn.call(comp);
 			comp.state[k] = v;
 		}
 	}
@@ -645,6 +645,7 @@ function bindProps(comp,parent,parentAttrs){
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
+	var computedState = {};
 	for(var k in parentAttrs){
 		var v = parentAttrs[k];
 		if(k == ATTR_REF_TAG){
@@ -659,6 +660,14 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 		// .xxxx
 		var n = k.substr(1);
+
+		//compute state
+		if(k.indexOf(COMPUTESTATE_SUFFIX)>-1){
+			if(!comp.computedState)comp.computedState = {};
+			comp.computedState[n.replace(COMPUTESTATE_SUFFIX,'')] = new Function('return '+v);
+			continue;
+		}
+
 		if(parent[v] instanceof Function){
 			v = 'this.'+v;
 		}

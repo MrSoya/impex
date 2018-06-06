@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-06-05
+ * last build: 2018-06-06
  */
 !function (global) {
 	'use strict';
@@ -177,6 +177,14 @@
 
 				    	var comp = this.comp;
 
+				    	//computedState setter
+				    	if(comp.computedState && comp.computedState[name]){
+				    		var setter = comp.computedState[name].set;
+				    		if(setter instanceof Function){
+				    			setter.call(comp,v);
+				    		}
+				    	}
+
 				    	if(isObject(v)){
 				    		var pcs = target.__im__propChain.concat();
 							pcs.push(name);
@@ -196,11 +204,12 @@
 				    		});
 				    	}else 
 				    	//store
-			    		if(impex.Store){
+			    		if(impex.Store && comp.__noticeMap && comp.__noticeMap[name]){
 			    			comp.__noticeMap[name].forEach(function(pair) {
 			    				var target = pair[0];
 			    				var k = pair[1];
-				    			var nv = target.computedState[k].call(target);
+			    				var getter = target.computedState[k].get || target.computedState[k];
+				    			var nv = getter.call(target);
 				    			target.state[k] = nv;
 				    		});
 			    		}
@@ -2184,13 +2193,12 @@ function scopeStyle(host,style){
 var g_computedState,
 	g_computedComp;
 function compileComponent(comp){
-	//init 
+	//init computedstate to state
 	for(var k in comp.computedState){
 		var cs = comp.computedState[k];
-		if(cs instanceof Function){
-			var v = cs.call(comp);
-			comp.state[k] = v;
-		}else{
+		var fn = cs.get || cs;
+		comp.state[k] = cs;
+		if(!(fn instanceof Function)){
 			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
 		}
 	}
@@ -2214,10 +2222,11 @@ function compileComponent(comp){
 	//compute state
 	for(var k in comp.computedState){
 		var cs = comp.computedState[k];
+		var fn = cs.get || cs;
 		g_computedState = k;
 		g_computedComp = comp;
-		if(cs instanceof Function){
-			var v = cs.call(comp);
+		if(fn instanceof Function){
+			var v = fn.call(comp);
 			comp.state[k] = v;
 		}
 	}
@@ -2431,6 +2440,7 @@ function bindProps(comp,parent,parentAttrs){
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
+	var computedState = {};
 	for(var k in parentAttrs){
 		var v = parentAttrs[k];
 		if(k == ATTR_REF_TAG){
@@ -2445,6 +2455,14 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 		// .xxxx
 		var n = k.substr(1);
+
+		//compute state
+		if(k.indexOf(COMPUTESTATE_SUFFIX)>-1){
+			if(!comp.computedState)comp.computedState = {};
+			comp.computedState[n.replace(COMPUTESTATE_SUFFIX,'')] = new Function('return '+v);
+			continue;
+		}
+
 		if(parent[v] instanceof Function){
 			v = 'this.'+v;
 		}
@@ -2526,6 +2544,7 @@ function checkPropType(k,v,input,component){
 	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 
 	var DOM_COMP_ATTR = 'impex-component';
+	var COMPUTESTATE_SUFFIX = ':compute';
 
 	var SLOT = 'slot';
 
@@ -2894,11 +2913,20 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        // vnode.toNum = vnode.getAttribute('number');
-        // vnode.debounce = vnode.getAttribute('debounce')>>0;
         vnode.exp = data.exp;
-        vnode.on('change',this.handleChange);
-        vnode.on('input',handleInput);
+        switch(vnode.tag){
+            case 'select':
+                vnode.on('change',this.handleChange);
+                break;
+            case 'input':
+                var type = vnode.attrNodes.type;
+                if(type == 'radio' || type == 'checkbox'){
+                    vnode.on('change',this.handleChange);
+                    break;
+                }
+            default:
+                vnode.on('input',handleInput);
+        }
     },
     handleChange:function(e,vnode){
         var el = e.target;
@@ -2931,7 +2959,6 @@ impex.directive('style',{
                 }else{
                     handleInput(e,vnode,this);
                 }
-                
                 break;
         }
     }
@@ -2975,7 +3002,9 @@ function changeModelCheck(e,vnode,comp){
     }else{
         parts = fn(this.state);
     }
-    if(!isArray(parts)){
+    if(isArray(parts)){
+        parts = parts.concat();
+    }else{
         parts = [parts];
     }
     if(t.checked){
@@ -2986,6 +3015,7 @@ function changeModelCheck(e,vnode,comp){
             parts.splice(i,1);
         }
     }
+    comp.setState(vnode.exp,parts);
 }
 impex.filter('json',function(v){
     return JSON.stringify(v);

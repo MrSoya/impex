@@ -16,6 +16,7 @@
 	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 
 	var DOM_COMP_ATTR = 'impex-component';
+	var COMPUTESTATE_SUFFIX = ':compute';
 
 	var SLOT = 'slot';
 
