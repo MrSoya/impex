@@ -145,7 +145,8 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.exp = data.exp;
+        vnode.__exp = data.exp;
+        vnode.__store = data.args && data.args[0]=='store'?true:false;
         switch(vnode.tag){
             case 'select':
                 vnode.on('change',this.handleChange);
@@ -187,7 +188,7 @@ impex.directive('style',{
                             parts.push(opt.value);
                         }
                     }
-                    this.setState(vnode.exp,parts);
+                    setModel(vnode,parts,this);
                 }else{
                     handleInput(e,vnode,this);
                 }
@@ -213,20 +214,16 @@ function handleInput(e,vnode,comp){
             clearTimeout(vnode.debounceTimer);
             vnode.debounceTimer = null;
             
-            that.setState(vnode.exp,v);
+            setModel(vnode,v,that || comp);
         },debounce);
     }else{
-        if(!this){
-            comp.setState(vnode.exp,v);
-        }else{
-            this.setState(vnode.exp,v);
-        }
+        setModel(vnode,v,this || comp);
     }
 }
 function changeModelCheck(e,vnode,comp){
     var t = e.target || e.srcElement;
     var val = t.value;
-    var str = 'with(scope){return '+vnode.exp+'}';
+    var str = 'with(scope){return '+vnode.__exp+'}';
     var fn = new Function('scope',str);
     var parts = null;
     if(!this){
@@ -247,5 +244,12 @@ function changeModelCheck(e,vnode,comp){
             parts.splice(i,1);
         }
     }
-    comp.setState(vnode.exp,parts);
+    setModel(vnode,parts,comp);
+}
+function setModel(vnode,value,comp){
+    if(vnode.__store){
+        comp.store.commit('model',vnode.__exp,value);
+    }else{
+        comp.setState(vnode.__exp,value);
+    }
 }

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-06-06
+ * last build: 2018-06-07
  */
 !function (global) {
 	'use strict';
@@ -501,7 +501,7 @@ VNode.prototype = {
                     forScopeStart += 'with(arguments['+(5/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
-            evMap[this.vid] = [this,new Function('$global,comp,state,$event,$vnode','with($global){with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}}'),this._cid];
+            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}'),this._cid];
         }
 
         this._hasEvent = true;
@@ -551,7 +551,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
     if(html != null){
         var forScopeStart = '',forScopeEnd = '';
         var root,str;
-        var args = [impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
+        var args = [comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
         //build for scope
         var scopeAry = [];
         var argCount = args.length;
@@ -572,7 +572,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
 
         var argStr = scopeAry.length>0?','+scopeAry.toString():'';
         
-        var fn = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with($global){with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}}');
+        var fn = new Function('comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}');
         root = fn.apply(comp,args);
         children = root.children || [];
     }
@@ -1012,7 +1012,8 @@ function buildAttrs(map){
         var attr = map[k];
         if(attr.directive){
             var exp = attr.value;
-            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(attr.directive[0] === 'on'?JSON.stringify(exp):exp)+","+JSON.stringify(exp)+"]";
+            var calcExp = attr.directive[0] === 'on'||attr.directive[0] === 'model'?JSON.stringify(exp):exp;
+            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(calcExp)+","+JSON.stringify(exp)+"]";
         }else{
             rs[k] = attr.value;
         }
@@ -1049,8 +1050,8 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var rs = 'with($global){with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}}';
-    rs = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi',rs);
+    var rs = 'with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}';
+    rs = new Function('comp,state,_ce,_tmp,_ct,_li,_fi',rs);
     VDOM_CACHE[str] = rs;
     return rs;
 }
@@ -1080,7 +1081,7 @@ function buildVDOMTree(comp){
     var root = null;
     try{
         var fn = compileVDOM(comp.compiledTmp,comp);
-        root = fn.call(comp,impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+        root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
         error(comp.name,"compile",e);
     }
@@ -1449,7 +1450,7 @@ function dispatch(type,e) {
         if(isFn){
             fn.call(comp,e,vnode);
         }else{
-            var args = [impex.$global,comp,comp.state,e,vnode];
+            var args = [comp,comp.state,e,vnode];
             if(vnode._forScopeQ)
                 for(var i=0;i<vnode._forScopeQ.length;i++){
                     args.push(vnode._forScopeQ[i]);
@@ -2359,6 +2360,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	//bind parent
 	parent.children.push(c);
 	c.parent = parent;
+	c.root = parent.root;
+	c.store = c.root.store;
 	c.vnode = vnode;
 	//ref
 	if(attrs[ATTR_REF_TAG]){
@@ -2379,7 +2382,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		var fnName = RegExp.$1;
 		
 
-        var fn = parent[fnName] || impex.$global[fnName];
+        var fn = parent[fnName];
         if(fn)
 			c.on(type,fn.bind(parent));
 	});
@@ -2455,14 +2458,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 		// .xxxx
 		var n = k.substr(1);
-
-		//compute state
-		if(k.indexOf(COMPUTESTATE_SUFFIX)>-1){
-			if(!comp.computedState)comp.computedState = {};
-			comp.computedState[n.replace(COMPUTESTATE_SUFFIX,'')] = new Function('return '+v);
-			continue;
-		}
-
 		if(parent[v] instanceof Function){
 			v = 'this.'+v;
 		}
@@ -2487,6 +2482,29 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	}	
 	var objs = [];
 	ext(strMap,rs);
+
+	//compute state
+	if(!isUndefined(strMap['store'])){
+		if(!comp.store){
+			error(comp.name,"there's no store injected into the 'render' method");
+			return;
+		}
+		var states = null;
+		if(strMap['store']){
+			states = strMap['store'].split(' ');
+		}else{
+			states = Object.keys(comp.store.state);
+		}		
+		if(!comp.computedState)comp.computedState = {};
+		states.forEach(function(state) {
+			var csKey = null;
+			if(/[^\w]?(\w+)$/.test(state)){
+				csKey = RegExp.$1;
+				comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
+			}
+		});
+	}
+
 	for(var k in rs){
 		var v = rs[k];
 		if(isObject(v) && v.__im__oid){
@@ -2544,7 +2562,6 @@ function checkPropType(k,v,input,component){
 	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 
 	var DOM_COMP_ATTR = 'impex-component';
-	var COMPUTESTATE_SUFFIX = ':compute';
 
 	var SLOT = 'slot';
 
@@ -2576,15 +2593,6 @@ function checkPropType(k,v,input,component){
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */
 	var impex = new function(){
-		/**
-		 * 全局对象命名空间。注册在此对象上的变量/方法可以在表达式中直接访问。比如
-		 * {{ $global.URL }} 或 {{ URL }}
-		 * 注意，全局对象中的变量应该是只读，否则可能会引起不可预测的错误或混乱的数据流。
-		 * 全局变量的更新并不会刷新使用变量的表达式
-		 * @type {Object}
-		 */
-		this.$global = {};
-
 		/**
 		 * 保存注册过的全局组件实例引用。
 		 * 注册全局组件可以使用id属性.
@@ -2728,6 +2736,7 @@ function checkPropType(k,v,input,component){
             }
 
 			var comp = newComponent(tmpl,container,model);
+			comp.root = comp;
 
 			parseComponent(comp);
 			mountComponent(comp);
@@ -2913,7 +2922,8 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.exp = data.exp;
+        vnode.__exp = data.exp;
+        vnode.__store = data.args && data.args[0]=='store'?true:false;
         switch(vnode.tag){
             case 'select':
                 vnode.on('change',this.handleChange);
@@ -2955,7 +2965,7 @@ impex.directive('style',{
                             parts.push(opt.value);
                         }
                     }
-                    this.setState(vnode.exp,parts);
+                    setModel(vnode,parts,this);
                 }else{
                     handleInput(e,vnode,this);
                 }
@@ -2981,20 +2991,16 @@ function handleInput(e,vnode,comp){
             clearTimeout(vnode.debounceTimer);
             vnode.debounceTimer = null;
             
-            that.setState(vnode.exp,v);
+            setModel(vnode,v,that || comp);
         },debounce);
     }else{
-        if(!this){
-            comp.setState(vnode.exp,v);
-        }else{
-            this.setState(vnode.exp,v);
-        }
+        setModel(vnode,v,this || comp);
     }
 }
 function changeModelCheck(e,vnode,comp){
     var t = e.target || e.srcElement;
     var val = t.value;
-    var str = 'with(scope){return '+vnode.exp+'}';
+    var str = 'with(scope){return '+vnode.__exp+'}';
     var fn = new Function('scope',str);
     var parts = null;
     if(!this){
@@ -3015,7 +3021,14 @@ function changeModelCheck(e,vnode,comp){
             parts.splice(i,1);
         }
     }
-    comp.setState(vnode.exp,parts);
+    setModel(vnode,parts,comp);
+}
+function setModel(vnode,value,comp){
+    if(vnode.__store){
+        comp.store.commit('model',vnode.__exp,value);
+    }else{
+        comp.setState(vnode.__exp,value);
+    }
 }
 impex.filter('json',function(v){
     return JSON.stringify(v);

@@ -32,6 +32,13 @@
         }
 
 		if(!this.actions)this.actions = {};
+		//model
+		this.actions['model'] = function(exp,v) {
+			v = JSON.stringify(v);
+			var str = 'with(scope){'+exp+'='+v+'}';
+			var fn = new Function('scope',str);
+			fn(this.state);
+		}
 
 		if(this.state instanceof Function){
 			this.state = this.state.call(ins);

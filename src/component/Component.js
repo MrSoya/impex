@@ -564,6 +564,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	//bind parent
 	parent.children.push(c);
 	c.parent = parent;
+	c.root = parent.root;
+	c.store = c.root.store;
 	c.vnode = vnode;
 	//ref
 	if(attrs[ATTR_REF_TAG]){
@@ -584,7 +586,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		var fnName = RegExp.$1;
 		
 
-        var fn = parent[fnName] || impex.$global[fnName];
+        var fn = parent[fnName];
         if(fn)
 			c.on(type,fn.bind(parent));
 	});
@@ -660,14 +662,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 		// .xxxx
 		var n = k.substr(1);
-
-		//compute state
-		if(k.indexOf(COMPUTESTATE_SUFFIX)>-1){
-			if(!comp.computedState)comp.computedState = {};
-			comp.computedState[n.replace(COMPUTESTATE_SUFFIX,'')] = new Function('return '+v);
-			continue;
-		}
-
 		if(parent[v] instanceof Function){
 			v = 'this.'+v;
 		}
@@ -692,6 +686,29 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	}	
 	var objs = [];
 	ext(strMap,rs);
+
+	//compute state
+	if(!isUndefined(strMap['store'])){
+		if(!comp.store){
+			error(comp.name,"there's no store injected into the 'render' method");
+			return;
+		}
+		var states = null;
+		if(strMap['store']){
+			states = strMap['store'].split(' ');
+		}else{
+			states = Object.keys(comp.store.state);
+		}		
+		if(!comp.computedState)comp.computedState = {};
+		states.forEach(function(state) {
+			var csKey = null;
+			if(/[^\w]?(\w+)$/.test(state)){
+				csKey = RegExp.$1;
+				comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
+			}
+		});
+	}
+
 	for(var k in rs){
 		var v = rs[k];
 		if(isObject(v) && v.__im__oid){

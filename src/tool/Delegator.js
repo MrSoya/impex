@@ -26,7 +26,7 @@ function dispatch(type,e) {
         if(isFn){
             fn.call(comp,e,vnode);
         }else{
-            var args = [impex.$global,comp,comp.state,e,vnode];
+            var args = [comp,comp.state,e,vnode];
             if(vnode._forScopeQ)
                 for(var i=0;i<vnode._forScopeQ.length;i++){
                     args.push(vnode._forScopeQ[i]);

@@ -53,7 +53,7 @@ VNode.prototype = {
                     forScopeStart += 'with(arguments['+(5/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
-            evMap[this.vid] = [this,new Function('$global,comp,state,$event,$vnode','with($global){with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}}'),this._cid];
+            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}'),this._cid];
         }
 
         this._hasEvent = true;
@@ -103,7 +103,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
     if(html != null){
         var forScopeStart = '',forScopeEnd = '';
         var root,str;
-        var args = [impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
+        var args = [comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
         //build for scope
         var scopeAry = [];
         var argCount = args.length;
@@ -124,7 +124,7 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
 
         var argStr = scopeAry.length>0?','+scopeAry.toString():'';
         
-        var fn = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with($global){with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}}');
+        var fn = new Function('comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}');
         root = fn.apply(comp,args);
         children = root.children || [];
     }
@@ -564,7 +564,8 @@ function buildAttrs(map){
         var attr = map[k];
         if(attr.directive){
             var exp = attr.value;
-            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(attr.directive[0] === 'on'?JSON.stringify(exp):exp)+","+JSON.stringify(exp)+"]";
+            var calcExp = attr.directive[0] === 'on'||attr.directive[0] === 'model'?JSON.stringify(exp):exp;
+            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(calcExp)+","+JSON.stringify(exp)+"]";
         }else{
             rs[k] = attr.value;
         }
@@ -601,8 +602,8 @@ function buildFilterStr(filters){
 function compileVDOM(str,comp){
     if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
 
-    var rs = 'with($global){with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}}';
-    rs = new Function('$global,comp,state,_ce,_tmp,_ct,_li,_fi',rs);
+    var rs = 'with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}';
+    rs = new Function('comp,state,_ce,_tmp,_ct,_li,_fi',rs);
     VDOM_CACHE[str] = rs;
     return rs;
 }
@@ -632,7 +633,7 @@ function buildVDOMTree(comp){
     var root = null;
     try{
         var fn = compileVDOM(comp.compiledTmp,comp);
-        root = fn.call(comp,impex.$global,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+        root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
         error(comp.name,"compile",e);
     }

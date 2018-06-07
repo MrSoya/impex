@@ -15,64 +15,39 @@
     <body>
         model -> view & view -> model
         <div id="demo">
-            <x-a .x:compute="store.state.x"  x-store:x="x">
+            <x-a store="x">
                 x-a: {{x}}
             </x-a>
-            <x-b .y:compute="store.state.y + 1" .x:compute="store.state.x">
+            <x-b store>
                 x-b: {{y + x}}
             </x-b>
-            <x-c > 
+            <x-c >
                 store x: 
-                <input 
-                .value="store.state.x" 
-                x-model="x"
-                x-store:setX="x" >
+                <input .value="store.state.x" x-model:store="x" number>
                 <br>
                 store y: 
-                <input .value="store.state.y" :input="changeStorey($event)">
+                <input .value="store.state.y" x-model:store="y" number>
             </x-c>
-            
         </div>
         <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
         <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
-            impex.component('x-a',{
-                template:'<div><slot></slot></div>'
-            });
-            impex.component('x-b',{
-                template:'<div><slot></slot></div>'
-            });
+            impex.component('x-a',{template:'<div><slot></slot></div>'});
+            impex.component('x-b',{template:'<div><slot></slot></div>'});
             impex.component('x-c',{
+                state:{z:1},
                 template:'<div><slot></slot></div>'
             });
             var store = new impex.Store({
                 state:{
                     x:1,
-                    y:2
-                },
-                actions:{
-                    setX:function(val){
-                        this.state.x = val;
-                    },
-                    setY:function(val){
-                        this.state.y = val;
-                    }
+                    y:2,
+                    list:[]
                 }
             });
-
-            function changeStorex(e){
-                var v = e.target.value;
-                store.commit('setX',parseInt(v));
-            }
-            function changeStorey(e){
-                var v = e.target.value;
-                store.commit('setY',parseInt(v));
-            }
             //渲染
             var debug = impex.render('#demo',{
-                change:function(argument) {
-                    store.commit('change',Math.random()*100);
-                }
+                // store:store
             });
         </script>
     </body>

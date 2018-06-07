@@ -16,7 +16,6 @@
 	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 
 	var DOM_COMP_ATTR = 'impex-component';
-	var COMPUTESTATE_SUFFIX = ':compute';
 
 	var SLOT = 'slot';
 
@@ -39,6 +38,32 @@
 		console && console.error('XERROR C[' + compName +'] - L['+phase+'] - ',e);
 	}
 
+	var ERROR_CODE = {
+		component:{//1xxx
+			container:1001,//container element must be inside <body> tag
+			templateprop:1002,//can not find property 'template'
+			loaderror:1003,//
+			loadtimeout:1004,
+			templatetag:1005,
+		},
+		COMPILE:{//2xxx
+			oneroot:2001,
+			each:2002,
+			html:2003,
+			roottag:2004,
+			rootcomponent:2005,
+			error:2006
+		},
+		//component attribute errors
+		INPUT:{//3xxx
+			require:3001,
+			type:3002
+		},
+		store:{//4xxx
+			nostore:4001
+		}
+	}
+
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -48,15 +73,6 @@
 	 * @author {@link https://github.com/MrSoya MrSoya}
 	 */
 	var impex = new function(){
-		/**
-		 * 全局对象命名空间。注册在此对象上的变量/方法可以在表达式中直接访问。比如
-		 * {{ $global.URL }} 或 {{ URL }}
-		 * 注意，全局对象中的变量应该是只读，否则可能会引起不可预测的错误或混乱的数据流。
-		 * 全局变量的更新并不会刷新使用变量的表达式
-		 * @type {Object}
-		 */
-		this.$global = {};
-
 		/**
 		 * 保存注册过的全局组件实例引用。
 		 * 注册全局组件可以使用id属性.
@@ -200,6 +216,7 @@
             }
 
 			var comp = newComponent(tmpl,container,model);
+			comp.root = comp;
 
 			parseComponent(comp);
 			mountComponent(comp);
