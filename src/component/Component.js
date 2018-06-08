@@ -403,9 +403,7 @@ function compileComponent(comp){
 		var cs = comp.computedState[k];
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
-		if(!(fn instanceof Function)){
-			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
-		}
+		assert(!(fn instanceof Function),comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
 	}
 
 	var vnode = buildVDOMTree(comp);
@@ -638,11 +636,7 @@ function bindProps(comp,parent,parentAttrs){
 	}
 
 	//check requires
-	var ks = Object.keys(requires);
-	if(ks.length > 0){
-		error(comp.name,"input args ["+ks.join(',')+"] are required");
-		return;
-	}
+	assert(Object.keys(requires).length>0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
 }
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
@@ -689,10 +683,8 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 	//compute state
 	if(!isUndefined(strMap['store'])){
-		if(!comp.store){
-			error(comp.name,"there's no store injected into the 'render' method");
-			return;
-		}
+		assert(!comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
+		
 		var states = null;
 		if(strMap['store']){
 			states = strMap['store'].split(' ');
@@ -716,12 +708,23 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 		if(input && k in input){
 			delete requires[k];
-			checkPropType(k,v,input,comp);
+			//check type 
+			assert((function(k,v,input,component){
+				if(!input[k] || !input[k].type)return false;
+				var checkType = input[k].type;
+				checkType = checkType instanceof Array?checkType:[checkType];
+				var vType = typeof v;
+				if(v instanceof Array){
+					vType = 'array';
+				}
+				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+					return true;
+				}
+				return false;
+			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
 		}
 	}
-	if(objs.length>0){
-		warn(comp.name,"dynamic attribute '"+objs.join(',')+"' should be read only");
-	}
+
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
 	}else{
@@ -734,17 +737,4 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			}
 		}
 	}//end if	
-}
-
-function checkPropType(k,v,input,component){
-	if(!input[k] || !input[k].type)return;
-	var checkType = input[k].type;
-	checkType = checkType instanceof Array?checkType:[checkType];
-	var vType = typeof v;
-	if(v instanceof Array){
-		vType = 'array';
-	}
-	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-		error(component.name,"invalid type ["+vType+"] of input arg ["+k+"];should be ["+checkType.join(',')+"]");
-	}
 }

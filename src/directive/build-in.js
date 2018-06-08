@@ -91,9 +91,6 @@ impex.directive('style',{
 .directive('bind',{
     onBind:function(vnode,data){
         var args = data.args;
-        if(!args || args.length < 1){
-            warn('at least one attribute be binded');
-        }
         for(var i=args.length;i--;){
             var p = args[i];
 

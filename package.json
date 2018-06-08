@@ -12,17 +12,18 @@
     "type": "git",
     "url": "git@github.com:MrSoya/impex.git"
   },
-  "bugs":{
-      "url":"https://github.com/MrSoya/impex/issues"
+  "bugs": {
+    "url": "https://github.com/MrSoya/impex/issues"
   },
   "license": "MIT",
   "main": "gulpfile.js",
   "devDependencies": {
+    "del": "~1.2.1",
     "gulp": "^3.9.0",
     "gulp-concat": "~2.6.0",
-    "gulp-rename": "~1.2.0",
-    "gulp-uglify": "~1.2.0",
     "gulp-header": "~1.8.7",
-    "del": "~1.2.1"
+    "gulp-remove-code": "^3.0.2",
+    "gulp-rename": "~1.2.0",
+    "gulp-uglify": "~1.2.0"
   }
 }

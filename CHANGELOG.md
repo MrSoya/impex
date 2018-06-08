@@ -1,4 +1,25 @@
 # Change Log
+## Version 0.98.0 - 2018/06/09
+### 新增
+* computedState 计算属性
+* x-model:store 绑定store属性
+* Component.root 引用渲染树顶级组件
+* Component.store 引用渲染时注入的store
+* 错误信息在生产版本中不显示
+
+### 更新
+* 全新impex.Store
+* onupdate回掉参数由 array -> map
+* xerror会显示错误码
+* 优化代码
+
+
+## Version 0.97.0 - 2018/03/09
+### 更新
+* 全新HTML解析算法，性能大幅提升
+* 全新router
+* slot
+
 ## Version 0.96.0 - 2017/11/30
 ### 更新
 * 基于VDOM设计的全新架构

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-06-07
+ * last build: 2018-06-08
  */
 !function (global) {
 	'use strict';
@@ -39,11 +39,11 @@
 
     function loadError(){
         var name = requirements[this.url].name;
-        error(name,'can not fetch remote data of : '+this.url);
+        error(name,XERROR.COMPONENT.LOADERROR,'can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
         var name = requirements[this.url].name;
-        error(name,'load timeout : '+this.url);
+        error(name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+this.url);
     }
     function onload(){
         if(this.status===0 || //native
@@ -55,10 +55,8 @@
 
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
-            if(!tmpl){
-                error(name,'can not find tag <template> in component file');
-                return;
-            }
+            
+            assert(!tmpl,name,XERROR.COMPONENT.TEMPLATETAG,'can not find tag <template> in component file');
 
             var css = '';
             tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
@@ -563,12 +561,8 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
                 args.push(rs._forScopeQ[i]);
                 scopeAry.push(tmp);
             }
-        try{
-            str = compileVDOMStr('<'+type+'>'+html+'</'+type+'>',comp,scopeAry);
-        }catch(e){
-            error(comp.name,'[x-html] compile error on '+e.message);
-            return;
-        }
+
+        str = compileVDOMStr('<'+tag+'>'+html+'</'+tag+'>',comp,scopeAry);
 
         var argStr = scopeAry.length>0?','+scopeAry.toString():'';
         
@@ -687,11 +681,8 @@ function isDirectiveVNode(attrName,comp,isCompNode){
             case 'if':case 'else':case 'for':case 'html':return c;
         }
 
-        //如果有对应的处理器
-        if(!DIRECT_MAP[c]){
-            warn(comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
-            return;
-        }
+        //如果没有对应的处理器
+        assert(!DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
     }else if(attrName[0] === EV_AB_PRIFX){
         rs = 'on';
         params = attrName.substr(1);
@@ -714,17 +705,16 @@ function isDirectiveVNode(attrName,comp,isCompNode){
 }
 //解析for语句：datasource，alias
 //包括to和普通语法
-function parseDirectFor(name,attrNode){
+function parseDirectFor(name,attrNode,compNode){
     if(name !== 'for')return false;
 
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
-    if(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/)){
-        //each语法错误
-        throw new Error('invalid each expression : '+forExpStr);
-        return;
-    }
+    
+    assert(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/) && !forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+
     var alias = RegExp.$2;
     var kv = alias.split(',');
     var k = kv.length>1?kv[0]:null;
@@ -829,6 +819,9 @@ function parseHTML(str){
                 }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
+
+                assert(!endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
+
                 endIndex = endNodeData.index;
                 var txt = str.substring(lastEndIndex,endNodeData.index);
                 if(txt.trim()){
@@ -887,7 +880,7 @@ function parseHTML_attrs(attrs,node,compNode){
             var tmp = null;
             var dName = attrNode.directive;
             if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
-                if(tmp = parseDirectFor(dName,attrNode)){
+                if(tmp = parseDirectFor(dName,attrNode,compNode)){
                     node.for = tmp;
                 }
                 if(tmp = parseDirectIf(dName,attrNode)){
@@ -1059,16 +1052,13 @@ function compileVDOMStr(str,comp,forScopeAry){
     var pair = parseHTML(str);
     var roots = pair[0];
         
-    if(roots.length>1){
-        throw new Error("should only have one root");
-    }
+    assert(roots.length>1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
+
     var rs = roots[0];
-    if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        throw new Error("root element cannot be <template> or <slot>");
-    }
-    if(COMP_MAP[rs.tag]){
-        throw new Error("root element <"+rs.tag+"> should be a non-component tag");
-    }
+
+    assert(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
+    assert(COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
+
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
     var str = buildEvalStr(rs,null,forScopeAry);
@@ -1083,7 +1073,7 @@ function buildVDOMTree(comp){
         var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error(comp.name,"compile",e);
+        error(comp.name,XERROR.COMPILE.ERROR,"compile error on ",e);
     }
     return root;
 }
@@ -2199,9 +2189,7 @@ function compileComponent(comp){
 		var cs = comp.computedState[k];
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
-		if(!(fn instanceof Function)){
-			warn(comp.name,"invalid computedState '"+k+"' ,it must be a function");
-		}
+		assert(!(fn instanceof Function),comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
 	}
 
 	var vnode = buildVDOMTree(comp);
@@ -2434,11 +2422,7 @@ function bindProps(comp,parent,parentAttrs){
 	}
 
 	//check requires
-	var ks = Object.keys(requires);
-	if(ks.length > 0){
-		error(comp.name,"input args ["+ks.join(',')+"] are required");
-		return;
-	}
+	assert(Object.keys(requires).length>0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
 }
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
@@ -2485,10 +2469,8 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 	//compute state
 	if(!isUndefined(strMap['store'])){
-		if(!comp.store){
-			error(comp.name,"there's no store injected into the 'render' method");
-			return;
-		}
+		assert(!comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
+		
 		var states = null;
 		if(strMap['store']){
 			states = strMap['store'].split(' ');
@@ -2512,12 +2494,23 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 		if(input && k in input){
 			delete requires[k];
-			checkPropType(k,v,input,comp);
+			//check type 
+			assert((function(k,v,input,component){
+				if(!input[k] || !input[k].type)return false;
+				var checkType = input[k].type;
+				checkType = checkType instanceof Array?checkType:[checkType];
+				var vType = typeof v;
+				if(v instanceof Array){
+					vType = 'array';
+				}
+				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+					return true;
+				}
+				return false;
+			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
 		}
 	}
-	if(objs.length>0){
-		warn(comp.name,"dynamic attribute '"+objs.join(',')+"' should be read only");
-	}
+
 	if(comp.onPropBind){
 		comp.onPropBind(rs);
 	}else{
@@ -2530,19 +2523,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			}
 		}
 	}//end if	
-}
-
-function checkPropType(k,v,input,component){
-	if(!input[k] || !input[k].type)return;
-	var checkType = input[k].type;
-	checkType = checkType instanceof Array?checkType:[checkType];
-	var vType = typeof v;
-	if(v instanceof Array){
-		vType = 'array';
-	}
-	if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-		error(component.name,"invalid type ["+vType+"] of input arg ["+k+"];should be ["+checkType.join(',')+"]");
-	}
 }
 
 	var CMD_PREFIX = 'x-';//指令前缀
@@ -2574,14 +2554,40 @@ function checkPropType(k,v,input,component){
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
-	var SHOW_WARN = true;
 
-	function warn(compName,msg){
-		SHOW_WARN && console && console.warn('XWARN C[' + compName +'] - ' + msg);
-	}
 	//phase --> compile --> mount
-	function error(compName,phase,e){
-		console && console.error('XERROR C[' + compName +'] - L['+phase+'] - ',e);
+	function error(compName,code,msg,e){
+		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/api/#XError');
+	}
+
+	function assert(isTrue,compName,code,msg,e) {
+		isTrue && error(compName,code,msg,e);
+	}
+
+	var XERROR = {
+		COMPONENT:{//1XXX
+			CONTAINER:1001,//CONTAINER ELEMENT MUST BE INSIDE <BODY> TAG
+			TEMPLATEPROP:1002,//CAN NOT FIND PROPERTY 'TEMPLATE'
+			LOADERROR:1003,//
+			LOADTIMEOUT:1004,
+			TEMPLATETAG:1005,
+		},
+		COMPILE:{//2XXX
+			ONEROOT:2001,
+			EACH:2002,
+			HTML:2003,
+			ROOTTAG:2004,
+			ROOTCOMPONENT:2005,
+			ERROR:2006
+		},
+		//COMPONENT ATTRIBUTE ERRORS
+		INPUT:{//3XXX
+			REQUIRE:3001,
+			TYPE:3002
+		},
+		STORE:{//4XXX
+			NOSTORE:4001
+		}
 	}
 
 	/**
@@ -2631,13 +2637,11 @@ function checkPropType(k,v,input,component){
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param  {int} cfg.showWarn 是否显示警告信息
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
 			EXP_START_TAG = delimiters[0] || '{{';
 			EXP_END_TAG = delimiters[1] || '}}';
-			SHOW_WARN = cfg.showWarn===false?false:true;
 
 			EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 		};
@@ -2651,9 +2655,7 @@ function checkPropType(k,v,input,component){
 		 * @return this
 		 */
 		this.component = function(name,model){
-			if(typeof(model)!='string' && !model.template){
-				error(name,"can not find property 'template'");
-			}
+			assert(typeof(model)!='string' && !model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
 			COMP_MAP[name] = model;
 			return this;
 		}
@@ -2730,10 +2732,8 @@ function checkPropType(k,v,input,component){
             if(isString(container)){
             	container = document.querySelector(container);
             }
-            if(container.tagName === 'BODY'){
-            	error('ROOT',"container element must be inside <body> tag");
-            	return;
-            }
+            
+            assert(container.tagName === 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
 
 			var comp = newComponent(tmpl,container,model);
 			comp.root = comp;
@@ -2868,9 +2868,6 @@ impex.directive('style',{
 .directive('bind',{
     onBind:function(vnode,data){
         var args = data.args;
-        if(!args || args.length < 1){
-            warn('at least one attribute be binded');
-        }
         for(var i=args.length;i--;){
             var p = args[i];
 
@@ -3040,7 +3037,6 @@ impex.filter('json',function(v){
 .filter('filterBy',function(v,key,inName){
     var ary = v;
     if(!isArray(ary)){
-        console.warn('can only filter array');
         return v;
     }
     var rs = [];
@@ -3071,7 +3067,6 @@ impex.filter('json',function(v){
 //[1,2,3,4,5] => limitBy:3:1   ----> [2,3,4]
 .filter('limitBy',function(v,count,start){
     if(!isArray(v)){
-        console.warn('can only filter array');
         return v;
     }
     if(!count)return v;
@@ -3082,7 +3077,6 @@ impex.filter('json',function(v){
 .filter('orderBy',function(v,key,dir){
     if(!key && !dir)return v;
     if(!isArray(v)){
-        console.warn('can only filter array');
         return v;
     }
     v.sort(function(a,b){

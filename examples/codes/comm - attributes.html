@@ -8,11 +8,10 @@
     </head>
     <body >
         <p>
-            组件可以接收上级组件传递的参数，包括三种类型：
+            组件可以接收上级组件传递的参数：
             <ul>
                 <li><code>param</code>:字符串参数，直接绑定到子组件的state中，不可变更，不区分类型</li>
                 <li><code>.param</code>:类型参数，直接绑定到子组件的state中，不可变更，区分类型</li>
-                <li><code>.param</code>:同步类型参数，直接绑定到子组件的state中，父组件状态变更时，会更新参数，并且参数变更时也会自动更新state。除非onPropUpdate返回false</li>
             </ul>
             <p>
                 示例：<br/>

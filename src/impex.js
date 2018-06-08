@@ -28,41 +28,40 @@
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
-	var SHOW_WARN = true;
 
-	function warn(compName,msg){
-		SHOW_WARN && console && console.warn('XWARN C[' + compName +'] - ' + msg);
+	//removeIf(production)
+	function error(compName,code,msg,e){
+		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/api/#XError');
 	}
-	//phase --> compile --> mount
-	function error(compName,phase,e){
-		console && console.error('XERROR C[' + compName +'] - L['+phase+'] - ',e);
+	function assert(isTrue,compName,code,msg,e) {
+		isTrue && error(compName,code,msg,e);
 	}
-
-	var ERROR_CODE = {
-		component:{//1xxx
-			container:1001,//container element must be inside <body> tag
-			templateprop:1002,//can not find property 'template'
-			loaderror:1003,//
-			loadtimeout:1004,
-			templatetag:1005,
+	var XERROR = {
+		COMPONENT:{//1XXX
+			CONTAINER:1001,
+			TEMPLATEPROP:1002,
+			LOADERROR:1003,
+			LOADTIMEOUT:1004,
+			TEMPLATETAG:1005,
 		},
-		COMPILE:{//2xxx
-			oneroot:2001,
-			each:2002,
-			html:2003,
-			roottag:2004,
-			rootcomponent:2005,
-			error:2006
+		COMPILE:{//2XXX
+			ONEROOT:2001,
+			EACH:2002,
+			HTML:2003,
+			ROOTTAG:2004,
+			ROOTCOMPONENT:2005,
+			ERROR:2006
 		},
-		//component attribute errors
-		INPUT:{//3xxx
-			require:3001,
-			type:3002
+		//COMPONENT ATTRIBUTE ERRORS
+		INPUT:{//3XXX
+			REQUIRE:3001,
+			TYPE:3002
 		},
-		store:{//4xxx
-			nostore:4001
+		STORE:{//4XXX
+			NOSTORE:4001
 		}
 	}
+	//endRemoveIf(production)
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -111,13 +110,11 @@
 		 * 设置impex参数
 		 * @param  {Object} cfg 参数选项
 		 * @param  {String} cfg.delimiters 表达式分隔符，默认{{ }}
-		 * @param  {int} cfg.showWarn 是否显示警告信息
 		 */
 		this.config = function(cfg){
 			var delimiters = cfg.delimiters || [];
 			EXP_START_TAG = delimiters[0] || '{{';
 			EXP_END_TAG = delimiters[1] || '}}';
-			SHOW_WARN = cfg.showWarn===false?false:true;
 
 			EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
 		};
@@ -131,9 +128,7 @@
 		 * @return this
 		 */
 		this.component = function(name,model){
-			if(typeof(model)!='string' && !model.template){
-				error(name,"can not find property 'template'");
-			}
+			assert(typeof(model)!='string' && !model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
 			COMP_MAP[name] = model;
 			return this;
 		}
@@ -210,10 +205,8 @@
             if(isString(container)){
             	container = document.querySelector(container);
             }
-            if(container.tagName === 'BODY'){
-            	error('ROOT',"container element must be inside <body> tag");
-            	return;
-            }
+            
+            assert(container.tagName === 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
 
 			var comp = newComponent(tmpl,container,model);
 			comp.root = comp;

@@ -115,12 +115,8 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
                 args.push(rs._forScopeQ[i]);
                 scopeAry.push(tmp);
             }
-        try{
-            str = compileVDOMStr('<'+type+'>'+html+'</'+type+'>',comp,scopeAry);
-        }catch(e){
-            error(comp.name,'[x-html] compile error on '+e.message);
-            return;
-        }
+
+        str = compileVDOMStr('<'+tag+'>'+html+'</'+tag+'>',comp,scopeAry);
 
         var argStr = scopeAry.length>0?','+scopeAry.toString():'';
         
@@ -239,11 +235,8 @@ function isDirectiveVNode(attrName,comp,isCompNode){
             case 'if':case 'else':case 'for':case 'html':return c;
         }
 
-        //如果有对应的处理器
-        if(!DIRECT_MAP[c]){
-            warn(comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
-            return;
-        }
+        //如果没有对应的处理器
+        assert(!DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
     }else if(attrName[0] === EV_AB_PRIFX){
         rs = 'on';
         params = attrName.substr(1);
@@ -266,17 +259,16 @@ function isDirectiveVNode(attrName,comp,isCompNode){
 }
 //解析for语句：datasource，alias
 //包括to和普通语法
-function parseDirectFor(name,attrNode){
+function parseDirectFor(name,attrNode,compNode){
     if(name !== 'for')return false;
 
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
-    if(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/)){
-        //each语法错误
-        throw new Error('invalid each expression : '+forExpStr);
-        return;
-    }
+    
+    assert(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/) && !forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+
     var alias = RegExp.$2;
     var kv = alias.split(',');
     var k = kv.length>1?kv[0]:null;
@@ -381,6 +373,9 @@ function parseHTML(str){
                 }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
+
+                assert(!endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
+
                 endIndex = endNodeData.index;
                 var txt = str.substring(lastEndIndex,endNodeData.index);
                 if(txt.trim()){
@@ -439,7 +434,7 @@ function parseHTML_attrs(attrs,node,compNode){
             var tmp = null;
             var dName = attrNode.directive;
             if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
-                if(tmp = parseDirectFor(dName,attrNode)){
+                if(tmp = parseDirectFor(dName,attrNode,compNode)){
                     node.for = tmp;
                 }
                 if(tmp = parseDirectIf(dName,attrNode)){
@@ -611,16 +606,13 @@ function compileVDOMStr(str,comp,forScopeAry){
     var pair = parseHTML(str);
     var roots = pair[0];
         
-    if(roots.length>1){
-        throw new Error("should only have one root");
-    }
+    assert(roots.length>1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
+
     var rs = roots[0];
-    if(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for){
-        throw new Error("root element cannot be <template> or <slot>");
-    }
-    if(COMP_MAP[rs.tag]){
-        throw new Error("root element <"+rs.tag+"> should be a non-component tag");
-    }
+
+    assert(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
+    assert(COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
+
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
     var str = buildEvalStr(rs,null,forScopeAry);
@@ -635,7 +627,7 @@ function buildVDOMTree(comp){
         var fn = compileVDOM(comp.compiledTmp,comp);
         root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     }catch(e){
-        error(comp.name,"compile",e);
+        error(comp.name,XERROR.COMPILE.ERROR,"compile error on ",e);
     }
     return root;
 }
