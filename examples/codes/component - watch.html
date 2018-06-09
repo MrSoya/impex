@@ -24,7 +24,7 @@
                 </x-b>
             </div>            
         </div>
-        <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             
             //渲染
@@ -55,6 +55,9 @@
                         this.state.info += '<p>b change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
                     this.watch('a.b.c.list',function(newVal,oldVal){
+                        //如果监控状态是一个对象，那么必须手动比较新旧值是否相同
+                        if(newVal.length == oldVal.length)return;
+
                         this.state.info += '<p>a.b.c.list change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
                 }

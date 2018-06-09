@@ -6,6 +6,7 @@
 * Component.root 引用渲染树顶级组件
 * Component.store 引用渲染时注入的store
 * 错误信息在生产版本中不显示
+* <x-comp store></x-comp> <x-comp store="x y z"></x-comp> 再视图中注入store对应/全部的计算属性
 
 ### 更新
 * 全新impex.Store

@@ -7,7 +7,7 @@
         <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
         <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
         <meta >
-    <script type="text/javascript" src="../lib/impex/impex.all.js"></script>
+    <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
     </head>
     <body>
         impex可以直接渲染命名组件
@@ -21,7 +21,7 @@
     <div id="demo">
         firstTextNode:{{start}}
         <br>
-        <x-demo .pa="x" .op="open">
+        <x-demo .pa="x" .op="open" id="x">
             <div>test</div>
             <span slot="ss">content</span>
         </x-demo>
@@ -37,7 +37,7 @@
                         <p></p>\
                             <button :click="add()">add y</button>\
                         <slot></slot>\
-                        <slot name="ss"></slot\
+                        <slot name="ss"></slot>\
                         </div>',
             add:function() {
                 this.state.y ++;

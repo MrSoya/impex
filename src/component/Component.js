@@ -403,7 +403,9 @@ function compileComponent(comp){
 		var cs = comp.computedState[k];
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
-		assert(!(fn instanceof Function),comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
+		//removeIf(production)
+		assert(fn instanceof Function,comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
+		//endRemoveIf(production)
 	}
 
 	var vnode = buildVDOMTree(comp);
@@ -635,8 +637,10 @@ function bindProps(comp,parent,parentAttrs){
 		handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
+	//removeIf(production)
 	//check requires
-	assert(Object.keys(requires).length>0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
+	assert(Object.keys(requires).length==0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
+	//endRemoveIf(production)
 }
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
@@ -683,8 +687,9 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 	//compute state
 	if(!isUndefined(strMap['store'])){
-		assert(!comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
-		
+		//removeIf(production)
+		assert(comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
+		//endRemoveIf(production)
 		var states = null;
 		if(strMap['store']){
 			states = strMap['store'].split(' ');
@@ -708,6 +713,8 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 		if(input && k in input){
 			delete requires[k];
+			
+			//removeIf(production)
 			//check type 
 			assert((function(k,v,input,component){
 				if(!input[k] || !input[k].type)return false;
@@ -718,10 +725,11 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 					vType = 'array';
 				}
 				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-					return true;
+					return false;
 				}
-				return false;
+				return true;
 			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
+			//endRemoveIf(production)
 		}
 	}
 

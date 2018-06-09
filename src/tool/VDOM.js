@@ -50,7 +50,7 @@ VNode.prototype = {
             var forScopeStart = '',forScopeEnd = '';
             if(this._forScopeQ)
                 for(var i=0;i<this._forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(5/* Delegator.js line 29 */+i)+']){';
+                    forScopeStart += 'with(arguments['+(4/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
             evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}'),this._cid];
@@ -235,8 +235,10 @@ function isDirectiveVNode(attrName,comp,isCompNode){
             case 'if':case 'else':case 'for':case 'html':return c;
         }
 
+        //removeIf(production)
         //如果没有对应的处理器
-        assert(!DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
+        assert(DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
+        //endRemoveIf(production)
     }else if(attrName[0] === EV_AB_PRIFX){
         rs = 'on';
         params = attrName.substr(1);
@@ -265,10 +267,12 @@ function parseDirectFor(name,attrNode,compNode){
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
-    
-    assert(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/) && !forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-
+    //removeIf(production)    
+    var check1 = forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/);
+    var check2 = forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/);
+    assert(check1,compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    if(check1)assert(check2,compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    //endRemoveIf(production)
     var alias = RegExp.$2;
     var kv = alias.split(',');
     var k = kv.length>1?kv[0]:null;
@@ -373,9 +377,9 @@ function parseHTML(str){
                 }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
-
-                assert(!endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
-
+                //removeIf(production)
+                assert(endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
+                //endRemoveIf(production)
                 endIndex = endNodeData.index;
                 var txt = str.substring(lastEndIndex,endNodeData.index);
                 if(txt.trim()){
@@ -605,14 +609,14 @@ function compileVDOM(str,comp){
 function compileVDOMStr(str,comp,forScopeAry){
     var pair = parseHTML(str);
     var roots = pair[0];
-        
-    assert(roots.length>1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
-
+    //removeIf(production)
+    assert(roots.length==1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
+    //endRemoveIf(production)
     var rs = roots[0];
-
-    assert(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
-    assert(COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
-
+    //removeIf(production)
+    assert(rs.type == 1 && rs.tag != 'template' && rs.tag != 'slot' && !rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
+    assert(!COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
+    //endRemoveIf(production)
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
     var str = buildEvalStr(rs,null,forScopeAry);
@@ -623,12 +627,8 @@ function compileVDOMStr(str,comp,forScopeAry){
  */
 function buildVDOMTree(comp){
     var root = null;
-    try{
-        var fn = compileVDOM(comp.compiledTmp,comp);
-        root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
-    }catch(e){
-        error(comp.name,XERROR.COMPILE.ERROR,"compile error on ",e);
-    }
+    var fn = compileVDOM(comp.compiledTmp,comp);
+    root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     return root;
 }
 var forScopeQ = null;
@@ -769,15 +769,13 @@ function compareChildren(nc,oc,op,comp){
             ns = nc[++nsp];
             continue;
         }else{
-            if(ns.getAttribute('xid')){
-                //处理id重用
-            }else{
-                //插入ov之前，并删除ov
-                insertBefore(ns,os,oc,op,comp);
-                removeVNode(os);
-                os = oc[++osp],
-                ns = nc[++nsp];
-            }
+            //todo xid
+            
+            //插入ov之前，并删除ov
+            insertBefore(ns,os,oc,op,comp);
+            removeVNode(os);
+            os = oc[++osp],
+            ns = nc[++nsp];
         }
     }
     //在osp位置，插入剩余的newlist，删除剩余的oldlist

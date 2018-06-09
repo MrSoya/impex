@@ -23,17 +23,18 @@
     function isFunction(obj){
         return obj instanceof Function;
     }
-
+    //removeIf(production)
     function loadError(){
         var name = requirements[this.url].name;
-        error(name,XERROR.COMPONENT.LOADERROR,'can not fetch remote data of : '+this.url);
+        assert(false,name,XERROR.COMPONENT.LOADERROR,'can not fetch remote data of : '+this.url);
     }
     function loadTimeout(){
         var name = requirements[this.url].name;
-        error(name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+this.url);
+        assert(false,name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+this.url);
     }
+    //endRemoveIf(production)
     function onload(){
-        if(this.status===0 || //native
+        if(this.status===0 || //local
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
             var txt = this.responseText;
             var obj = requirements[this.url];
@@ -42,9 +43,9 @@
 
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
-            
-            assert(!tmpl,name,XERROR.COMPONENT.TEMPLATETAG,'can not find tag <template> in component file');
-
+            //removeIf(production)
+            assert(tmpl,name,XERROR.COMPONENT.TEMPLATETAG,'can not find tag <template> in component file');
+            //endRemoveIf(production)
             var css = '';
             tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
                 css += b;
@@ -78,9 +79,11 @@
 
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
+        //removeIf(production)
         xhr.timeout = timeout || 5000;
         xhr.ontimeout = loadTimeout;
         xhr.onerror = loadError;
+        //endRemoveIf(production)
         if(xhr.onload === null){
             xhr.onload = onload;
         }else{

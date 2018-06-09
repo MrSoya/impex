@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-06-08
+ * last build: 2018-6-9
  */
 !function (global) {
 	'use strict';
@@ -36,17 +36,8 @@
     function isFunction(obj){
         return obj instanceof Function;
     }
-
-    function loadError(){
-        var name = requirements[this.url].name;
-        error(name,XERROR.COMPONENT.LOADERROR,'can not fetch remote data of : '+this.url);
-    }
-    function loadTimeout(){
-        var name = requirements[this.url].name;
-        error(name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+this.url);
-    }
     function onload(){
-        if(this.status===0 || //native
+        if(this.status===0 || //local
         ((this.status >= 200 && this.status <300) || this.status === 304) ){
             var txt = this.responseText;
             var obj = requirements[this.url];
@@ -55,9 +46,6 @@
 
             txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
             var tmpl = RegExp.$1;
-            
-            assert(!tmpl,name,XERROR.COMPONENT.TEMPLATETAG,'can not find tag <template> in component file');
-
             var css = '';
             tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
                 css += b;
@@ -91,9 +79,6 @@
 
         var xhr = new XMLHttpRequest();
         xhr.open('get',url,true);
-        xhr.timeout = timeout || 5000;
-        xhr.ontimeout = loadTimeout;
-        xhr.onerror = loadError;
         if(xhr.onload === null){
             xhr.onload = onload;
         }else{
@@ -496,7 +481,7 @@ VNode.prototype = {
             var forScopeStart = '',forScopeEnd = '';
             if(this._forScopeQ)
                 for(var i=0;i<this._forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(5/* Delegator.js line 29 */+i)+']){';
+                    forScopeStart += 'with(arguments['+(4/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
             evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}'),this._cid];
@@ -681,9 +666,7 @@ function isDirectiveVNode(attrName,comp,isCompNode){
             case 'if':case 'else':case 'for':case 'html':return c;
         }
 
-        //如果没有对应的处理器
-        assert(!DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
-    }else if(attrName[0] === EV_AB_PRIFX){
+        }else if(attrName[0] === EV_AB_PRIFX){
         rs = 'on';
         params = attrName.substr(1);
     }else if(attrName[0] === BIND_AB_PRIFX && !isCompNode){/* 区分指令参数和bind */
@@ -711,10 +694,6 @@ function parseDirectFor(name,attrNode,compNode){
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
-    
-    assert(!forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/) && !forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-
     var alias = RegExp.$2;
     var kv = alias.split(',');
     var k = kv.length>1?kv[0]:null;
@@ -819,9 +798,6 @@ function parseHTML(str){
                 }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
-
-                assert(!endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
-
                 endIndex = endNodeData.index;
                 var txt = str.substring(lastEndIndex,endNodeData.index);
                 if(txt.trim()){
@@ -1051,14 +1027,7 @@ function compileVDOM(str,comp){
 function compileVDOMStr(str,comp,forScopeAry){
     var pair = parseHTML(str);
     var roots = pair[0];
-        
-    assert(roots.length>1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
-
     var rs = roots[0];
-
-    assert(rs.type != 1 || rs.tag == 'template' || rs.tag == 'slot' || rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
-    assert(COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
-
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
     var str = buildEvalStr(rs,null,forScopeAry);
@@ -1069,12 +1038,8 @@ function compileVDOMStr(str,comp,forScopeAry){
  */
 function buildVDOMTree(comp){
     var root = null;
-    try{
-        var fn = compileVDOM(comp.compiledTmp,comp);
-        root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
-    }catch(e){
-        error(comp.name,XERROR.COMPILE.ERROR,"compile error on ",e);
-    }
+    var fn = compileVDOM(comp.compiledTmp,comp);
+    root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     return root;
 }
 var forScopeQ = null;
@@ -1215,15 +1180,13 @@ function compareChildren(nc,oc,op,comp){
             ns = nc[++nsp];
             continue;
         }else{
-            if(ns.getAttribute('xid')){
-                //处理id重用
-            }else{
-                //插入ov之前，并删除ov
-                insertBefore(ns,os,oc,op,comp);
-                removeVNode(os);
-                os = oc[++osp],
-                ns = nc[++nsp];
-            }
+            //todo xid
+            
+            //插入ov之前，并删除ov
+            insertBefore(ns,os,oc,op,comp);
+            removeVNode(os);
+            os = oc[++osp],
+            ns = nc[++nsp];
         }
     }
     //在osp位置，插入剩余的newlist，删除剩余的oldlist
@@ -2189,8 +2152,7 @@ function compileComponent(comp){
 		var cs = comp.computedState[k];
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
-		assert(!(fn instanceof Function),comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
-	}
+		}
 
 	var vnode = buildVDOMTree(comp);
 	var pv = null;
@@ -2421,9 +2383,7 @@ function bindProps(comp,parent,parentAttrs){
 		handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
-	//check requires
-	assert(Object.keys(requires).length>0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
-}
+	}
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
@@ -2469,8 +2429,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 	//compute state
 	if(!isUndefined(strMap['store'])){
-		assert(!comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
-		
 		var states = null;
 		if(strMap['store']){
 			states = strMap['store'].split(' ');
@@ -2494,21 +2452,8 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 		if(input && k in input){
 			delete requires[k];
-			//check type 
-			assert((function(k,v,input,component){
-				if(!input[k] || !input[k].type)return false;
-				var checkType = input[k].type;
-				checkType = checkType instanceof Array?checkType:[checkType];
-				var vType = typeof v;
-				if(v instanceof Array){
-					vType = 'array';
-				}
-				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-					return true;
-				}
-				return false;
-			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
-		}
+			
+			}
 	}
 
 	if(comp.onPropBind){
@@ -2555,41 +2500,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
 
-	//phase --> compile --> mount
-	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/api/#XError');
-	}
-
-	function assert(isTrue,compName,code,msg,e) {
-		isTrue && error(compName,code,msg,e);
-	}
-
-	var XERROR = {
-		COMPONENT:{//1XXX
-			CONTAINER:1001,//CONTAINER ELEMENT MUST BE INSIDE <BODY> TAG
-			TEMPLATEPROP:1002,//CAN NOT FIND PROPERTY 'TEMPLATE'
-			LOADERROR:1003,//
-			LOADTIMEOUT:1004,
-			TEMPLATETAG:1005,
-		},
-		COMPILE:{//2XXX
-			ONEROOT:2001,
-			EACH:2002,
-			HTML:2003,
-			ROOTTAG:2004,
-			ROOTCOMPONENT:2005,
-			ERROR:2006
-		},
-		//COMPONENT ATTRIBUTE ERRORS
-		INPUT:{//3XXX
-			REQUIRE:3001,
-			TYPE:3002
-		},
-		STORE:{//4XXX
-			NOSTORE:4001
-		}
-	}
-
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -2620,7 +2530,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,97,0],
+	        v:[0,98,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2655,7 +2565,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		 * @return this
 		 */
 		this.component = function(name,model){
-			assert(typeof(model)!='string' && !model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
 			COMP_MAP[name] = model;
 			return this;
 		}
@@ -2732,10 +2641,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
             if(isString(container)){
             	container = document.querySelector(container);
             }
-            
-            assert(container.tagName === 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
-
-			var comp = newComponent(tmpl,container,model);
+            var comp = newComponent(tmpl,container,model);
 			comp.root = comp;
 
 			parseComponent(comp);

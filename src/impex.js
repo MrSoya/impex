@@ -34,7 +34,7 @@
 		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/api/#XError');
 	}
 	function assert(isTrue,compName,code,msg,e) {
-		isTrue && error(compName,code,msg,e);
+		!isTrue && error(compName,code,msg,e);
 	}
 	var XERROR = {
 		COMPONENT:{//1XXX
@@ -93,7 +93,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,97,0],
+	        v:[0,98,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -128,7 +128,9 @@
 		 * @return this
 		 */
 		this.component = function(name,model){
-			assert(typeof(model)!='string' && !model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
+			//removeIf(production)
+			assert(typeof(model)=='string' || model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
+			//endRemoveIf(production)
 			COMP_MAP[name] = model;
 			return this;
 		}
@@ -205,9 +207,9 @@
             if(isString(container)){
             	container = document.querySelector(container);
             }
-            
-            assert(container.tagName === 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
-
+            //removeIf(production)
+            assert(container.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
+            //endRemoveIf(production)
 			var comp = newComponent(tmpl,container,model);
 			comp.root = comp;
 
