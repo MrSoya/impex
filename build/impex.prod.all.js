@@ -1809,14 +1809,6 @@ function Component (el) {
 	this.__dependence = {};
 
 	/**
-	 * 组件模版，用于生成组件视图
-	 * @type {string}
-	 */
-	this.template;
-
-	//组件url
-	this.__url;
-	/**
 	 * 组件数据
 	 * @type {Object}
 	 */

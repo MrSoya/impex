@@ -717,10 +717,7 @@ function parseDirectFor(name,attrNode,compNode){
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
     //removeIf(production)    
-    var check1 = forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/);
-    var check2 = forExpStr.match(/^((?:[\s\S]*?)\s+to\s+(?:[\s\S]*?))\s+as\s+([\s\S]*?)$/);
-    assert(check1,compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-    if(check1)assert(check2,compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
     //endRemoveIf(production)
     var alias = RegExp.$2;
     var kv = alias.split(',');
@@ -1846,14 +1843,6 @@ function Component (el) {
 	//computedstate
 	this.__dependence = {};
 
-	/**
-	 * 组件模版，用于生成组件视图
-	 * @type {string}
-	 */
-	this.template;
-
-	//组件url
-	this.__url;
 	/**
 	 * 组件数据
 	 * @type {Object}
