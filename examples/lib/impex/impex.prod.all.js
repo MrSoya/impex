@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-6-9
+ * last build: 2018-6-11
  */
 !function (global) {
 	'use strict';

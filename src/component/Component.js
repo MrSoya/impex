@@ -396,7 +396,7 @@ function compileComponent(comp){
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
 		//removeIf(production)
-		assert(fn instanceof Function,comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
+		assert(fn instanceof Function,comp.name,XERROR.COMPONENT.COMPUTESTATE,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
 		//endRemoveIf(production)
 	}
 

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-6-9
+ * last build: 2018-6-11
  */
 !function (global) {
 	'use strict';
@@ -2180,7 +2180,7 @@ function compileComponent(comp){
 		var fn = cs.get || cs;
 		comp.state[k] = cs;
 		//removeIf(production)
-		assert(fn instanceof Function,comp.name,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
+		assert(fn instanceof Function,comp.name,XERROR.COMPONENT.COMPUTESTATE,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
 		//endRemoveIf(production)
 	}
 
@@ -2555,7 +2555,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 
 	//removeIf(production)
 	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/api/#XError');
+		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.php#techniques-xerror');
 	}
 	function assert(isTrue,compName,code,msg,e) {
 		!isTrue && error(compName,code,msg,e);
@@ -2567,6 +2567,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			LOADERROR:1003,
 			LOADTIMEOUT:1004,
 			TEMPLATETAG:1005,
+			COMPUTESTATE:1006
 		},
 		COMPILE:{//2XXX
 			ONEROOT:2001,

@@ -2,6 +2,7 @@
   "name": "impex",
   "description": "a powerful web application engine",
   "version": "0.98.0",
+  "nodejs": "6.11.2",
   "author": [
     {
       "name": "MrSoya",
@@ -17,7 +18,7 @@
   },
   "license": "MIT",
   "main": "gulpfile.js",
-  "devDependencies": {//nodejs 6.11.2
+  "devDependencies": {
     "del": "~1.2.1",
     "gulp": "^3.9.0",
     "gulp-concat": "~2.6.0",
