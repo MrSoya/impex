@@ -478,8 +478,7 @@ function updateComponent(comp,changeMap){
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
 
-	//mount non async subcomponents which created by VDOM 
-	
+	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.children.length;i++){
 		var c = comp.children[i];
 		if(!c.compiledTmp){

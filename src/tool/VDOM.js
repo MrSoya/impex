@@ -832,21 +832,12 @@ function insertBefore(nv,target,list,targetParent,comp){
             for(var i=0;i<nv.length;i++){
                 var vn = nv[i];
                 var tmp = buildOffscreenDOM(vn,comp);
-                //bind vdom
-                if(vn._comp){
-                    parseComponent(vn._comp);
-                    compAry.push(vn._comp);
-                }
+
                 fragment.appendChild(tmp);
             }
             dom = fragment;
         }else{
             dom = buildOffscreenDOM(nv,comp);
-            //bind vdom
-            if(nv._comp){
-                parseComponent(nv._comp);
-                compAry.push(nv._comp);
-            }
         }
     }else{
         dom.parentNode.removeChild(dom);
@@ -857,14 +848,6 @@ function insertBefore(nv,target,list,targetParent,comp){
         tdom.parentNode.insertBefore(dom,tdom);
     }else{
         targetParent.dom.appendChild(dom);
-    }
-    
-    //comp
-    for(var i=0;i<compAry.length;i++){
-        var tmp = compAry[i];
-        if(!tmp.__url){
-            mountComponent(tmp,targetParent);
-        }        
     }
 }
 function next(nv){
