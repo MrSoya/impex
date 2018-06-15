@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Wish List</title>
+	<meta name="renderer" content="webkit">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no">
+	<meta http-equiv="content-type" content="text/html;charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+	<link rel="impex" type="x-wish" href="components/x-wish.html">
+</head>
+<body>
+	<section id="entry">
+		<header>
+			<h2>wish list</h2>
+			<ul>
+				<li .class="{active:showGoing}" :pointerdown="changeTab('going')">going</li>
+				<li .class="{active:!showGoing}" :pointerdown="changeTab('done')">done</li>
+			</ul>
+		</header>
+		<main>
+			<section name="going-list" x-show="showGoing">
+				<template x-for="wishList as wish" x-if="!wish.done">
+					<x-wish :done="changeList()" :progress="progress()" .id="wish.id" .title="wish.title" .cost="wish.cost" .progress="wish.progress"></x-wish>
+					<hr>
+				</template>
+			</section>
+			<section name="done-list" x-show="!showGoing">
+				<template x-for="wishList as wish" x-if="wish.done">
+					<x-wish :done="changeList()" .id="wish.id" .title="wish.title" .cost="wish.cost" .done="true" .time="wish.doneTime"></x-wish>
+					<hr>
+				</template>
+			</section>
+		</main>
+		<!-- 新增面板 -->
+		<section class="panel" .class="{open:inEdit}">
+			<input type="text" name="title" maxlength="15" x-model="newWish.title" placeholder="title">
+			<input type="text" name="cost" maxlength="7" x-model="newWish.cost" number placeholder="￥cost">
+			<button :tap="submit()">↑</button>
+		</section>
+		<a class="addbtn" .class="{close:inEdit}" :tap="openEdit()">+</a>
+	</section>
+	<script type="text/javascript" src="../../lib/impex/impex.dev.all.js"></script>
+	<script type="text/javascript" src="js/filters.js"></script>
+	<script type="text/javascript">
+		impex.render('#entry',{
+			state:{
+				showGoing:true,//是否显示进度列表，控制显示
+				wishList:[//数据列表，可以从服务端获取
+					// {id:1,title:'买一台Switch',cost:3000,done:false,progress:40},
+					// {id:2,title:'走遍五岳',cost:10000,done:false,progress:20},
+					// {id:3,title:'全国自驾游',cost:20000,done:false,progress:0},
+					// {id:4,title:'骑行1000km',cost:5000,done:false,progress:0}
+				],
+				newWish:{//编辑模型，用来和新增视图做数据绑定
+					title:'',
+					cost:0
+				},
+				inEdit:false //是否正在编辑，用来控制新增显示
+			},
+			onBeforeMount:function(dom){
+				//这里演示从远程(服务端)读取数据，你可以使用任何习惯的库来实现远程访问接口
+				var that = this;
+				var xhr = new XMLHttpRequest();
+				xhr.onload = function() {
+					if(this.readyState==4 && this.status==200){
+						that.state.wishList = eval(this.responseText);
+					}
+				}
+				xhr.open('get','data.js',true);
+        		xhr.send(null);
+			},
+			//切换页签显示
+			changeTab:function(type) {
+				this.state.showGoing = type=='going'?true:false;
+			},
+			changeList:function(id) {
+				this.state.wishList.forEach(function(wish) {
+					if(wish.id == id){
+						wish.done = true;
+						wish.doneTime = Date.now();
+					}
+				});
+			},
+			progress:function(id,prog) {
+				this.state.wishList.forEach(function(wish) {
+					if(wish.id == id){
+						wish.progress = prog;
+					}
+				});
+			},
+			openEdit:function() {
+				this.state.inEdit = true;
+			},
+			submit:function() {
+				if(this.state.newWish.title && this.state.newWish.cost)
+					this.state.wishList.push({
+						id:this.state.wishList.length+1,
+						title:this.state.newWish.title,
+						cost:this.state.newWish.cost,
+						done:false
+					});
+				this.state.newWish.title = '';
+				this.state.newWish.cost = 0;
+				this.state.inEdit = false;
+			}
+		});
+	</script>
+</body>
+</html>
