@@ -204,10 +204,13 @@ function createElementList(ds,iterator,scope,k,v){
     });
     return rs;
 }
-function doFilter(v,filters){
+function doFilter(v,filters,comp){
     for(var i=0;i<filters.length;i++){
         var f = filters[i];
         var ins = FILTER_MAP[f[0]];
+        //removeIf(production)
+        assert(ins,comp.name,XERROR.COMPILE.NOFILTER,"can not find filter '"+f[0]+"'");
+        //endRemoveIf(production)
         var params = f[1];
         params.unshift(v);
         v = ins.apply(ins,params);
@@ -540,7 +543,7 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
                 dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
             }
             if(filter){
-                dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+")";
+                dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+",comp)";
             }
             str += '_li('+dsStr+',function('+forScopeStr+'){ with('+forScopeStr+'){return '+nodeStr+','+forScopeChainStr+'):null}},this,"'+k+'","'+v+'")';
         }else{
@@ -575,7 +578,7 @@ function buildTxtStr(q){
             var exp = item[0];
             var filter = item[1];
             if(filter.length>0){
-                rs += "+_fi("+exp+","+buildFilterStr(filter)+")";
+                rs += "+_fi("+exp+","+buildFilterStr(filter)+",comp)";
             }else{
                 rs += "+"+exp;
             }
