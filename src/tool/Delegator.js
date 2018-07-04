@@ -3,6 +3,7 @@
  */
 function dispatch(type,e) {
     var p = e.target;
+    var canceled = false;
     do{
         var uid = p._vid;
         if(uid === undefined)continue;
@@ -33,8 +34,10 @@ function dispatch(type,e) {
                 }
             fn.apply(comp,args);
         }
+
+        canceled = e.cancelBubble;
         
-    }while((p = p.parentNode) && p.tagName != 'BODY');
+    }while((p = p.parentNode) && p.tagName != 'BODY' && !canceled);
 }
 function contains(a,b){
     if(a.contains){

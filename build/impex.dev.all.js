@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-6-28
+ * last build: 2018-7-4
  */
 !function (global) {
 	'use strict';
@@ -1401,6 +1401,7 @@ function updateAttr(newAttrs,oldAttrs,dom,tag){
  */
 function dispatch(type,e) {
     var p = e.target;
+    var canceled = false;
     do{
         var uid = p._vid;
         if(uid === undefined)continue;
@@ -1431,8 +1432,10 @@ function dispatch(type,e) {
                 }
             fn.apply(comp,args);
         }
+
+        canceled = e.cancelBubble;
         
-    }while((p = p.parentNode) && p.tagName != 'BODY');
+    }while((p = p.parentNode) && p.tagName != 'BODY' && !canceled);
 }
 function contains(a,b){
     if(a.contains){
