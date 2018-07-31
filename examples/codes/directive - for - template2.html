@@ -9,14 +9,14 @@
     <body>
         <p>
             
-        each 允许同时对多个元素进行循环，比如带分割线的区域
+        for 允许同时对多个元素进行循环，比如带分割线的区域
         </p>
         <p>
             <pre>
             <code>
-                &lt;template x-each="groups as g"&gt;
+                &lt;template x-for="groups as g"&gt;
                     &lt;a &gt;
-                        {{g.title}}  <span x-each="[1,2,3,4,5,6] as i">{{i}}</span>
+                        {{g.title}}  &lt;span x-for="[1,2,3,4,5,6] as i"&gt;{{i}}&lt;/span&gt;
                     &lt;/a&gt;
                     &lt;b x-if="$index % 2 == 0"&gt;
                         {{g.desc}}

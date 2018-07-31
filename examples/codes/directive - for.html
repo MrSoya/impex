@@ -9,7 +9,7 @@
     <body>
         <div id="demo">
             mod:<input x-model="mod" .value="mod">
-            <div x-for="1 to 100 as i" x-if="i%mod==0">{{i}}</div>
+            <div x-for="1 to 100 as i" var="{a:i*3,b:i+3}" x-if="i%mod==0">{{a}} {{b}}</div>
         </div>
 
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>

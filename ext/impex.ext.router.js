@@ -115,7 +115,6 @@
 	 * 字符串方式：<a x-link="'/list/1?id=20'" http="true">...</a>
 	 * 对象方式：<a x-link="{to:'/a/b',title:'表单',input:{x:''}}">...</a>
 	 *
-	 * 默认路由不会进行http请求，除非添加http属性。
 	 * 路由地址中的search参数以及<x-route>中的匹配模版中的参数都会作为
 	 * 回调函数的参数，比如
 	 * <x-route path="/list/:id" :route="route"></x-route>

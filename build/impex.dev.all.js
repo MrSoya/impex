@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-7-4
+ * last build: 2018-7-31
  */
 !function (global) {
 	'use strict';
@@ -496,13 +496,23 @@ VNode.prototype = {
         if(fn){
             evMap[this.vid] = [this,exp,this._cid,fn];
         }else{
+            var declare = this.getAttribute('var');
+            if(declare){
+                var list = declare.replace(/^{|}$/mg,'').split(',');
+                var str = '';
+                list.forEach(function(de) {
+                    var pair = de.split(':');
+                    str += 'var '+ pair[0] +'='+pair[1]+';';
+                });
+                declare = str;
+            }            
             var forScopeStart = '',forScopeEnd = '';
             if(this._forScopeQ)
                 for(var i=0;i<this._forScopeQ.length;i++){
                     forScopeStart += 'with(arguments['+(4/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
-            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+exp+forScopeEnd+'}}'),this._cid];
+            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+declare+";"+exp+forScopeEnd+'}}'),this._cid];
         }
 
         this._hasEvent = true;
@@ -943,10 +953,7 @@ function parseHTML_exp(expStr,filterStr,isTxt){
     rs[1] = filterAry;
     return rs;
 }
-function buildVDOMStr(pm){
-    var str = buildEvalStr(pm,null,[]);
-    return 'with(scope){return '+str+'}';
-}
+
 var FORSCOPE_COUNT = 0;
 function buildEvalStr(pm,prevIfStr,forScopeAry){
     var str = '';
@@ -988,13 +995,24 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
             var ds1 = pm.for[3];
             var ds2 = pm.for[4];
             var dsStr = ds1;
+            var declare = "";
+            if(pm.attrNodes.var){
+                declare = pm.attrNodes.var.value;
+                var list = declare.replace(/^{|}$/mg,'').split(',');
+                var s = '';
+                list.forEach(function(de) {
+                    var pair = de.split(':');
+                    s += 'var '+ pair[0] +'='+pair[1]+';';
+                });
+                declare = s;
+            }
             if(ds2){
                 dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
             }
             if(filter){
                 dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+",comp)";
             }
-            str += '_li('+dsStr+',function('+forScopeStr+'){ with('+forScopeStr+'){return '+nodeStr+','+forScopeChainStr+'):null}},this,"'+k+'","'+v+'")';
+            str += '_li('+dsStr+',function('+forScopeStr+'){with('+forScopeStr+'){'+declare+' return '+nodeStr+','+forScopeChainStr+'):null}},this,"'+k+'","'+v+'")';
         }else{
             str += nodeStr+','+forScopeChainStr+'):null';
         }
