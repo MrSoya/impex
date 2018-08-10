@@ -294,7 +294,7 @@ function parseComponent(comp){
 
 			//css
 			bindScopeStyle(comp.name,css);
-			comp.__attrs = comp.__url = null;
+			comp.__url = null;
 			compileComponent(comp);
 			mountComponent(comp,comp.parent?comp.parent.vnode:null);
 		});

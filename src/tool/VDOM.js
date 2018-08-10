@@ -661,6 +661,20 @@ function compareVDOM(newVNode,oldVNode,comp){
     }
     return forScopeQ;
 }
+function isSameComponent(nv,ov) {
+    var c = impex._cs[ov._cid];
+    //compare attrs
+    var nas = nv.attrNodes;
+    var oas = c.__attrs;
+    if(Object.keys(nas).length !== Object.keys(oas).length)return false;
+    for(var k in nas){
+        if(isUndefined(oas[k]))return false;
+    }
+    //compare slots
+    return JSON.stringify(nv._slots) == JSON.stringify(c.__slots)
+            && JSON.stringify(nv._slotMap) == JSON.stringify(c.__slotMap);
+}
+
 function compareSame(newVNode,oldVNode,comp){
     if(newVNode._comp){
         forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
@@ -917,8 +931,8 @@ function insertChildren(parent,children,comp){
 }
 function isSameVNode(nv,ov){
     if(nv._comp){
-        if(ov.getAttribute(DOM_COMP_ATTR)==nv.tag)return true;
-        return false;
+        if(ov.getAttribute(DOM_COMP_ATTR) != nv.tag)return false;
+        return isSameComponent(nv,ov);
     }
     return ov.tag === nv.tag;
 }
