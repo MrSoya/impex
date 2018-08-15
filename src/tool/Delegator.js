@@ -19,6 +19,12 @@ function dispatch(type,e) {
             var toElement = e.toElement || e.relatedTarget;
             if(contains(vnode.dom,toElement))return;
         }
+        if(type == 'mouseenter'){
+            var t = e.target;
+            var fromElement = e.relatedTarget;
+            if(contains(vnode.dom,t) && vnode.dom != t)return;
+            if(fromElement && contains(vnode.dom,fromElement))return;
+        }
 
         var fn = tmp[1];
         var cid = tmp[2];
@@ -204,6 +210,7 @@ if(isMobile){
     }
     function doMouseover(e){
         dispatch('mouseover',e);
+        dispatch('mouseenter',e);
     }
     function doMousewheel(e){
         dispatch('mousewheel',e);
