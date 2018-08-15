@@ -132,6 +132,14 @@ ext({
 		impex._cs[this._uid] = null;
 		delete impex._cs[this._uid];
 
+		destroyDirective(this.vnode,this);
+
+		this.vnode = 
+		this.el = 
+		this.compTags = 
+		this.root = 
+		this.__dependence = 
+
 		this.refs = 
 		this.__nodes = 
 		this.__syncFn = 
@@ -248,6 +256,34 @@ function callDirective(vnode,comp,type){
 			if(vnode.children && vnode.children.length>0){
 				for(var i=0;i<vnode.children.length;i++){
 					callDirective(vnode.children[i],comp,type);
+				}
+			}//end if
+		}//end if
+	}
+}
+
+function destroyDirective(vnode,comp){
+	if(isUndefined(vnode.txt)){
+		if(!vnode._comp){//component dosen't exec directive
+			//directive init
+			var dircts = vnode._directives;
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var dName = di[1][0];
+					var d = DIRECT_MAP[dName];
+					if(!d)return;
+					
+					var params = di[1][1];
+					var v = di[2];
+					var exp = di[3];
+					
+					d.onDestroy && d.onDestroy(vnode,{comp:comp,value:v,args:params,exp:exp});
+				});
+			}
+
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					destroyDirective(vnode.children[i],comp);
 				}
 			}//end if
 		}//end if
@@ -484,7 +520,7 @@ function updateComponent(comp,changeMap){
 		if(!c.compiledTmp){
 			parseComponent(c);
 			if(!c.__url)
-				mountComponent(c,comp.vnode);
+				mountComponent(c,c.vnode.parent);
 		}
 	}
 
