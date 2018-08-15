@@ -60,7 +60,7 @@
 		onUpdate:function(changes){
 			var ref = this._uid+'_route_comp';
 
-			if(changes[0].name == "comp"){
+			if(changes.comp){
 				this.emit("end",this.refs[ref],this.params,this.state.path);
 			}
 		},
@@ -79,6 +79,10 @@
 				}
 			}
 			return params;
+		},
+		onDestory:function(){
+			Router.routes[this._uid] = null;
+			delete Router.routes[this._uid];
 		},
 		onCompile:function(){
 			Router.routes[this._uid] = this;
@@ -175,16 +179,20 @@
 			// 		return '/'+url;
 			// 	});
 			// }
-			if(router.lastTo != url){
-				router.lastTo = url;
-			}else{
+			if(router.lastTo == url){
 				return;
 			}
 
 			router.goto(url,title,getParams());
 		},
 		goto:function(url,title,params){
-	        history.pushState({url:url,title:title}, null, url);
+			if(!history.state || url != history.state.url){
+				history.pushState({url:url,title:title}, null, url);
+			}
+			if(Router.lastTo != url){
+				Router.lastTo = url;
+			}
+				
 			this._exec(url,title,params);
 		},
 		_exec:function(url,title,params){
@@ -202,6 +210,12 @@
 	},false);
 	window.addEventListener('popstate', function(e) {
         var state = e.state || {};
+        //check anchor
+        var url = location.pathname;
+        if(url == Router.lastTo)return;
+        
+        Router.lastTo = url;
+        
         Router._exec(state.url,state.title,getParams());
     });
 
