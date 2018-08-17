@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-8-15
+ * last build: 2018-8-16
  */
 !function (global) {
 	'use strict';
@@ -2053,14 +2053,9 @@ function callDirective(vnode,comp,type){
 					var exp = di[3];
 					
 					if(type == 0){
-						//last v
-						DIRECT_EXP_VALUE_MAP[dName+'.'+exp] = v;
 						d.onActive && d.onActive(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
 					}else{
-						if(DIRECT_EXP_VALUE_MAP[dName+'.'+exp] != v){
-							d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
-							DIRECT_EXP_VALUE_MAP[dName+'.'+exp] = v;
-						}
+						d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
 					}
 				});
 			}

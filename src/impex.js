@@ -24,7 +24,6 @@
 	var DISPATCHERS = [];
 	var FILTER_MAP = {};
 	var DIRECT_MAP = {};
-	var DIRECT_EXP_VALUE_MAP = {};
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var COMP_CSS_MAP = {};
