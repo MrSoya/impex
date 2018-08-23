@@ -18,12 +18,14 @@ function dispatch(type,e) {
             if(!contains(vnode.dom,t))return;
             var toElement = e.toElement || e.relatedTarget;
             if(contains(vnode.dom,toElement))return;
+            if(vnode._entered)vnode._entered = false;
         }
         if(type == 'mouseenter'){
             var t = e.target;
             var fromElement = e.relatedTarget;
-            if(contains(vnode.dom,t) && vnode.dom != t)return;
+            if(vnode._entered && contains(vnode.dom,t) && vnode.dom != t)return;
             if(fromElement && contains(vnode.dom,fromElement))return;
+            if(!vnode._entered)vnode._entered = true;
         }
 
         var fn = tmp[1];
