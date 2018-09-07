@@ -49,7 +49,7 @@
 					    		if(!deps){
 					    			deps = comp.__dependence[name] = [];
 					    		}
-					    		if(deps instanceof Array)deps.push(g_computedState);
+					    		if(deps instanceof Array && deps.indexOf(g_computedState)<0)deps.push(g_computedState);
 				    		}else 	    		
 				    		//store
 				    		if(impex.Store){
