@@ -118,8 +118,8 @@
                     </colgroup>
                     <tr x-for="lockedHeader as row">
                         <th x-for="row as col" 
-                        .rowspan="col.group?0:(headerRowSize - col.rowNo+1)"
-                        .colspan="col.colspan || 0">
+                        .rowspan="(col.group?0:(headerRowSize - col.rowNo+1)) || ''"
+                        .colspan="col.colspan || ''">
                             {{col.name}}
                         </th>
                     </tr>
@@ -132,8 +132,8 @@
                     </colgroup>
                     <tr x-for="header as row">
                         <th x-for="row as col" 
-                        .rowspan="col.group?0:(headerRowSize - col.rowNo+1)"
-                        .colspan="col.colspan || 0">
+                        .rowspan="(col.group?0:(headerRowSize - col.rowNo+1)) || ''"
+                        .colspan="col.colspan || ''">
                             {{col.name}}
                         </th>
                     </tr>
@@ -177,7 +177,7 @@
 </template>
 <!-- 模型  -->
 <script type="text/javascript" id="impex">
-    function component(){
+    function component(){ 
         function immutable(obj){
             return JSON.parse(JSON.stringify(obj));
         }
@@ -260,7 +260,9 @@
                 var ll = this.refs.lockedList;
                 var st = sl.scrollTop;
                 var dy = e.deltaY;
-                st += dy;
+                console.log(e)
+                var direction = dy>0 ? 1 : -1;
+                st += 100*direction;
 
                 ll.scrollTop = st;
                 sl.scrollTop = st;

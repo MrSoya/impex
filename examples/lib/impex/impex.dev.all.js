@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-8-23
+ * last build: 2018-9-7
  */
 !function (global) {
 	'use strict';
@@ -156,7 +156,7 @@
 					    		if(!deps){
 					    			deps = comp.__dependence[name] = [];
 					    		}
-					    		if(deps instanceof Array)deps.push(g_computedState);
+					    		if(deps instanceof Array && deps.indexOf(g_computedState)<0)deps.push(g_computedState);
 				    		}else 	    		
 				    		//store
 				    		if(impex.Store){
@@ -1798,6 +1798,14 @@ EventEmitter.prototype = {
 		this.__eeMap[type] = [handler,context||this];
 		return this;
 	},
+	/**
+	 * 取消事件注册
+	 * @param  {[type]} type [description]
+	 * @return {[type]}      [description]
+	 */
+	off:function(type) {
+		this.__eeMap[type] = null;
+	},
 	emit:function(type){
 		var pair = this.__eeMap[type];
 		if(!pair)return;
@@ -2418,13 +2426,15 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		
 		var type = di[1][1][0];
 		var exp = di[2];
-		exp.match(/(?:^|this\.)([a-zA-Z_][a-zA-Z0-9_$]*)(?:\(|$)/);
-		var fnName = RegExp.$1;
-		
+		var fnStr = exp.replace(/\(.*\)/,'');
+		var fn = new Function('comp','with(comp){return '+fnStr+'}');
 
-        var fn = parent[fnName];
+        fn = fn(parent);
+        if(parent[fnStr]){
+        	fn = fn.bind(parent);
+        }
         if(fn)
-			c.on(type,fn.bind(parent));
+			c.on(type,fn);
 	});
 
 	c.__attrs = attrs;

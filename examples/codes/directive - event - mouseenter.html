@@ -25,7 +25,7 @@
     </head>
     <body>
         <div id="demo">
-            <div class="parent" :mouseover="console.log('over')" :mouseenter="console.log('enter')" :mouseleave="console.log('leave')">
+            <div class="parent" :mouseover="console.log('over')" :mouseenter="console.log('enter',$event,$vnode)" :mouseleave="console.log('leave',$event,$vnode)">
                 parent
                 <div class="child" >
                     child
