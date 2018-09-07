@@ -604,13 +604,15 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		
 		var type = di[1][1][0];
 		var exp = di[2];
-		exp.match(/(?:^|this\.)([a-zA-Z_][a-zA-Z0-9_$]*)(?:\(|$)/);
-		var fnName = RegExp.$1;
-		
+		var fnStr = exp.replace(/\(.*\)/,'');
+		var fn = new Function('comp','with(comp){return '+fnStr+'}');
 
-        var fn = parent[fnName];
+        fn = fn(parent);
+        if(parent[fnStr]){
+        	fn = fn.bind(parent);
+        }
         if(fn)
-			c.on(type,fn.bind(parent));
+			c.on(type,fn);
 	});
 
 	c.__attrs = attrs;
