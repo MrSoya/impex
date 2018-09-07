@@ -18,6 +18,14 @@ EventEmitter.prototype = {
 		this.__eeMap[type] = [handler,context||this];
 		return this;
 	},
+	/**
+	 * 取消事件注册
+	 * @param  {[type]} type [description]
+	 * @return {[type]}      [description]
+	 */
+	off:function(type) {
+		this.__eeMap[type] = null;
+	},
 	emit:function(type){
 		var pair = this.__eeMap[type];
 		if(!pair)return;
