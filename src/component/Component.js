@@ -304,31 +304,8 @@ function bindScopeStyle(name,css){
  * parse component template & to create vdom
  */
 function parseComponent(comp){
-	if(comp.__url){
-		loadComponent(comp.name,comp.__url,function(model,css){
-			COMP_MAP[comp.name] = model;
-			ext(model,comp);
-			if(isFunction(model.state)){
-				comp.state = model.state.call(comp);
-			}else if(model.state){
-				comp.state = {};
-				ext(model.state,comp.state);
-			}
-
-			preCompile(comp.template,comp);
-
-
-			comp.onCreate && comp.onCreate();
-
-			//同步父组件变量
-			bindProps(comp,comp.parent,comp.__attrs);
-
-			//css
-			bindScopeStyle(comp.name,css);
-			comp.__url = null;
-			compileComponent(comp);
-			mountComponent(comp,comp.parent?comp.parent.vnode:null);
-		});
+	if(comp.__loading){
+		loadComp(comp);
 	}else{
 		if(comp.template){
 			preCompile(comp.template,comp);
@@ -479,7 +456,7 @@ function mountComponent(comp,parentVNode){
 	}
 	//mount children
 	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__url)
+		if(!comp.children[i].__loading)
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
@@ -514,7 +491,7 @@ function updateComponent(comp,changeMap){
 		var c = comp.children[i];
 		if(!c.compiledTmp){
 			parseComponent(c);
-			if(!c.__url)
+			if(!c.__loading)
 				mountComponent(c,c.vnode.parent);
 		}
 	}
@@ -619,8 +596,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
-	if(isString(param)){
-		c.__url = param;
+	if(isFunction(param.__loader)){
+		c.__loading = param;
 		return c;
 	}
 	if(param){
@@ -657,14 +634,30 @@ function bindProps(comp,parent,parentAttrs){
 		}
 	}
 
+	var rs = null;
 	if(parentAttrs){
-		handleProps(parentAttrs,comp,parent,input,requires);
+		rs = handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
 	//removeIf(production)
 	//check requires
 	assert(Object.keys(requires).length==0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
 	//endRemoveIf(production)
+	
+	if(!rs)return;
+
+	if(comp.onPropBind){
+		comp.onPropBind(rs);
+	}else{
+		for(var k in rs){
+			var v = rs[k];
+			if(v instanceof Function){
+				comp[k] = v;
+			}else{
+				comp.state[k] = v;
+			}
+		}
+	}//end if	
 }
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
@@ -740,6 +733,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			
 			//removeIf(production)
 			//check type 
+			if(isUndefined(input[k].type))continue;
 			assert((function(k,v,input,component){
 				if(!input[k] || !input[k].type)return false;
 				var checkType = input[k].type;
@@ -757,16 +751,5 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 	}
 
-	if(comp.onPropBind){
-		comp.onPropBind(rs);
-	}else{
-		for(var k in rs){
-			var v = rs[k];
-			if(v instanceof Function){
-				comp[k] = v;
-			}else{
-				comp.state[k] = v;
-			}
-		}
-	}//end if	
+	return rs;
 }
