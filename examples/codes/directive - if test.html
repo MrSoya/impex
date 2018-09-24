@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css" media="screen">
+            /* 必需 */
+            .test-transition {
+                transition: all .3s;
+                font-size:2rem;
+            }
+
+            .test-enter, .test-leave {
+                font-size:1rem;
+                opacity: 0;
+            }
+        </style>
+    </head>
+    <body>
+    
+        
+        <div id="demo">
+            <div x-if="exp">
+                
+            </div>
+            <template x-else>
+                <div>
+                    <x-x>
+                        <div>111111111111111</div>
+                        <x-x>22222222222222</x-x>
+                    </x-x>
+                </div>
+            </template>
+            
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            impex.component("x-x",{
+                template:'<div><slot></slot></div>'
+            })
+
+            //渲染
+            var debug = impex.render('#demo',{
+            	state:{
+            		exp:true
+            	}
+                
+            });
+            
+        </script>
+    </body>
+</html>

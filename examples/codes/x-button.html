@@ -12,7 +12,9 @@
             }
         </style>
         <a :pointerdown="tip($event)" x-cloak>
+            {{v}}
             <slot></slot>
+            
         </a>
     </template>
     <!-- 模型  -->
@@ -24,7 +26,8 @@
                     alert('clicked '+(this.state.times++)+' times');
                 },
                 state:{
-                    times:0
+                    times:0,
+                    v:1
                 }
             }            
         }

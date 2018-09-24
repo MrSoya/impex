@@ -9,26 +9,50 @@
             <p>
                 异步加载的远程组件
             </p>
-
+            <x-a></x-a>
             <x-button id="xbtn">
                 按钮1 {{times}}
             </x-button>
+            <x-button id="xbtn2">
+                按钮2 {{times}}
+            </x-button>
 
             <p></p>
-                <x-button id="xbtn2">
-                    按钮2 {{times}}
-                </x-button>
-            
+            <x-table></x-table>
+            <x-table></x-table>
+
+            <x-table></x-table>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.loadable.js"></script>
         <script type="text/javascript">
         
-            //自定义组件
-            impex.component('x-button','x-button.html');
+            //加载异步组件
+            impex.component({
+                loader:{
+                    'x-button':loadable('x-button.html'),
+                    'x-table':function (resolve,reject) {
+                        setTimeout(function(argument) {
+                            Math.random()*10>5?
+                            resolve('<template><div>table loaded</div></template>')
+                            :reject('xxxxxxx');
+                        },1000);
+                        
+                    }
+                },
+                // delay:3000,
+                loading:'<x-button >loading xxxxxxxx</x-button>',
+                error:function(msg) {
+                    return '<div>4444'+msg+"</div>";
+                }
+            })
 
             //渲染
-            var debug = impex.render('#demo');
-            
+            var debug = impex.render('#demo',{
+                state:{
+                    s:1
+                }
+            });
         </script>
     </body>
 </html>

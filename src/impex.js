@@ -93,7 +93,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,98,0],
+	        v:[0,99,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -124,14 +124,47 @@
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | String} model 组件模型对象，或url地址
+		 * @param  {Object | Function | Promise} model 组件模型对象，或异步函数或promise对象
+		 * @param  {Object} [loadsetting] 加载异步组件还可以通过加载设置对象实现
+		 * @param {Object} loadsetting.loader 定义1-n个组件的加载器
+		 *        			{
+		 *        				'x-a':function(resolve,reject){...}
+		 *        				'xb':loadable(url)
+		 *        			}
+		 * @param {String | Function} [loading] html代码或返回html代码的函数，用于在组件加载时显示在组件的位置
+		 * @param {int} [delay] 在发出请求一段时间后再显示loading，防止快速加载造成的页面闪烁，单位ms。默认200
+		 * @param {String | Function} [error] html代码或返回html代码的函数，用于在组件加载错误时显示在组件的位置
+		 * @param {int} [timeout] 超时设置，单位ms。默认10000 
 		 * @return this
 		 */
 		this.component = function(name,model){
-			//removeIf(production)
-			assert(typeof(model)=='string' || model.template,name,XERROR.COMPONENT.TEMPLATEPROP,"can not find property 'template'")
-			//endRemoveIf(production)
-			COMP_MAP[name] = model;
+			if(typeof model == 'object'){
+				COMP_MAP[name] = model;
+				return;
+			}
+			model = model || name;
+			var setting = {
+				__timeout: model.timeout||10000,
+				__delay:model.delay||200,
+				__error:model.error,
+				__loading:model.loading,
+				__loader:model
+			}
+			if(typeof name == "object"){
+				var loader = name.loader;
+				for(var k in loader){
+					var tmp = new Object();
+					tmp.__timeout = setting.__timeout;
+					tmp.__delay = setting.__delay;
+					tmp.__error = setting.__error;
+					tmp.__loading = setting.__loading;
+					COMP_MAP[k] = tmp;
+					COMP_MAP[k].__loader = loader[k];
+				}
+			}else{
+				COMP_MAP[name] = setting;
+			}
+			
 			return this;
 		}
 
@@ -192,18 +225,6 @@
 		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
 		this.renderTo = function(tmpl,container,model){
-			
-			//link comps
-			var links = document.querySelectorAll('link[rel="impex"]');
-
-            //register requires
-            for(var i=links.length;i--;){
-                var lk = links[i];
-                var type = lk.getAttribute('type');
-                var href = lk.getAttribute('href');
-                impex.component(type,href);
-            }
-
             if(isString(container)){
             	container = document.querySelector(container);
             }

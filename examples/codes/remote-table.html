@@ -15,10 +15,11 @@
             
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript" src="../lib/impex/impex.ext.loadable.js"></script>
         <script type="text/javascript">
         
             //自定义组件
-            impex.component('x-table','x-table.html');
+            impex.component('x-table',loadable('x-table.html'));
 
             //渲染
             var debug = impex.render('#demo',{

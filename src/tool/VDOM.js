@@ -663,6 +663,7 @@ function compareVDOM(newVNode,oldVNode,comp){
 }
 function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
+    if(!c)return false;
     //compare attrs
     var nas = nv.attrNodes;
     var oas = c.__attrs;
@@ -915,23 +916,13 @@ function insertChildren(parent,children,comp){
     for(var i=0;i<children.length;i++){
         var vn = children[i];
         var dom = buildOffscreenDOM(vn,comp);
-        //bind vdom
-        if(vn._comp){
-            parseComponent(vn._comp);
-            compAry.push(vn._comp);
-        }
         fragment.appendChild(dom);
     }
     parent.dom.appendChild(fragment);
-
-    for(var i=0;i<compAry.length;i++){
-        var tmp = compAry[i];
-        mountComponent(tmp,parent);
-    }
 }
 function isSameVNode(nv,ov){
     if(nv._comp){
-        if(ov.getAttribute(DOM_COMP_ATTR) != nv.tag)return false;
+        if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
         return isSameComponent(nv,ov);
     }
     return ov.tag === nv.tag;

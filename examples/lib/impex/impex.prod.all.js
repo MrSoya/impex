@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-9-7
+ * last build: 2018-9-24
  */
 !function (global) {
 	'use strict';
@@ -36,56 +36,96 @@
     function isFunction(obj){
         return obj instanceof Function;
     }
-    function onload(){
-        if(this.status===0 || //local
-        ((this.status >= 200 && this.status <300) || this.status === 304) ){
-            var txt = this.responseText;
-            var obj = requirements[this.url];
-            var cbks = obj.cbks;
-            var name = obj.name;
 
-            txt.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img)[0];
-            var tmpl = RegExp.$1;
-            var css = '';
-            tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
-                css += b;
-                return '';
-            });
-
-            txt.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img)[0];
-            var modelStr = RegExp.$1;
+    var awaitQ = {},
+        timeoutTimer = {},
+        loadingTimer = {},
+        errors = {};
+    //if loader resolved then it can't be rejected and vice versa
+    function loadComp(comp) {
+        var name = comp.name;
+        var setting = comp.__loading;
+        var q = awaitQ[name];
+        if(!q){
+            q = awaitQ[name] = [comp];
+            timeoutTimer[name] = setTimeout(function(argument) {
+                assert(false,name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+name);
+                reject.call(comp,'timeout');
+            },setting.__timeout);
+            setting.__loader(resolve.bind(comp),reject.bind(comp));
+            //show loaing after delay
+            if(setting.__loading){
+                loadingTimer[name] = setTimeout(function(argument) {
+                    var loading = isFunction(setting.__loading)?setting.__loading():setting.__loading;
             
-            var model = new Function('return ('+modelStr+')')();
-            model = model();
-            model.template = tmpl.trim();
-            
-            var url = this.url;
-            cbks.forEach(function(cbk){
-                cbk(model,css.trim());
-            });
-            requirements[this.url] = null;
+                    COMP_MAP[name] = {template:'<section>'+loading+'</section>',state:{}};
+                    renderCompOf(name,COMP_MAP[name]);
+                },setting.__delay);
+            }
+        }else{
+            q.push(comp);
         }
     }
+    function reject(errorMsg){
+        if(!awaitQ[this.name])return;
+        errors[this.name] = errorMsg;
+        var error = isFunction(this.__loading.__error)?this.__loading.__error(errorMsg):this.__loading.__error;
+        error = error || errorMsg;
+        COMP_MAP[this.name] = {template:'<section>'+error+'</section>',state:{}};
+        renderCompOf(this.name,COMP_MAP[this.name]);
+    }
+    function resolve(compStr){
+        if(errors[this.name])return;
 
-    var requirements = {};
-    function loadComponent(name,url,cbk,timeout){
-        if(!requirements[url]){
-            requirements[url] = {name:name,cbks:[]};
-            requirements[url].cbks.push(cbk);
-        }else{
-            requirements[url].cbks.push(cbk);
-            return;
-        }        
+        var rs = compStr.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img);
+        var tmpl = RegExp.$1;
+        var css = '';
+        tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
+            css += b;
+            return '';
+        });
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('get',url,true);
-        if(xhr.onload === null){
-            xhr.onload = onload;
-        }else{
-            xhr.onreadystatechange = onload;
-        }
-        xhr.url = url;
-        xhr.send(null);
+        rs = compStr.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img);
+        var modelStr = rs?RegExp.$1:'function(){return{};}';
+        
+        var model = new Function('return ('+modelStr+')')();
+        model = model();
+        model.template = tmpl.trim();
+        COMP_MAP[this.name] = model;
+         //css
+        bindScopeStyle(this.name,css.trim());
+
+        renderCompOf(this.name,model,true);
+    }
+    function renderCompOf(name,model,clearAwait) {
+        clearTimeout(timeoutTimer[name]);
+        clearTimeout(loadingTimer[name]);
+
+        var q = awaitQ[name];
+        for(var i=q.length;i--;){
+            var comp = q[i];
+
+            ext(model,comp);
+            if(isFunction(model.state)){
+                comp.state = model.state.call(comp);
+            }else if(model.state){
+                comp.state = {};
+                ext(model.state,comp.state);
+            }
+
+            comp.onCreate && comp.onCreate();
+
+            //同步父组件变量
+            bindProps(comp,comp.parent,comp.__attrs);
+
+            if(clearAwait)comp.__loading = null;
+
+            preCompile(comp.template,comp);
+            compileComponent(comp);
+            mountComponent(comp,comp.parent?comp.parent.vnode:null);
+        }//end for    
+        
+        if(clearAwait)awaitQ[name] = null;    
     }
 	var Observer = null;
 	window.Proxy && !function(){
@@ -1074,6 +1114,7 @@ function compareVDOM(newVNode,oldVNode,comp){
 }
 function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
+    if(!c)return false;
     //compare attrs
     var nas = nv.attrNodes;
     var oas = c.__attrs;
@@ -1326,23 +1367,13 @@ function insertChildren(parent,children,comp){
     for(var i=0;i<children.length;i++){
         var vn = children[i];
         var dom = buildOffscreenDOM(vn,comp);
-        //bind vdom
-        if(vn._comp){
-            parseComponent(vn._comp);
-            compAry.push(vn._comp);
-        }
         fragment.appendChild(dom);
     }
     parent.dom.appendChild(fragment);
-
-    for(var i=0;i<compAry.length;i++){
-        var tmp = compAry[i];
-        mountComponent(tmp,parent);
-    }
 }
 function isSameVNode(nv,ov){
     if(nv._comp){
-        if(ov.getAttribute(DOM_COMP_ATTR) != nv.tag)return false;
+        if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
         return isSameComponent(nv,ov);
     }
     return ov.tag === nv.tag;
@@ -2088,31 +2119,8 @@ function bindScopeStyle(name,css){
  * parse component template & to create vdom
  */
 function parseComponent(comp){
-	if(comp.__url){
-		loadComponent(comp.name,comp.__url,function(model,css){
-			COMP_MAP[comp.name] = model;
-			ext(model,comp);
-			if(isFunction(model.state)){
-				comp.state = model.state.call(comp);
-			}else if(model.state){
-				comp.state = {};
-				ext(model.state,comp.state);
-			}
-
-			preCompile(comp.template,comp);
-
-
-			comp.onCreate && comp.onCreate();
-
-			//同步父组件变量
-			bindProps(comp,comp.parent,comp.__attrs);
-
-			//css
-			bindScopeStyle(comp.name,css);
-			comp.__url = null;
-			compileComponent(comp);
-			mountComponent(comp,comp.parent?comp.parent.vnode:null);
-		});
+	if(comp.__loading){
+		loadComp(comp);
 	}else{
 		if(comp.template){
 			preCompile(comp.template,comp);
@@ -2260,7 +2268,7 @@ function mountComponent(comp,parentVNode){
 	}
 	//mount children
 	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__url)
+		if(!comp.children[i].__loading)
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
@@ -2295,7 +2303,7 @@ function updateComponent(comp,changeMap){
 		var c = comp.children[i];
 		if(!c.compiledTmp){
 			parseComponent(c);
-			if(!c.__url)
+			if(!c.__loading)
 				mountComponent(c,c.vnode.parent);
 		}
 	}
@@ -2400,8 +2408,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
-	if(isString(param)){
-		c.__url = param;
+	if(isFunction(param.__loader)){
+		c.__loading = param;
 		return c;
 	}
 	if(param){
@@ -2438,11 +2446,26 @@ function bindProps(comp,parent,parentAttrs){
 		}
 	}
 
+	var rs = null;
 	if(parentAttrs){
-		handleProps(parentAttrs,comp,parent,input,requires);
+		rs = handleProps(parentAttrs,comp,parent,input,requires);
 	}
 
-	}
+	if(!rs)return;
+
+	if(comp.onPropBind){
+		comp.onPropBind(rs);
+	}else{
+		for(var k in rs){
+			var v = rs[k];
+			if(v instanceof Function){
+				comp[k] = v;
+			}else{
+				comp.state[k] = v;
+			}
+		}
+	}//end if	
+}
 function handleProps(parentAttrs,comp,parent,input,requires){
 	var str = '';
 	var strMap = {};
@@ -2515,18 +2538,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			}
 	}
 
-	if(comp.onPropBind){
-		comp.onPropBind(rs);
-	}else{
-		for(var k in rs){
-			var v = rs[k];
-			if(v instanceof Function){
-				comp[k] = v;
-			}else{
-				comp.state[k] = v;
-			}
-		}
-	}//end if	
+	return rs;
 }
 
 	var CMD_PREFIX = 'x-';//指令前缀
@@ -2588,7 +2600,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,98,0],
+	        v:[0,99,0],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2619,11 +2631,47 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | String} model 组件模型对象，或url地址
+		 * @param  {Object | Function | Promise} model 组件模型对象，或异步函数或promise对象
+		 * @param  {Object} [loadsetting] 加载异步组件还可以通过加载设置对象实现
+		 * @param {Object} loadsetting.loader 定义1-n个组件的加载器
+		 *        			{
+		 *        				'x-a':function(resolve,reject){...}
+		 *        				'xb':loadable(url)
+		 *        			}
+		 * @param {String | Function} [loading] html代码或返回html代码的函数，用于在组件加载时显示在组件的位置
+		 * @param {int} [delay] 在发出请求一段时间后再显示loading，防止快速加载造成的页面闪烁，单位ms。默认200
+		 * @param {String | Function} [error] html代码或返回html代码的函数，用于在组件加载错误时显示在组件的位置
+		 * @param {int} [timeout] 超时设置，单位ms。默认10000 
 		 * @return this
 		 */
 		this.component = function(name,model){
-			COMP_MAP[name] = model;
+			if(typeof model == 'object'){
+				COMP_MAP[name] = model;
+				return;
+			}
+			model = model || name;
+			var setting = {
+				__timeout: model.timeout||10000,
+				__delay:model.delay||200,
+				__error:model.error,
+				__loading:model.loading,
+				__loader:model
+			}
+			if(typeof name == "object"){
+				var loader = name.loader;
+				for(var k in loader){
+					var tmp = new Object();
+					tmp.__timeout = setting.__timeout;
+					tmp.__delay = setting.__delay;
+					tmp.__error = setting.__error;
+					tmp.__loading = setting.__loading;
+					COMP_MAP[k] = tmp;
+					COMP_MAP[k].__loader = loader[k];
+				}
+			}else{
+				COMP_MAP[name] = setting;
+			}
+			
 			return this;
 		}
 
@@ -2684,18 +2732,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
 		 */
 		this.renderTo = function(tmpl,container,model){
-			
-			//link comps
-			var links = document.querySelectorAll('link[rel="impex"]');
-
-            //register requires
-            for(var i=links.length;i--;){
-                var lk = links[i];
-                var type = lk.getAttribute('type');
-                var href = lk.getAttribute('href');
-                impex.component(type,href);
-            }
-
             if(isString(container)){
             	container = document.querySelector(container);
             }

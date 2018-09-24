@@ -71,7 +71,8 @@
                     this.state.x += 1;
                 },
                 destroyComp:function(){
-                    this.children[0].destroy();
+                    this.children[0] && this.children[0].destroy();
+                    this.state.comp = '';
                 },
                 state:{
                     comp:'',
