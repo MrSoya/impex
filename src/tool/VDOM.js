@@ -922,6 +922,7 @@ function insertChildren(parent,children,comp){
 }
 function isSameVNode(nv,ov){
     if(nv._comp){
+        if(ov.tag === nv.tag)return true;//for loading component
         if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
         return isSameComponent(nv,ov);
     }
