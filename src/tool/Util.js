@@ -31,32 +31,38 @@
     //if loader resolved then it can't be rejected and vice versa
     function loadComp(comp) {
         var name = comp.name;
-        var setting = comp.__loading;
+        var setting = comp.__loadSetting;
         var q = awaitQ[name];
+        //removeIf(production)
+        // if(q && q.indexOf(comp)>-1){
+        //     console.error('lib error',comp);
+        // }
+        //endRemoveIf(production)
         if(!q){
             q = awaitQ[name] = [comp];
             timeoutTimer[name] = setTimeout(function(argument) {
                 assert(false,name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+name);
                 reject.call(comp,'timeout');
-            },setting.__timeout);
-            setting.__loader(resolve.bind(comp),reject.bind(comp));
+            },setting.timeout);
+            setting.loader(resolve.bind(comp),reject.bind(comp));
             //show loaing after delay
-            if(setting.__loading){
+            if(setting.onLoading){
                 loadingTimer[name] = setTimeout(function(argument) {
-                    var loading = isFunction(setting.__loading)?setting.__loading():setting.__loading;
+                    var loading = isFunction(setting.onLoading)?setting.onLoading():setting.onLoading;
             
                     COMP_MAP[name] = {template:'<section>'+loading+'</section>',state:{}};
                     renderCompOf(name,COMP_MAP[name]);
-                },setting.__delay);
+                },setting.delay);
             }
         }else{
             q.push(comp);
         }
+        setting.loading = true;
     }
     function reject(errorMsg){
         if(!awaitQ[this.name])return;
         errors[this.name] = errorMsg;
-        var error = isFunction(this.__loading.__error)?this.__loading.__error(errorMsg):this.__loading.__error;
+        var error = isFunction(this.__loadSetting.onError)?this.__loadSetting.onError(errorMsg):this.__loadSetting.onError;
         error = error || errorMsg;
         COMP_MAP[this.name] = {template:'<section>'+error+'</section>',state:{}};
         renderCompOf(this.name,COMP_MAP[this.name]);
@@ -108,7 +114,7 @@
             //同步父组件变量
             bindProps(comp,comp.parent,comp.__attrs);
 
-            if(clearAwait)comp.__loading = null;
+            if(clearAwait)comp.__loadSetting = null;
 
             preCompile(comp.template,comp);
             compileComponent(comp);

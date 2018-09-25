@@ -304,7 +304,7 @@ function bindScopeStyle(name,css){
  * parse component template & to create vdom
  */
 function parseComponent(comp){
-	if(comp.__loading){
+	if(comp.__loadSetting){
 		loadComp(comp);
 	}else{
 		if(comp.template){
@@ -456,7 +456,7 @@ function mountComponent(comp,parentVNode){
 	}
 	//mount children
 	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__loading)
+		if(!comp.children[i].__loadSetting)
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
@@ -489,9 +489,10 @@ function updateComponent(comp,changeMap){
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.children.length;i++){
 		var c = comp.children[i];
-		if(!c.compiledTmp){
+		if(!c.compiledTmp
+			&& !(c.__loadSetting && c.__loadSetting.loading)/* sync comp */){
 			parseComponent(c);
-			if(!c.__loading)
+			if(!c.__loadSetting)
 				mountComponent(c,c.vnode.parent);
 		}
 	}
@@ -596,8 +597,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
-	if(isFunction(param.__loader)){
-		c.__loading = param;
+	if(isFunction(param.loader)){
+		c.__loadSetting = param;
 		return c;
 	}
 	if(param){

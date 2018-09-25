@@ -30,7 +30,7 @@
 
 	//removeIf(production)
 	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.php#techniques-xerror');
+		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror');
 	}
 	function assert(isTrue,compName,code,msg,e) {
 		!isTrue && error(compName,code,msg,e);
@@ -144,22 +144,22 @@
 			}
 			model = model || name;
 			var setting = {
-				__timeout: model.timeout||10000,
-				__delay:model.delay||200,
-				__error:model.error,
-				__loading:model.loading,
-				__loader:model
+				timeout: model.timeout||10000,
+				delay:model.delay||200,
+				onError:model.error,
+				onLoading:model.loading,
+				loader:model
 			}
 			if(typeof name == "object"){
 				var loader = name.loader;
 				for(var k in loader){
 					var tmp = new Object();
-					tmp.__timeout = setting.__timeout;
-					tmp.__delay = setting.__delay;
-					tmp.__error = setting.__error;
-					tmp.__loading = setting.__loading;
+					tmp.timeout = setting.timeout;
+					tmp.delay = setting.delay;
+					tmp.onError = setting.error;
+					tmp.onLoading = setting.loading;
 					COMP_MAP[k] = tmp;
-					COMP_MAP[k].__loader = loader[k];
+					COMP_MAP[k].loader = loader[k];
 				}
 			}else{
 				COMP_MAP[name] = setting;

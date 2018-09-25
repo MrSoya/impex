@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-9-24
+ * last build: 2018-9-25
  */
 !function (global) {
 	'use strict';
@@ -44,32 +44,33 @@
     //if loader resolved then it can't be rejected and vice versa
     function loadComp(comp) {
         var name = comp.name;
-        var setting = comp.__loading;
+        var setting = comp.__loadSetting;
         var q = awaitQ[name];
         if(!q){
             q = awaitQ[name] = [comp];
             timeoutTimer[name] = setTimeout(function(argument) {
                 assert(false,name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+name);
                 reject.call(comp,'timeout');
-            },setting.__timeout);
-            setting.__loader(resolve.bind(comp),reject.bind(comp));
+            },setting.timeout);
+            setting.loader(resolve.bind(comp),reject.bind(comp));
             //show loaing after delay
-            if(setting.__loading){
+            if(setting.onLoading){
                 loadingTimer[name] = setTimeout(function(argument) {
-                    var loading = isFunction(setting.__loading)?setting.__loading():setting.__loading;
+                    var loading = isFunction(setting.onLoading)?setting.onLoading():setting.onLoading;
             
                     COMP_MAP[name] = {template:'<section>'+loading+'</section>',state:{}};
                     renderCompOf(name,COMP_MAP[name]);
-                },setting.__delay);
+                },setting.delay);
             }
         }else{
             q.push(comp);
         }
+        setting.loading = true;
     }
     function reject(errorMsg){
         if(!awaitQ[this.name])return;
         errors[this.name] = errorMsg;
-        var error = isFunction(this.__loading.__error)?this.__loading.__error(errorMsg):this.__loading.__error;
+        var error = isFunction(this.__loadSetting.onError)?this.__loadSetting.onError(errorMsg):this.__loadSetting.onError;
         error = error || errorMsg;
         COMP_MAP[this.name] = {template:'<section>'+error+'</section>',state:{}};
         renderCompOf(this.name,COMP_MAP[this.name]);
@@ -118,7 +119,7 @@
             //同步父组件变量
             bindProps(comp,comp.parent,comp.__attrs);
 
-            if(clearAwait)comp.__loading = null;
+            if(clearAwait)comp.__loadSetting = null;
 
             preCompile(comp.template,comp);
             compileComponent(comp);
@@ -1373,6 +1374,7 @@ function insertChildren(parent,children,comp){
 }
 function isSameVNode(nv,ov){
     if(nv._comp){
+        if(ov.tag === nv.tag)return true;//for loading component
         if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
         return isSameComponent(nv,ov);
     }
@@ -2119,7 +2121,7 @@ function bindScopeStyle(name,css){
  * parse component template & to create vdom
  */
 function parseComponent(comp){
-	if(comp.__loading){
+	if(comp.__loadSetting){
 		loadComp(comp);
 	}else{
 		if(comp.template){
@@ -2268,7 +2270,7 @@ function mountComponent(comp,parentVNode){
 	}
 	//mount children
 	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__loading)
+		if(!comp.children[i].__loadSetting)
 			mountComponent(comp.children[i],comp.vnode);
 	}
 	if(comp.name){
@@ -2301,9 +2303,10 @@ function updateComponent(comp,changeMap){
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.children.length;i++){
 		var c = comp.children[i];
-		if(!c.compiledTmp){
+		if(!c.compiledTmp
+			&& !(c.__loadSetting && c.__loadSetting.loading)/* sync comp */){
 			parseComponent(c);
-			if(!c.__loading)
+			if(!c.__loadSetting)
 				mountComponent(c,c.vnode.parent);
 		}
 	}
@@ -2408,8 +2411,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	
-	if(isFunction(param.__loader)){
-		c.__loading = param;
+	if(isFunction(param.loader)){
+		c.__loadSetting = param;
 		return c;
 	}
 	if(param){
@@ -2651,22 +2654,22 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			}
 			model = model || name;
 			var setting = {
-				__timeout: model.timeout||10000,
-				__delay:model.delay||200,
-				__error:model.error,
-				__loading:model.loading,
-				__loader:model
+				timeout: model.timeout||10000,
+				delay:model.delay||200,
+				onError:model.error,
+				onLoading:model.loading,
+				loader:model
 			}
 			if(typeof name == "object"){
 				var loader = name.loader;
 				for(var k in loader){
 					var tmp = new Object();
-					tmp.__timeout = setting.__timeout;
-					tmp.__delay = setting.__delay;
-					tmp.__error = setting.__error;
-					tmp.__loading = setting.__loading;
+					tmp.timeout = setting.timeout;
+					tmp.delay = setting.delay;
+					tmp.onError = setting.error;
+					tmp.onLoading = setting.loading;
 					COMP_MAP[k] = tmp;
-					COMP_MAP[k].__loader = loader[k];
+					COMP_MAP[k].loader = loader[k];
 				}
 			}else{
 				COMP_MAP[name] = setting;
