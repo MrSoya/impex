@@ -8,7 +8,7 @@
     </head>
     <body>
         <div id="demo">
-            <div x-for="list2 as v => filterBy:filterKey:'name' |orderBy:orderKey:'desc'">
+            <div x-for="list2 as v => filterBy:filterKey:'name' |orderBy:orderKey:'desc'|inScope">
                 {{$index}} {{v => json}}
             </div>
             <p>
@@ -30,8 +30,11 @@
                     orderKey : '',
                     list1 : [{p:3},{p:1},{p:2},{p:4}],
                     list2 : [{name:'impex'},{name:'soya'},{name:'h5stars'}]
+                },
+                inScope:function(v) {
+                    console.log(v)
+                    return v;
                 }
-                
             });
             
         </script>

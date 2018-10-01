@@ -218,6 +218,7 @@ function doFilter(v,filters,comp){
     for(var i=0;i<filters.length;i++){
         var f = filters[i];
         var ins = FILTER_MAP[f[0]];
+        if(!ins)ins = comp[f[0]];
         //removeIf(production)
         assert(ins,comp.name,XERROR.COMPILE.NOFILTER,"can not find filter '"+f[0]+"'");
         //endRemoveIf(production)

@@ -12,6 +12,8 @@
             {{money => currency:'$':3}}
             <br>
             {{money => currency:'€':4}}
+            <br>
+            {{money => inScope}}
         </div>
 
         <script type="text/javascript">
@@ -28,15 +30,17 @@
                     }
                     return sym + ' ' + integer + parseFloat('0.'+pair[1]).toFixed(decimal).substr(1);
             });
-            
 
             //渲染
             var debug = impex.render('#demo',{
                 state:{
                     money : '4321234.5678',
                     len:3
+                },
+                inScope:function(v) {
+                    console.log(v);
+                    return v;
                 }
-                
             });
             
             
