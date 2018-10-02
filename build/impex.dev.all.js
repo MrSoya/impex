@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-10-1
+ * last build: 2018-10-2
  */
 !function (global) {
 	'use strict';
@@ -704,7 +704,7 @@ function doFilter(v,filters,comp){
         //endRemoveIf(production)
         var params = f[1];
         params.unshift(v);
-        v = ins.apply(ins,params);
+        v = ins.apply(comp,params);
     }
     return v;
 }

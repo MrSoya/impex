@@ -224,7 +224,7 @@ function doFilter(v,filters,comp){
         //endRemoveIf(production)
         var params = f[1];
         params.unshift(v);
-        v = ins.apply(ins,params);
+        v = ins.apply(comp,params);
     }
     return v;
 }
