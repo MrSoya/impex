@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-10-2
+ * last build: 2018-10-7
  */
 !function (global) {
 	'use strict';
@@ -478,6 +478,8 @@
 
 		dirtyCheck();
 	}();
+var pnode_counter = 0;
+var pnode_map = {};
 function pNode(type,tag,txtQ){
     this.type = type;//1 node 3 text
     this.tag = tag;
@@ -485,12 +487,27 @@ function pNode(type,tag,txtQ){
     this.children = [];
     this.attrNodes = {};
     this.slotMap = {};
+    this._pid = 'P_'+pnode_counter++;
 }
 function pNodeAttr(name,directive){
     this.value;
     this.name = name;
     this.directive = directive;
 }
+pNode.prototype = {
+    innerHTML:function() {
+        var r = new RegExp('<\s*\/\s*'+this.tag+'\s*>','img');
+        var rs = this._innerHTML.trim();
+        var match = r.exec(rs);
+        if(match){
+            return rs.substring(0,match.index);
+        }
+        return rs;
+    },
+    outerHTML:function (){
+        return this._outerHTML+this.innerHTML()+'</'+this.tag+'>';
+    }
+};
 
 var vn_counter = 0;
 /**
@@ -583,11 +600,10 @@ function createElement(comp,tag,props,directives,children,html,forScopeAry){
         rs._forScopeQ = forScopeAry;
     if (COMP_MAP[tag] || tag == 'component') {
         rs._comp = true;
-        var slotData = children[0];
-        if(slotData){
-            rs._slots = slotData[0];
-            rs._slotMap = slotData[1];     
-        }
+        var pnode = pnode_map[children[0]];
+        rs._slots = pnode.children;
+        rs._slotMap = pnode.slotMap;     
+        rs._pnode = pnode;
         return rs;
     }
     if(html != null){
@@ -815,6 +831,8 @@ function parseHTML(str){
         //build pNode
         var tagName = startNodeData[1];
         var node = new pNode(1,tagName);
+        node._outerHTML = startNodeData[0];
+        node._innerHTML = str;
         var parentNode = stack[stack.length-1];
         if(parentNode){
             parentNode.children.push(node);
@@ -840,6 +858,9 @@ function parseHTML(str){
         }
 
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
+        else{
+            node._innerHTML = '';
+        }
 
         //check
         var nextNodeData = TAG_START_EXP.exec(str);
@@ -866,6 +887,15 @@ function parseHTML(str){
                     compStack.pop();
                     compNode = compStack[compStack.length-1];
                 }
+
+                if(tmp === node){
+                    if(node._innerHTML == endNodeData.input){
+                        node._innerHTML = endNodeData.input.substring(0,endNodeData.index);
+                    }else{
+                        var part = node._innerHTML.replace(endNodeData.input,'');
+                        node._innerHTML = part + endNodeData.input.substring(0,endNodeData.index);
+                    }                        
+                }
                 if(stack.length<1)break;
                 endNodeData = TAG_END_EXP_G.exec(str);
                 //removeIf(production)
@@ -889,7 +919,6 @@ function parseHTML(str){
             }while(endIndex < nextIndex);
             
             if(!nextNodeData)break;
-
             str = str.substr(nextIndex + nextNodeData[0].length);
         }
     }
@@ -999,7 +1028,8 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
 
         var children = '';
         if(COMP_MAP[pm.tag]){
-            children = JSON.stringify([pm.children,pm.slotMap]);
+            pnode_map[pm._pid] = pm;
+            children = JSON.stringify(pm._pid);
         }else{
             for(var i=0;i<pm.children.length;i++){
                 var prevPm = pm.children[i-1];
@@ -1153,8 +1183,7 @@ function isSameComponent(nv,ov) {
         if(isUndefined(oas[k]))return false;
     }
     //compare slots
-    return JSON.stringify(nv._slots) == JSON.stringify(c.__slots)
-            && JSON.stringify(nv._slotMap) == JSON.stringify(c.__slotMap);
+    return nv._pnode.innerHTML() == c._innerHTML;
 }
 
 function compareSame(newVNode,oldVNode,comp){
@@ -2161,7 +2190,7 @@ function parseComponent(comp){
 }
 function preCompile(tmpl,comp){
 	if(comp.onBeforeCompile)
-        tmpl = comp.onBeforeCompile(tmpl);
+        tmpl = comp.onBeforeCompile(tmpl,comp.vnode._pnode);
     
     comp.compiledTmp = 
     tmpl.trim()
@@ -2442,6 +2471,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__attrs = attrs;
 	c.__slots = slots;
 	c.__slotMap = slotMap;
+	c._innerHTML = vnode._pnode.innerHTML();
 	
 	if(isFunction(param.loader)){
 		c.__loadSetting = param;

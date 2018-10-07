@@ -315,7 +315,7 @@ function parseComponent(comp){
 }
 function preCompile(tmpl,comp){
 	if(comp.onBeforeCompile)
-        tmpl = comp.onBeforeCompile(tmpl);
+        tmpl = comp.onBeforeCompile(tmpl,comp.vnode._pnode);
     
     comp.compiledTmp = 
     tmpl.trim()
@@ -596,6 +596,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	c.__attrs = attrs;
 	c.__slots = slots;
 	c.__slotMap = slotMap;
+	c._innerHTML = vnode._pnode.innerHTML();
 	
 	if(isFunction(param.loader)){
 		c.__loadSetting = param;
