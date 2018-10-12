@@ -697,7 +697,7 @@ function isSameComponent(nv,ov) {
     if(!c)return false;
     //compare attrs
     var nas = nv.attrNodes;
-    var oas = c.__attrs;
+    var oas = c.attributes;
     if(Object.keys(nas).length !== Object.keys(oas).length)return false;
     for(var k in nas){
         if(isUndefined(oas[k]))return false;

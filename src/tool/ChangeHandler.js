@@ -62,18 +62,19 @@ var ChangeHandler = new function() {
         	chains.push(name);
         
         if(!comp)return;
+        var cid = comp.id;
 
-        if(!changeMap[comp._uid]){
-        	changeMap[comp._uid] = {
+        if(!changeMap[cid]){
+        	changeMap[cid] = {
         		change:{},
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
         if(action){
-        	changeMap[comp._uid].change[name] = [c,action];
+        	changeMap[cid].change[name] = [c,action];
         }else{
-        	changeMap[comp._uid].change[name] = c;
+        	changeMap[cid].change[name] = c;
         }
         
 	}

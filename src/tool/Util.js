@@ -112,7 +112,7 @@
             comp.onCreate && comp.onCreate();
 
             //同步父组件变量
-            bindProps(comp,comp.parent,comp.__attrs);
+            bindProps(comp,comp.parent,comp.attributes);
 
             if(clearAwait)comp.__loadSetting = null;
 

@@ -7,7 +7,7 @@
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-10-7
+ * last build: 2018-10-10
  */
 !function (global) {
 	'use strict';
@@ -117,7 +117,7 @@
             comp.onCreate && comp.onCreate();
 
             //同步父组件变量
-            bindProps(comp,comp.parent,comp.__attrs);
+            bindProps(comp,comp.parent,comp.attributes);
 
             if(clearAwait)comp.__loadSetting = null;
 
@@ -1149,7 +1149,7 @@ function isSameComponent(nv,ov) {
     if(!c)return false;
     //compare attrs
     var nas = nv.attrNodes;
-    var oas = c.__attrs;
+    var oas = c.attributes;
     if(Object.keys(nas).length !== Object.keys(oas).length)return false;
     for(var k in nas){
         if(isUndefined(oas[k]))return false;
@@ -1775,18 +1775,19 @@ var ChangeHandler = new function() {
         	chains.push(name);
         
         if(!comp)return;
+        var cid = comp.id;
 
-        if(!changeMap[comp._uid]){
-        	changeMap[comp._uid] = {
+        if(!changeMap[cid]){
+        	changeMap[cid] = {
         		change:{},
         		comp:comp
         	};
         }
         var c = new Change(name,newVal,oldVal,chains,type,object);
         if(action){
-        	changeMap[comp._uid].change[name] = [c,action];
+        	changeMap[cid].change[name] = [c,action];
         }else{
-        	changeMap[comp._uid].change[name] = c;
+        	changeMap[cid].change[name] = c;
         }
         
 	}
@@ -1858,7 +1859,7 @@ EventEmitter.prototype = {
 function Component (el) {
 	EventEmitter.call(this);
 
-	this._uid = 'C_' + im_counter++;
+	this.id = 'C_' + im_counter++;
 
 	/**
 	 * 对顶级元素的引用
@@ -1912,7 +1913,7 @@ function Component (el) {
 	 */
 	this.state = {};
 
-	impex._cs[this._uid] = this;
+	impex._cs[this.id] = this;
 };
 function F(){}
 F.prototype = EventEmitter.prototype;  
@@ -1956,14 +1957,15 @@ ext({
 	 */
 	destroy:function(){
 		this.onDestroy && this.onDestroy();
-
+		var id = this.id;
 		if(this.parent){
-			this.parent.__syncFn[this._uid] = null;
-			this.parent.__syncOldVal[this._uid] = null;
-			this.parent.__syncFnForScope[this._uid] = null;
-			delete this.parent.__syncFn[this._uid];
-			delete this.parent.__syncOldVal[this._uid];
-			delete this.parent.__syncFnForScope[this._uid];
+			
+			this.parent.__syncFn[id] = null;
+			this.parent.__syncOldVal[id] = null;
+			this.parent.__syncFnForScope[id] = null;
+			delete this.parent.__syncFn[id];
+			delete this.parent.__syncOldVal[id];
+			delete this.parent.__syncFnForScope[id];
 			var index = this.parent.children.indexOf(this);
 			if(index > -1){
 				this.parent.children.splice(index,1);
@@ -1976,8 +1978,8 @@ ext({
 		}
 
 		this.children = 
-		impex._cs[this._uid] = null;
-		delete impex._cs[this._uid];
+		impex._cs[id] = null;
+		delete impex._cs[id];
 
 		destroyDirective(this.vnode,this);
 
@@ -1990,7 +1992,7 @@ ext({
 		this.refs = 
 		this.__nodes = 
 		this.__syncFn = 
-		this._uid = 
+		this.id = 
 
 		this.__url = 
 		this.template = 
@@ -2013,7 +2015,7 @@ ext({
 /*********	component handlers	*********/
 //////	init flow
 function buildOffscreenDOM(vnode,comp){
-	var n,cid = comp._uid;
+	var n,cid = comp.id;
 	if(vnode._isEl){
 		n = document.createElement(vnode.tag);
 		n._vid = vnode.vid;
@@ -2437,7 +2439,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			c.on(type,fn);
 	});
 
-	c.__attrs = attrs;
+	c.attributes = attrs;
 	c.__slots = slots;
 	c.__slotMap = slotMap;
 	c._innerHTML = vnode._pnode.innerHTML();
@@ -2529,7 +2531,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		var forScopeStart = '',forScopeEnd = '';
 		var vn = comp.vnode;
 		var args = [parent.state];
-		var sfs = parent.__syncFnForScope[comp._uid] = [];
+		var sfs = parent.__syncFnForScope[comp.id] = [];
 	    if(vn._forScopeQ)
 	        for(var i=0;i<vn._forScopeQ.length;i++){
 	            forScopeStart += 'with(arguments['+(1+i)+']){';
@@ -2537,8 +2539,8 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	            args.push(vn._forScopeQ[i]);
 	            sfs.push(vn._forScopeQ[i]);
 	        }
-		var fn = parent.__syncFn[comp._uid] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
-		rs = parent.__syncOldVal[comp._uid] = fn.apply(parent,args);
+		var fn = parent.__syncFn[comp.id] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
+		rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
 	}	
 	var objs = [];
 	ext(strMap,rs);

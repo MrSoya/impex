@@ -12,7 +12,7 @@
 	 * @param {Object} [state] store中的存储
 	 */
 	function Store(data){
-		this._uid = 'S_'+store_counter++;
+		this.id = 'S_'+store_counter++;
 		/**
 		 * 数据
 		 * @type {Object}

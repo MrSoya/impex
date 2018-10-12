@@ -50,7 +50,7 @@
 				for(var k in params){
 					propstr += '.'+k+'="'+params[k]+'" ';
 				}
-				this.state.comp = '<'+tag+' ref="'+this._uid+'_route_comp" '+propstr+'></'+tag+'>';
+				this.state.comp = '<'+tag+' ref="'+this.id+'_route_comp" '+propstr+'></'+tag+'>';
 			}else{
 				var rs = this.emit("render",this.__setView.bind(this),params,path);
 				if(rs !== undefined)this.state.comp = rs;
@@ -58,7 +58,7 @@
 			this.params = params;
 		},
 		onUpdate:function(changes){
-			var ref = this._uid+'_route_comp';
+			var ref = this.id+'_route_comp';
 
 			if(changes.comp){
 				this.emit("end",this.refs[ref],this.params,this.state.path);
@@ -81,11 +81,11 @@
 			return params;
 		},
 		onDestory:function(){
-			Router.routes[this._uid] = null;
-			delete Router.routes[this._uid];
+			Router.routes[this.id] = null;
+			delete Router.routes[this.id];
 		},
 		onCompile:function(){
-			Router.routes[this._uid] = this;
+			Router.routes[this.id] = this;
 			var segs = [];
 			this.state.path.replace(/\/?([^/]+)/mg,function(a,b){
 				segs.push(b);
