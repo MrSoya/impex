@@ -1268,6 +1268,8 @@ function compareSame(newVNode,oldVNode,comp){
         }
         //add bind
         add.forEach(function(di){
+            oldVNode._directives.push(di);
+            
             var dName = di[1][0];
             var d = DIRECT_MAP[dName];
             if(!d)return;
@@ -2342,7 +2344,7 @@ function compileComponent(comp){
 			cs.splice(i,1,vnode);
 		}
 		//for directives of component
-		vnode._directives = comp.vnode._directives;
+		vnode._directives = vnode._directives.concat(comp.vnode._directives);
 	}
 	comp.vnode = vnode;
 	vnode.parent = pv;

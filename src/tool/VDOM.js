@@ -788,6 +788,8 @@ function compareSame(newVNode,oldVNode,comp){
         }
         //add bind
         add.forEach(function(di){
+            oldVNode._directives.push(di);
+            
             var dName = di[1][0];
             var d = DIRECT_MAP[dName];
             if(!d)return;

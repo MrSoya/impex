@@ -420,7 +420,7 @@ function compileComponent(comp){
 			cs.splice(i,1,vnode);
 		}
 		//for directives of component
-		vnode._directives = comp.vnode._directives;
+		vnode._directives = vnode._directives.concat(comp.vnode._directives);
 	}
 	comp.vnode = vnode;
 	vnode.parent = pv;
