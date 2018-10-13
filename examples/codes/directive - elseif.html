@@ -20,29 +20,28 @@
     
         
         <div id="demo">
-            <div x-if="exp">
-                112312312
-            </div>
-            <template x-else>
-                <div>
-                    <x-x>
-                        <div>111111111111111</div>
-                        <x-x>22222222222222</x-x>
-                    </x-x>
-                </div>
-            </template>
-            <button :click="exp = !exp">{{exp}}</button>
+            <i x-if="a.x > 4" transition="test" .a="aaa" :click:xx.a="alert(aaa)">more than 4 </i>
+            <i x-else-if="a.x < 4" transition="test">less then 4 </i>
+            <i x-else transition="test">equal to 4</i>
+            <br>
+            <p>
+                x>4:<input x-model="a.x" .value="a.x">
+            </p>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
-            impex.component("x-x",{
-                template:'<div><slot></slot></div>'
-            })
 
             //渲染
             var debug = impex.render('#demo',{
             	state:{
-            		exp:true
+            		aaa : 10,
+	                a : {
+	                    x:6
+	                },
+	                b : {
+	                    y:4
+	                },
+	                list : [1,2,3,4]
             	}
                 
             });

@@ -6,6 +6,7 @@ function pNode(type,tag,txtQ){
     this.txtQ = txtQ;
     this.children = [];
     this.attrNodes = {};
+    this.directives = {};
     this.slotMap = {};
     this._pid = 'P_'+pnode_counter++;
 }
@@ -113,14 +114,25 @@ VNode.prototype = {
 /**
  * funcs for build VNode
  */
-function createElement(comp,tag,props,directives,children,html,forScopeAry){
-    var rs = new VNode(tag,props,directives);
+function createElement(comp,pid,direcExpMap,children,html,forScopeAry){
+    var pnode = pnode_map[pid];
+    var tag = pnode.tag;
+    var directives = [];
+    var map = pnode.directives;
+    for(var k in map){
+        directives.push([k,map[k].directive,direcExpMap[k],map[k].value]);
+    }
+    var attrs = {};
+    for(var k in pnode.attrNodes){
+        attrs[k] = pnode.attrNodes[k].value;
+    }
+    var rs = new VNode(tag,attrs,directives);
     rs._isEl = true;
     if(forScopeAry.length>0)
         rs._forScopeQ = forScopeAry;
     if (COMP_MAP[tag] || tag == 'component') {
         rs._comp = true;
-        var pnode = pnode_map[children[0]];
+        
         rs._slots = pnode.children;
         rs._slotMap = pnode.slotMap;     
         rs._pnode = pnode;
@@ -262,7 +274,7 @@ function isDirectiveVNode(attrName,comp,isCompNode){
         }
 
         switch(c){
-            case 'if':case 'else':case 'for':case 'html':return c;
+            case 'if':case 'else-if':case 'else':case 'for':case 'html':return c;
         }
 
         //removeIf(production)
@@ -291,9 +303,7 @@ function isDirectiveVNode(attrName,comp,isCompNode){
 }
 //解析for语句：datasource，alias
 //包括to和普通语法
-function parseDirectFor(name,attrNode,compNode){
-    if(name !== 'for')return false;
-
+function parseDirectFor(attrNode,compNode){
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = attrNode.exp[0];
     var filters = attrNode.exp[1];
@@ -311,16 +321,6 @@ function parseDirectFor(name,attrNode,compNode){
         rs = [k,v,filters,ds];
     }
     return rs;
-}
-function parseDirectIf(name,attrNode){
-    if(name !== 'if')return false;
-
-    return attrNode.exp[0];
-}
-function parseDirectHTML(name,attrNode){
-    if(name !== 'html')return false;
-
-    return attrNode.exp[0];
 }
 function replaceGtLt(str){
     return str.replace(/&gt;/img,'>').replace(/&lt;/img,'<');
@@ -457,7 +457,6 @@ function parseHTML_attrs(attrs,node,compNode){
             value = attrStr.substring(splitIndex+2,attrStr.length-1);
         }
         var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode && node == compNode));
-        node.attrNodes[aName] = attrNode;
         attrNode.value = value;
         if(attrNode.directive){
             if(value){
@@ -477,22 +476,33 @@ function parseHTML_attrs(attrs,node,compNode){
             
             var tmp = null;
             var dName = attrNode.directive;
-            if(dName === 'for' || dName === 'if' || dName === 'else' || dName === 'html'){
-                if(tmp = parseDirectFor(dName,attrNode,compNode)){
-                    node.for = tmp;
-                }
-                if(tmp = parseDirectIf(dName,attrNode)){
-                    node.if = tmp;
-                }
-                if(tmp = parseDirectHTML(dName,attrNode)){
-                    node.html = tmp;
-                }
-                if(dName === 'else'){
+            var parseDir = true;
+            switch(dName){
+                case 'for':
+                    node.for = parseDirectFor(attrNode,compNode);
+                    parseDir = false;
+                    break;
+                case 'if':
+                    node.if = attrNode.exp[0];
+                    parseDir = false;
+                    break;
+                case 'else-if':
+                    node.elseif = attrNode.exp[0];
+                    parseDir = false;
+                    break;
+                case 'else':
                     node.else = true;
-                }
-                node.attrNodes[attrNode.name] = null;
-                delete node.attrNodes[attrNode.name];
+                    parseDir = false;
+                    break;
+                case 'html':
+                    node.html = attrNode.exp[0];
+                    parseDir = false;
+                    break;
             }
+            if(parseDir)
+                node.directives[aName] = attrNode;
+        }else{
+            node.attrNodes[aName] = attrNode;
         }
     }
 }
@@ -536,7 +546,7 @@ function parseHTML_exp(expStr,filterStr,isTxt){
 }
 
 var FORSCOPE_COUNT = 0;
-function buildEvalStr(pm,prevIfStr,forScopeAry){
+function buildEvalStr(pm,forScopeAry){
     var str = '';
     if(pm.type === 1){
         var forScopeStr,forScopeChainStr;
@@ -547,29 +557,53 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
         forScopeChainStr = '['+forScopeAry.toString()+']';
 
         var children = '';
-        if(COMP_MAP[pm.tag]){
-            pnode_map[pm._pid] = pm;
-            children = JSON.stringify(pm._pid);
-        }else{
+        pnode_map[pm._pid] = pm;
+        if(!COMP_MAP[pm.tag]){
+            var startIf = false,ifStr = '';
             for(var i=0;i<pm.children.length;i++){
-                var prevPm = pm.children[i-1];
-                children += ','+buildEvalStr(pm.children[i],prevPm?prevPm.if:null,forScopeAry);
+                var pmc = pm.children[i];
+                var npmc = pm.children[i+1];
+                var nodeStr = buildEvalStr(pmc,forScopeAry);
+                if(pmc.if && !pmc.for){
+                    startIf = true;
+                    ifStr = '';
+                }
+                if(startIf){
+                    if(pmc.else){
+                        startIf = false;
+                        children += ',' + ifStr + nodeStr;
+                        continue;
+                    }
+                    if(ifStr && !pmc.elseif){
+                        startIf = false;
+                        children += ',' + ifStr + 'null,'+nodeStr;
+                        continue;
+                    }
+                    ifStr += nodeStr;
+                    if(!npmc || npmc.if){
+                        children += ',' + ifStr + 'null';
+                    }
+                }else{
+                    children += ',' + nodeStr;
+                }
+                
             }
             if(children.length>0)children = children.substr(1);
-        }            
-        var pair = buildAttrs(pm.attrNodes);
-        var attrStr = pair[0];
-        var dirStr = pair[1];
-        var ifStr = pm.if || 'true';
-        ifStr = '('+ifStr+')';
-        if(prevIfStr && pm.else){
-            ifStr = '!('+prevIfStr+')'
         }
+        var ifStr = pm.if || pm.elseif;
+        var ifStart = '',ifEnd = '';
+        if(ifStr){
+            ifStart = '('+ifStr+')?';
+            ifEnd = ':';
+        }
+
+        var direcExpMap = buildDirectiveExp(pm.directives);
         var innerHTML = pm.html || 'null';
-        var nodeStr = ifStr+'?_ce(this,"'+pm.tag+'",'+attrStr+','+dirStr+',['+children+'],'+innerHTML;
+        var nodeStr = '_ce(this,"'+pm._pid+'",{'+direcExpMap+'},['+children+'],'+innerHTML+','+forScopeChainStr;
         if(pm.tag == 'template'){
-            nodeStr = ifStr+'?_tmp(['+children+']';
+            nodeStr = '_tmp(['+children+'],'+forScopeChainStr;
         }
+        nodeStr = ifStart + nodeStr;
         if(pm.for){
             var k = (pm.for[0]||'').trim();
             var v = pm.for[1].trim();
@@ -594,9 +628,9 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
             if(filter){
                 dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+",comp)";
             }
-            str += '_li('+dsStr+',function('+forScopeStr+'){with('+forScopeStr+'){'+declare+' return '+nodeStr+','+forScopeChainStr+'):null}},this,"'+k+'","'+v+'")';
+            str = '_li('+dsStr+',function('+forScopeStr+'){with('+forScopeStr+'){'+declare+' return '+nodeStr+')'+(ifEnd?':null':'')+'}},this,"'+k+'","'+v+'")';
         }else{
-            str += nodeStr+','+forScopeChainStr+'):null';
+            str = nodeStr+')'+ifEnd;
         }
     }else{
         var tmp = buildTxtStr(pm.txtQ);
@@ -605,20 +639,15 @@ function buildEvalStr(pm,prevIfStr,forScopeAry){
 
     return str;
 }
-function buildAttrs(map){
-    var rs = {};
+function buildDirectiveExp(map){
     var dirStr = '';
     for(var k in map){
         var attr = map[k];
-        if(attr.directive){
-            var exp = attr.value;
-            var calcExp = attr.directive[0] === 'on'||attr.directive[0] === 'model'?JSON.stringify(exp):exp;
-            dirStr += ",['"+k+"',"+JSON.stringify(attr.directive)+","+(calcExp)+","+JSON.stringify(exp)+"]";
-        }else{
-            rs[k] = attr.value;
-        }
+        var exp = attr.value;
+        var calcExp = attr.directive[0] === 'on'||attr.directive[0] === 'model'?JSON.stringify(exp):exp;
+        dirStr += ',"'+k+'":'+ (calcExp || 'null');
     }//end for
-    return [JSON.stringify(rs),'['+dirStr.substr(1)+']'];
+    return dirStr.substr(1);
 }
 function buildTxtStr(q){
     var rs = '';
@@ -668,7 +697,7 @@ function compileVDOMStr(str,comp,forScopeAry){
     //endRemoveIf(production)
     //doslot
     doSlot(pair[1],comp.__slots,comp.__slotMap);
-    var str = buildEvalStr(rs,null,forScopeAry);
+    var str = buildEvalStr(rs,forScopeAry);
     return str;
 }
 /**
@@ -709,6 +738,8 @@ function isSameComponent(nv,ov) {
 function compareSame(newVNode,oldVNode,comp){
     if(newVNode._comp){
         forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
+        //update directives
+        oldVNode._directives = newVNode._directives;
         return;
     }
 
@@ -746,18 +777,28 @@ function compareSame(newVNode,oldVNode,comp){
             var index = oldVNode._directives.indexOf(del[i]);
             oldVNode._directives.splice(index,1);
 
+            var dName = del[i][1][0];
+            var d = DIRECT_MAP[dName];
+            if(!d)return;
+
             var params = del[i][1][1];
             var v = del[i][2];
             var exp = del[i][3];
-            del[i].onDestroy && del[i].onDestroy(oldVNode,{value:v,args:params,exp:exp});
+            d.onDestroy && d.onDestroy(oldVNode,{value:v,args:params,exp:exp});
         }
-        //add
-        for(var i=add.length;i--;){
-            oldVNode._directives.push(add[i]);
-        }
-        //unbind old events
-        oldVNode.off();
-        //do bind
+        //add bind
+        add.forEach(function(di){
+            var dName = di[1][0];
+            var d = DIRECT_MAP[dName];
+            if(!d)return;
+            
+            var params = di[1][1];
+            var v = di[2];
+            var exp = di[3];
+
+            d.onBind && d.onBind(oldVNode,{value:v,comp:comp,args:params,exp:exp});
+        });
+        //do update
         oldVNode._directives.forEach(function(di){
             var dName = di[1][0];
             var d = DIRECT_MAP[dName];
@@ -767,7 +808,7 @@ function compareSame(newVNode,oldVNode,comp){
             var v = di[2];
             var exp = di[3];
 
-            d.onBind && d.onBind(oldVNode,{value:v,args:params,exp:exp});
+            d.onUpdate && d.onUpdate(oldVNode,{value:v,comp:comp,args:params,exp:exp},oldVNode.dom);
         });
 
         //for unstated change like x-html
@@ -842,7 +883,12 @@ function compareChildren(nc,oc,op,comp){
         }
     }
     //在osp位置，插入剩余的newlist，删除剩余的oldlist
-    if(osp <= oep && oep>0){
+    if(osp == nsp && oep>nep){//right match case
+        var toDelList = oc.splice(osp,oep - nep);
+        if(toDelList.length>0){
+            removeVNode(toDelList);
+        }
+    }else if(osp <= oep && oep>0){
         var toDelList = oc.splice(osp,oep-osp+1);
         if(toDelList.length>0){
             removeVNode(toDelList);

@@ -193,7 +193,8 @@ function buildOffscreenDOM(vnode,comp){
 
 		for(var k in vnode.attrNodes){
 			if(k[0] === BIND_AB_PRIFX)continue;
-			n.setAttribute(k,vnode.attrNodes[k]);
+			var attr = vnode.attrNodes[k];
+			n.setAttribute(k,attr);
 		}
 
 		if(vnode.attrNodes[ATTR_REF_TAG]){
@@ -418,6 +419,8 @@ function compileComponent(comp){
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
+		//for directives of component
+		vnode._directives = comp.vnode._directives;
 	}
 	comp.vnode = vnode;
 	vnode.parent = pv;
@@ -483,6 +486,8 @@ function updateComponent(comp,changeMap){
 
 	//rebuild VDOM tree
 	var vnode = buildVDOMTree(comp);
+	//append component directives
+	vnode._directives = vnode._directives.concat(comp.vnode._directives);
 
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
@@ -528,7 +533,11 @@ function updateComponent(comp,changeMap){
 
 	comp.onUpdate && comp.onUpdate(changeMap);
 
-	callDirective(comp.vnode,comp);
+	if(comp.vnode.children && comp.vnode.children.length>0){
+		for(var i=0;i<comp.vnode.children.length;i++){
+			callDirective(comp.vnode.children[i],comp);
+		}
+	}//end if
 }
 
 

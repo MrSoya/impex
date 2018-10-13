@@ -39,6 +39,9 @@ impex.directive('style',{
         }
         vnode.setAttribute('style',style);
     },
+    onUpdate:function(vnode,data) {
+        this.onBind(vnode,data);
+    },
     filterName:function(k){
         return k.replace(/-([a-z])/img,function(a,b){
             return b.toUpperCase();
@@ -56,19 +59,31 @@ impex.directive('style',{
     onBind:function(vnode,data){
         var v = data.value;
         var cls = vnode.getAttribute('class')||'';
+        var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
+        var appendCls = null;
         if(isString(v)){
-            cls += ' '+v;
+            appendCls = v.split(' ');
         }else if(isArray(v)){
-            cls += ' '+ v.join(' ');
+            appendCls = v;
         }else{
+            appendCls = [];
             for(var k in v){
                 var val = v[k];
                 if(val)
-                    cls += ' '+k;
+                    appendCls.push(k);
             }
         }
+        appendCls.forEach(function(c) {
+            if(c && clsAry.indexOf(c.trim())<0){
+                clsAry.push(c);
+            }
+        });
         
-        vnode.setAttribute('class',cls);
+        vnode.setAttribute('class',clsAry.join(' '));
+    },
+    onUpdate:function(vnode,data) {
+        vnode.setAttribute('class','');
+        this.onBind(vnode,data);
     }
 })
 /**
@@ -81,6 +96,12 @@ impex.directive('style',{
         var args = data.args;
         for(var i=args.length;i--;){
             vnode.on(args[i],data.value);
+        }
+    },
+    onDestroy:function(vnode,data){
+        var args = data.args;
+        for(var i=args.length;i--;){
+            vnode.off(args[i]);
         }
     }
 })
@@ -105,6 +126,9 @@ impex.directive('style',{
                     vnode.setAttribute(p,data.value);
             }//end switch
         }//end for
+    },
+    onUpdate:function(vnode,data) {
+        this.onBind(vnode,data);
     }
 })
 /**
@@ -113,15 +137,19 @@ impex.directive('style',{
  */
 .directive('show',{
     onBind:function(vnode,data){
-        var v = data.value;
         var style = vnode.getAttribute('style')||'';
-        if(v){
-            style = style.replace(/display\s*:\s*none\s*;?/,'');
+        if(data.value){
+            style = style.replace(/;display\s*:\s*none\s*;?/,'');
         }else{
-            style += ';display:none;'
+            style = style.replace(/;display:none;/,'') + ';display:none;';
         }
         
         vnode.setAttribute('style',style);
+        return style;
+    },
+    onUpdate:function(vnode,data,dom) {
+        var style = this.onBind(vnode,data);
+        dom.setAttribute('style',style);
     }
 })
 /**
@@ -157,6 +185,9 @@ impex.directive('style',{
             default:
                 vnode.on('input',handleInput);
         }
+    },
+    onUpdate:function(vnode,data) {
+        this.onBind(vnode,data);
     },
     handleChange:function(e,vnode){
         var el = e.target;
