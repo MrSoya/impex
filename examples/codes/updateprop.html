@@ -31,7 +31,8 @@
             	},
                 onPropChange:function(newProps,oldProps){
                     //手动处理参数变更
-                    console.log(arguments)
+                    console.log(arguments);
+                    this.state.items = newProps;
                 },
                 template:`<div>
                     <b>x-a</b>:  {{items =>json}}
@@ -40,7 +41,7 @@
                 `
             });
             impex.component('x-b',{
-                //自动处理参数变更
+                //自动处理参数变更，引用类型不会自动处理
                 // onPropChange:function(newProps,oldProps){
                 // },
                 template:`

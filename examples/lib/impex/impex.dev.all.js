@@ -3150,9 +3150,6 @@ impex.directive('style',{
                 vnode.on('input',handleInput);
         }
     },
-    onUpdate:function(vnode,data) {
-        this.onBind(vnode,data);
-    },
     handleChange:function(e,vnode){
         var el = e.target;
         var tag = el.tagName.toLowerCase();
