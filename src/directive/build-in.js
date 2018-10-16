@@ -24,6 +24,7 @@ impex.directive('style',{
             v = rs;
         }
         var style = vnode.getAttribute('style')||'';
+        vnode._init = style;
         for(var k in v){
             var n = this.filterName(k);
             var val = v[k];
@@ -40,6 +41,7 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     },
     onUpdate:function(vnode,data) {
+        vnode.setAttribute('style',vnode._init);
         this.onBind(vnode,data);
     },
     filterName:function(k){
@@ -59,6 +61,7 @@ impex.directive('style',{
     onBind:function(vnode,data){
         var v = data.value;
         var cls = vnode.getAttribute('class')||'';
+        vnode._init = cls;
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
         var appendCls = null;
         if(isString(v)){
@@ -82,7 +85,7 @@ impex.directive('style',{
         vnode.setAttribute('class',clsAry.join(' '));
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('class','');
+        vnode.setAttribute('class',vnode._init);
         this.onBind(vnode,data);
     }
 })

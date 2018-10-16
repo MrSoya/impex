@@ -122,11 +122,13 @@ function createElement(comp,pid,direcExpMap,children,html,forScopeAry){
     for(var k in map){
         directives.push([k,map[k].directive,direcExpMap[k],map[k].value]);
     }
-    var attrs = {};
+    var attrs = {},
+        _attrs = {};
     for(var k in pnode.attrNodes){
-        attrs[k] = pnode.attrNodes[k].value;
+        _attrs[k] = attrs[k] = pnode.attrNodes[k].value;
     }
     var rs = new VNode(tag,attrs,directives);
+    rs._attr = _attrs;
     rs._isEl = true;
     if(forScopeAry.length>0)
         rs._forScopeQ = forScopeAry;
@@ -738,8 +740,8 @@ function isSameComponent(nv,ov) {
 function compareSame(newVNode,oldVNode,comp){
     if(newVNode._comp){
         forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
-        //update directives
-        oldVNode._directives = newVNode._directives;
+        //update directive of components
+        oldVNode._comp_directives = newVNode._directives;
         return;
     }
 
@@ -747,12 +749,12 @@ function compareSame(newVNode,oldVNode,comp){
         //update events forscope
         oldVNode._forScopeQ = newVNode._forScopeQ;
         
-        var allOldAttrs = oldVNode.attrNodes;
+        var allOldAttrs = Object.assign({},oldVNode.attrNodes);
         var nvdis = newVNode._directives,
             ovdis = oldVNode._directives;
         var nvDiMap = getDirectiveMap(nvdis),
             ovDiMap = getDirectiveMap(ovdis);
-        var add=[],del=[];
+        var add=[],del=[],update=[];
         //compare dirs
         for(var i=ovdis.length;i--;){
             var odi = ovdis[i];
@@ -765,52 +767,36 @@ function compareSame(newVNode,oldVNode,comp){
             var ndi = nvdis[i];
             var ndiStr = ndi[0]+ndi[3];
             if(ovDiMap[ndiStr]){
-                ovDiMap[ndiStr][2] = ndi[2];
+                if(ovDiMap[ndiStr][2] != ndi[2]){
+                    ovDiMap[ndiStr][2] = ndi[2];
+                    update.push(ndi);
+                }
             }else{
                 add.push(ndi);
             }
         }
-        //reset attrs
-        oldVNode.attrNodes = newVNode.attrNodes;
         //do del
         for(var i=del.length;i--;){
             var index = oldVNode._directives.indexOf(del[i]);
             oldVNode._directives.splice(index,1);
 
-            var dName = del[i][1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-
-            var params = del[i][1][1];
-            var v = del[i][2];
-            var exp = del[i][3];
-            d.onDestroy && d.onDestroy(oldVNode,{value:v,args:params,exp:exp});
+            var part = getDirectiveParam(del[i],comp);
+            var d = part[0];
+            d.onDestroy && d.onDestroy(oldVNode,part[1]);
         }
+        //do update
+        update.forEach(function(di){
+            var part = getDirectiveParam(di,comp);
+            var d = part[0];
+            d.onUpdate && d.onUpdate(oldVNode,part[1],oldVNode.dom);
+        });
         //add bind
         add.forEach(function(di){
             oldVNode._directives.push(di);
             
-            var dName = di[1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-            
-            var params = di[1][1];
-            var v = di[2];
-            var exp = di[3];
-
-            d.onBind && d.onBind(oldVNode,{value:v,comp:comp,args:params,exp:exp});
-        });
-        //do update
-        oldVNode._directives.forEach(function(di){
-            var dName = di[1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-            
-            var params = di[1][1];
-            var v = di[2];
-            var exp = di[3];
-
-            d.onUpdate && d.onUpdate(oldVNode,{value:v,comp:comp,args:params,exp:exp},oldVNode.dom);
+            var part = getDirectiveParam(di,comp);
+            var d = part[0];
+            d.onBind && d.onBind(oldVNode,part[1]);
         });
 
         //for unstated change like x-html

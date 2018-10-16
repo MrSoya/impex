@@ -164,6 +164,15 @@ ext({
     }
 },Component.prototype);
 
+function getDirectiveParam(directive,comp) {
+	var dName = directive[1][0];
+	var d = DIRECT_MAP[dName];
+	var params = directive[1][1];
+	var v = directive[2];
+	var exp = directive[3];
+	return [d,{comp:comp,value:v,args:params,exp:exp}];
+}
+
 /*********	component handlers	*********/
 //////	init flow
 function buildOffscreenDOM(vnode,comp){
@@ -173,20 +182,18 @@ function buildOffscreenDOM(vnode,comp){
 		n._vid = vnode.vid;
 		vnode._cid = cid;
 
-		if(!vnode._comp){//component dosen't exec directive
+		if(!vnode._comp){//uncompiled node dosen't exec directive
 			//directive init
 			var dircts = vnode._directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
+
 			if(dircts && dircts.length>0){
 				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
-					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
-
-					d.onBind && d.onBind(vnode,{comp:comp,value:v,args:params,exp:exp});
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
+					d.onBind && d.onBind(vnode,part[1]);
 				});
 			}
 		}
@@ -229,23 +236,21 @@ function filterEntity(str){
 
 function callDirective(vnode,comp,type){
 	if(isUndefined(vnode.txt)){
-		if(!vnode._comp){//component dosen't exec directive
+		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
 			var dircts = vnode._directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
 			if(dircts && dircts.length>0){
 				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
-					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
 					
 					if(type == 0){
-						d.onActive && d.onActive(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+						d.onActive && d.onActive(vnode,part[1],vnode.dom);
 					}else{
-						d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+						d.onUpdate && d.onUpdate(vnode,part[1],vnode.dom);
 					}
 				});
 			}
@@ -261,20 +266,18 @@ function callDirective(vnode,comp,type){
 
 function destroyDirective(vnode,comp){
 	if(isUndefined(vnode.txt)){
-		if(!vnode._comp){//component dosen't exec directive
+		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
 			var dircts = vnode._directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
 			if(dircts && dircts.length>0){
 				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
 					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
-					
-					d.onDestroy && d.onDestroy(vnode,{comp:comp,value:v,args:params,exp:exp});
+					d.onDestroy && d.onDestroy(vnode,part[1]);
 				});
 			}
 
@@ -420,7 +423,7 @@ function compileComponent(comp){
 			cs.splice(i,1,vnode);
 		}
 		//for directives of component
-		vnode._directives = vnode._directives.concat(comp.vnode._directives);
+		vnode._comp_directives = comp.vnode._directives;
 	}
 	comp.vnode = vnode;
 	vnode.parent = pv;
@@ -486,8 +489,6 @@ function updateComponent(comp,changeMap){
 
 	//rebuild VDOM tree
 	var vnode = buildVDOMTree(comp);
-	//append component directives
-	vnode._directives = vnode._directives.concat(comp.vnode._directives);
 
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);

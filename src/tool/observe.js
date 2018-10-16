@@ -101,6 +101,8 @@
 			    		if(impex.Store && comp.__noticeMap && comp.__noticeMap[name]){
 			    			comp.__noticeMap[name].forEach(function(pair) {
 			    				var target = pair[0];
+			    				if(!target.state)return;
+			    				
 			    				var k = pair[1];
 			    				var getter = target.computedState[k].get || target.computedState[k];
 				    			var nv = getter.call(target);
