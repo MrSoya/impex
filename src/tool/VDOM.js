@@ -107,6 +107,10 @@ VNode.prototype = {
     },
     getAttribute:function(k){
         return this.attrNodes[k];
+    },
+    removeAttribute:function(k) {
+        this.attrNodes[k] = null;
+        delete this.attrNodes[k];
     }
 };
 
@@ -749,7 +753,10 @@ function compareSame(newVNode,oldVNode,comp){
         //update events forscope
         oldVNode._forScopeQ = newVNode._forScopeQ;
         
-        var allOldAttrs = Object.assign({},oldVNode.attrNodes);
+        var renderedAttrs = Object.assign({},oldVNode.attrNodes);
+        //overwirte primary attrs
+        oldVNode._attr = newVNode._attr;
+
         var nvdis = newVNode._directives,
             ovdis = oldVNode._directives;
         var nvDiMap = getDirectiveMap(nvdis),
@@ -799,8 +806,15 @@ function compareSame(newVNode,oldVNode,comp){
             d.onBind && d.onBind(oldVNode,part[1]);
         });
 
+        //bind _attr
+        for(var k in oldVNode._attr){
+            if(isUndefined(oldVNode.attrNodes[k])){
+                oldVNode.attrNodes[k] = oldVNode._attr[k];
+            }
+        }
+
         //for unstated change like x-html
-        updateAttr(oldVNode.attrNodes,allOldAttrs,oldVNode.dom,oldVNode.tag);
+        updateAttr(oldVNode.attrNodes,renderedAttrs,oldVNode.dom,oldVNode.tag);
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);

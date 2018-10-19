@@ -43,6 +43,14 @@ impex.directive('style',{
         vnode.setAttribute('style',vnode._attr.style);
         this.onBind(vnode,data);
     },
+    onDestroy:function(vnode){
+        if(isUndefined(vnode._attr.style)){
+            vnode.removeAttribute('style');
+        }else{
+            vnode.setAttribute('style',vnode._attr.style);  
+        }
+        
+    },
     filterName:function(k){
         return k.replace(/-([a-z])/img,function(a,b){
             return b.toUpperCase();
@@ -85,6 +93,13 @@ impex.directive('style',{
     onUpdate:function(vnode,data) {
         vnode.setAttribute('class',vnode._attr.class);
         this.onBind(vnode,data);
+    },
+    onDestroy:function(vnode,data) {
+        if(isUndefined(vnode._attr.class)){
+            vnode.removeAttribute('class');
+        }else{
+            vnode.setAttribute('class',vnode._attr.class);   
+        }
     }
 })
 /**
@@ -135,7 +150,16 @@ impex.directive('style',{
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
-            vnode.setAttribute(p,data.value);
+            switch(p){
+                case 'style':
+                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    break;
+                case 'class':
+                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    break;
+                default:
+                    vnode.removeAttribute(p);
+            }//end switch
         }//end for
     }
 })
@@ -158,6 +182,11 @@ impex.directive('style',{
     onUpdate:function(vnode,data,dom) {
         var style = this.onBind(vnode,data);
         dom.setAttribute('style',style);
+    },
+    onDestroy:function(vnode) {
+        var style = vnode.getAttribute('style');
+        style = style.replace(/;display\s*:\s*none\s*;?/,'');
+        vnode.setAttribute('style',style);
     }
 })
 /**
