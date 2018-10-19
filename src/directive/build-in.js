@@ -24,7 +24,6 @@ impex.directive('style',{
             v = rs;
         }
         var style = vnode.getAttribute('style')||'';
-        vnode._init = style;
         for(var k in v){
             var n = this.filterName(k);
             var val = v[k];
@@ -41,7 +40,7 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('style',vnode._init);
+        vnode.setAttribute('style',vnode._attr.style);
         this.onBind(vnode,data);
     },
     filterName:function(k){
@@ -61,7 +60,6 @@ impex.directive('style',{
     onBind:function(vnode,data){
         var v = data.value;
         var cls = vnode.getAttribute('class')||'';
-        vnode._init = cls;
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
         var appendCls = null;
         if(isString(v)){
@@ -85,7 +83,7 @@ impex.directive('style',{
         vnode.setAttribute('class',clsAry.join(' '));
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('class',vnode._init);
+        vnode.setAttribute('class',vnode._attr.class);
         this.onBind(vnode,data);
     }
 })
@@ -120,10 +118,10 @@ impex.directive('style',{
 
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].onBind(vnode,data);
+                    DIRECT_MAP[p].onUpdate(vnode,data);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].onBind(vnode,data);
+                    DIRECT_MAP[p].onUpdate(vnode,data);
                     break;
                 default:
                     vnode.setAttribute(p,data.value);
@@ -132,6 +130,13 @@ impex.directive('style',{
     },
     onUpdate:function(vnode,data) {
         this.onBind(vnode,data);
+    },
+    onDestroy:function(vnode,data) {
+        var args = data.args;
+        for(var i=args.length;i--;){
+            var p = args[i];
+            vnode.setAttribute(p,data.value);
+        }//end for
     }
 })
 /**

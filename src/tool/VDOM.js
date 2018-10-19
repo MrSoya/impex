@@ -767,7 +767,7 @@ function compareSame(newVNode,oldVNode,comp){
             var ndi = nvdis[i];
             var ndiStr = ndi[0]+ndi[3];
             if(ovDiMap[ndiStr]){
-                if(ovDiMap[ndiStr][2] != ndi[2]){
+                if((ovDiMap[ndiStr][2] !== ndi[2]) || typeof(ndi[2]) === 'object'){
                     ovDiMap[ndiStr][2] = ndi[2];
                     update.push(ndi);
                 }

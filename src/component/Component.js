@@ -491,7 +491,7 @@ function updateComponent(comp,changeMap){
 	var vnode = buildVDOMTree(comp);
 
 	//diffing
-	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
+	var forScopeQ = compareVDOM(vnode,comp.vnode,comp);
 
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.children.length;i++){
@@ -534,11 +534,18 @@ function updateComponent(comp,changeMap){
 
 	comp.onUpdate && comp.onUpdate(changeMap);
 
-	if(comp.vnode.children && comp.vnode.children.length>0){
-		for(var i=0;i<comp.vnode.children.length;i++){
-			callDirective(comp.vnode.children[i],comp);
+	//call directives of subcomponents
+	comp.children.forEach(function(child) {
+		var cvnode = child.vnode;
+		if(cvnode._comp_directives){
+			cvnode._comp_directives.forEach(function(di){
+				var part = getDirectiveParam(di,child);
+				var d = part[0];
+				
+				d.onUpdate && d.onUpdate(cvnode,part[1],cvnode.dom);
+			});
 		}
-	}//end if
+	});
 }
 
 
