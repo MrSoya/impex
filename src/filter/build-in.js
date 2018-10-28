@@ -40,6 +40,7 @@ impex.filter('json',function(v){
     if(!isArray(v)){
         return v;
     }
+    v = v.concat();
     if(!count)return v;
     return v.splice(start||0,count);
 })
@@ -50,6 +51,7 @@ impex.filter('json',function(v){
     if(!isArray(v)){
         return v;
     }
+    v = v.concat();
     v.sort(function(a,b){
         var x = key?a[key]:a,
             y = key?b[key]:b;

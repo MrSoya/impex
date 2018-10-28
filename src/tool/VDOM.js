@@ -757,6 +757,11 @@ function compareSame(newVNode,oldVNode,comp){
         //overwirte primary attrs
         oldVNode._attr = newVNode._attr;
 
+        //bind _attr
+        for(var k in oldVNode._attr){
+            oldVNode.attrNodes[k] = oldVNode._attr[k];
+        }
+
         var nvdis = newVNode._directives,
             ovdis = oldVNode._directives;
         var nvDiMap = getDirectiveMap(nvdis),
@@ -774,10 +779,8 @@ function compareSame(newVNode,oldVNode,comp){
             var ndi = nvdis[i];
             var ndiStr = ndi[0]+ndi[3];
             if(ovDiMap[ndiStr]){
-                if((ovDiMap[ndiStr][2] !== ndi[2]) || typeof(ndi[2]) === 'object'){
-                    ovDiMap[ndiStr][2] = ndi[2];
-                    update.push(ndi);
-                }
+                ovDiMap[ndiStr][2] = ndi[2];
+                update.push(ndi);
             }else{
                 add.push(ndi);
             }
@@ -805,13 +808,6 @@ function compareSame(newVNode,oldVNode,comp){
             var d = part[0];
             d.onBind && d.onBind(oldVNode,part[1]);
         });
-
-        //bind _attr
-        for(var k in oldVNode._attr){
-            if(isUndefined(oldVNode.attrNodes[k])){
-                oldVNode.attrNodes[k] = oldVNode._attr[k];
-            }
-        }
 
         //for unstated change like x-html
         updateAttr(oldVNode.attrNodes,renderedAttrs,oldVNode.dom,oldVNode.tag);

@@ -185,6 +185,7 @@ impex.directive('style',{
     },
     onDestroy:function(vnode) {
         var style = vnode.getAttribute('style');
+        if(!style)return;
         style = style.replace(/;display\s*:\s*none\s*;?/,'');
         vnode.setAttribute('style',style);
     }
