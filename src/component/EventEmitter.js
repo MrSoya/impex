@@ -38,5 +38,13 @@ EventEmitter.prototype = {
 			args.push(arguments[i]);
 		}
 		return fn.apply(ctx,args);
+	},
+	/**
+	 * 获取事件，可以用来实现同步的事件处理
+	 * @param  {String} type   事件类型
+	 * @return {Array}  [handler,context]
+	 */
+	getEvent:function(type) {
+		return this.__eeMap[type];
 	}
 }
