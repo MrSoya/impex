@@ -717,7 +717,16 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	            sfs.push(vn._forScopeQ[i]);
 	        }
 		var fn = parent.__syncFn[comp.id] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
-		rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
+		//removeIf(production)
+		try{
+	    //endRemoveIf(production)
+	        rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
+	    //removeIf(production)
+	    }catch(e){
+	        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message);
+	    }
+	    //endRemoveIf(production)
+
 	}	
 	var objs = [];
 	ext(strMap,rs);
@@ -732,7 +741,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 			states = strMap['store'].split(' ');
 		}else{
 			states = Object.keys(comp.store.state);
-		}		
+		}
 		if(!comp.computedState)comp.computedState = {};
 		states.forEach(function(state) {
 			var csKey = null;

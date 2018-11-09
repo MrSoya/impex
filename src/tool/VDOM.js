@@ -712,7 +712,16 @@ function compileVDOMStr(str,comp,forScopeAry){
 function buildVDOMTree(comp){
     var root = null;
     var fn = compileVDOM(comp.compiledTmp,comp);
-    root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+    //removeIf(production)
+    try{
+    //endRemoveIf(production)
+        root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
+    //removeIf(production)
+    }catch(e){
+        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message);
+    }
+    //endRemoveIf(production)
+    
     return root;
 }
 var forScopeQ = null;
