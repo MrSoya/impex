@@ -13,6 +13,13 @@ function dispatch(type,e) {
         if(!tmp)continue;
 
         var vnode = tmp[0];
+
+        if(startDOM && CHECK_TYPES.indexOf(type)>-1){
+            var ref = startDOM;
+            startDOM = null;
+            if(!contains(vnode.dom,ref))continue;
+        }
+
         if(type == 'mouseleave'){
             var t = e.target;
             if(!contains(vnode.dom,t))return;
@@ -57,6 +64,10 @@ function contains(a,b){
     }while(b && b.tagName != 'BODY');
     return false;
 }
+//scope vars
+var startDOM = null;
+var CHECK_TYPES = ['click','dblclick','tap','dbltap'];
+
 //touch/mouse/pointer events
 var userAgent = self.navigator.userAgent.toLowerCase();
 var isAndroid = userAgent.indexOf('android')>0?true:false;
@@ -172,6 +183,8 @@ if(isMobile){
     function doMousedown(e){
         dispatch('mousedown',e);
         dispatch('pointerdown',e);
+
+        startDOM = e.target;
 
         //start timer
         timer = setTimeout(function(){
