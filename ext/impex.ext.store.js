@@ -14,7 +14,7 @@
 	function Store(data){
 		this.id = 'S_'+store_counter++;
 		/**
-		 * 数据
+		 * 数据，层级尽量缩短
 		 * @type {Object}
 		 */
 		this.state = {};
@@ -120,7 +120,7 @@
 			for(var k in change){
 				var c = change[k];
 				var action = c[1];
-				if(actionTypes.indexOf(action)<0){
+				if(action && actionTypes.indexOf(action)<0){
 					actionTypes.push(action);
 				}
 				change[k] = c[0];

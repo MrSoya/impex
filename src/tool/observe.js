@@ -79,8 +79,9 @@
 				    		}
 				    	}
 
+				    	var pcs;
 				    	if(isObject(v)){
-				    		var pcs = target.__im__propChain.concat();
+				    		pcs = target.__im__propChain.concat();
 							pcs.push(name);
 				    		v = observeData(this,pcs,v,comp);
 				    	}
@@ -90,6 +91,9 @@
 					    	target[name] = v;
 				    	}
 
+				    	var path = target.__im__propChain;
+				    	var changeObj = {action:comp.__action,object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
+
 				    	//check computedstate
 				    	if(comp.__dependence && comp.__dependence[name]){
 				    		comp.__dependence[name].forEach(function(k) {
@@ -98,21 +102,27 @@
 				    		});
 				    	}else 
 				    	//store
-			    		if(impex.Store && comp.__noticeMap && comp.__noticeMap[name]){
-			    			comp.__noticeMap[name].forEach(function(pair) {
+			    		if(impex.Store && comp.__noticeMap){
+			    			var computedName = pcs?pcs[0]:name;
+			    			var notices = comp.__noticeMap[computedName];
+			    			notices && notices.forEach(function(pair) {
 			    				var target = pair[0];
 			    				if(!target.state)return;
 			    				
 			    				var k = pair[1];
 			    				var getter = target.computedState[k].get || target.computedState[k];
 				    			var nv = getter.call(target);
+				    			if(isObject(nv)){//如果是对象，直接触发变更。自行判断是否需要更新
+				    				changeObj.object = nv;
+				    				changeObj.name = k;
+				    				changeObj.comp = target;
+				    				changeObj.action = target.__action;
+				    				ChangeHandler.handle(changeObj);
+				    				return;
+				    			}
 				    			target.state[k] = nv;
 				    		});
 			    		}
-
-				    	var path = target.__im__propChain;
-
-				    	var changeObj = {action:comp.__action,object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
 
 				    	ChangeHandler.handle(changeObj);
 				    	
