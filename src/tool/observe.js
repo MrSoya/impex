@@ -112,15 +112,16 @@
 			    				var k = pair[1];
 			    				var getter = target.computedState[k].get || target.computedState[k];
 				    			var nv = getter.call(target);
-				    			if(isObject(nv)){//如果是对象，直接触发变更。自行判断是否需要更新
+				    			target.state[k] = nv;
+
+				    			if(isObject(nv)){//如果是对象，触发变更
 				    				changeObj.object = nv;
 				    				changeObj.name = k;
 				    				changeObj.comp = target;
 				    				changeObj.action = target.__action;
 				    				ChangeHandler.handle(changeObj);
-				    				return;
 				    			}
-				    			target.state[k] = nv;
+				    			
 				    		});
 			    		}
 

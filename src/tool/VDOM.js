@@ -380,7 +380,11 @@ function parseHTML(str){
         if(tagName === SLOT){
             slotList.push([parentNode,node,node.attrNodes.name?node.attrNodes.name.value:null]);
         }else if(node.attrNodes.slot){
-            if(compNode)compNode.slotMap[node.attrNodes.slot.value] = node;
+            var slotComp = compNode;
+            if(slotComp === node){//component can be inserted into slots
+                slotComp = compStack[compStack.length-1-1];
+            }
+            if(slotComp)slotComp.slotMap[node.attrNodes.slot.value] = node;
         }
 
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
