@@ -6,6 +6,7 @@
  * 组成，为impex提供单页路由能力。
  *
  * 兼容性：IE 10+
+ *
  */
 !function(impex){
 	if(!('pushState' in history)){
@@ -14,8 +15,8 @@
 	var TITLE = document.title;
 	/**
 	 * 路由点，url变更时，此路由点会显示对应的渲染内容。
-	 * @event render 当路径匹配时触发此事件。一旦此事件触发，组件属性就会被忽略
-	 * @event end 路由点执行过渲染（render回调或component属性）之后执行
+	 * @event render - (setView,idMap,queryMap,path) 当路径匹配时触发此事件。一旦此事件触发，组件属性就会被忽略
+	 * @event end - (comp,idMap,queryMap,path) 路由点执行过渲染（render回调或component属性）之后执行
 	 */
 	impex.component('x-route',{
 		template:'<div x-html="comp"></div>',
@@ -35,43 +36,42 @@
 		__setView:function(html){
 			this.state.comp = html;
 		},
-		_updateView:function(path,params){
-			var ids = this.match(path);
-			if(!ids){
+		_updateView:function(path,query){
+			var idMap = this.match(path);
+			if(!idMap){
 				this.state.comp = '';
 				return;
-			}
-			for(var k in ids){
-				params[k] = ids[k];
 			}
 			if(this.state.component){
 				var tag = this.state.component;
 				var propstr = "";
-				for(var k in params){
-					propstr += '.'+k+'="'+params[k]+'" ';
+				for(var k in idMap){
+					propstr += '.'+k+'="'+idMap[k]+'" ';
 				}
 				this.state.comp = '<'+tag+' ref="'+this.id+'_route_comp" '+propstr+'></'+tag+'>';
 			}else{
-				var rs = this.emit("render",this.__setView.bind(this),params,path);
+				var rs = this.emit("render",this.__setView.bind(this),idMap,query,path);
 				if(rs !== undefined)this.state.comp = rs;
 			}
-			this.params = params;
+			this.idMap = idMap;
+			this.query = query;
 		},
 		onUpdate:function(changes){
 			var ref = this.id+'_route_comp';
 
 			if(changes.comp){
-				this.emit("end",this.refs[ref],this.params,this.state.path);
+				this.emit("end",this.refs[ref],this.idMap,this.query,this.state.path);
 			}
 		},
 		match:function(url){
 			var params = null;
+            var checkUrl = url.replace(/\?(\w+=[^=&]*&?)*$/img,'');
 			/**
 			 * /a/:b/:c
 			 * /a/*
 			 * /a/**
 			 */
-			if(this.matchExp.test(url)){
+			if(this.matchExp.test(checkUrl)){
 				params = {};
 				for(var i=this.ids.length;i--;){
 					var pair = this.ids[i];
@@ -117,7 +117,7 @@
 	 * 绑定路由请求节点。该指令可以让元素具有发起路由的能力。
 	 * 指令支持两种方式：
 	 * 字符串方式：<a x-link="'/list/1?id=20'" http="true">...</a>
-	 * 对象方式：<a x-link="{to:'/a/b',title:'表单',input:{x:''}}">...</a>
+	 * 对象方式：<a x-link="{to:'/a/b',title:'表单',query:{x:''}}">...</a>
 	 *
 	 * 路由地址中的search参数以及<x-route>中的匹配模版中的参数都会作为
 	 * 回调函数的参数，比如
@@ -143,18 +143,6 @@
 		}
 	});
 
-	function getParams() {
-		//calc param
-		var params = {};
-		var tmp = location.search.substr(1).split('&');
-		for(var i=tmp.length;i--;){
-			if(!tmp[i])continue;
-			var pair = tmp[i].split("=");
-			params[pair[0]] = pair[1];
-		}
-		return params;
-	}
-
 	/**
 	 * 
 	 * @version 1.0
@@ -172,20 +160,34 @@
 			var router = impex.router;
 			var link = router.link[lid];
 			var title = link.title;
-			var url = link.to||'';
-			// if(url[0].trim() != '/'){
-			// 	var root = location.pathname;
-			// 	url = root.replace(/\/\s*([^/]*)$/i,function(){
-			// 		return '/'+url;
-			// 	});
-			// }
+			var url = (link.to||'').replace(/&amp;/img,'&');
+
+            //handle query string
+            var query = link.query||{};
+            url = url.replace(/\?(\w+=[^=&]*&?)*$/img,function(a){
+                a.substr(1).split('&').forEach(function (kv) {
+                    var pair = kv.split('=');
+                    query[pair[0]] = pair[1];
+                });
+                return '';
+            });
+            var queryStr = '';
+            if(Object.keys(query).length > 0){
+                for(var k in query){
+                    queryStr += '&' + k + '=' + query[k];
+                }
+                queryStr = '?'+queryStr.substr(1);
+            }
+
+            url += queryStr;
+
 			if(router.lastTo == url){
 				return;
 			}
 
-			router.goto(url,title,getParams());
+			router.goto(url,title,query);
 		},
-		goto:function(url,title,params){
+		goto:function(url,title,query){
 			if(!history.state || url != history.state.url){
 				history.pushState({url:url,title:title}, null, url);
 			}
@@ -193,31 +195,43 @@
 				Router.lastTo = url;
 			}
 				
-			this._exec(url,title,params);
+			this._exec(url,title,query);
 		},
-		_exec:function(url,title,params){
+		_exec:function(url,title,query){
 			document.title = title || TITLE;
 			for(var k in impex.router.routes){
 				var route = impex.router.routes[k];
-				route._updateView(url,params);
+				route._updateView(url,query);
 			}
 		}
 	}
 
 	window.addEventListener('load',function(e){
-		var url = location.pathname;
-		Router.goto(url,'',getParams());
+		var url = location.pathname + location.search;
+		Router.goto(url,'',getQuery());
 	},false);
 	window.addEventListener('popstate', function(e) {
         var state = e.state || {};
         //check anchor
-        var url = location.pathname;
+        var url = location.pathname + location.search;
         if(url == Router.lastTo)return;
         
         Router.lastTo = url;
         
-        Router._exec(state.url,state.title,getParams());
+        Router._exec(state.url,state.title,getQuery());
     });
+
+    function getQuery() {
+        //calc param
+        var params = {};
+        var tmp = location.search.substr(1).split('&');
+        for(var i=tmp.length;i--;){
+            if(!tmp[i])continue;
+            var pair = tmp[i].split("=");
+            params[pair[0]] = pair[1];
+        }
+        return params;
+    }
 
 	impex.router = Router;
 
