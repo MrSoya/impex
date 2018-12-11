@@ -7,7 +7,7 @@ var ChangeHandler = new function() {
 	function mergeChange(change){
 		for(var i=changeQ.length;i--;){
 			var c = changeQ[i];
-			if(c.object.__im__oid === change.object.__im__oid && c.name === change.name)break;
+			if(!c.store && c.object.__im__oid === change.object.__im__oid && c.name === change.name)break;
 		}
 		if(i > -1)
 			changeQ.splice(i,1,change);

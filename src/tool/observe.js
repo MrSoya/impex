@@ -103,7 +103,8 @@
 				    	}else 
 				    	//store
 			    		if(impex.Store && comp.__noticeMap){
-			    			var computedName = pcs?pcs[0]:name;
+			    			path = path||pcs;
+			    			var computedName = path?path[0]||name:name;
 			    			var notices = comp.__noticeMap[computedName];
 			    			notices && notices.forEach(function(pair) {
 			    				var target = pair[0];
@@ -114,11 +115,8 @@
 				    			var nv = getter.call(target);
 				    			target.state[k] = nv;
 
-				    			if(isObject(nv)){//如果是对象，触发变更
-				    				changeObj.object = nv;
-				    				changeObj.name = k;
-				    				changeObj.comp = target;
-				    				changeObj.action = target.__action;
+				    			if(isObject(nv)){//如果是对象，主动触发变更
+				    				var changeObj = {store:true,action:target.__action,object:nv,name:k,pc:path,oldVal:old,newVal:v,comp:target,type:isAdd?'add':'update'};
 				    				ChangeHandler.handle(changeObj);
 				    			}
 				    			
