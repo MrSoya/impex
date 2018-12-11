@@ -11,8 +11,8 @@
             <div x-else a="c">222</div> -->
 
             <!-- //场景2 新增一个属性，移除一个属性，移除一个指令 -->
-            <!-- <div x-if="show" class="a" .class="b">111</div>
-            <div x-else a="c">222</div> -->
+            <div x-if="show" class="a">111</div>
+            <div x-else a="c">222</div>
 
             <!-- //场景3 更新指令 -->
             <!-- <div .class="cls">111</div> -->
@@ -22,14 +22,16 @@
             <div x-else a="c" .class="x">222</div> -->
             
             <!-- //场景5 新增一个属性，移除两个指令 -->
-            <div x-if="show" .class="b" .style="d">111</div>
-            <div x-else style="color:red">222</div> 
+            <!-- <div x-if="show" .class="b" .style="d">111</div>
+            <div x-else style="color:red">222</div>  -->
+
+
 			<button :click="show = !show">{{show}}</button>
 
             <!-- //场景6 HTML注入导致的属性变动 -->
-            <div x-html="html"></div>
+            <!-- <div x-html="html"></div>
 			<button :click="html = (html==html2?html:html2)">{{html}}</button>
-            
+             -->
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
