@@ -11,11 +11,12 @@
             <div x-else a="c">222</div> -->
 
             <!-- //场景2 新增一个属性，移除一个属性，移除一个指令 -->
-            <div x-if="show" class="a">111</div>
-            <div x-else a="c">222</div>
+            <!-- <div x-if="show" class="a" .class="b">111</div>
+            <div x-else a="c">222</div> -->
 
             <!-- //场景3 更新指令 -->
-            <!-- <div .class="cls">111</div> -->
+            <!-- <div x-if="show" class="a">111</div>
+            <div x-else a="c">222</div> -->
 
             <!-- //场景4 新增一个属性，移除一个属性，更新一个指令 -->
             <!-- <div x-if="show" class="a" .class="b">111</div>
@@ -24,6 +25,14 @@
             <!-- //场景5 新增一个属性，移除两个指令 -->
             <!-- <div x-if="show" .class="b" .style="d">111</div>
             <div x-else style="color:red">222</div>  -->
+
+            <!-- <div x-show="a == 1" xx="13">111</div>
+            <div x-show="a == 2" xx="23">222</div>
+            <div x-show="a == 3" xx="3">333</div> -->
+
+            <x-a x-show="a == 1" xx="13">111</x-a>
+            <x-a x-show="a == 2" xx="23">222</x-a>
+            <x-a x-show="a == 3" xx="3">333</x-a>
 
 
 			<button :click="show = !show">{{show}}</button>
@@ -35,10 +44,23 @@
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
+            impex.component('x-a',{
+                state:{
+                    xx:1
+                },
+                onMount:function(dom){
+                    var that = this;
+                    setTimeout(function(argument) {
+                        that.state.xx = Math.random();
+                    },1000)  
+                },
+                template:'<b .class="xx"><slot></slot></b>'
+            });
+
             //渲染
             var debug = impex.render('#demo',{
                 state:{
-                    a:'a',
+                    a:'1',
                     b:'b',
                     x:'x',
                     d:'background:blue',
