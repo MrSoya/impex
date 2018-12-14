@@ -769,6 +769,7 @@ function compareSame(newVNode,oldVNode,comp){
         var renderedAttrs = Object.assign({},oldVNode.attrNodes);
         //overwirte primary attrs
         oldVNode._attr = newVNode._attr;
+        oldVNode.attrNodes = {};
 
         //bind _attr
         for(var k in oldVNode._attr){
@@ -821,6 +822,15 @@ function compareSame(newVNode,oldVNode,comp){
             var d = part[0];
             d.onBind && d.onBind(oldVNode,part[1]);
         });
+        //rebind component's
+        if(oldVNode._comp_directives){
+            oldVNode._comp_directives.forEach(function(di){
+                
+                var part = getDirectiveParam(di,comp);
+                var d = part[0];
+                d.onBind && d.onBind(oldVNode,part[1]);
+            });
+        }
 
         //for unstated change like x-html
         updateAttr(oldVNode.attrNodes,renderedAttrs,oldVNode.dom,oldVNode.tag);
