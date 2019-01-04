@@ -736,20 +736,22 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		//removeIf(production)
 		assert(comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
 		//endRemoveIf(production)
-		var states = null;
-		if(strMap['store']){
-			states = strMap['store'].split(' ');
-		}else{
-			states = Object.keys(comp.store.state);
-		}
-		if(!comp.computedState)comp.computedState = {};
-		states.forEach(function(state) {
-			var csKey = null;
-			if(/[^\w]?(\w+)$/.test(state)){
-				csKey = RegExp.$1;
-				comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
+		if(comp.store){
+			var states = null;
+			if(strMap['store']){
+				states = strMap['store'].split(' ');
+			}else{
+				states = Object.keys(comp.store.state);
 			}
-		});
+			if(!comp.computedState)comp.computedState = {};
+			states.forEach(function(state) {
+				var csKey = null;
+				if(/[^\w]?(\w+)$/.test(state)){
+					csKey = RegExp.$1;
+					comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
+				}
+			});
+		}//end if
 	}
 
 	for(var k in rs){
