@@ -833,7 +833,7 @@ function compareSame(newVNode,oldVNode,comp){
         }
 
         //for unstated change like x-html
-        updateAttr(oldVNode.attrNodes,renderedAttrs,oldVNode.dom,oldVNode.tag);
+        updateAttr(comp,oldVNode.attrNodes,renderedAttrs,oldVNode.dom,oldVNode.tag);
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);
@@ -1030,7 +1030,7 @@ function updateTxt(nv,ov){
     var dom = ov.dom;
     dom.textContent = nv.txt;
 }
-function updateAttr(newAttrs,oldAttrs,dom,tag){
+function updateAttr(comp,newAttrs,oldAttrs,dom,tag){
     //比较节点属性
     var nvas = newAttrs;
     var ovas = oldAttrs;
@@ -1058,6 +1058,11 @@ function updateAttr(newAttrs,oldAttrs,dom,tag){
     for(var i=ovasKs.length;i--;){
         if(ovasKs[i] === DOM_COMP_ATTR)continue;
         dom.removeAttribute(ovasKs[i]);
+    }
+
+    //update ref
+    if(newAttrs[ATTR_REF_TAG]){
+        comp.refs[newAttrs[ATTR_REF_TAG]] = dom;
     }
 
     //update new attrs
