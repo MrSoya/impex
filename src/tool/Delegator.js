@@ -25,14 +25,16 @@ function dispatch(type,e) {
             if(!contains(vnode.dom,t))return;
             var toElement = e.toElement || e.relatedTarget;
             if(contains(vnode.dom,toElement))return;
-            if(vnode._entered)vnode._entered = false;
+            
+            var i = vnodes_mouseEntered.indexOf(vnode);
+            if(i>-1)vnodes_mouseEntered.splice(i,1);
         }
         if(type == 'mouseenter'){
             var t = e.target;
             var fromElement = e.relatedTarget;
-            if(vnode._entered && contains(vnode.dom,t) && vnode.dom != t)return;
+            if(contains(vnode.dom,t) && vnode.dom != t && vnodes_mouseEntered.indexOf(vnode)>-1)return;
             if(fromElement && contains(vnode.dom,fromElement))return;
-            if(!vnode._entered)vnode._entered = true;
+            vnodes_mouseEntered.push(vnode);
         }
 
         var fn = tmp[1];
@@ -67,6 +69,7 @@ function contains(a,b){
 //scope vars
 var startDOM = null;
 var CHECK_TYPES = ['click','dblclick','tap','dbltap'];
+var vnodes_mouseEntered = [];
 
 //touch/mouse/pointer events
 var userAgent = self.navigator.userAgent.toLowerCase();
@@ -222,6 +225,21 @@ if(isMobile){
     function doMouseout(e){
         dispatch('mouseout',e);
         dispatch('mouseleave',e);
+
+        //check entered
+        var t = e.target;
+        var toDel = [];
+        vnodes_mouseEntered.forEach(function(vnode) {
+            if(!contains(vnode.dom,t))return;
+            var toElement = e.toElement || e.relatedTarget;
+            if(contains(vnode.dom,toElement))return;
+            
+            toDel.push(vnode);
+        });
+        toDel.forEach(function(vnode) {
+            var i = vnodes_mouseEntered.indexOf(vnode);
+            vnodes_mouseEntered.splice(i,1);
+        });
     }
     function doMouseover(e){
         dispatch('mouseover',e);
