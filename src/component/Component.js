@@ -603,7 +603,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		var fnStr = exp.replace(/\(.*\)/,'');
 		var fn = new Function('comp','with(comp){return '+fnStr+'}');
 
-        fn = fn(parent);
+        fn = fn.call(parent,parent);
         if(parent[fnStr]){
         	fn = fn.bind(parent);
         }
