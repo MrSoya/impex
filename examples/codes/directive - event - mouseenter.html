@@ -9,6 +9,7 @@
                 height: 200px;
                 background-color: #999;
                 padding: 50px;
+                border-color: red;
             }
             .child{
                 width: 100px;
@@ -21,18 +22,32 @@
                 height: 100px;
                 background-color: #fff;
             }
+            .neighbor{
+                /*margin-top: 50px;*/
+                width: 100px;
+                height: 100px;
+                background-color: #eee;
+                padding: 50px;
+            }
         </style>
     </head>
     <body>
         <div id="demo">
-            <div class="parent" :mouseover="console.log('over')" :mouseenter="console.log('enter',$event,$vnode)" :mouseleave="console.log('leave',$event,$vnode)">
+            <div class="parent" 
+            :mouseover="console.log('over parent')" 
+            :mouseenter="console.log('enter parent',$event,$vnode)" 
+            :mouseleave="console.log('leave parent')" >
                 parent
-                <div class="child" >
+                <div class="child" :mouseover1="cancelBubble($event)">
                     child
-                    <div class="grandchildren" >
+                    <div class="grandchildren">
                         grandchildren
                     </div>
                 </div>
+            </div>
+
+            <div class="neighbor">
+                neighbor
             </div>
         </div>
     
@@ -41,6 +56,9 @@
             
             //渲染
             impex.render('#demo',{
+                cancelBubble:function(e) {
+                    e.stopPropagation();
+                }
             });
             
         </script>
