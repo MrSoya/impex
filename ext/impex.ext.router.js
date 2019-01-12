@@ -38,10 +38,6 @@
 		},
 		_updateView:function(path,query){
 			var idMap = this.match(path);
-			if(!idMap){
-				this.state.comp = '';
-				return;
-			}
 			if(this.state.component){
 				var tag = this.state.component;
 				var propstr = "";
