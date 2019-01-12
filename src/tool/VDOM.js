@@ -351,6 +351,10 @@ function parseHTML(str){
     while(str.length>0){
         if(!startNodeData){
             startNodeData = TAG_START_EXP.exec(str);
+            //removeIf(production)
+            assert(startNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - syntax error in - \n"+str);
+            //endRemoveIf(production)
+            if(!startNodeData){}
             var index = startNodeData.index + startNodeData[0].length;
             str = str.substr(index);
         }
