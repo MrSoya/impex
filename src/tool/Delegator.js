@@ -14,12 +14,6 @@ function dispatch(type,e) {
 
         var vnode = tmp[0];
 
-        if(startDOM && CHECK_TYPES.indexOf(type)>-1){
-            var ref = startDOM;
-            startDOM = null;
-            if(!contains(vnode.dom,ref))continue;
-        }
-
         if(type == 'mouseleave'){
             var t = e.target;
             if(!contains(vnode.dom,t))return;
@@ -67,8 +61,6 @@ function contains(a,b){
     return false;
 }
 //scope vars
-var startDOM = null;
-var CHECK_TYPES = ['click','dblclick','tap','dbltap'];
 var vnodes_mouseEntered = [];
 
 //touch/mouse/pointer events
@@ -169,6 +161,8 @@ if(isMobile){
     }
 }else{
     ///////////////////// 鼠标事件分派器 /////////////////////
+    document.addEventListener('click',doClick,true);
+    document.addEventListener('dblclick',doDblClick,true);
     document.addEventListener('mousedown',doMousedown,true);
     document.addEventListener('mousemove',doMousemove,true);
     document.addEventListener('mouseup',doMouseup,true);
@@ -182,12 +176,20 @@ if(isMobile){
     var inited = true;
     var lastClickTime = 0;
     var timer;
+
+    function doClick(e) {
+        dispatch('click',e);
+        dispatch('tap',e);
+    }
+
+    function doDblClick(e) {
+        dispatch('dblclick',e);
+        dispatch('dbltap',e);
+    }
         
     function doMousedown(e){
         dispatch('mousedown',e);
         dispatch('pointerdown',e);
-
-        startDOM = e.target;
 
         //start timer
         timer = setTimeout(function(){
@@ -205,17 +207,6 @@ if(isMobile){
 
         dispatch('mouseup',e);
         dispatch('pointerup',e);
-
-        if(e.button === 0){
-            dispatch('click',e);
-            dispatch('tap',e);
-            if(Date.now() - lastClickTime < 300){
-                dispatch('dblclick',e);
-                dispatch('dbltap',e);
-            }
-
-            lastClickTime = Date.now();
-        }
     }
     function doMouseCancel(e){
         clearTimeout(timer);
