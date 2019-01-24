@@ -111,7 +111,7 @@ impex.directive('style',{
     onBind:function(vnode,data){
         var args = data.args;
         for(var i=args.length;i--;){
-            vnode.on(args[i],data.value);
+            vnode.on(args[i],data.value,data.filter);
         }
     },
     onDestroy:function(vnode,data){

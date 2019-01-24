@@ -52,8 +52,9 @@ VNode.prototype = {
      * 绑定事件到该节点
      * @param {String} type 事件类型
      * @param {String|Function} exp 表达式或回调函数
+     * @param {String} filter 过滤表达式
      */
-    on:function(type,exp){
+    on:function(type,exp,filter){
         var evMap = EVENT_MAP[type];
         if(!evMap){
             evMap = EVENT_MAP[type] = {};
@@ -63,7 +64,7 @@ VNode.prototype = {
             fn = true;
         }
         if(fn){
-            evMap[this.vid] = [this,exp,this._cid,fn];
+            evMap[this.vid] = [this,filter,exp,this._cid,fn];
         }else{
             var declare = this.getAttribute('var');
             if(declare){
@@ -74,14 +75,14 @@ VNode.prototype = {
                     str += 'var '+ pair[0] +'='+pair[1]+';';
                 });
                 declare = str;
-            }            
+            }
             var forScopeStart = '',forScopeEnd = '';
             if(this._forScopeQ)
                 for(var i=0;i<this._forScopeQ.length;i++){
                     forScopeStart += 'with(arguments['+(4/* Delegator.js line 29 */+i)+']){';
                     forScopeEnd += '}';
                 }
-            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+declare+";"+exp+forScopeEnd+'}}'),this._cid];
+            evMap[this.vid] = [this,filter,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+declare+";"+exp+forScopeEnd+'}}'),this._cid];
         }
 
         this._hasEvent = true;
@@ -726,7 +727,7 @@ function buildVDOMTree(comp){
         root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message);
+        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message,e);
     }
     //endRemoveIf(production)
     

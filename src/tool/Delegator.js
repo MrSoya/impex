@@ -31,9 +31,15 @@ function dispatch(type,e) {
             vnodes_mouseEntered.push(vnode);
         }
 
-        var fn = tmp[1];
-        var cid = tmp[2];
-        var isFn = tmp[3];
+        var filter = tmp[1];
+
+        if(type.indexOf('key')===0 && filter){
+            if(e.key.toLowerCase() != filter)continue;
+        }
+
+        var fn = tmp[2];
+        var cid = tmp[3];
+        var isFn = tmp[4];
         var comp = impex._cs[cid];
         if(isFn){
             fn.call(comp,e,vnode);

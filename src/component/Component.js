@@ -168,9 +168,11 @@ function getDirectiveParam(directive,comp) {
 	var dName = directive[1][0];
 	var d = DIRECT_MAP[dName];
 	var params = directive[1][1];
+	var filter = directive[1][2];
 	var v = directive[2];
 	var exp = directive[3];
-	return [d,{comp:comp,value:v,args:params,exp:exp}];
+
+	return [d,{comp:comp,value:v,args:params,exp:exp,filter:filter}];
 }
 
 /*********	component handlers	*********/
@@ -603,12 +605,16 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		var fnStr = exp.replace(/\(.*\)/,'');
 		var fn = new Function('comp','with(comp){return '+fnStr+'}');
 
+		//parse context
+		di[2] = di[3] = exp.replace(/this\./img,'impex._cs["'+parent.id+'"].');
+
         fn = fn.call(parent,parent);
-        if(parent[fnStr]){
+        if(parent[fnStr])
         	fn = fn.bind(parent);
-        }
-        if(fn)
+       
+        if(fn){
 			c.on(type,fn);
+        }
 	});
 
 	c.attributes = attrs;
@@ -723,7 +729,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	        rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
 	    //removeIf(production)
 	    }catch(e){
-	        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message);
+	        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message,e);
 	    }
 	    //endRemoveIf(production)
 
