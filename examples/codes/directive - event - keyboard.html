@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .parent{
+                width: 200px;
+                height: 200px;
+                background-color: #999;
+                padding: 50px;
+                border-color: red;
+            }
+            .child{
+                width: 100px;
+                height: 100px;
+                background-color: #eee;
+                padding: 50px;
+            }
+            .grandchildren{
+                width: 100px;
+                height: 100px;
+                background-color: #fff;
+            }
+            .neighbor{
+                /*margin-top: 50px;*/
+                width: 100px;
+                height: 100px;
+                background-color: #eee;
+                padding: 50px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="demo">
+            <ul>
+                <li>键盘事件可以通过设置filter来过滤key</li>
+            </ul>
+            <input :keypress="anyKey()" :keydown.enter="enterKey()" :keyup.control="ctrlKey()">
+            <ul>
+                <li>按键次数：{{keyCount}} </li>
+                <li>回车次数：{{enterCount}} </li>
+                <li>ctrl次数：{{ctrlCount}} </li>
+            </ul>
+        </div>
+    
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            
+            //渲染
+            impex.render('#demo',{
+                state:{
+                    enterCount:0,
+                    ctrlCount:0,
+                    keyCount:0
+                },
+                anyKey:function(e) {
+                    this.state.keyCount++;
+                },
+                enterKey:function(e) {
+                    this.state.enterCount++;
+                },
+                ctrlKey:function(e) {
+                    this.state.ctrlCount++;
+                }
+            });
+            
+        </script>
+    </body>
+</html>
