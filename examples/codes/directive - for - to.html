@@ -9,7 +9,7 @@
     </head>
     <body>
         
-        <div id="container">
+        <div id="demo">
             <ul>
                 <li x-for="begin() to end as k,v =>orderBy::orderDir" step="5">
                     {{$index+":"+k}}
@@ -21,7 +21,8 @@
         <script type="text/javascript">
             var s = Date.now();
             //渲染
-            var debug = impex.render('#container',{
+            var debug = impex.create({
+                el:'#demo',
                 begin:function(){
                     return 1;
                 },

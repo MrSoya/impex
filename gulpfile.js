@@ -4,7 +4,9 @@ var gulp = require('gulp'),
     rename = require('gulp-rename'),
     header = require('gulp-header'),
     removeCode = require('gulp-remove-code'),
-    del = require('del');
+    del = require('del'),
+    stripDebug = require('gulp-strip-debug');
+
 
     var banner = [
         '/*'
@@ -22,11 +24,21 @@ var gulp = require('gulp'),
 
     var libs = [
         'src/shellStart.js',
-        'src/tool/Util.js',
-        'src/tool/observe.js',
-        'src/tool/VDOM.js',
-        'src/tool/Delegator.js',
-        'src/tool/ChangeHandler.js',
+        'src/core/basic.js',
+        'src/core/util.js',
+        'src/core/parser.js',
+        'src/core/compiler.js',
+        'src/core/event.js',
+
+        'src/observe/Change.js',
+        'src/observe/Watcher.js',
+        'src/observe/Monitor.js',
+        'src/observe/observer.js',
+
+        'src/vdom/vnode.js',
+        'src/vdom/builder.js',
+        'src/vdom/transform.js',
+        'src/vdom/comparer.js',
 
         'src/component/EventEmitter.js',
         'src/component/Component.js',
@@ -55,6 +67,7 @@ var gulp = require('gulp'),
             .pipe(concat('impex.prod.all.js'))
             .pipe(header(banner))
             .pipe(removeCode({ production: true }))
+            .pipe(stripDebug())
             .pipe(gulp.dest('build'))
             .pipe(gulp.dest('examples/lib/impex'))
             .pipe(rename({suffix: '.min'}))

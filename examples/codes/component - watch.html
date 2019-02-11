@@ -16,19 +16,17 @@
             <p>
                 a.b.c.list：{{a.b.c['list']}}
             </p>
-            <button :click="change()">修改数据</button>
-            <div x-html="info">
-                内部所有东西都会被忽略
-                <x-b>
-                    <div>11221</div>
-                </x-b>
-            </div>            
+            <p>
+                x：{{x}}
+            </p>
+            <button @click="change()">修改数据</button>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     a:{
                         b:{
@@ -40,25 +38,30 @@
                     b:12,
                     info:''
                 },
-                change:function(){
-                    this.state.a.b.c.list = [2,3,4];
-                    this.state.b = 'b';
-                    this.state.a.b.x = 1;
-                    this.state.x =23;
+                computeState:{
+                    x:function(impex) {
+                        return this.b + this.a.b.c.list[0];
+                    }
                 },
-                onCreate : function(){
-                    this.watch('a.b.x',function(newVal,oldVal){
-                        this.state.info +=
-                         '<p>a.b.x change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
+                change:function(){
+                    this.a.b.c.list = [2,3,4];
+                    this.b = 'b';
+                    this.a.b.x = 1;
+                    this.x =23;
+                },
+                onMount : function(){
+                    this.$watch('x',function(newVal,oldVal){
+                        // this.info +=
+                        //  '<p>a.b.x change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.watch('b',function(newVal,oldVal){
-                        this.state.info += '<p>b change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
+                    this.$watch('b',function(newVal,oldVal){
+                        // this.info += '<p>b change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.watch('a.b.c.list',function(newVal,oldVal){
+                    this.$watch('a.b.c.list',function(newVal,oldVal){
                         //如果监控状态是一个对象，那么必须手动比较新旧值是否相同
                         if(newVal.length == oldVal.length)return;
 
-                        this.state.info += '<p>a.b.c.list change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
+                        // this.info += '<p>a.b.c.list change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
                 }
             });

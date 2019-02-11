@@ -118,3 +118,90 @@ main hr{
 	font-size: 1rem;
 	width: 3rem;
 }
+
+.x-wish{
+    background-color: #fff;
+    width: 96%;
+    margin: 1rem 0 1rem 2%;
+    border:1px solid #eee;
+    border-top: none;
+    padding: .5rem 0;
+    min-height: 4rem;
+    vertical-align: middle;
+    position: relative;
+    display: flex;
+    transition: all .2s;
+}
+.progress{
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: rgba(111, 111, 255, 0.1);
+    height: 100%;
+    z-index: 0;
+    transition: all .2s;
+}
+.target{
+    position: absolute;
+    left: 0;
+    top: 0%;
+    margin: 0;
+    width: 100%;
+    display: flex;
+    z-index: -1;
+    opacity: 0;
+    transition: all .2s;
+}
+
+.x-wish.show{
+    box-shadow: 0 0px 16px 0 rgba(0, 67, 151, 0.1);
+    margin-bottom: 3.5rem;
+}
+.x-wish.show .target{
+    top: 100%;
+    opacity: 1;
+    box-shadow: 0 2px 16px 0 rgba(0, 67, 151, 0.1);
+    z-index: 1;
+}
+.x-wish.show .progress{
+    height: 0;
+    top: 100%;
+}
+.target li{
+    flex: 1;
+    border: 1px solid #eee;
+    padding: .5rem 0;
+    text-align: center;
+    background-color: #fff;
+    border-right: none;
+}
+.target li.passed{
+    background-color: rgba(111, 111, 255, 0.1);
+}
+.target li:first-child{
+    border-left: none;
+}
+.title{
+    flex: 1;
+    line-height: 4rem;
+    margin-left: .5rem;
+    z-index: 1;
+}
+.cost{
+    color: #ff5858;
+    font-size: 1.2rem;
+    font-style: normal;
+    line-height: 4rem;
+    position: absolute;
+    right: .5rem;
+    z-index: 1;
+}
+
+.done{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    color: #ccc;
+    text-align: center;
+}

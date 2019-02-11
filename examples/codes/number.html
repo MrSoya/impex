@@ -7,8 +7,8 @@
     <body>
     	<div id="demo">
             Number:<input type="text" 
-            :focus="bindWheel(this)" 
-            :blur="unbindWheel(this)" 
+            @focus="bindWheel(this)" 
+            @blur="unbindWheel(this)" 
             x-model="value" 
             .value="value||0">响应鼠标滚动
         </div>
@@ -17,15 +17,16 @@
         <script type="text/javascript">
             var type = document.body.onmousewheel === null?'mousewheel':'DOMMouseScroll';
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     value:10
                 },
                 onCompile : function(){
-                    this.watch('value',function(object,name,type,newVal,oldVal){
+                    this.$watch('value',function(newVal,oldVal){
                         var nv = /^-?[0-9]+$/.test(newVal);
                         if(!nv && nv!==''){
-                            this.state.value = parseFloat(newVal)||'';
+                            this.value = parseFloat(newVal)||'';
                         }
                     });
                 },
@@ -46,9 +47,9 @@
                         }
 
                         if(dir>0){
-                            that.state.value = parseFloat(that.state.value) + 1;
+                            that.value = parseFloat(that.value) + 1;
                         }else{
-                            that.state.value = parseFloat(that.state.value) - 1;
+                            that.value = parseFloat(that.value) - 1;
                         }
 
                         return false;

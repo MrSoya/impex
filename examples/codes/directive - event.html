@@ -8,8 +8,8 @@
         <div id="demo">
             打开控制台查看
             <button 
-                :mousedown="onmouse($event)"
-                :mouseup="onmouse(root,$event)" 
+                @mousedown="onmouse($event)"
+                @mouseup="onmouse(root,$event)" 
                 x-on:dblclick="showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！
             </button>
         </div>
@@ -18,7 +18,8 @@
         <script type="text/javascript">
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     root:{
                         tip:''

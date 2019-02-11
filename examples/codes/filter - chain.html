@@ -26,7 +26,8 @@
             });
 
             //渲染
-            var comp = impex.render('#demo',{
+            var comp = impex.create({
+                el:'#demo',
                 state:{
                     version : impex.version.toString()
                 }

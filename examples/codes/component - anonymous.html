@@ -14,23 +14,23 @@
 <pre>
 <code>
 //渲染匿名组件
-impex.render(document.body,{
+impex.create({
+    el:'#demo',
     state:{
         name:'impex'
     }
 });
 </code>
 </pre>
-    <div id="demo"></div>
-    <script type="text/tmpl" id="tmpl">
+    <div id="demo">
         <div x="10" x-cloak x-style="{color:red?'red':'blue','font-size':fs+'px'}">
             name: {{nameStr => cap:1:'23'|json:x}} xx:{{x=>json}}
             <p>
-                <button :click="attach($event,1+x,atty())">click</button>
+                <button @click="attach($event,1+x,atty())">click</button>
             </p>
             <input type="text" x-model="x.a">
         </div>
-    </script>
+    </div>
     <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
     <script type="text/javascript">
         impex.filter('cap',function(v){
@@ -39,9 +39,8 @@ impex.render(document.body,{
         impex.filter('round',function(v){
             return v<10?15:v;
         })
-        impex.renderTo(
-            document.getElementById('tmpl').innerText,
-            document.getElementById('demo'), {
+        impex.create({
+            el:'#demo',
             state:{
                 nameStr:'impex',
                 x:{a:1,b:2},
@@ -49,10 +48,10 @@ impex.render(document.body,{
                 fs:15 - Math.random()*10
             },
             onCompile:function(){
-                this.watch('nameStr',function(){
+                this.$watch('nameStr',function(){
                     console.log(arguments)
                 });
-                this.watch('x.a',function(){
+                this.$watch('x.a',function(){
                     console.log(arguments)
                 });
             },
@@ -60,7 +59,7 @@ impex.render(document.body,{
                 // return false;
             },
             attach:function() {
-                this.state.nameStr += 'x';
+                this.nameStr += 'x';
             },
             atty:function(){
                 return 2;

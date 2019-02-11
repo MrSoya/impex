@@ -16,23 +16,24 @@
         
         <div id="demo">
             <p>
-            <div x-if="show" :click="alert('show d1')" name="d1" .sid="sid">click me</div>
-            <div x-else :mouseup="alert('show d2')" name="d2" id="d2" .sid="sid">click me 2</div>
+            <div x-if="show" @click="alert('show d1')" name="d1" .sid="sid">click me</div>
+            <div x-else @mouseup="alert('show d2')" name="d2" id="d2" .sid="sid">click me 2</div>
             </p>
-            <button :click="change()">change</button>
+            <button @click="change()">change</button>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
             	state:{
             		sid:1,
                     show:true
             	},
                 change:function(){
-                	this.state.show = !this.state.show;
-                    this.state.sid++;
+                	this.show = !this.show;
+                    this.sid++;
                 }
             });
             

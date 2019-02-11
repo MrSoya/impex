@@ -20,7 +20,8 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 state:{
                     html1 : "<a href='http://soya2d.com'>{{ title1}}</a>",
                     html2 : "HTML表达式",

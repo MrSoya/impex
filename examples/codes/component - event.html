@@ -20,7 +20,7 @@
 </pre>
     <div id="demo">
         <!-- listen component custom event -->
-        <x-demo :mount="demoIsMounted()"></x-demo>
+        <x-demo @mount="demoIsMounted()"></x-demo>
 
     </div>
     <script type="text/javascript">
@@ -31,10 +31,11 @@
                 this.emit('mount',1);
             }
         });
-        impex.render('#demo',{
-             demoIsMounted:function(){
-                alert('child loaded');
-             }
+        impex.create({
+            el:'#demo',
+            demoIsMounted:function(){
+               alert('child loaded');
+            }
         });
     </script>
     </body>

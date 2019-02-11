@@ -11,61 +11,43 @@
 function Component (el) {
 	EventEmitter.call(this);
 
-	this.id = 'C_' + im_counter++;
+	this.$id = 'C_' + im_counter++;
 
 	/**
 	 * 对顶级元素的引用
 	 * @type {HTMLElement}
 	 */
-	this.el = el;
+	this.$el = el;
 	/**
 	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
-	this.refs = {};
+	this.$ref = {};
 	/**
 	 * 组件标签引用
 	 * @type {Object}
 	 */
-	this.compTags = {};
+	this.$compTags = {};
 	/**
-	 * 用于指定输入参数的限制
-	 * @type {Object}
+	 * 组件类型，在创建时由系统自动注入
 	 */
-	this.input = null;
-	/**
-	 * 组件名，在创建时由系统自动注入
-	 */
-	this.name;
+	this.$name;
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
 	 */
-	this.parent;
+	this.$parent;
 	/**
 	 * 子组件列表
 	 * @type {Array}
 	 */
-	this.children = [];
-	//watchs
-	this.__watchMap = {};
-	this.__watchFn;
-	this.__watchOldVal;
-	this.__watchPaths = [];
-	//syncs
-	this.__syncFn = {};
-	this.__syncOldVal = {};
-	this.__syncFnForScope = {};
-	//computedstate
-	this.__dependence = {};
+	this.$children = [];
 
-	/**
-	 * 组件数据
-	 * @type {Object}
-	 */
-	this.state = {};
+	this._watchers = [];
+	this._combiningChange = false;
+	this._updateMap = {};
 
-	impex._cs[this.id] = this;
+	impex._cs[this.$id] = this;
 };
 function F(){}
 F.prototype = EventEmitter.prototype;  
@@ -73,34 +55,22 @@ Component.prototype = new F();
 Component.prototype.constructor = Component.constructor; 
 ext({
 	/**
-	 * 设置组件状态值
-	 * @param {String} path 状态路径
-	 * @param {Object} v  
-	 */
-	setState:function(path,v){
-		v = JSON.stringify(v);
-		var str = 'with(scope){'+path+'='+v+'}';
-		var fn = new Function('scope',str);
-		fn(this.state);
-		
-		return this;
-	},
-	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
-	 * @param  {Function} cbk      回调函数，[newVal,oldVal]
+	 * @param  {Function} cbk      回调函数，[newVal,oldVal,k]
 	 */
-	watch:function(path,cbk){
-		this.__watchPaths.push(path);
-		var str = '';
-		for(var i=this.__watchPaths.length;i--;){
-			var p = this.__watchPaths[i];
-			str += ','+JSON.stringify(p)+':'+p;
-		}
-		str = str.substr(1);
-		var fn = this.__watchFn = new Function('scope','with(scope){return {'+str+'}}');
-		this.__watchOldVal = fn(this.state);
-		this.__watchMap[path] = cbk;
+	$watch:function(path,cbk){
+		var watcher = new Watcher(function(change) {
+			cbk && cbk.call(this,change.newVal,change.oldVal,change.name);
+		},this);
+		console.log('watcher变更监控。。。。',this.$id);
+		Monitor.target = watcher;
+		//find monitor
+		var makeWatch = new Function('state','return state.'+path);
+
+		makeWatch(this.$state);
+		Monitor.target = null;
+		console.log('watcher变更监控。。。。end');
 
 		return this;
 	},
@@ -109,138 +79,106 @@ ext({
 	 */
 	destroy:function(){
 		this.onDestroy && this.onDestroy();
-		var id = this.id;
-		if(this.parent){
+		var id = this.$id;
+
+		this._watchers.forEach(function(watcher) {
+			watcher.dispose();
+		});
+		this._watchers = null;
+
+		if(this._updateTimer){
+			clearTimeout(this._updateTimer);
+			this._updateTimer = null;
+		}
+
+		if(this.$parent){
 			
-			this.parent.__syncFn[id] = null;
-			this.parent.__syncOldVal[id] = null;
-			this.parent.__syncFnForScope[id] = null;
-			delete this.parent.__syncFn[id];
-			delete this.parent.__syncOldVal[id];
-			delete this.parent.__syncFnForScope[id];
-			var index = this.parent.children.indexOf(this);
+			var index = this.$parent.$children.indexOf(this);
 			if(index > -1){
-				this.parent.children.splice(index,1);
+				this.$parent.$children.splice(index,1);
 			}
-			this.parent = null;
+			this.$parent = null;
 		}
 
-		while(this.children.length > 0){
-			this.children[0].destroy();
+		while(this.$children.length > 0){
+			this.$children[0].destroy();
 		}
 
-		this.children = 
+		this.$children = 
 		impex._cs[id] = null;
 		delete impex._cs[id];
 
-		destroyDirective(this.vnode,this);
+		destroyDirective(this.$vnode,this);
 
-		this.vnode = 
-		this.el = 
-		this.compTags = 
-		this.root = 
-		this.__dependence = 
+		this.$vnode = 
+		this.$el = 
+		this.$compTags = 
+		this.$root = 
 
-		this.refs = 
-		this.__nodes = 
-		this.__syncFn = 
-		this.id = 
-
-		this.__url = 
-		this.template = 
-		this.state = null;
+		this.$ref = 
+		this.$id = null;
 	},
 	/**
 	 * 如果一个引用参数发生了改变，那么子组件必须重载该方法，
 	 * 并自行判断是否真的修改了。但是更好的方案是，调用子组件的某个方法比如刷新之类
 	 */
-	onPropChange : function(newProps,oldProps){
-		for(var k in newProps){
-			var v = newProps[k];
-			if(v !== this.state[k]){
-				this.state[k] = v;
-			}
+	onPropChange:function(key,newVal,oldVal){
+		this[key] = newVal;
+    },
+    /**
+     * 把一个未挂载的根组件挂载到指定的dom中
+     * @param  {HTMLElement|String} target 挂载的目标dom或者选择器
+     */
+    $mount:function(target) {
+    	if(target){
+    		if(isString(target) && target.trim()){
+	    		target = document.querySelector(target);
+	    	}
+	    	target.append(this.$el);
+    	}
+
+    	mountComponent(this,this.$vnode);
+    },
+    //解析组件参数，并编译视图
+    _parse:function(opts) {
+    	opts = opts || COMP_MAP[this.$name];
+    	preprocess(this,opts);
+
+    	//lc onCreate
+    	this.onCreate && this.onCreate();
+
+		if(this._processedTmpl)
+			compileComponent(this);
+
+		//挂载组件
+		if(this.$el){
+			this.$mount();
 		}
-    }
+
+		//init children
+		for(var i = this.$children.length;i--;){
+			this.$children[i]._parse();
+		}
+	}
 },Component.prototype);
 
-function getDirectiveParam(directive,comp) {
-	var dName = directive[1][0];
+function getDirectiveParam(di,comp) {
+	var dName = di[2].dName;
 	var d = DIRECT_MAP[dName];
-	var params = directive[1][1];
-	var filter = directive[1][2];
-	var v = directive[2];
-	var exp = directive[3];
+	var params = di[2].dArgsAry;
+	var filter = di[2].dFilter;
+	var v = di[1];
+	var exp = di[3].vExp;
 
 	return [d,{comp:comp,value:v,args:params,exp:exp,filter:filter}];
 }
 
 /*********	component handlers	*********/
-//////	init flow
-function buildOffscreenDOM(vnode,comp){
-	var n,cid = comp.id;
-	if(vnode._isEl){
-		n = document.createElement(vnode.tag);
-		n._vid = vnode.vid;
-		vnode._cid = cid;
-
-		if(!vnode._comp){//uncompiled node dosen't exec directive
-			//directive init
-			var dircts = vnode._directives;
-			if(vnode._comp_directives){
-				dircts = dircts.concat(vnode._comp_directives);
-			}
-
-			if(dircts && dircts.length>0){
-				dircts.forEach(function(di){
-					var part = getDirectiveParam(di,comp);
-					var d = part[0];
-					d.onBind && d.onBind(vnode,part[1]);
-				});
-			}
-		}
-
-		for(var k in vnode.attrNodes){
-			if(k[0] === BIND_AB_PRIFX)continue;
-			var attr = vnode.attrNodes[k];
-			n.setAttribute(k,attr);
-		}
-
-		if(vnode.attrNodes[ATTR_REF_TAG]){
-			comp.refs[vnode.attrNodes[ATTR_REF_TAG]] = n;
-		}
-		
-		if(vnode._comp){
-			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attrNodes);
-			vnode._comp = c;
-		}else{
-			if(vnode.children && vnode.children.length>0){
-				for(var i=0;i<vnode.children.length;i++){
-					var c = buildOffscreenDOM(vnode.children[i],comp);
-					n.appendChild(c);
-				}
-			}
-		}
-		
-	}else{
-		n = document.createTextNode(filterEntity(vnode.txt));
-	}
-	vnode.dom = n;
-	return n;
-}
-function filterEntity(str){
-	return str && str.replace?str
-	.replace(/&lt;/img,'<')
-	.replace(/&gt;/img,'>')
-	.replace(/&nbsp;/img,'\u00a0')
-	.replace(/&amp;/img,'&'):str;
-}
-
 function callDirective(vnode,comp,type){
 	if(isUndefined(vnode.txt)){
 		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
-			var dircts = vnode._directives;
+			var dircts = vnode.directives;
 			if(vnode._comp_directives){
 				dircts = dircts.concat(vnode._comp_directives);
 			}
@@ -270,7 +208,7 @@ function destroyDirective(vnode,comp){
 	if(isUndefined(vnode.txt)){
 		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
-			var dircts = vnode._directives;
+			var dircts = vnode.directives;
 			if(vnode._comp_directives){
 				dircts = dircts.concat(vnode._comp_directives);
 			}
@@ -291,192 +229,277 @@ function destroyDirective(vnode,comp){
 		}//end if
 	}
 }
-function bindScopeStyle(name,css){
-	if(!css)return;
-	var cssStr = scopeStyle(name,css);
-	if(!COMP_CSS_MAP[name]){
-		//attach style
-		if(cssStr.trim().length>0){
-			var target = document.head.children[0];
-			if(target){
-				target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
-			}else{
-				document.head.innerHTML = '<style>'+cssStr+'</style>';
-			}
-		}
-		COMP_CSS_MAP[name] = true;	
-	}
-}
+
 /**
- * parse component template & to create vdom
+ * 在编译组件前进行预处理，包括
+ * 	解析组件模型
+ * 	参数绑定处理
+ * 	模版处理
+ * 	监控state
+ * 	计算状态处理
  */
-function parseComponent(comp){
-	if(comp.__loadSetting){
-		loadComp(comp);
-	}else{
-		if(comp.template){
-			preCompile(comp.template,comp);
+function preprocess(comp,opts) {
+    var tmpl = null,
+    	state = {},
+    	computeState = {},
+    	input = null;
+
+    //解析组件模型
+    if(opts){
+    	tmpl = opts.template;
+    	state = opts.state || {};
+    	input = opts.input;
+    	computeState = opts.computeState;
+
+    	var keys = Object.keys(opts);
+        for (var i=keys.length;i--;) {
+            var k = keys[i];
+            if(isFunction(opts[k])) {
+            	comp[k] = opts[k];
+            }
+        }
+		
+		if(isFunction(state)){
+			state = state.call(comp);
 		}
-		compileComponent(comp);
+	}
+
+	//解析入参，包括
+	//验证必填项和入参类型
+	//建立变量依赖
+	//触发onPropBind
+	if(comp._props){
+		var props = parseInputProps(comp,comp.$parent,comp._props,input);
+		for(var k in props){
+			state[k] = props[k];
+		}
+	}
+	
+	//编译前可以对模版视图或者slot的内容进行操作
+	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
+	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
+	//顶级组件不会调用该方法
+	if(tmpl){
+		if(comp.onBeforeCompile && comp.vnode)
+	        tmpl = comp.onBeforeCompile(tmpl,comp.vnode.raw);
+		comp._processedTmpl = tmpl.trim()
+	    .replace(/<!--[\s\S]*?-->/mg,'')
+	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
+	    .replace(/^\s+|\s+$/img,' ')
+	    .replace(/>\s([^<]*)\s</,function(a,b){
+	            return '>'+b+'<';
+	    });
+	}	
+
+	//observe state
+	observe(state,comp);
+
+	//removeIf(production)
+    //check computeState
+	for(var k in computeState){
+		var cs = computeState[k];
+		var fn = cs.get || cs;
+
+		assert(fn instanceof Function,comp.$name,XERROR.COMPONENT.COMPUTESTATE,"invalid computeState '"+k+"' ,it must be a function or an object with getter");
+	}
+	//endRemoveIf(production)
+
+	//compute state
+	for(var k in computeState){
+		var cs = computeState[k];
+		var fn = cs.get || cs;
+		//record hooks
+		var watcher = new Watcher(function(change,wtc) {
+			var v = wtc.fn.call(this,this);
+			this[wtc.k] = v;
+		},comp);
+		watcher.k = k;
+		watcher.fn = fn;
+
+		Monitor.target = watcher;
+		console.log('compute变更监控。。。。',comp.$id);
+		var v = fn.call(comp);
+		Monitor.target = null;
+		console.log('compute变更监控。。。。end');
+
+		comp.$state[k] = v;
+		comp.$state = defineProxy(comp.$state,null,comp,true);
 	}
 }
-function preCompile(tmpl,comp){
-	if(comp.onBeforeCompile)
-        tmpl = comp.onBeforeCompile(tmpl,comp.vnode._pnode);
-    
-    comp.compiledTmp = 
-    tmpl.trim()
-    .replace(/<!--[\s\S]*?-->/mg,'')
-    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-    .replace(/^\s+|\s+$/img,' ')
-    .replace(/>\s([^<]*)\s</,function(a,b){
-            return '>'+b+'<';
-    });
-}
-function doSlot(slotList,slots,slotMap){
-	if(slots || slotMap)
-		slotList.forEach(function(slot){
-			var parent = slot[0];
-			var node = slot[1];
-			var name = slot[2];
-			//update slot position everytime
-			var pos = parent.children.indexOf(node);
-			var params = [pos,1];
-			
-			if(name){
-				if(slotMap[name])
-					params.push(slotMap[name]);
-			}else{
-				params = params.concat(slots);
+function parseInputProps(comp,parent,parentAttrs,input,requires){
+
+	//解析input，抽取必须项
+	var requires = {};
+	if(input){
+		for(var k in input){
+			var arg = input[k];
+			if(arg.require){
+				requires[k] = type;
 			}
-			parent.children.splice.apply(parent.children,params);
-		});
-}
-function scopeStyle(host,style){
-	style = style.replace(/\n/img,'').trim()//.replace(/:host/img,host);
-	var isBody = false;
-	var selector = '';
-	var body = '';
-	var lastStyle = {};
-	var styles = [];
-	for(var i=0;i<style.length;i++){
-		var c = style[i];
-		if(isBody){
-			if(c === '}'){
-				isBody = false;
-				lastStyle.body = body.trim();
-				selector = '';
-				styles.push(lastStyle);
-				lastStyle = {};
-			}
-			body += c;
-		}else{
-			if(c === '{'){
-				isBody = true;
-				lastStyle.selector = selector.trim();
-				body = '';
+		}
+	}
+
+	var rs = {};
+	if(parentAttrs){
+		var depMap = {};
+		for(var k in parentAttrs){
+			var v = parentAttrs[k];
+			if(k == ATTR_REF_TAG){
 				continue;
 			}
-			selector += c;
+			k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+			// xxxx
+			if(k[0] !== PROP_TYPE_PRIFX){
+				rs[k] = v;
+				continue;
+			}
+
+			// .xxxx
+			var n = k.substr(1);
+			depMap[n] = v;
+		}//end for
+		//创建watcher
+		for(k in depMap){
+			var vn = comp.$vnode;
+			var args = [parent];
+			var forScopeStart = '',forScopeEnd = '';
+			if(vn._forScopeQ)
+		        for(var i=0;i<vn._forScopeQ.length;i++){
+		            forScopeStart += 'with(arguments['+(1+i)+']){';
+		            forScopeEnd += '}';
+		            args.push(vn._forScopeQ[i]);
+		        }
+			var fn = new Function('scope','with(scope){'+forScopeStart+'return '+ depMap[k] +forScopeEnd+'}');
+			//建立parent的watcher
+			var watcher = new Watcher(function(change,wtc) {
+				this[wtc.k] = wtc.fn.apply(parent,wtc.args);
+			},comp);
+			watcher.k = k;
+			watcher.fn = fn;
+			watcher.args = args;
+			Monitor.target = watcher;
+			console.log('入参变更监控。。。。',comp.$id);
+			//removeIf(production)
+			try{
+		    //endRemoveIf(production)
+		       	rs[k] = fn.apply(parent,args);
+		    //removeIf(production)
+		    }catch(e){
+		        assert(false,comp.$name,XERROR.COMPONENT.DEP,"creating dependencies error with prop "+JSON.stringify(k)+": ",e);
+		    }
+		    //endRemoveIf(production)
+		    Monitor.target = null;
+		    console.log('入参变更监控。。。。end');
 		}
+		//验证input
+		for(var k in rs){
+			var v = rs[k];
+			if(input && k in input){
+				delete requires[k];
+				
+				//removeIf(production)
+				//check type 
+				if(isUndefined(input[k].type))continue;
+				assert((function(k,v,input,component){
+					if(!input[k] || !input[k].type)return false;
+					var checkType = input[k].type;
+					checkType = checkType instanceof Array?checkType:[checkType];
+					var vType = typeof v;
+					if(v instanceof Array){
+						vType = 'array';
+					}
+					if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+						return false;
+					}
+					return true;
+				})(k,v,input,comp),comp.$name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input prop ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
+				//endRemoveIf(production)
+			}
+		}//end for
 	}
 
-	var css = '';
-	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
-	styles.forEach(function(style){
-		var parts = style.selector.split(',');
-		var tmp = '';
-		for(var i=0;i<parts.length;i++){
-			var name = parts[i].trim();
-			
-			if(name.indexOf(':host')===0){
-				tmp += ','+name.replace(/:host/,host);
-			}else{
-				tmp += ','+host + ' ' + name;
-			}
-		}
-		tmp = tmp.substr(1);
-		css += tmp + '{'+style.body+'}';
-	});
+	//removeIf(production)
+	//check requires
+	assert(Object.keys(requires).length==0,comp.$name,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
+	//endRemoveIf(production)
+	
+	if(!rs)return;
 
-	return css;
+	if(comp.onPropBind){
+		rs = comp.onPropBind(rs);
+	}
+
+	return rs;	
 }
 
-var g_computedState,
-	g_computedComp;
 function compileComponent(comp){
-	//init computedstate to state
-	for(var k in comp.computedState){
-		var cs = comp.computedState[k];
-		var fn = cs.get || cs;
-		comp.state[k] = cs;
-		//removeIf(production)
-		assert(fn instanceof Function,comp.name,XERROR.COMPONENT.COMPUTESTATE,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
-		//endRemoveIf(production)
-	}
-
+	//监控state
+	var watcher = new Watcher(function(change) {
+		this._updateMap[change.name] = change;
+		if(!this._combiningChange){
+			ready2notify(this);
+		}
+		console.log('组件属性变更',arguments);
+	},comp);
+	Monitor.target = watcher;
+	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
+	Monitor.target = null;
+	console.log('组件属性变更监控。。。。end');
+
 	var pv = null;
-	if(comp.vnode){
-		pv = comp.vnode.parent;
+	if(comp.$vnode){
+		pv = comp.$vnode.parent;
 		var cs = pv.children;
-		var i = cs.indexOf(comp.vnode);
+		var i = cs.indexOf(comp.$vnode);
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
-		//for directives of component
-		vnode._comp_directives = comp.vnode._directives;
+		//绑定组件上的指令
+		vnode._comp_directives = comp.$vnode.directives;
 	}
-	comp.vnode = vnode;
+	//覆盖编译后的vnode
+	comp.$vnode = vnode;
 	vnode.parent = pv;
 
-	//observe state
-	comp.state = Observer.observe(comp.state,comp);
+	comp.onCompile && comp.onCompile(comp.$vnode);//must handle slots before this callback 
+}
+function ready2notify(comp) {
+	comp._combiningChange = true;
+	console.log('ready2notify',comp.$id)
+	comp._updateTimer = setTimeout(function(){
+		//通知组件更新
+		updateComponent(comp,comp._updateMap);
 
-	//compute state
-	for(var k in comp.computedState){
-		var cs = comp.computedState[k];
-		var fn = cs.get || cs;
-		g_computedState = k;
-		g_computedComp = comp;
-		if(fn instanceof Function){
-			var v = fn.call(comp);
-			comp.state[k] = v;
-		}
-	}
-	g_computedComp = g_computedState = null;
+		console.log('update',comp.$id)
 
-	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
+		//restore
+		comp._updateMap = {};
+		comp._combiningChange = false;
+	},20);
 }
 /**
  * 准备挂载组件到页面
  */
 function mountComponent(comp,parentVNode){
-	var dom = buildOffscreenDOM(comp.vnode,comp);
+	var dom = transform(comp.$vnode,comp);
 
 	//beforemount
 	comp.onBeforeMount && comp.onBeforeMount(dom);
-	comp.el.parentNode.replaceChild(dom,comp.el);
-	comp.el = dom;
 
-	//init children
-	for(var i = comp.children.length;i--;){
-		parseComponent(comp.children[i]);
-	}
-	//mount children
-	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__loadSetting)
-			mountComponent(comp.children[i],comp.vnode);
-	}
-	if(comp.name){
-		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
-		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
-	}
-	comp.onMount && comp.onMount(comp.el);
+	//mount
+	//在子组件之前插入页面可以在onMount中获取正确的dom样式
+	comp.$el.parentNode.replaceChild(dom,comp.$el);
+	comp.$el = dom;
 
-	comp.vnode.parent = parentVNode;
+	if(comp.$name){
+		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
+		comp.$vnode.setAttribute(DOM_COMP_ATTR,comp.$name);
+	}
+	
+	comp.onMount && comp.onMount(comp.$el);
 
-	callDirective(comp.vnode,comp,0);
+	callDirective(comp.$vnode,comp,0);
 }
 
 //////	update flow
@@ -493,52 +516,21 @@ function updateComponent(comp,changeMap){
 	var vnode = buildVDOMTree(comp);
 
 	//diffing
-	var forScopeQ = compareVDOM(vnode,comp.vnode,comp);
+	var forScopeQ = compareVDOM(vnode,comp.$vnode,comp);
 
 	//mount subcomponents which created by VDOM 
-	for(var i = 0;i<comp.children.length;i++){
-		var c = comp.children[i];
-		if(!c.compiledTmp
-			&& !(c.__loadSetting && c.__loadSetting.loading)/* sync comp */){
-			parseComponent(c);
-			if(!c.__loadSetting)
-				mountComponent(c,c.vnode.parent);
+	for(var i = 0;i<comp.$children.length;i++){
+		var c = comp.$children[i];
+		if(isUndefined(c._processedTmpl)){
+			c._parse();
 		}
-	}
-
-	//call watchs
-	if(comp.__watchFn){
-		var newVal = comp.__watchFn(comp.state);
-		for(var k in newVal){
-			var nv = newVal[k];
-			var ov = comp.__watchOldVal[k];
-			if(nv !== ov || isObject(nv)){
-				comp.__watchMap[k].call(comp,nv,ov,k);
-			}
-		}
-		comp.__watchOldVal = newVal;
-	}	
-
-	//update children props
-	for(var uid in comp.__syncFn){
-		var changeProps = {};
-		var args = [comp.state];
-		if(forScopeQ[uid])comp.__syncFnForScope[uid] = forScopeQ[uid];
-		var sfs = comp.__syncFnForScope[uid];
-	    if(sfs)
-	        for(var i=0;i<sfs.length;i++){
-	            args.push(sfs[i]);
-	        }
-		var rs = comp.__syncFn[uid].apply(comp,args);
-		impex._cs[uid].onPropChange && impex._cs[uid].onPropChange(rs,comp.__syncOldVal[uid]);
-		comp.__syncOldVal[uid] = rs;
 	}
 
 	comp.onUpdate && comp.onUpdate(changeMap);
 
 	//call directives of subcomponents
-	comp.children.forEach(function(child) {
-		var cvnode = child.vnode;
+	comp.$children.forEach(function(child) {
+		var cvnode = child.$vnode;
 		if(cvnode._comp_directives){
 			cvnode._comp_directives.forEach(function(di){
 				var part = getDirectiveParam(di,child);
@@ -550,243 +542,21 @@ function updateComponent(comp,changeMap){
 	});
 }
 
-
-
-function newComponent(tmpl,el,param){
-	var c = new Component(el);
-	c.template = tmpl;
-	c.name = 'ROOT';
-	if(param){
-		ext(param,c);
-
-		if(isFunction(param.state)){
-			c.state = param.state.call(c);
-		}
-	}
-
-	c.onCreate && c.onCreate();
-	
-	return c;
-}
-function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
-	//handle component
-	if(type == 'component'){
-		type = attrs.is;
-		if(attrs['.is']){//'.is' value can only be a var
-			type = attrs['.is'];
-			type = new Function('scope',"with(scope){return "+type+"}")(parent.state);
-		}
-	}
-	var param = COMP_MAP[type];
-	if(!param)return;
-	var c = new Component(el);
-	c.name = type;
-	//bind parent
-	parent.children.push(c);
-	c.parent = parent;
-	c.root = parent.root;
-	c.store = c.root.store;
-	c.vnode = vnode;
-	//ref
-	if(attrs[ATTR_REF_TAG]){
-		parent.refs[attrs[ATTR_REF_TAG]] = c;
-	}
-	//global
-	if(attrs[ATTR_ID_TAG]){
-		impex.id[attrs[ATTR_ID_TAG]] = c;
-	}
-	//custome even
-	vnode._directives.forEach(function(di){
-		var dName = di[1][0];
-		if(dName !== 'on')return;
-		
-		var type = di[1][1][0];
-		var exp = di[2];
-		var fnStr = exp.replace(/\(.*\)/,'');
-		var fn = new Function('comp','with(comp){return '+fnStr+'}');
-
-		//parse context
-		di[2] = di[3] = exp.replace(/this\./img,'impex._cs["'+parent.id+'"].');
-
-        fn = fn.call(parent,parent);
-        if(parent[fnStr])
-        	fn = fn.bind(parent);
-       
-        if(fn){
-			c.on(type,fn);
-        }
-	});
-
-	c.attributes = attrs;
-	c.__slots = slots;
-	c.__slotMap = slotMap;
-	c._innerHTML = vnode._pnode.innerHTML();
-	
-	if(isFunction(param.loader)){
-		c.__loadSetting = param;
-		return c;
-	}
-	if(param){
-		ext(param,c);
-		
-		if(isFunction(param.state)){
-			c.state = param.state.call(c);
-		}else if(param.state){
-			c.state = {};
-			ext(param.state,c.state);
-		}
-	}
-	
-	c.onCreate && c.onCreate();
-
-	bindProps(c,parent,attrs);
-	
-	return c;
-}
-
-function bindProps(comp,parent,parentAttrs){
-	//check props
-	var requires = {};
-	var input = comp.input;
-	if(input){
-		for(var k in input){
-			var arg = input[k];
-			if(arg.require){
-				requires[k] = type;
-			}
-			if(!isUndefined(arg.value) && isUndefined(comp.state[k])){
-				comp.state[k] = arg.value;
-			}
-		}
-	}
-
-	var rs = null;
-	if(parentAttrs){
-		rs = handleProps(parentAttrs,comp,parent,input,requires);
-	}
-
-	//removeIf(production)
-	//check requires
-	assert(Object.keys(requires).length==0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
-	//endRemoveIf(production)
-	
-	if(!rs)return;
-
-	if(comp.onPropBind){
-		comp.onPropBind(rs);
-	}else{
-		for(var k in rs){
-			var v = rs[k];
-			if(v instanceof Function){
-				comp[k] = v;
-			}else{
-				comp.state[k] = v;
-			}
-		}
-	}//end if	
-}
-function handleProps(parentAttrs,comp,parent,input,requires){
-	var str = '';
-	var strMap = {};
-	var computedState = {};
-	for(var k in parentAttrs){
-		var v = parentAttrs[k];
-		if(k == ATTR_REF_TAG){
-			continue;
-		}
-		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
-		// xxxx
-		if(k[0] !== PROP_TYPE_PRIFX){
-			strMap[k] = v;
-			continue;
-		}
-
-		// .xxxx
-		var n = k.substr(1);
-		if(parent[v] instanceof Function){
-			v = 'this.'+v;
-		}
-		str += ','+JSON.stringify(n)+':'+v;
-	}//end for
-	str = str.substr(1);
-	var rs = {};
-	if(str){
-		var forScopeStart = '',forScopeEnd = '';
-		var vn = comp.vnode;
-		var args = [parent.state];
-		var sfs = parent.__syncFnForScope[comp.id] = [];
-	    if(vn._forScopeQ)
-	        for(var i=0;i<vn._forScopeQ.length;i++){
-	            forScopeStart += 'with(arguments['+(1+i)+']){';
-	            forScopeEnd += '}';
-	            args.push(vn._forScopeQ[i]);
-	            sfs.push(vn._forScopeQ[i]);
-	        }
-		var fn = parent.__syncFn[comp.id] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
-		//removeIf(production)
-		try{
-	    //endRemoveIf(production)
-	        rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
-	    //removeIf(production)
-	    }catch(e){
-	        assert(false,comp.name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.attributes)+": " + e.message,e);
-	    }
-	    //endRemoveIf(production)
-
-	}	
-	var objs = [];
-	ext(strMap,rs);
-
-	//compute state
-	if(!isUndefined(strMap['store'])){
-		//removeIf(production)
-		assert(comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
-		//endRemoveIf(production)
-		if(comp.store){
-			var states = null;
-			if(strMap['store']){
-				states = strMap['store'].split(' ');
-			}else{
-				states = Object.keys(comp.store.state);
-			}
-			if(!comp.computedState)comp.computedState = {};
-			states.forEach(function(state) {
-				var csKey = null;
-				if(/[^\w]?(\w+)$/.test(state)){
-					csKey = RegExp.$1;
-					comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
-				}
-			});
-		}//end if
-	}
-
-	for(var k in rs){
-		var v = rs[k];
-		if(isObject(v) && v.__im__oid){
-			objs.push(k);
-		}
-		if(input && k in input){
-			delete requires[k];
-			
-			//removeIf(production)
-			//check type 
-			if(isUndefined(input[k].type))continue;
-			assert((function(k,v,input,component){
-				if(!input[k] || !input[k].type)return false;
-				var checkType = input[k].type;
-				checkType = checkType instanceof Array?checkType:[checkType];
-				var vType = typeof v;
-				if(v instanceof Array){
-					vType = 'array';
-				}
-				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-					return false;
-				}
-				return true;
-			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
-			//endRemoveIf(production)
-		}
-	}
-
-	return rs;
+/**
+ * get vdom tree for component
+ */
+function buildVDOMTree(comp){
+    var root = null;
+    var fn = compile(comp._processedTmpl,comp);
+    //removeIf(production)
+    try{
+    //endRemoveIf(production)
+        root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter);
+    //removeIf(production)
+    }catch(e){
+        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.$attributes)+": ",e);
+    }
+    //endRemoveIf(production)
+    
+    return root;
 }

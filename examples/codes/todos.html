@@ -75,24 +75,24 @@
     <body>
         <section class="todos">
             <header>
-                <input :keydown="addTodo($event)" placeholder="What needs to be done?">
+                <input @keydown="addTodo($event)" placeholder="What needs to be done?">
             </header>
             <section>
                 <ul class="todolist">
                     <li x-for="todos as v => filterBy:filterType:'type' " 
                         transition="todo"
-                        x-class="{'completed':v.type=='completed'}"
-                    >
-                        <input type="checkbox" x-checked="v.type=='completed'" :change="done($event,v)">
-                        {{v.val}} <i :click="removeTodo(v)" class="close">&times;</i>
+                        .class="{'completed':v.type=='completed'}"
+                    >{{v.type}}
+                        <input type="checkbox" x-checked="v.type=='completed'" @change="done($event,v)">
+                        {{v.val}} <i @click="removeTodo(v)" class="close">&times;</i>
                     </li>
                 </ul>
             </section>
             <footer>
                 <span>{{activeTodos}} item left</span>
-                <a class="btn" .class="filterType===''?'active':''" :click="filterTodos('')">All</a>
-                <a class="btn" .class="filterType==='active'?'active':''" :click="filterTodos('active')">Active</a>
-                <a class="btn" .class="filterType==='completed'?'active':''" :click="filterTodos('completed')">Completed</a>
+                <a class="btn" .class="filterType===''?'active':''" @click="filterTodos('')">All</a>
+                <a class="btn" .class="filterType==='active'?'active':''" @click="filterTodos('active')">Active</a>
+                <a class="btn" .class="filterType==='completed'?'active':''" @click="filterTodos('completed')">Completed</a>
             </footer>
         </section>
 
@@ -110,24 +110,18 @@
             })
 
             //渲染
-            var debug = impex.render('.todos',{
+            var debug = impex.create({
+                el:'.todos',
                 state:{
                     todos:[],
                     filterType:'',
                     activeTodos:0,
                 },
-                onInit:function(){
-                    this.watch('todos',function(todos,name,type,newVal){
-                        // this.activeTodos = todos.filter(function(todo){
-                        //     return todo.type === 'active';
-                        // }).length;
-                    });
-                },
                 addTodo:function(e){
                     var t = e.target;
                     if(e.keyCode === 13 && t.value.trim()){
 
-                        this.state.todos.push({
+                        this.todos.push({
                             id:Math.random()+'',
                             val:t.value,
                             type:'active'
@@ -137,15 +131,15 @@
                         });
                         t.value = '';
 
-                        this.state.activeTodos = this.state.todos.filter(function(td){
+                        this.activeTodos = this.todos.filter(function(td){
                             return td.type === 'active';
                         }).length;
                     }
                 },
                 removeTodo:function(todo){
-                    var i = this.state.todos.indexOf(todo);
+                    var i = this.todos.indexOf(todo);
                     if(i > -1)
-                    this.state.todos.splice(i,1);
+                    this.todos.splice(i,1);
                 },
                 done:function(e,todo){
                     var type = 'active';
@@ -156,13 +150,13 @@
 
                     todo.type = type;
 
-                    this.state.activeTodos = this.state.todos.filter(function(td){
+                    this.activeTodos = this.todos.filter(function(td){
                         return td.type === 'active';
                     }).length;
 
                 },
                 filterTodos:function(type){
-                    this.state.filterType = type;
+                    this.filterType = type;
                 }
                 
             });

@@ -15,7 +15,7 @@
     </head>
     <body>
         <div id="demo">
-            全局变量注册 <button :click="togglePanel()">toggle</button>
+            全局变量注册 <button @click="togglePanel()">toggle</button>
             <x-panel id="xPanel">2222222222222222</x-panel>
             <x-panel >111111111</x-panel>
         </div>
@@ -27,16 +27,17 @@
                     // this.showPanel();
                 },
                 showPanel:function(){
-                    if(this.el.style.display=='none'){
-                        this.el.style.display = '';
+                    if(this.$el.style.display=='none'){
+                        this.$el.style.display = '';
                     }else{
-                        this.el.style.display = 'none';
+                        this.$el.style.display = 'none';
                     }
                 }
             });
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 togglePanel:function(){
                     impex.id.xPanel.showPanel();
                 }

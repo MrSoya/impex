@@ -40,14 +40,14 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('style',vnode._attr.style);
+        vnode.setAttribute('style',vnode.raw.attributes.style);
         this.onBind(vnode,data);
     },
     onDestroy:function(vnode){
-        if(isUndefined(vnode._attr.style)){
+        if(isUndefined(vnode.raw.attributes.style)){
             vnode.removeAttribute('style');
         }else{
-            vnode.setAttribute('style',vnode._attr.style);  
+            vnode.setAttribute('style',vnode.raw.attributes.style);  
         }
         
     },
@@ -91,14 +91,14 @@ impex.directive('style',{
         vnode.setAttribute('class',clsAry.join(' '));
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('class',vnode._attr.class);
+        vnode.setAttribute('class',vnode.raw.attributes.class);
         this.onBind(vnode,data);
     },
     onDestroy:function(vnode,data) {
-        if(isUndefined(vnode._attr.class)){
+        if(isUndefined(vnode.raw.attributes.class)){
             vnode.removeAttribute('class');
         }else{
-            vnode.setAttribute('class',vnode._attr.class);   
+            vnode.setAttribute('class',vnode.raw.attributes.class);   
         }
     }
 })
@@ -208,14 +208,13 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.__exp = data.exp;
-        vnode.__store = data.args && data.args[0]=='store'?true:false;
+        vnode._exp = data.exp;
         switch(vnode.tag){
             case 'select':
                 vnode.on('change',this.handleChange);
                 break;
             case 'input':
-                var type = vnode.attrNodes.type;
+                var type = vnode.attributes.type;
                 if(type == 'radio' || type == 'checkbox'){
                     vnode.on('change',this.handleChange);
                     break;
@@ -286,13 +285,13 @@ function handleInput(e,vnode,comp){
 function changeModelCheck(e,vnode,comp){
     var t = e.target || e.srcElement;
     var val = t.value;
-    var str = 'with(scope){return '+vnode.__exp+'}';
+    var str = 'with(scope){return '+vnode._exp+'}';
     var fn = new Function('scope',str);
     var parts = null;
     if(!this){
-        parts = fn(comp.state);
+        parts = fn(comp);
     }else{
-        parts = fn(this.state);
+        parts = fn(this);
     }
     if(isArray(parts)){
         parts = parts.concat();
@@ -310,9 +309,6 @@ function changeModelCheck(e,vnode,comp){
     setModel(vnode,parts,comp);
 }
 function setModel(vnode,value,comp){
-    if(vnode.__store){
-        comp.store.commit('model',vnode.__exp,value);
-    }else{
-        comp.setState(vnode.__exp,value);
-    }
+    var fn = new Function('comp','v','comp.'+vnode._exp+'= v;');
+    fn(comp,value);
 }

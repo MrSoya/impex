@@ -23,9 +23,9 @@
                 cancelBubble
                 <input type="checkbox" x-model="cancelBubble" checked="" value="cancel">
             </label>
-            <div class="parent" :click="alert('parent')">
+            <div class="parent" @click="alert('parent')">
                 click me
-                <div class="child" :click="cancelEvent($event)">
+                <div class="child" @click="cancelEvent($event)">
                     click me
                 </div>
             </div>
@@ -35,7 +35,8 @@
         <script type="text/javascript">
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     cancelBubble:['cancel']
                 },
@@ -46,7 +47,7 @@
                     // e.cancelBubble = !!this.state.cancelBubble[0];
 
                     //也可以调用方法
-                    if(!!this.state.cancelBubble[0])e.stopPropagation();
+                    if(!!this.cancelBubble[0])e.stopPropagation();
                 }
                 
             });

@@ -1,69 +1,3 @@
-
-	var CMD_PREFIX = 'x-';//指令前缀
-	var CMD_PARAM_DELIMITER = ':';
-	var CMD_FILTER_DELIMITER = '.';
-
-	var EXP_START_TAG = '{{',
-		EXP_END_TAG = '}}';
-	var REG_CMD = /^x-.*/;
-	var ATTR_REF_TAG = 'ref';
-	var ATTR_ID_TAG = 'id';
-	var COMP_SLOT_TAG = 'component';
-	var PROP_TYPE_PRIFX = '.';
-
-	var EV_AB_PRIFX = ':';
-	var BIND_AB_PRIFX = '.';
-	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
-
-	var DOM_COMP_ATTR = 'impex-component';
-
-	var SLOT = 'slot';
-
-	var im_counter = 0;
-
-	var DISPATCHERS = [];
-	var FILTER_MAP = {};
-	var DIRECT_MAP = {};
-	var COMP_MAP = {'component':1};
-	var EVENT_MAP = {};
-	var COMP_CSS_MAP = {};
-
-	//removeIf(production)
-	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror');
-	}
-	function assert(isTrue,compName,code,msg,e) {
-		!isTrue && error(compName,code,msg,e);
-	}
-	var XERROR = {
-		COMPONENT:{//1XXX
-			CONTAINER:1001,
-			TEMPLATEPROP:1002,
-			LOADERROR:1003,
-			LOADTIMEOUT:1004,
-			TEMPLATETAG:1005,
-			COMPUTESTATE:1006
-		},
-		COMPILE:{//2XXX
-			ONEROOT:2001,
-			EACH:2002,
-			HTML:2003,
-			ROOTTAG:2004,
-			ROOTCOMPONENT:2005,
-			NOFILTER:2006,
-			ERROR:2007
-		},
-		//COMPONENT ATTRIBUTE ERRORS
-		INPUT:{//3XXX
-			REQUIRE:3001,
-			TYPE:3002
-		},
-		STORE:{//4XXX
-			NOSTORE:4001
-		}
-	}
-	//endRemoveIf(production)
-
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
 	 * 让你的web程序更好维护，更好开发。
@@ -94,7 +28,7 @@
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,99,0],
+	        v:[0,99,1],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -125,46 +59,11 @@
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | Function | Promise} model 组件模型对象，或异步函数或promise对象
-		 * @param  {Object} [loadsetting] 加载异步组件还可以通过加载设置对象实现
-		 * @param {Object} loadsetting.loader 定义1-n个组件的加载器
-		 *        			{
-		 *        				'x-a':function(resolve,reject){...}
-		 *        				'xb':loadable(url)
-		 *        			}
-		 * @param {String | Function} [loading] html代码或返回html代码的函数，用于在组件加载时显示在组件的位置
-		 * @param {int} [delay] 在发出请求一段时间后再显示loading，防止快速加载造成的页面闪烁，单位ms。默认200
-		 * @param {String | Function} [error] html代码或返回html代码的函数，用于在组件加载错误时显示在组件的位置
-		 * @param {int} [timeout] 超时设置，单位ms。默认10000 
+		 * @param  {Object} model 组件模型对象
 		 * @return this
 		 */
 		this.component = function(name,model){
-			if(typeof model == 'object'){
-				COMP_MAP[name] = model;
-				return;
-			}
-			model = model || name;
-			var setting = {
-				timeout: model.timeout||10000,
-				delay:model.delay||200,
-				onError:model.error,
-				onLoading:model.loading,
-				loader:model
-			}
-			if(typeof name == "object"){
-				var loader = name.loader;
-				for(var k in loader){
-					var tmp = new Object();
-					tmp.timeout = setting.timeout;
-					tmp.delay = setting.delay;
-					tmp.onError = setting.error;
-					tmp.onLoading = setting.loading;
-					COMP_MAP[k] = tmp;
-					COMP_MAP[k].loader = loader[k];
-				}
-			}else{
-				COMP_MAP[name] = setting;
-			}
+			COMP_MAP[name] = model;
 			
 			return this;
 		}
@@ -215,50 +114,56 @@
 		}
 
 		/**
-		 * 渲染一段HTML匿名组件到指定容器，比如
-		 * <pre>
-		 * 	<div id="entry"></div>
-		 * 	...
-		 * 	impex.renderTo('<x-app></x-app>','#entry'...)
-		 * </pre>
-		 * @param  {String} tmpl 字符串模板
-		 * @param  {HTMLElement | String} container 匿名组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
-		 */
-		this.renderTo = function(tmpl,container,model){
-            if(isString(container)){
-            	container = document.querySelector(container);
-            }
-            //removeIf(production)
-            assert(container.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
-            //endRemoveIf(production)
-			var comp = newComponent(tmpl,container,model);
-			comp.root = comp;
-
-			parseComponent(comp);
-			mountComponent(comp);
-
-			return comp;
-		}
-
-		/**
 		 * 渲染一个DOM节点组件，比如
 		 * <pre>
-		 * 	<x-stage id="entry"><x-stage>
+		 * 	<x-stage id="entry" @click="showStage()"><x-stage>
 		 * 	...
-		 * 	impex.render('#entry'...)
+		 * 	impex.create({
+		 * 		el:'$entry',
+		 * 		state:{...},
+		 * 		showStage:function(){}
+		 * 	})
 		 * </pre>
-		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
-		 * impex总会从渲染一个组件作为一切的开始
-		 * @param  {HTMLElement | String} node 组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
+		 * 创建一个impex实例。
+		 * 如果有el参数那就会以el为根渲染一个组件树，如果el参数是已经挂载的DOM节点或者选择器，
+		 * 渲染完成后的组件树会自动挂载到页面，否则需要手动挂载
+		 * 如果el参数为空，会创建一个只对state监控的非视图组件，无法挂载
+		 * 
+		 * @param  {Object} opts  
+		 * @param  {var} [opts.el] DOM节点或选择器字符串或一段HTML代码
+		 * @param  {Object} [opts.state] 组件状态，内部所有属性会被监控
+		 * @param  {Object} [opts.computeState] 计算状态
+		 * @param  {...} [functions] 所有函数都会直接绑定到组件上
 		 */
-		this.render = function(node,model){
-			if(isString(node)){
-            	node = document.querySelector(node);
+		this.create = function(opts){
+			var tmpl = null;
+			var el = opts.el;
+			if(el instanceof HTMLElement){
+				//removeIf(production)
+	            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+	            //endRemoveIf(production)
+				tmpl = el.outerHTML;
+			}else if(isString(el) && el.trim()){
+				try{
+            		el = document.querySelector(el);
+            		//removeIf(production)
+		            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+		            //endRemoveIf(production)
+            		tmpl = el.outerHTML;
+				}catch(e){
+					tmpl = el;
+				}
             }
-            var tmpl = node.outerHTML;
-            return this.renderTo(tmpl,node,model);
+
+            //创建根组件
+			var root = new Component(isString(el)?null:el);
+			root.$name = 'ROOT';
+			root.$root = root;
+
+			opts.template = tmpl;
+			root._parse(opts);
+
+            return root;
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
@@ -267,7 +172,5 @@
 		this.Component = Component;
 
 		this.EventEmitter = EventEmitter;
-
-		this._Observer = Observer;
 	}
 

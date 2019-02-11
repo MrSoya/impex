@@ -35,7 +35,7 @@
             <x-a x-show="a == 3" xx="3">333</x-a>
 
 
-			<button :click="show = !show">{{show}}</button>
+			<button @click="change()">{{show}}</button>
 
             <!-- //场景6 HTML注入导致的属性变动 -->
             <!-- <div x-html="html"></div>
@@ -50,17 +50,15 @@
                 },
                 onMount:function(dom){
                     var that = this;
-                    setTimeout(function(argument) {
-                        that.state.xx = Math.random();
-                    },1000)  
                 },
                 template:'<b .class="xx"><slot></slot></b>'
             });
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 state:{
-                    a:'1',
+                    a:1,
                     b:'b',
                     x:'x',
                     d:'background:blue',
@@ -68,6 +66,10 @@
                     show:true,
                     html:'<b style="color:red;font-style:italic;">font</b>',
                     html2:'<b style="color:blue;text-decoration: underline;">font</b>',
+                },
+                change:function() {
+                    this.a++;
+                    if(this.a>3)this.a = 1;
                 }
             });
             

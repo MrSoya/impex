@@ -33,36 +33,36 @@
                     var that = this;
                     eventbus
                     .on('addx',function(x){
-                        that.state.x = x;
+                        that.x = x;
                     })
                     .on('addy',function(y){
-                        that.state.y = y;
+                        that.y = y;
                     })
                 }
             });
             impex.component('x-addx',{
-                template:'<label><button :click="add()">Addx</button>x={{x}}</label>',
+                template:'<label><button @click="add()">Addx</button>x={{x}}</label>',
                 state:{
                     x:999
                 },
                 add:function(){
-                    eventbus.emit('addx',++this.state.x);
+                    eventbus.emit('addx',++this.x);
                 }
             });
 
             impex.component('x-addy',{
-                template:'<label><button :click="add()">Addy</button>y={{y}}</label>',
+                template:'<label><button @click="add()">Addy</button>y={{y}}</label>',
                 state:{
                     y:1
                 },
                 add:function(){
-                    eventbus.emit('addy',++this.state.y);
+                    eventbus.emit('addy',++this.y);
                 }
             });
 
             //渲染
-            var debug = impex.render('#demo',{
-                
+            var debug = impex.create({
+                el:'#demo'
             });
 
             

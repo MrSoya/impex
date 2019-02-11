@@ -29,22 +29,25 @@
                     content:'',
                     xx:{}
                 },
-                onPropChange:function(newProps,oldProps) {
-                    console.log(newProps)  
-                    this.state.content = newProps.content;
-                    this.state.xx = JSON.parse(JSON.stringify(newProps.xx));
+                onPropChange:function(k,newVal,oldVal) {
+                    
+                    if(k == 'xx'){
+                    	this.xx = JSON.parse(JSON.stringify(newVal));
+                    }else{
+                    	this[k] = newVal;	
+                    }
                 },
                 template:'<p style="border:1px solid red">{{content}}<slot></slot></p>'
             });
 
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
-                    obj:{x:111111},
+                    obj:{id:111111},
                     msg:'这是参数'
                 }
             });
-            //slot插入的input 没有指令？
             
         </script>
     </body>

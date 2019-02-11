@@ -3,14 +3,82 @@
  * reactive webUI system
  *
  *
- * Copyright 2015-2018 MrSoya and other contributors
+ * Copyright 2015-2019 MrSoya and other contributors
  * Released under the MIT license
  *
  * website: http://impexjs.org
- * last build: 2018-10-14
+ * last build: 2019-2-11
  */
 !function (global) {
 	'use strict';
+/**
+ * 系统常量
+ * 包括所有语法标识符、错误信息等
+ */
+
+	var CMD_PREFIX = 'x-';//指令前缀
+	var CMD_PARAM_DELIMITER = ':';
+	var CMD_FILTER_DELIMITER = '.';
+
+	var EXP_START_TAG = '{{',
+		EXP_END_TAG = '}}';
+	var REG_CMD = /^x-.*/;
+	var ATTR_REF_TAG = 'ref';
+	var ATTR_ID_TAG = 'id';
+	var COMP_SLOT_TAG = 'component';
+	var PROP_TYPE_PRIFX = '.';
+
+	var EVENT_AB_PRIFX = '@';
+	var BIND_AB_PRIFX = '.';
+	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
+
+	var DOM_COMP_ATTR = 'impex-component';
+
+	var im_counter = 0;
+
+	var DISPATCHERS = [];
+	var FILTER_MAP = {};
+	var DIRECT_MAP = {};
+	var COMP_MAP = {'component':1};
+	var EVENT_MAP = {};
+
+	//removeIf(production)
+	function error(compName,code,msg,e){
+		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror');
+	}
+	function assert(isTrue,compName,code,msg,e) {
+		!isTrue && error(compName,code,msg,e);
+	}
+	var XERROR = {
+		COMPONENT:{//1XXX
+			CONTAINER:1001,
+			TEMPLATEPROP:1002,
+			LOADERROR:1003,
+			LOADTIMEOUT:1004,
+			TEMPLATETAG:1005,
+			COMPUTESTATE:1006,
+			DEP:1007
+		},
+		COMPILE:{//2XXX
+			ONEROOT:2001,
+			EACH:2002,
+			HTML:2003,
+			ROOTTAG:2004,
+			ROOTCOMPONENT:2005,
+			NOFILTER:2006,
+			ERROR:2007
+		},
+		//COMPONENT ATTRIBUTE ERRORS
+		INPUT:{//3XXX
+			REQUIRE:3001,
+			TYPE:3002
+		},
+		STORE:{//4XXX
+			NOSTORE:4001
+		}
+	}
+	//endRemoveIf(production)
+
 /**
  * utils
  */
@@ -25,7 +93,7 @@
         return typeof(obj) === 'object' && obj !== null;
     }
     function isArray(obj){
-        return obj instanceof Array;
+        return Array.isArray(obj);
     }
     function isString(obj){
         return typeof obj === 'string';
@@ -37,782 +105,22 @@
         return obj instanceof Function;
     }
 
-    var awaitQ = {},
-        timeoutTimer = {},
-        loadingTimer = {},
-        errors = {};
-    //if loader resolved then it can't be rejected and vice versa
-    function loadComp(comp) {
-        var name = comp.name;
-        var setting = comp.__loadSetting;
-        var q = awaitQ[name];
-        //removeIf(production)
-        // if(q && q.indexOf(comp)>-1){
-        //     console.error('lib error',comp);
-        // }
-        //endRemoveIf(production)
-        if(!q){
-            q = awaitQ[name] = [comp];
-            timeoutTimer[name] = setTimeout(function(argument) {
-                assert(false,name,XERROR.COMPONENT.LOADTIMEOUT,'load timeout : '+name);
-                reject.call(comp,'timeout');
-            },setting.timeout);
-            setting.loader(resolve.bind(comp),reject.bind(comp));
-            //show loaing after delay
-            if(setting.onLoading){
-                loadingTimer[name] = setTimeout(function(argument) {
-                    var loading = isFunction(setting.onLoading)?setting.onLoading():setting.onLoading;
-            
-                    COMP_MAP[name] = {template:'<section>'+loading+'</section>',state:{}};
-                    renderCompOf(name,COMP_MAP[name]);
-                },setting.delay);
-            }
-        }else{
-            q.push(comp);
-        }
-        setting.loading = true;
-    }
-    function reject(errorMsg){
-        if(!awaitQ[this.name])return;
-        errors[this.name] = errorMsg;
-        var error = isFunction(this.__loadSetting.onError)?this.__loadSetting.onError(errorMsg):this.__loadSetting.onError;
-        error = error || errorMsg;
-        COMP_MAP[this.name] = {template:'<section>'+error+'</section>',state:{}};
-        renderCompOf(this.name,COMP_MAP[this.name]);
-    }
-    function resolve(compStr){
-        if(errors[this.name])return;
-
-        var rs = compStr.match(/<\s*template[^<>]*>([\s\S]*)<\s*\/\s*template\s*>/img);
-        var tmpl = RegExp.$1;
-        //removeIf(production)
-        assert(tmpl && rs,name,XERROR.COMPONENT.TEMPLATETAG,'can not find tag <template> in component file "'+this.name+'"');
-        //endRemoveIf(production)
-        var css = '';
-        tmpl = tmpl.replace(/<\s*style[^<>]*>([\s\S]*?)<\s*\/\s*style\s*>/img,function(a,b){
-            css += b;
-            return '';
-        });
-
-        rs = compStr.match(/<\s*script[^<>]*>([\s\S]*?)<\s*\/\s*script\s*>/img);
-        var modelStr = rs?RegExp.$1:'function(){return{};}';
-        
-        var model = new Function('return ('+modelStr+')')();
-        model = model();
-        model.template = tmpl.trim();
-        COMP_MAP[this.name] = model;
-         //css
-        bindScopeStyle(this.name,css.trim());
-
-        renderCompOf(this.name,model,true);
-    }
-    function renderCompOf(name,model,clearAwait) {
-        clearTimeout(timeoutTimer[name]);
-        clearTimeout(loadingTimer[name]);
-
-        var q = awaitQ[name];
-        for(var i=q.length;i--;){
-            var comp = q[i];
-
-            ext(model,comp);
-            if(isFunction(model.state)){
-                comp.state = model.state.call(comp);
-            }else if(model.state){
-                comp.state = {};
-                ext(model.state,comp.state);
-            }
-
-            comp.onCreate && comp.onCreate();
-
-            //同步父组件变量
-            bindProps(comp,comp.parent,comp.attributes);
-
-            if(clearAwait)comp.__loadSetting = null;
-
-            preCompile(comp.template,comp);
-            compileComponent(comp);
-            mountComponent(comp,comp.parent?comp.parent.vnode:null);
-        }//end for    
-        
-        if(clearAwait)awaitQ[name] = null;    
-    }
-	var Observer = null;
-	window.Proxy && !function(){
-		function setArray(ary,index,value){
-			if(isNaN(index))return;
-
-			ary[index>>0] = value;
-		}
-		function delArray(ary,index){
-			if(isNaN(index))return;
-
-			ary.splice(index,1);
-		}
-		function observeData(handler,propChains,data,component){
-			if(data && data.__im__propChain)return data;
-
-			var t = isArray(data)?[]:{};
-			for(var k in data){
-				var o = data[k];
-				if(isObject(o)){
-					var pcs = propChains.concat();
-					pcs.push(k);
-					var tmp = observeData(handler,pcs,o,component);
-					t[k] = tmp;
-				}else{
-					t[k] = o;
-				}
-			}
-			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			
-			var p = new Proxy(t, handler);
-			
-			var id = Date.now() + Math.random();
-			Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
-			return p;
-		}
-
-		Observer = {
-			observe:function(data,component){
-				if(data && data.__im__propChain)return data;
-
-				//build handler
-				var handler = {
-					comp:component,
-				    get: function(target, name){
-				    	if(g_computedState){
-				    		var comp = this.comp;
-				    		if(comp instanceof Component){
-				    			var deps = comp.__dependence[name];
-					    		if(!deps){
-					    			deps = comp.__dependence[name] = [];
-					    		}
-					    		if(deps instanceof Array && deps.indexOf(g_computedState)<0)deps.push(g_computedState);
-				    		}else 	    		
-				    		//store
-				    		if(impex.Store){
-				    			var notices = comp.__noticeMap[name];
-				    			if(!notices){
-				    				notices = comp.__noticeMap[name] = [];
-				    			}
-				    			notices.push([g_computedComp,g_computedState]);
-				    		}
-				    	}
-				        return target[name];
-				    },
-				    set: function(target,name,value) {
-				    	var isAdd = !(name in target);
-
-				    	var old = target[name];
-				    	var v = value;
-				    	if(old === v)return true;
-
-				    	var comp = this.comp;
-
-				    	//computedState setter
-				    	if(comp.computedState && comp.computedState[name]){
-				    		var setter = comp.computedState[name].set;
-				    		if(setter instanceof Function){
-				    			setter.call(comp,v);
-				    		}
-				    	}
-
-				    	if(isObject(v)){
-				    		var pcs = target.__im__propChain.concat();
-							pcs.push(name);
-				    		v = observeData(this,pcs,v,comp);
-				    	}
-				    	if(isArray(target)){
-				    		setArray(target,name,v);
-				    	}else{
-					    	target[name] = v;
-				    	}
-
-				    	//check computedstate
-				    	if(comp.__dependence && comp.__dependence[name]){
-				    		comp.__dependence[name].forEach(function(k) {
-				    			var nv = comp.computedState[k].call(comp);
-				    			comp.state[k] = nv;
-				    		});
-				    	}else 
-				    	//store
-			    		if(impex.Store && comp.__noticeMap && comp.__noticeMap[name]){
-			    			comp.__noticeMap[name].forEach(function(pair) {
-			    				var target = pair[0];
-			    				var k = pair[1];
-			    				var getter = target.computedState[k].get || target.computedState[k];
-				    			var nv = getter.call(target);
-				    			target.state[k] = nv;
-				    		});
-			    		}
-
-				    	var path = target.__im__propChain;
-
-				    	var changeObj = {action:comp.__action,object:target,name:name,pc:path,oldVal:old,newVal:v,comp:this.comp,type:isAdd?'add':'update'};
-
-				    	ChangeHandler.handle(changeObj);
-				    	
-				    	return true;
-				    },
-				    deleteProperty: function (target, name) {
-				    	var old = target[name];
-
-					    if(isArray(target)){
-				    		delArray(target,name);
-				    	}else{
-				    		delete target[name];
-				    	}
-
-					    var path = target.__im__propChain;
-
-					    var changeObj = {object:target,name:name,pc:path,oldVal:old,comp:this.comp,type:'delete'};
-				    	ChangeHandler.handle(changeObj);
-
-					    return true;
-					}
-				};
-
-				return observeData(handler,[],data,component);
-			}
-		};
-	}();
-
-	///////////////////////////////////////// fallback ///////////////////////////////////////////
-	!window.Proxy && !function(){
-		function getter(k){
-			return this.__im__innerProps[k];
-		}
-		function setter(k,v){
-			var old = this.__im__innerProps[k];
-			if(old)clearObserve(old);
-			if(isObject(v)){
-	    		var pcs = this.__im__propChain.concat();
-				pcs.push(k);
-	    		v = observeData(pcs,v,this.__im__comp);
-	    	}
-			this.__im__innerProps[k] = v;
-
-			var path = this.__im__propChain;
-	    	
-	    	handler([{
-	    		name:k,
-	    		target:this,
-	    		oldVal:old,
-	    		newVal:v,
-	    		type:'update'
-	    	}],true);
-		}
-		function observeData(propChains,data,component){
-			if(data && data.__im__propChain)return data;
-			
-			var t = isArray(data)?[]:{};
-
-			Object.defineProperty(t,'__im__innerProps',{enumerable: false,writable: true,value:{}});
-			var props = {};
-
-			var observeObj = {};
-			for(var k in data){
-				if(!data.hasOwnProperty(k))continue;
-
-				var o = data[k];			
-				if(isObject(o)){
-					var pcs = propChains.concat();
-					pcs.push(k);
-					var tmp = observeData(pcs,o,component);
-					t.__im__innerProps[k] = tmp;
-				}else{
-					t.__im__innerProps[k] = o;
-				}
-
-				//设置监控属性
-				observeObj[k] = o;
-
-				!function(k){
-					props[k] = {
-						get:function(){return getter.call(this,k)},
-						set:function(v){setter.call(this,k,v)},
-						enumerable:true,
-						configurable:true
-					};
-				}(k);
-			}
-
-			Object.defineProperties(t,props);
-			Object.defineProperty(t,'__im__propChain',{enumerable: false,writable: false,value:propChains});
-			Object.defineProperty(t,'__im__comp',{enumerable: false,writable: false,value:component});
-
-			var id = Date.now() + Math.random();
-			Object.defineProperty(t,'__im__oid',{enumerable: false,writable: false,value:id});
-			observedObjects.push({snap:observeObj,now:t,id:id});
-
-			return t;
-		}
-		function dirtyCheck(){
-			RAF(function(){
-				for(var i=observedObjects.length;i--;){
-					var obj = observedObjects[i];
-
-					var oldVer = obj.snap,
-						newVer = obj.now,
-						id = obj.id;
-
-					var changes = [];
-					for(var prop in oldVer){
-						if(!(prop in newVer)){
-							var change = {};
-							change.name = prop;
-							change.target = newVer;
-							change.oldVal = oldVer[prop];
-							change.snap = oldVer;
-							change.type = 'delete';
-							
-							changes.push(change);
-						}
-					}
-					for(var prop in newVer){
-						if(!(prop in oldVer)){
-							var change = {};
-							change.name = prop;
-							change.target = newVer;
-							change.newVal = newVer[prop];
-							change.snap = oldVer;
-							change.type = 'add';
-							
-							changes.push(change);
-						}
-					}
-					if(changes.length>0){
-						handler(changes);
-					}
-				}
-
-				dirtyCheck();
-			});
-		}
-		function clearObserve(obj){
-			var oo = null;
-			for(var i=observedObjects.length;i--;){
-				oo = observedObjects[i];
-				if(oo.id === obj.__im__oid)break;
-			}
-			if(i>-1){
-				observedObjects.splice(i,1);
-				if(isObject(oo)){
-					clearObserve(oo);
-				}
-			}
-		}
-		function handler(changes,fromSetter){
-			for(var i=changes.length;i--;){
-				var change = changes[i];
-
-				// console.log(change);
-
-				var name = change.name;
-				var target = change.target;
-				var path = target.__im__propChain;//.concat();
-		    	var comp = target.__im__comp;
-		    	var old = change.oldVal;
-		    	var v = change.newVal;
-		    	var type = change.type;
-		    	var snap = change.snap;
-
-		    	if(type === 'add'){
-		    		snap[name] = v;
-		    		target.__im__innerProps[name] = v;
-		    		if(isObject(v)){
-		    			var pc = path.concat();
-		    			pc.push(name);
-		    			target.__im__innerProps[name] = observeData(pc,v,comp);
-		    		}
-		    		!function(name,target){
-		    			Object.defineProperty(target,name,{
-		    				get:function(){
-		    					return getter.call(this,name)
-		    				},
-							set:function(v){
-								setter.call(this,name,v)
-							},
-							enumerable:true,
-							configurable:true
-		    			});
-		    		}(name,target);
-		    		
-		    	}else 
-		    	if(type === 'delete'){
-		    		var obj = snap[name];
-		    		if(isObject(obj)){
-		    			clearObserve(obj);
-		    		}
-		    		delete snap[name];
-		    	}else if(!fromSetter){
-		    		console.log('无效update')
-		    		continue;
-		    	}
-
-		    	var changeObj = {object:target,name:name,pc:path,oldVal:old,newVal:v,comp:comp,type:type};
-		    	ChangeHandler.handle(changeObj);
-		    }
-		}
-		var observedObjects = [];//用于保存监控对象
-
-		var RAF = (function(w){
-		    return  w.requestAnimationFrame       || 
-		            w.webkitRequestAnimationFrame ||
-		            w.msRequestAnimationFrame     ||
-		            w.mozRequestAnimationFrame    ||
-		            w.oRequestAnimationFrame      ||
-		            function(callback) {
-		                return w.setTimeout(function() {
-		                    callback(Date.now());
-		                },16.7);
-		            };
-		})(self);
-
-		Observer = {};
-		Observer.observe = function(data,component){
-			if(data && data.__im__propChain)return data;
-
-			return observeData([],data,component);
-		}
-
-		dirtyCheck();
-	}();
-var pnode_counter = 0;
-var pnode_map = {};
-function pNode(type,tag,txtQ){
-    this.type = type;//1 node 3 text
-    this.tag = tag;
-    this.txtQ = txtQ;
-    this.children = [];
-    this.attrNodes = {};
-    this.directives = {};
-    this.slotMap = {};
-    this._pid = 'P_'+pnode_counter++;
-}
-function pNodeAttr(name,directive){
-    this.value;
-    this.name = name;
-    this.directive = directive;
-}
-pNode.prototype = {
-    innerHTML:function() {
-        var r = new RegExp('<\s*\/\s*'+this.tag+'\s*>','img');
-        var rs = this._innerHTML.trim();
-        var match = r.exec(rs);
-        if(match){
-            return rs.substring(0,match.index);
-        }
-        return rs;
-    },
-    outerHTML:function (){
-        return this._outerHTML+this.innerHTML()+'</'+this.tag+'>';
-    }
-};
-
-var vn_counter = 0;
 /**
- * 虚拟节点
+ * 视图模版解析模块，解析结果送入编译器进行编译
+ * 包含组件识别、指令处理、属性解析、SLOT解析、文本解析等
+ * 支持 
+ *     表达式错误提醒
+ *     结构指令 - for/if/else-if/else/html
+ *     指令过滤器
  */
-function VNode(tag,attrNodes,directives){
-    this.tag = tag;
-    this.txt;
-    this.children;
-    this.vid = vn_counter++;
-    this.attrNodes = attrNodes;
-    this._directives = directives;
-    this._comp;//组件
-    this.dom;
-    this._forScopeQ;
-    this._slotMap;
-    this._hasEvent;
-}
-VNode.prototype = {
-    /**
-     * 绑定事件到该节点
-     * @param {String} type 事件类型
-     * @param {String|Function} exp 表达式或回调函数
-     */
-    on:function(type,exp){
-        var evMap = EVENT_MAP[type];
-        if(!evMap){
-            evMap = EVENT_MAP[type] = {};
-        }
-        var fn = false;
-        if(isFunction(exp)){
-            fn = true;
-        }
-        if(fn){
-            evMap[this.vid] = [this,exp,this._cid,fn];
-        }else{
-            var declare = this.getAttribute('var');
-            if(declare){
-                var list = declare.replace(/^{|}$/mg,'').split(',');
-                var str = '';
-                list.forEach(function(de) {
-                    var pair = de.split(':');
-                    str += 'var '+ pair[0] +'='+pair[1]+';';
-                });
-                declare = str;
-            }            
-            var forScopeStart = '',forScopeEnd = '';
-            if(this._forScopeQ)
-                for(var i=0;i<this._forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(4/* Delegator.js line 29 */+i)+']){';
-                    forScopeEnd += '}';
-                }
-            evMap[this.vid] = [this,new Function('comp,state,$event,$vnode','with(comp){with(state){'+forScopeStart+declare+";"+exp+forScopeEnd+'}}'),this._cid];
-        }
-
-        this._hasEvent = true;
-    },
-    /**
-     * 卸载事件
-     * @param {String} [type] 事件类型。为空时，卸载所有事件
-     */
-    off:function(type){
-        var evMap = EVENT_MAP[type];
-        if(evMap){
-            evMap[this.vid] = null;
-        }else if(!type){
-            for(var k in EVENT_MAP){
-                evMap = EVENT_MAP[k];
-                if(evMap)evMap[this.vid] = null;
-            }
-        }
-    },
-    setAttribute:function(k,v){
-        this.attrNodes[k] = v;
-        return this;
-    },
-    getAttribute:function(k){
-        return this.attrNodes[k];
-    }
-};
-
-
-/**
- * funcs for build VNode
- */
-function createElement(comp,pid,direcExpMap,children,html,forScopeAry){
-    var pnode = pnode_map[pid];
-    var tag = pnode.tag;
-    var directives = [];
-    var map = pnode.directives;
-    for(var k in map){
-        directives.push([k,map[k].directive,direcExpMap[k],map[k].value]);
-    }
-    var attrs = {};
-    for(var k in pnode.attrNodes){
-        attrs[k] = pnode.attrNodes[k].value;
-    }
-    var rs = new VNode(tag,attrs,directives);
-    rs._isEl = true;
-    if(forScopeAry.length>0)
-        rs._forScopeQ = forScopeAry;
-    if (COMP_MAP[tag] || tag == 'component') {
-        rs._comp = true;
-        
-        rs._slots = pnode.children;
-        rs._slotMap = pnode.slotMap;     
-        rs._pnode = pnode;
-        return rs;
-    }
-    if(html != null){
-        var forScopeStart = '',forScopeEnd = '';
-        var root,str;
-        var args = [comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter];
-        //build for scope
-        var scopeAry = [];
-        var argCount = args.length;
-        if(rs._forScopeQ)
-            for(var i=0;i<rs._forScopeQ.length;i++){
-                var tmp = 'forScope'+FORSCOPE_COUNT++;
-                forScopeStart += 'with('+tmp+'){';
-                forScopeEnd += '}';
-                args.push(rs._forScopeQ[i]);
-                scopeAry.push(tmp);
-            }
-
-        str = compileVDOMStr('<'+tag+'>'+html+'</'+tag+'>',comp,scopeAry);
-
-        var argStr = scopeAry.length>0?','+scopeAry.toString():'';
-        
-        var fn = new Function('comp,state,_ce,_tmp,_ct,_li,_fi'+argStr,'with(comp){with(state){'+forScopeStart+'return '+str+';'+forScopeEnd+'}}');
-        root = fn.apply(comp,args);
-        children = root.children || [];
-    }
-    
-    if(children.length>0){
-        rs.children = [];
-        children.forEach(function(node){
-            if(node){
-                if(node instanceof Array){
-                    node.forEach(function(c){
-                        c.parent = rs;
-                        rs.children.push(c);
-                    });
-                }else{
-                    node.parent = rs;
-                    rs.children.push(node);
-                }//end if
-            }//end if
-        });
-    }
-    
-    return rs;
-}
-function createTemplate(children,forScope){
-    var fsq = null;
-    if(forScope)
-        fsq = [forScope];
-    var rs = [];
-    if(children.length>0){
-        children.forEach(function(node){
-            if(node){
-                if(node instanceof Array){
-                    node.forEach(function(c){
-                        rs.push(c);
-                        if(fsq){
-                            var cfsq = c._forScopeQ;
-                            if(cfsq){
-                                c._forScopeQ = fsq.concat(cfsq);
-                            }else{
-                                c._forScopeQ = fsq;
-                            }
-                        }
-                    });
-                }else{
-                    rs.push(node);
-                    if(fsq){
-                        var cfsq = node._forScopeQ;
-                        if(cfsq){
-                            node._forScopeQ = fsq.concat(cfsq);
-                        }else{
-                            node._forScopeQ = fsq;
-                        }
-                    }
-                }//end if
-            }//end if
-        });
-    }
-    
-    return rs;
-}
-function createText(txt){
-    var rs = new VNode();
-    rs.txt = txt && txt.toString?txt.toString():txt;
-    return rs;
-}
-function createElementList(ds,iterator,scope,k,v){
-    var rs = [];
-    ds.forEach(function(item,i){
-        var forScope = {$index:i};
-        
-        if(k)forScope[k] = i;
-        forScope[v] = item;
-        var tmp = iterator.call(scope,forScope);
-        if(tmp){
-            if(isArray(tmp)){
-                rs = rs.concat(tmp);
-            }else{
-                rs.push(tmp);
-            }
-        }
-    });
-    return rs;
-}
-function doFilter(v,filters,comp){
-    for(var i=0;i<filters.length;i++){
-        var f = filters[i];
-        var ins = FILTER_MAP[f[0]];
-        if(!ins)ins = comp[f[0]];
-        //removeIf(production)
-        assert(ins,comp.name,XERROR.COMPILE.NOFILTER,"can not find filter '"+f[0]+"'");
-        //endRemoveIf(production)
-        var params = f[1];
-        params.unshift(v);
-        v = ins.apply(comp,params);
-    }
-    return v;
-}
-var VDOM_CACHE = [];
-//解析属性名，如果是指令，返回指令name,参数
-function isDirectiveVNode(attrName,comp,isCompNode){
-    var rs = null;
-    var params = null;
-    var filter = null;
-    if(REG_CMD.test(attrName)){
-        var c = attrName.replace(CMD_PREFIX,'');
-        var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
-        if(CPDI > -1)c = c.substring(0,CPDI);
-        rs = c;
-
-        var i = attrName.indexOf(CMD_PARAM_DELIMITER);
-        if(i > -1){
-            params = attrName.substr(i+1);
-        }
-
-        switch(c){
-            case 'if':case 'else-if':case 'else':case 'for':case 'html':return c;
-        }
-
-        //removeIf(production)
-        //如果没有对应的处理器
-        assert(DIRECT_MAP[c],comp?comp.name:'ROOT',"there is no handler of directive '"+c+"' ");
-        //endRemoveIf(production)
-    }else if(attrName[0] === EV_AB_PRIFX){
-        rs = 'on';
-        params = attrName.substr(1);
-    }else if(attrName[0] === BIND_AB_PRIFX && !isCompNode){/* 区分指令参数和bind */
-        rs = 'bind';
-        params = attrName.substr(1);
-    }
-
-    if(params){
-        var fi = params.indexOf(CMD_FILTER_DELIMITER);
-        if(fi > -1){
-            filter = params.substr(fi+1);
-            params = params.substring(0,fi);
-        }
-
-        params = params.split(CMD_PARAM_DELIMITER);
-    }
-
-    return rs?[rs,params,filter]:rs;
-}
-//解析for语句：datasource，alias
-//包括to和普通语法
-function parseDirectFor(attrNode,compNode){
-    var rs = null;//k,v,filters,ds1,ds2;
-    var forExpStr = attrNode.exp[0];
-    var filters = attrNode.exp[1];
-    //removeIf(production)    
-    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-    //endRemoveIf(production)
-    var alias = RegExp.$2;
-    var kv = alias.split(',');
-    var k = kv.length>1?kv[0]:null;
-    var v = kv.length>1?kv[1]:kv[0];
-    var ds = RegExp.$1;
-    if(ds.match(/^([\s\S]*?)\s+to\s+([\s\S]*?)$/)){ 
-        rs = [k,v,filters,RegExp.$1,RegExp.$2];
-    }else{
-        rs = [k,v,filters,ds];
-    }
-    return rs;
-}
-function replaceGtLt(str){
-    return str.replace(/&gt;/img,'>').replace(/&lt;/img,'<');
-}
 
 //https://www.w3.org/TR/html5/syntax.html#void-elements
 var VOIDELS = ['br','hr','img','input','link','meta','area','base','col','embed','keygen','param','source','track','wbr'];
-// var TAG_START_EXP = /^<([-a-z0-9]+)((?:\s+[a-zA-Z_:.][-a-zA-Z0-9_:.]*(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(?:\/?)>/im;
-var TAG_START_EXP = /<([-a-z0-9]+)((?:\s+[-a-zA-Z0-9_:.]+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')))?)*)\s*(?:\/?)>/im;
-var TAG_ATTR_EXP = /[a-zA-Z_:.][-a-zA-Z0-9_:.]*(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?/img;
+var TAG_START_EXP = new RegExp('<([-a-z0-9]+)((?:\\s+[-a-zA-Z0-9_'+EVENT_AB_PRIFX+BIND_AB_PRIFX+CMD_PARAM_DELIMITER+']+(?:\\s*=\\s*(?:(?:"[^"]*")|(?:\'[^\']*\')))?)*)\\s*(?:\/?)>','im');
+var TAG_ATTR_EXP = new RegExp('[a-zA-Z_'+EVENT_AB_PRIFX+BIND_AB_PRIFX+'][-a-zA-Z0-9_'+EVENT_AB_PRIFX+BIND_AB_PRIFX+CMD_PARAM_DELIMITER+']*(?:\\s*=\\s*(?:(?:"[^"]*")|(?:\'[^\']*\')|[^>\\s]+))?','img');
 var TAG_END_EXP = /<\/([-a-z0-9]+)>/im;
 var TAG_END_EXP_G = /<\/([-a-z0-9]+)>/img;
+var SLOT = 'slot';
 
 function parseHTML(str){
     var startNodeData = null;
@@ -825,14 +133,18 @@ function parseHTML(str){
     while(str.length>0){
         if(!startNodeData){
             startNodeData = TAG_START_EXP.exec(str);
+            //removeIf(production)
+            assert(startNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - syntax error in - \n"+str);
+            //endRemoveIf(production)
+            if(!startNodeData){}
             var index = startNodeData.index + startNodeData[0].length;
             str = str.substr(index);
         }
-        //build pNode
+        //build VNode
         var tagName = startNodeData[1];
-        var node = new pNode(1,tagName);
-        node._outerHTML = startNodeData[0];
-        node._innerHTML = str;
+        var node = new RawNode(tagName);
+        node.outerHTML = startNodeData[0];
+        node.innerHTML = str;
         var parentNode = stack[stack.length-1];
         if(parentNode){
             parentNode.children.push(node);
@@ -852,14 +164,18 @@ function parseHTML(str){
 
         //handle slot
         if(tagName === SLOT){
-            slotList.push([parentNode,node,node.attrNodes.name?node.attrNodes.name.value:null]);
-        }else if(node.attrNodes.slot){
-            if(compNode)compNode.slotMap[node.attrNodes.slot.value] = node;
+            slotList.push([parentNode,node,node.attributes.name?node.attributes.name:null]);
+        }else if(node.attributes.slot){
+            var slotComp = compNode;
+            if(slotComp === node){//component can be inserted into slots
+                slotComp = compStack[compStack.length-1-1];
+            }
+            if(slotComp)slotComp.slotMap[node.attributes.slot] = node;
         }
 
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
         else{
-            node._innerHTML = '';
+            node.innerHTML = '';
         }
 
         //check
@@ -889,11 +205,11 @@ function parseHTML(str){
                 }
 
                 if(tmp === node){
-                    if(node._innerHTML == endNodeData.input){
-                        node._innerHTML = endNodeData.input.substring(0,endNodeData.index);
+                    if(node.innerHTML == endNodeData.input){
+                        node.innerHTML = endNodeData.input.substring(0,endNodeData.index);
                     }else{
-                        var part = node._innerHTML.replace(endNodeData.input,'');
-                        node._innerHTML = part + endNodeData.input.substring(0,endNodeData.index);
+                        var part = node.innerHTML.replace(endNodeData.input,'');
+                        node.innerHTML = part + endNodeData.input.substring(0,endNodeData.index);
                     }                        
                 }
                 if(stack.length<1)break;
@@ -936,38 +252,41 @@ function parseHTML_attrs(attrs,node,compNode){
             aName = attrStr.substring(0,splitIndex);
             value = attrStr.substring(splitIndex+2,attrStr.length-1);
         }
-        var attrNode = new pNodeAttr(aName,isDirectiveVNode(aName,node,compNode && node == compNode));
-        attrNode.value = value;
-        if(attrNode.directive){
+
+        var attrNode = [aName,value];
+        var directive = isDirectiveVNode(aName,node,compNode && node == compNode);
+        if(directive){
+            var expStr = null,expFilterAry = null;
             if(value){
                 //convert
                 value = value.replace(/&amp;/mg,'&');
                 //handle filter
                 var splitIndex = value.indexOf('=>');
-                var expStr,filterStr;
+                var filterStr;
                 if(splitIndex<0){
                     expStr = value;
                 }else{
                     expStr = value.substring(0,splitIndex);
                     filterStr = value.substring(splitIndex+2,value.length);
                 }
-                attrNode.exp = parseHTML_exp(expStr,filterStr);    
+                expStr = expStr.trim();
+                expFilterAry = parseExpFilter(filterStr);    
             }
             
             var tmp = null;
-            var dName = attrNode.directive;
+            var dName = isArray(directive)?directive[0]:directive;
             var parseDir = true;
             switch(dName){
                 case 'for':
-                    node.for = parseDirectFor(attrNode,compNode);
+                    node.for = parseDirectFor(expStr,expFilterAry,attrNode,compNode);
                     parseDir = false;
                     break;
                 case 'if':
-                    node.if = attrNode.exp[0];
+                    node.if = expStr;
                     parseDir = false;
                     break;
                 case 'else-if':
-                    node.elseif = attrNode.exp[0];
+                    node.elseif = expStr;
                     parseDir = false;
                     break;
                 case 'else':
@@ -975,14 +294,18 @@ function parseHTML_attrs(attrs,node,compNode){
                     parseDir = false;
                     break;
                 case 'html':
-                    node.html = attrNode.exp[0];
+                    node.html = expStr;
                     parseDir = false;
                     break;
             }
-            if(parseDir)
+
+            if(parseDir){
+                attrNode.push({dName:dName,dArgsAry:directive[1],dFilter:directive[2]});
+                attrNode.push({vExp:expStr,vFilterAry:expFilterAry});
                 node.directives[aName] = attrNode;
+            }
         }else{
-            node.attrNodes[aName] = attrNode;
+            node.attributes[aName] = value;
         }
     }
 }
@@ -995,21 +318,19 @@ function parseHTML_txt(txt,node){
         while(expData = EXP_EXP.exec(txt)){
             var t = txt.substring(lastIndex,expData.index);
             if(t)txtQ.push(t);
-            txtQ.push(parseHTML_exp(expData[1],expData[2],true));
+            txtQ.push([expData[1],parseExpFilter(expData[2],true)]);
             lastIndex = expData.index + expData[0].length;
         }
         if(lastIndex < txt.length){
             txtQ.push(txt.substr(lastIndex));
         }
         if(txtQ.length<1)txtQ.push(txt);
-        var tn = new pNode(3,null,txtQ);
+        var tn = new RawNode();
+        tn.txtQ = txtQ;
         node.children.push(tn);
     }
 }
-function parseHTML_exp(expStr,filterStr,isTxt){
-    var rs = [];
-    rs[0] = expStr.trim();
-    if(isTxt)rs[0] = '('+rs[0]+')';
+function parseExpFilter(filterStr,isTxt){
     var filterAry = [];
     if(filterStr){
         var filters = filterStr.split('|');
@@ -1021,28 +342,151 @@ function parseHTML_exp(expStr,filterStr,isTxt){
             });
         }
     }
-    rs[1] = filterAry;
+    return filterAry;
+}
+//解析属性名，如果是指令，返回指令name,参数
+function isDirectiveVNode(attrName,comp,isCompNode){
+    var rs = null;
+    var params = null;
+    var filter = null;
+    if(REG_CMD.test(attrName)){
+        var c = attrName.replace(CMD_PREFIX,'');
+        var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
+        if(CPDI > -1)c = c.substring(0,CPDI);
+        rs = c;
+
+        var i = attrName.indexOf(CMD_PARAM_DELIMITER);
+        if(i > -1){
+            params = attrName.substr(i+1);
+        }
+
+        switch(c){
+            case 'if':case 'else-if':case 'else':case 'for':case 'html':return c;
+        }
+
+        //removeIf(production)
+        //如果没有对应的处理器
+        assert(DIRECT_MAP[c],comp?comp.$name:'ROOT',"there is no handler of directive '"+c+"' ");
+        //endRemoveIf(production)
+    }else if(attrName[0] === EVENT_AB_PRIFX){
+        rs = 'on';
+        params = attrName.substr(1);
+    }else if(attrName[0] === BIND_AB_PRIFX && !isCompNode){/* 区分指令参数和bind */
+        rs = 'bind';
+        params = attrName.substr(1);
+    }
+
+    if(params){
+        var fi = params.indexOf(CMD_FILTER_DELIMITER);
+        if(fi > -1){
+            filter = params.substr(fi+1);
+            params = params.substring(0,fi);
+        }
+
+        params = params.split(CMD_PARAM_DELIMITER);
+    }
+
+    return rs?[rs,params,filter]:rs;
+}
+//解析for语句：datasource，alias
+//包括to和普通语法
+function parseDirectFor(expStr,expFilterAry,attrNode,compNode){
+    var rs = null;//k,v,filters,ds1,ds2;
+    var forExpStr = expStr;
+    var filters = expFilterAry;
+    //removeIf(production)    
+    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
+    //endRemoveIf(production)
+    var alias = RegExp.$2;
+    var kv = alias.split(',');
+    var k = kv.length>1?kv[0]:null;
+    var v = kv.length>1?kv[1]:kv[0];
+    var ds = RegExp.$1;
+    if(ds.match(/^([\s\S]*?)\s+to\s+([\s\S]*?)$/)){ 
+        rs = [k,v,filters,RegExp.$1,RegExp.$2];
+    }else{
+        rs = [k,v,filters,ds];
+    }
     return rs;
+}
+/**
+ * 编译模块，解析结果进行编译，编译后可以进行link
+ * 支持 
+ *     编译错误提醒
+ *     VNODE构建
+ *     过滤器处理
+ *
+ * 变量作用域支持所在域组件变量、全局变量，不支持上级组件变量
+ */
+
+var VDOM_CACHE = [];
+function compile(str,comp){
+    if(VDOM_CACHE[str] && !comp._slots && !comp._slotMap)return VDOM_CACHE[str];
+
+    var rs = 'with(comp){return '+compileVDOMStr(str,comp,[])+'}';
+    rs = new Function('comp,_ce,_tmp,_ct,_li,_fi',rs);
+    VDOM_CACHE[str] = rs;
+    return rs;
+}
+function compileVDOMStr(str,comp,forScopeAry){
+    var pair = parseHTML(str);
+    var roots = pair[0];
+
+    //removeIf(production)
+    assert(roots.length==1,comp.$name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
+    //endRemoveIf(production)
+    
+    var rs = roots[0];
+
+    //removeIf(production)
+    assert(rs.tag && rs.tag != 'template' && rs.tag != 'slot' && !rs.for,comp.$name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
+    assert(!COMP_MAP[rs.tag],comp.$name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
+    //endRemoveIf(production)
+    
+    //doslot
+    doSlot(pair[1],comp._slots,comp._slotMap);
+    var str = buildEvalStr(rs,forScopeAry);
+    return str;
+}
+function doSlot(slotList,slots,slotMap){
+    if(slots || slotMap)
+        slotList.forEach(function(slot){
+            var parent = slot[0];
+            var node = slot[1];
+            var name = slot[2];
+            //update slot position everytime
+            var pos = parent.children.indexOf(node);
+            var params = [pos,1];
+            
+            if(name){
+                if(slotMap[name])
+                    params.push(slotMap[name]);
+            }else{
+                params = params.concat(slots);
+            }
+            parent.children.splice.apply(parent.children,params);
+        });
 }
 
 var FORSCOPE_COUNT = 0;
-function buildEvalStr(pm,forScopeAry){
+var RNODE_MAP = {};
+function buildEvalStr(raw,forScopeAry){
     var str = '';
-    if(pm.type === 1){
+    if(raw.tag){
         var forScopeStr,forScopeChainStr;
-        if(pm.for){
+        if(raw.for){
             forScopeStr = 'forScope'+FORSCOPE_COUNT++;
             forScopeAry = forScopeAry.concat(forScopeStr);
         }
         forScopeChainStr = '['+forScopeAry.toString()+']';
 
         var children = '';
-        pnode_map[pm._pid] = pm;
-        if(!COMP_MAP[pm.tag]){
+        RNODE_MAP[raw.rid] = raw;
+        if(!COMP_MAP[raw.tag]){
             var startIf = false,ifStr = '';
-            for(var i=0;i<pm.children.length;i++){
-                var pmc = pm.children[i];
-                var npmc = pm.children[i+1];
+            for(var i=0;i<raw.children.length;i++){
+                var pmc = raw.children[i];
+                var npmc = raw.children[i+1];
                 var nodeStr = buildEvalStr(pmc,forScopeAry);
                 if(pmc.if && !pmc.for){
                     startIf = true;
@@ -1070,30 +514,30 @@ function buildEvalStr(pm,forScopeAry){
             }
             if(children.length>0)children = children.substr(1);
         }
-        var ifStr = pm.if || pm.elseif;
+        var ifStr = raw.if || raw.elseif;
         var ifStart = '',ifEnd = '';
         if(ifStr){
             ifStart = '('+ifStr+')?';
             ifEnd = ':';
         }
 
-        var direcExpMap = buildDirectiveExp(pm.directives);
-        var innerHTML = pm.html || 'null';
-        var nodeStr = '_ce(this,"'+pm._pid+'",{'+direcExpMap+'},['+children+'],'+innerHTML+','+forScopeChainStr;
-        if(pm.tag == 'template'){
+        var diCalcExpMap = buildDirectiveExp(raw.directives);
+        var innerHTML = raw.html || 'null';
+        var nodeStr = '_ce(this,"'+raw.rid+'",['+children+'],{'+diCalcExpMap+'},'+innerHTML+','+forScopeChainStr;
+        if(raw.tag == 'template'){
             nodeStr = '_tmp(['+children+'],'+forScopeChainStr;
         }
         nodeStr = ifStart + nodeStr;
-        if(pm.for){
-            var k = (pm.for[0]||'').trim();
-            var v = pm.for[1].trim();
-            var filter = pm.for[2];
-            var ds1 = pm.for[3];
-            var ds2 = pm.for[4];
+        if(raw.for){
+            var k = (raw.for[0]||'').trim();
+            var v = raw.for[1].trim();
+            var filters = raw.for[2];
+            var ds1 = raw.for[3];
+            var ds2 = raw.for[4];
             var dsStr = ds1;
             var declare = "";
-            if(pm.attrNodes.var){
-                declare = pm.attrNodes.var.value;
+            if(raw.attributes.var){
+                declare = raw.attributes.var;
                 var list = declare.replace(/^{|}$/mg,'').split(',');
                 var s = '';
                 list.forEach(function(de) {
@@ -1105,15 +549,15 @@ function buildEvalStr(pm,forScopeAry){
             if(ds2){
                 dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
             }
-            if(filter){
-                dsStr = "_fi("+dsStr+","+buildFilterStr(filter)+",comp)";
+            if(filters.length>0){
+                dsStr = "_fi("+dsStr+","+buildFilterStr(filters)+",comp)";
             }
             str = '_li('+dsStr+',function('+forScopeStr+'){with('+forScopeStr+'){'+declare+' return '+nodeStr+')'+(ifEnd?':null':'')+'}},this,"'+k+'","'+v+'")';
         }else{
             str = nodeStr+')'+ifEnd;
         }
     }else{
-        var tmp = buildTxtStr(pm.txtQ);
+        var tmp = buildTxtStr(raw.txtQ);
         str += '_ct('+tmp+')';
     }
 
@@ -1123,8 +567,9 @@ function buildDirectiveExp(map){
     var dirStr = '';
     for(var k in map){
         var attr = map[k];
-        var exp = attr.value;
-        var calcExp = attr.directive[0] === 'on'||attr.directive[0] === 'model'?JSON.stringify(exp):exp;
+        var exp = attr[3].vExp;
+        var dName = attr[2].dName;
+        var calcExp = dName === 'on'||dName === 'model'?JSON.stringify(exp):exp;
         dirStr += ',"'+k+'":'+ (calcExp || 'null');
     }//end for
     return dirStr.substr(1);
@@ -1138,7 +583,7 @@ function buildTxtStr(q){
             if(filter.length>0){
                 rs += "+_fi("+exp+","+buildFilterStr(filter)+",comp)";
             }else{
-                rs += "+"+exp;
+                rs += "+("+exp+")";
             }
         }else if(item){
             rs += "+"+JSON.stringify(item);
@@ -1156,379 +601,6 @@ function buildFilterStr(filters){
     });
     return '['+rs.substr(1)+']';
 }
-function compileVDOM(str,comp){
-    if(VDOM_CACHE[str] && !comp.__slots && !comp.__slotMap)return VDOM_CACHE[str];
-
-    var rs = 'with(comp){with(state){return '+compileVDOMStr(str,comp,[])+'}}';
-    rs = new Function('comp,state,_ce,_tmp,_ct,_li,_fi',rs);
-    VDOM_CACHE[str] = rs;
-    return rs;
-}
-function compileVDOMStr(str,comp,forScopeAry){
-    var pair = parseHTML(str);
-    var roots = pair[0];
-    //removeIf(production)
-    assert(roots.length==1,comp.name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
-    //endRemoveIf(production)
-    var rs = roots[0];
-    //removeIf(production)
-    assert(rs.type == 1 && rs.tag != 'template' && rs.tag != 'slot' && !rs.for,comp.name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
-    assert(!COMP_MAP[rs.tag],comp.name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
-    //endRemoveIf(production)
-    //doslot
-    doSlot(pair[1],comp.__slots,comp.__slotMap);
-    var str = buildEvalStr(rs,forScopeAry);
-    return str;
-}
-/**
- * get vdom tree for component
- */
-function buildVDOMTree(comp){
-    var root = null;
-    var fn = compileVDOM(comp.compiledTmp,comp);
-    root = fn.call(comp,comp,comp.state,createElement,createTemplate,createText,createElementList,doFilter);
-    return root;
-}
-var forScopeQ = null;
-function compareVDOM(newVNode,oldVNode,comp){
-    forScopeQ = {};
-    if(isSameVNode(newVNode,oldVNode)){
-        compareSame(newVNode,oldVNode,comp);
-    }else{
-        //remove old,insert new
-        insertBefore(newVNode,oldVNode,oldVNode.parent?oldVNode.parent.children:null,oldVNode.parent,comp);
-        removeVNode(oldVNode);
-    }
-    return forScopeQ;
-}
-function isSameComponent(nv,ov) {
-    var c = impex._cs[ov._cid];
-    if(!c)return false;
-    //compare attrs
-    var nas = nv.attrNodes;
-    var oas = c.attributes;
-    if(Object.keys(nas).length !== Object.keys(oas).length)return false;
-    for(var k in nas){
-        if(isUndefined(oas[k]))return false;
-    }
-    //compare slots
-    return nv._pnode.innerHTML() == c._innerHTML;
-}
-
-function compareSame(newVNode,oldVNode,comp){
-    if(newVNode._comp){
-        forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
-        //update directives
-        oldVNode._directives = newVNode._directives;
-        return;
-    }
-
-    if(newVNode.tag){
-        //update events forscope
-        oldVNode._forScopeQ = newVNode._forScopeQ;
-        
-        var allOldAttrs = oldVNode.attrNodes;
-        var nvdis = newVNode._directives,
-            ovdis = oldVNode._directives;
-        var nvDiMap = getDirectiveMap(nvdis),
-            ovDiMap = getDirectiveMap(ovdis);
-        var add=[],del=[];
-        //compare dirs
-        for(var i=ovdis.length;i--;){
-            var odi = ovdis[i];
-            var odiStr = odi[0]+odi[3];
-            if(!nvDiMap[odiStr]){
-                del.push(odi);
-            }
-        }
-        for(var i=nvdis.length;i--;){
-            var ndi = nvdis[i];
-            var ndiStr = ndi[0]+ndi[3];
-            if(ovDiMap[ndiStr]){
-                ovDiMap[ndiStr][2] = ndi[2];
-            }else{
-                add.push(ndi);
-            }
-        }
-        //reset attrs
-        oldVNode.attrNodes = newVNode.attrNodes;
-        //do del
-        for(var i=del.length;i--;){
-            var index = oldVNode._directives.indexOf(del[i]);
-            oldVNode._directives.splice(index,1);
-
-            var dName = del[i][1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-
-            var params = del[i][1][1];
-            var v = del[i][2];
-            var exp = del[i][3];
-            d.onDestroy && d.onDestroy(oldVNode,{value:v,args:params,exp:exp});
-        }
-        //add bind
-        add.forEach(function(di){
-            oldVNode._directives.push(di);
-            
-            var dName = di[1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-            
-            var params = di[1][1];
-            var v = di[2];
-            var exp = di[3];
-
-            d.onBind && d.onBind(oldVNode,{value:v,comp:comp,args:params,exp:exp});
-        });
-        //do update
-        oldVNode._directives.forEach(function(di){
-            var dName = di[1][0];
-            var d = DIRECT_MAP[dName];
-            if(!d)return;
-            
-            var params = di[1][1];
-            var v = di[2];
-            var exp = di[3];
-
-            d.onUpdate && d.onUpdate(oldVNode,{value:v,comp:comp,args:params,exp:exp},oldVNode.dom);
-        });
-
-        //for unstated change like x-html
-        updateAttr(oldVNode.attrNodes,allOldAttrs,oldVNode.dom,oldVNode.tag);
-    }else{
-        if(newVNode.txt !== oldVNode.txt){
-            updateTxt(newVNode,oldVNode);
-        }
-    }
-
-    if(newVNode.children && oldVNode.children){
-        compareChildren(newVNode.children,oldVNode.children,oldVNode,comp);
-    }else if(newVNode.children){
-        //插入新的整个子树
-        insertChildren(oldVNode,newVNode.children,comp);
-    }else if(oldVNode.children && oldVNode.children.length>0){
-        //删除旧的整个子树
-        removeVNode(oldVNode.children);
-    }
-}
-
-function getDirectiveMap(directives){
-    var map = {};
-    for(var i=directives.length;i--;){
-        var di = directives[i];
-        var diStr = di[0]+di[3];
-        map[diStr] = di;
-    }
-    return map;
-}
-
-function compareChildren(nc,oc,op,comp){
-    if(nc.length<1){
-        if(oc.length>0)
-            removeVNode(oc);
-        return;
-    }
-    var osp = 0,oep = oc.length-1,
-        nsp = 0,nep = nc.length-1,
-        os = oc[0],oe = oc[oep],
-        ns = nc[0],ne = nc[nep];
-
-    while(osp <= oep && nsp <= nep){
-        if(isSameVNode(ns,os)){
-            compareSame(ns,os,comp);
-            os = oc[++osp],
-            ns = nc[++nsp];
-            continue;
-        }else if(isSameVNode(ne,oe)){
-            compareSame(ne,oe,comp);
-            oe = oc[--oep],
-            ne = nc[--nep];
-            continue;
-        }else if(isSameVNode(ne,os)){
-            insertBefore(os,next(oe),oc,op,comp);
-            os = oc[osp];oep--;
-            ne = nc[--nep];
-            continue;
-        }else if(isSameVNode(ns,oe)){
-            insertBefore(oe,os,oc,op,comp);
-            oe = oc[oep];osp++;
-            ns = nc[++nsp];
-            continue;
-        }else{
-            //todo xid
-            
-            //插入ov之前，并删除ov
-            insertBefore(ns,os,oc,op,comp);
-            removeVNode(os);
-            os = oc[++osp],
-            ns = nc[++nsp];
-        }
-    }
-    //在osp位置，插入剩余的newlist，删除剩余的oldlist
-    if(osp == nsp && oep>nep){//right match case
-        var toDelList = oc.splice(osp,oep - nep);
-        if(toDelList.length>0){
-            removeVNode(toDelList);
-        }
-    }else if(osp <= oep && oep>0){
-        var toDelList = oc.splice(osp,oep-osp+1);
-        if(toDelList.length>0){
-            removeVNode(toDelList);
-        }
-    }
-    if(nsp <= nep){
-        var toAddList = nsp==nep?[nc[nsp]]:nc.splice(nsp,nep-nsp+1);
-        if(toAddList.length>0){
-            insertBefore(toAddList,oc[osp],oc,op,comp);
-        }
-    }
-}
-
-function insertBefore(nv,target,list,targetParent,comp){
-    if(list){
-        //处理vdom
-        if(nv.dom){//删除ov
-            var i = list.indexOf(nv);
-            if(i>-1)list.splice(i,1);
-        }
-        var p = targetParent;
-        if(target){
-            i = list.indexOf(target);
-            p = p || target.parent;
-            if(isArray(nv)){
-                for(var l=nv.length;l--;){
-                    nv[l].parent = p;
-                }
-                var args = [i,0].concat(nv);
-                list.splice.apply(list,args);
-            }else{
-                nv.parent = p;
-                list.splice(i,0,nv);
-            }//end if
-        }else{
-            if(isArray(nv)){
-                nv.forEach(function(n){
-                    list.push(n);
-                    n.parent = p;
-                });
-            }else{
-                nv.parent = p;
-                list.push(nv);
-            }//end if
-        }
-    }
-    //处理dom
-    var dom = nv.dom;
-    var compAry = [];
-    if(!dom){
-        if(isArray(nv)){
-            var fragment = document.createDocumentFragment();
-            for(var i=0;i<nv.length;i++){
-                var vn = nv[i];
-                var tmp = buildOffscreenDOM(vn,comp);
-
-                fragment.appendChild(tmp);
-            }
-            dom = fragment;
-        }else{
-            dom = buildOffscreenDOM(nv,comp);
-        }
-    }else{
-        dom.parentNode.removeChild(dom);
-    }
-    // if(dom.parentNode)dom.parentNode.removeChild(dom);
-    if(target){
-        var tdom = target.dom;
-        tdom.parentNode.insertBefore(dom,tdom);
-    }else{
-        targetParent.dom.appendChild(dom);
-    }
-}
-function next(nv){
-    var p = nv.parent;
-    var i = p.children.indexOf(nv);
-    return p.children[i+1];
-}
-function removeVNode(vnodes){
-    if(!isArray(vnodes))vnodes = [vnodes];
-    var parent = vnodes[0].parent;
-    for(var i=vnodes.length;i--;){
-        var vnode = vnodes[i];
-        var k = parent.children.indexOf(vnode);
-        if(k>-1){
-            parent.children.splice(k,1);
-        }
-        var p = vnode.dom.parentNode;
-        p && p.removeChild(vnode.dom);
-
-        //todo...   release other resource
-        if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
-            impex._cs[vnode._cid].destroy();
-        }
-    }
-}
-function insertChildren(parent,children,comp){
-    parent.children = children;
-    var fragment = document.createDocumentFragment();
-    var compAry = [];
-    for(var i=0;i<children.length;i++){
-        var vn = children[i];
-        var dom = buildOffscreenDOM(vn,comp);
-        fragment.appendChild(dom);
-    }
-    parent.dom.appendChild(fragment);
-}
-function isSameVNode(nv,ov){
-    if(nv._comp){
-        if(ov.tag === nv.tag)return true;//for loading component
-        if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
-        return isSameComponent(nv,ov);
-    }
-    return ov.tag === nv.tag;
-}
-function updateTxt(nv,ov){
-    ov.txt = nv.txt;
-    var dom = ov.dom;
-    dom.textContent = nv.txt;
-}
-function updateAttr(newAttrs,oldAttrs,dom,tag){
-    //比较节点属性
-    var nvas = newAttrs;
-    var ovas = oldAttrs;
-    var nvasKs = Object.keys(nvas);
-    var ovasKs = Object.keys(ovas);
-    var isInputNode = tag === 'input'; 
-    for(var i=nvasKs.length;i--;){
-        var k = nvasKs[i];
-        var index = ovasKs.indexOf(k);
-        if(index<0){
-            dom.setAttribute(k,nvas[k]);
-            if(isInputNode && k === 'value'){
-                dom.value = nvas[k];
-            }
-        }else{
-            if(nvas[k] != ovas[k]){
-                dom.setAttribute(k,nvas[k]);
-                if(isInputNode && k === 'value'){
-                    dom.value = nvas[k];
-                }
-            }
-            ovasKs.splice(index,1);
-        }
-    }
-    for(var i=ovasKs.length;i--;){
-        if(ovasKs[i] === DOM_COMP_ATTR)continue;
-        dom.removeAttribute(ovasKs[i]);
-    }
-
-    //update new attrs
-    var comp_attr = oldAttrs[DOM_COMP_ATTR];
-    if(comp_attr)newAttrs[DOM_COMP_ATTR] = comp_attr;
-
-}
-
-
-
 /**
  * for DOM event delegation，support mouseEvent , touchEvent and pointerEvent
  */
@@ -1544,29 +616,38 @@ function dispatch(type,e) {
         if(!tmp)continue;
 
         var vnode = tmp[0];
+
         if(type == 'mouseleave'){
             var t = e.target;
             if(!contains(vnode.dom,t))return;
             var toElement = e.toElement || e.relatedTarget;
             if(contains(vnode.dom,toElement))return;
-            if(vnode._entered)vnode._entered = false;
+            
+            var i = vnodes_mouseEntered.indexOf(vnode);
+            if(i>-1)vnodes_mouseEntered.splice(i,1);
         }
         if(type == 'mouseenter'){
             var t = e.target;
             var fromElement = e.relatedTarget;
-            if(vnode._entered && contains(vnode.dom,t) && vnode.dom != t)return;
+            if(contains(vnode.dom,t) && vnode.dom != t && vnodes_mouseEntered.indexOf(vnode)>-1)return;
             if(fromElement && contains(vnode.dom,fromElement))return;
-            if(!vnode._entered)vnode._entered = true;
+            vnodes_mouseEntered.push(vnode);
         }
 
-        var fn = tmp[1];
-        var cid = tmp[2];
-        var isFn = tmp[3];
+        var filter = tmp[1];
+
+        if(type.indexOf('key')===0 && filter){
+            if(e.key.toLowerCase() != filter)continue;
+        }
+
+        var fn = tmp[2];
+        var cid = tmp[3];
+        var isFn = tmp[4];
         var comp = impex._cs[cid];
         if(isFn){
             fn.call(comp,e,vnode);
         }else{
-            var args = [comp,comp.state,e,vnode];
+            var args = [comp,e,vnode];
             if(vnode._forScopeQ)
                 for(var i=0;i<vnode._forScopeQ.length;i++){
                     args.push(vnode._forScopeQ[i]);
@@ -1588,6 +669,9 @@ function contains(a,b){
     }while(b && b.tagName != 'BODY');
     return false;
 }
+//scope vars
+var vnodes_mouseEntered = [];
+
 //touch/mouse/pointer events
 var userAgent = self.navigator.userAgent.toLowerCase();
 var isAndroid = userAgent.indexOf('android')>0?true:false;
@@ -1686,6 +770,8 @@ if(isMobile){
     }
 }else{
     ///////////////////// 鼠标事件分派器 /////////////////////
+    document.addEventListener('click',doClick,true);
+    document.addEventListener('dblclick',doDblClick,true);
     document.addEventListener('mousedown',doMousedown,true);
     document.addEventListener('mousemove',doMousemove,true);
     document.addEventListener('mouseup',doMouseup,true);
@@ -1699,6 +785,16 @@ if(isMobile){
     var inited = true;
     var lastClickTime = 0;
     var timer;
+
+    function doClick(e) {
+        dispatch('click',e);
+        dispatch('tap',e);
+    }
+
+    function doDblClick(e) {
+        dispatch('dblclick',e);
+        dispatch('dbltap',e);
+    }
         
     function doMousedown(e){
         dispatch('mousedown',e);
@@ -1720,17 +816,6 @@ if(isMobile){
 
         dispatch('mouseup',e);
         dispatch('pointerup',e);
-
-        if(e.button === 0){
-            dispatch('click',e);
-            dispatch('tap',e);
-            if(Date.now() - lastClickTime < 300){
-                dispatch('dblclick',e);
-                dispatch('dbltap',e);
-            }
-
-            lastClickTime = Date.now();
-        }
     }
     function doMouseCancel(e){
         clearTimeout(timer);
@@ -1740,6 +825,21 @@ if(isMobile){
     function doMouseout(e){
         dispatch('mouseout',e);
         dispatch('mouseleave',e);
+
+        //check entered
+        var t = e.target;
+        var toDel = [];
+        vnodes_mouseEntered.forEach(function(vnode) {
+            if(!contains(vnode.dom,t))return;
+            var toElement = e.toElement || e.relatedTarget;
+            if(contains(vnode.dom,toElement))return;
+            
+            toDel.push(vnode);
+        });
+        toDel.forEach(function(vnode) {
+            var i = vnodes_mouseEntered.indexOf(vnode);
+            vnodes_mouseEntered.splice(i,1);
+        });
     }
     function doMouseover(e){
         dispatch('mouseover',e);
@@ -1788,105 +888,1008 @@ document.addEventListener('scroll',function(e){
     dispatch('scroll',e);
 },true);
 /**
- * 变更处理器，处理所有变量变更，并触发渲染
+ * 当属性发生变更时，一个变更对象会被创建并通过watcher传递给handler
  */
-
-var ChangeHandler = new function() {
-
-	function mergeChange(change){
-		for(var i=changeQ.length;i--;){
-			var c = changeQ[i];
-			if(c.object.__im__oid === change.object.__im__oid && c.name === change.name)break;
-		}
-		if(i > -1)
-			changeQ.splice(i,1,change);
-		else{
-			changeQ.push(change);
-		}
-	}
-
-	var combineChange = false;
-	var changeQ = [];
-	var changeMap = {};
-
-	this.handle = function (change){
-		if(combineChange){
-			mergeChange(change);
-		}else{
-			changeQ = [];
-			changeMap = {};
-			combineChange = true;
-			changeQ.push(change);
-			setTimeout(function(){
-				combineChange = false;
-
-				changeQ.forEach(function(change){
-					var comp = change.comp;
-
-					var newVal = change.newVal;
-					var oldVal = change.oldVal;
-					var pc = change.pc;
-					var type = change.type;
-					var name = change.name;
-					var object = change.object;
-					
-					handlePath(newVal,oldVal,comp,type,name,object,pc,change.action);
-				});//end for
-				var tmp = changeMap;
-				for(var k in tmp){
-					if(tmp[k].comp instanceof Component){
-						updateComponent(tmp[k].comp,tmp[k].change);
-					}else{
-						tmp[k].comp.__update(tmp[k].change);
-					}					
-				}
-			},20);
-		}
-	}
-	
-	function handlePath(newVal,oldVal,comp,type,name,object,pc,action){
-        var chains = [];
-    	chains = pc.concat();
-		if(!isArray(object))
-        	chains.push(name);
-        
-        if(!comp)return;
-        var cid = comp.id;
-
-        if(!changeMap[cid]){
-        	changeMap[cid] = {
-        		change:{},
-        		comp:comp
-        	};
-        }
-        var c = new Change(name,newVal,oldVal,chains,type,object);
-        if(action){
-        	changeMap[cid].change[name] = [c,action];
-        }else{
-        	changeMap[cid].change[name] = c;
-        }
-        
-	}
-}
-
-/**
- * 变更信息
- */
-function Change(name,newVal,oldVal,path,type,object){
+function Change(name,newVal,oldVal,type,object){
 	this.name = name;
 	this.newVal = newVal;
 	this.oldVal = oldVal;
-	this.path = path;
 	this.type = type;
 	this.object = object;
 }
+/**
+ * 用于关联属性的观察器。当属性通知观察器更新时，观察器需要调用不同的逻辑处理器
+ */
+function Watcher(handler,comp){
+	this.key;
+	this.handler = handler;
+	this.component = comp;
+	this.monitors = [];
+
+	comp._watchers.push(this);
+}
+Watcher.prototype = {
+	/**
+	 * 更新处理
+	 */
+	update:function(change) {
+		this.handler && this.handler.call(this.component,change,this);
+	},
+	//销毁watcher
+	dispose:function() {
+		this.monitors.forEach(function(m){
+			m.removeWatcher(this);
+		},this);
+		
+		this.component = 
+		this.handler = 
+		this.monitors = 
+		this.key = null;
+	},
+	depend:function(monitor) {
+		if(this.monitors.indexOf(monitor)<0)
+			this.monitors.push(monitor);
+	}
+};
+/**
+ * 监控属性的变更以及依赖收集
+ */
+function Monitor(){
+	this.key;
+	this.target;
+	this.value;
+	this.watchers = [];
+}
+Monitor.prototype = {
+	/**
+	 * 通知watcher进行更新
+	 */
+	notify:function(newVal,type) {
+		this.value = newVal;
+
+		var c = new Change(this.key,newVal,this.value,type,this.target);
+		this.watchers.forEach(function(watcher) {
+			watcher.key = this.key;
+			watcher.update(c);
+		},this);
+	},
+	/**
+	 * 收集依赖
+	 */
+	collect:function() {
+		if(Monitor.target){
+			Monitor.target.depend(this);
+			if(this.watchers.indexOf(Monitor.target)<0)
+				this.watchers.push(Monitor.target);
+		}
+	},
+	/**
+	 * 删除已监控的watcher
+	 */
+	removeWatcher:function(watcher) {
+		var i = this.watchers.indexOf(watcher);
+		if(i>-1){
+			this.watchers.splice(i,1);
+		}
+		console.log('removeWatcher',this.key)
+	}
+};
+/**
+ * 兼容IE11的observer实现，包括
+ * 	watcher
+ *  组件参数依赖
+ *  计算属性
+ *  ...
+ */
+function observe(state,target) {
+   	target.$state = defineProxy(state,null,target,true);
+}
+function defineProxy(state,pmonitor,target,isRoot) {
+    var t = Array.isArray(state)?wrapArray([],target,pmonitor):{};
+    for(var k in state){
+        var v = state[k];
+        var react = null;
+        var monitor = null;
+
+        //对象被重新赋值后出发
+        if(pmonitor && pmonitor.value){
+            var desc = Object.getOwnPropertyDescriptor(pmonitor.value,k);
+            if(desc && desc.get){
+                monitor = desc.get.__mm__;
+            }
+        }
+        
+        //monitor has existed
+        var desc = Object.getOwnPropertyDescriptor(state,k);
+        if(desc && desc.get){
+            monitor = desc.get.__mm__;
+        }
+        if(!monitor){
+            monitor = new Monitor();
+        }
+        if(isObject(v)){
+            v = defineProxy(v,monitor,target,false);
+        }
+        proxy(k,v,t,target,isRoot,monitor);
+    }
+    return t;
+}
+function proxy(k,v,t,target,isRoot,monitor) {
+    monitor.key = k;
+    monitor.target = t;
+    monitor.value = v;
+    var getter = function() {
+            //收集依赖
+            monitor.collect();
+
+            return monitor.value;
+        };
+    Object.defineProperty(getter,'__mm__',{value:monitor});
+    var handler = {
+        enumerable:true,
+        configurable:true,
+        get:getter,
+        set:function(v) {
+            if(v === monitor.value)return;
+            
+            if(isObject(v)){
+                v = defineProxy(v,monitor,target,false);
+                if (Array.isArray(v)) {
+                    v = wrapArray(v,target,monitor);
+                }
+            }
+            
+            //触发更新
+            monitor.notify(v,'update');
+        }
+    };
+    
+    Object.defineProperty(t,k,handler);
+    if(isRoot){
+        Object.defineProperty(target,k,handler);
+    }
+    return monitor;
+}
+var AP_PUSH = Array.prototype.push;
+var AP_POP = Array.prototype.pop;
+var AP_SHIFT = Array.prototype.shift;
+var AP_UNSHIFT = Array.prototype.unshift;
+var AP_SPLICE = Array.prototype.splice;
+var AP_REVERSE = Array.prototype.reverse;
+var AP_SORT = Array.prototype.sort;
+function wrapArray(ary,component,monitor) {
+    if(ary.push !== AP_PUSH)return ary;
+    Object.defineProperties(ary,{
+        'push':{
+            value:function() {
+                var bl = this.length;
+                var nl = AP_PUSH.apply(this,arguments);
+                if(nl > bl){
+                    //proxy
+                    var rv = defineProxy(this,monitor,component,false);
+                    monitor.notify(rv,'add');
+                }
+                return nl;
+            }
+        },
+        'pop':{
+            value:function() {
+                var bl = this.length;
+                var rs = AP_POP.call(this);
+                if(this.length < bl){
+                    monitor.notify(this,'del');
+                }
+                return rs;
+            }
+        },
+        'unshift':{
+            value:function() {
+                var bl = this.length;
+                var nl = AP_UNSHIFT.apply(this,arguments);
+                if(nl > bl){
+                    //proxy
+                    var rv = defineProxy(this,monitor,component,false);
+                    monitor.notify(rv,'add');
+                }
+                return nl;
+            }
+        },
+        'shift':{
+            value:function() {
+                var bl = this.length;
+                var rs = AP_SHIFT.call(this);
+                if(this.length < bl){
+                    monitor.notify(this,'del');
+                }
+                return rs;
+            }
+        },
+        'splice':{
+            value:function() {
+                var type = null;
+                if(arguments[1]>-1){
+                    type = 'del';
+                }
+                if(arguments.length>2){
+                    type = type=='del'?'update':'add';
+                }
+                var bl = this.length;
+                var ary = AP_SPLICE.apply(this,arguments);
+                if(type != 'del'){
+                    //proxy
+                    var rv = defineProxy(this,monitor,component,false);
+                    monitor.notify(this,type);
+                }
+                if((ary && ary.length>0) || bl != this.length){
+                    monitor.notify(this,type);
+                }
+                return ary;
+            }
+        },
+        'reverse':{
+            value:function() {
+                if(this.length<1)return this;
+
+                AP_REVERSE.call(this);
+
+                monitor.notify(this,'update');
+                
+                return this;
+            }
+        },
+        'sort':{
+            value:function(sortby) {
+                if(this.length<1)return this;
+
+                AP_SORT.call(this,sortby);
+
+                monitor.notify(this,'update');
+
+                return this;
+            }
+        },
+    });
+
+    return ary;
+}
+/**
+ * 虚拟节点
+ * 保存编译前和编译后的信息
+ */
+var vn_counter = 0;
+var rn_counter = 0;
+function RawNode(tag) {
+    this.rid = rn_counter++;
+    this.tag = tag;
+    this.children = [];
+    this.directives = {};//{name:[dName,value,{dName,dArgsAry,dFilter},{vExp,vFilterAry}]
+    this.attributes = {};
+    this.txtQ;
+    this.slotMap = {};
+    this.outerHTML;
+    this.innerHTML;
+}
+RawNode.prototype = {
+    getInnerHTML:function() {
+        var r = new RegExp('<\s*\/\s*'+this.tag+'\s*>','img');
+        var rs = this.innerHTML.trim();
+        var match = r.exec(rs);
+        if(match){
+            return rs.substring(0,match.index);
+        }
+        return rs;
+    },
+    getOuterHTML:function (){
+        return this.outerHTML+this.getInnerHTML()+'</'+this.tag+'>';
+    }
+}
+
+function VNode(tag,rawNode){
+    this.tag = tag;
+    this.txt;
+    this.children = [];
+    this.dom;
+    this.vid = vn_counter++;
+    //和真实DOM保持一致的当前节点属性，
+    //不仅包含原始属性，也可能包含通过指令或者接口调用而产生的其他属性
+    this.attributes;
+    //[name,value,{dName,dArgsAry,dFilter},{vExp,vFilterAry}]
+    this.directives = [];
+    this._hasEvent;
+    this._slots;
+    this._comp;//组件
+    this._forScopeQ;
+    //原始信息
+    this.raw = rawNode;
+}
+VNode.prototype = {
+    /**
+     * 绑定事件到该节点
+     * @param {String} type 事件类型
+     * @param {String|Function} exp 表达式或回调函数
+     * @param {String} filter 过滤表达式
+     */
+    on:function(type,exp,filter){
+        var evMap = EVENT_MAP[type];
+        if(!evMap){
+            evMap = EVENT_MAP[type] = {};
+        }
+        var fn = false;
+        if(isFunction(exp)){
+            fn = true;
+        }
+        if(fn){
+            evMap[this.vid] = [this,filter,exp,this._cid,fn];
+        }else{
+            var declare = this.getAttribute('var');
+            if(declare){
+                var list = declare.replace(/^{|}$/mg,'').split(',');
+                var str = '';
+                list.forEach(function(de) {
+                    var pair = de.split(':');
+                    str += 'var '+ pair[0] +'='+pair[1]+';';
+                });
+                declare = str;
+            }
+            var forScopeStart = '',forScopeEnd = '';
+            if(this._forScopeQ)
+                for(var i=0;i<this._forScopeQ.length;i++){
+                    forScopeStart += 'with(arguments['+(3/* event.js line 47 */+i)+']){';
+                    forScopeEnd += '}';
+                }
+            evMap[this.vid] = [this,filter,new Function('comp,$event,$vnode','with(comp){'+forScopeStart+declare+";"+exp+forScopeEnd+'}'),this._cid];
+        }
+
+        this._hasEvent = true;
+    },
+    /**
+     * 卸载事件
+     * @param {String} [type] 事件类型。为空时，卸载所有事件
+     */
+    off:function(type){
+        var evMap = EVENT_MAP[type];
+        if(evMap){
+            evMap[this.vid] = null;
+        }else if(!type){
+            for(var k in EVENT_MAP){
+                evMap = EVENT_MAP[k];
+                if(evMap)evMap[this.vid] = null;
+            }
+        }
+    },
+    setAttribute:function(k,v){
+        this.attributes[k] = v;
+        return this;
+    },
+    getAttribute:function(k){
+        return this.attributes[k];
+    },
+    removeAttribute:function(k) {
+        this.attributes[k] = null;
+        delete this.attributes[k];
+    }
+};
+/**
+ * VDOM构建器，用来构建VDOM树
+ */
+function createElement(comp,rid,children,diCalcExpMap,html,forScopeAry){
+    var raw = RNODE_MAP[rid];
+    var tag = raw.tag;
+    var rs = new VNode(tag,raw);
+
+    //把计算后的指令表达式值放入vnode中
+    for(var k in raw.directives){
+        var di = raw.directives[k];
+        di[1] = diCalcExpMap[k];
+        rs.directives.push([di[0],di[1],di[2],di[3]]);
+    }
+    //复制原始属性
+    rs.attributes = Object.assign({},raw.attributes);
+    rs._isEl = true;
+    if(forScopeAry.length>0)
+        rs._forScopeQ = forScopeAry;
+    if (COMP_MAP[tag] || tag == 'component') {
+        rs._comp = true;
+        
+        rs._slots = raw.children;
+        rs._slotMap = raw.slotMap;
+        return rs;
+    }
+    if(html != null){
+        var forScopeStart = '',forScopeEnd = '';
+        var root,str;
+        var args = [comp,createElement,createTemplate,createText,createElementList,doFilter];
+        //build for scope
+        var scopeAry = [];
+        var argCount = args.length;
+        if(rs._forScopeQ)
+            for(var i=0;i<rs._forScopeQ.length;i++){
+                var tmp = 'forScope'+FORSCOPE_COUNT++;
+                forScopeStart += 'with('+tmp+'){';
+                forScopeEnd += '}';
+                args.push(rs._forScopeQ[i]);
+                scopeAry.push(tmp);
+            }
+
+        str = compileVDOMStr('<'+tag+'>'+html+'</'+tag+'>',comp,scopeAry);
+
+        var argStr = scopeAry.length>0?','+scopeAry.toString():'';
+        
+        var fn = new Function('comp,_ce,_tmp,_ct,_li,_fi'+argStr,'with(comp){'+forScopeStart+'return '+str+';'+forScopeEnd+'}');
+        root = fn.apply(comp,args);
+        children = root.children || [];
+    }
+    
+    if(children.length>0){
+        rs.children = [];
+        children.forEach(function(node){
+            if(node){
+                if(node instanceof Array){
+                    node.forEach(function(c){
+                        c.parent = rs;
+                        rs.children.push(c);
+                    });
+                }else{
+                    node.parent = rs;
+                    rs.children.push(node);
+                }//end if
+            }//end if
+        });
+    }
+    
+    return rs;
+}
+function createTemplate(children,forScope){
+    var fsq = null;
+    if(forScope)
+        fsq = [forScope];
+    var rs = [];
+    if(children.length>0){
+        children.forEach(function(node){
+            if(node){
+                if(node instanceof Array){
+                    node.forEach(function(c){
+                        rs.push(c);
+                        if(fsq){
+                            var cfsq = c._forScopeQ;
+                            if(cfsq){
+                                c._forScopeQ = fsq.concat(cfsq);
+                            }else{
+                                c._forScopeQ = fsq;
+                            }
+                        }
+                    });
+                }else{
+                    rs.push(node);
+                    if(fsq){
+                        var cfsq = node._forScopeQ;
+                        if(cfsq){
+                            node._forScopeQ = fsq.concat(cfsq);
+                        }else{
+                            node._forScopeQ = fsq;
+                        }
+                    }
+                }//end if
+            }//end if
+        });
+    }
+    
+    return rs;
+}
+function createText(txt){
+    var rs = new VNode();
+    rs.txt = txt && txt.toString?txt.toString():txt;
+    return rs;
+}
+function createElementList(ds,iterator,scope,k,v){
+    var rs = [];
+    ds.forEach(function(item,i){
+        var forScope = {$index:i};
+        
+        if(k)forScope[k] = i;
+        forScope[v] = item;
+        var tmp = iterator.call(scope,forScope);
+        if(tmp){
+            if(isArray(tmp)){
+                rs = rs.concat(tmp);
+            }else{
+                rs.push(tmp);
+            }
+        }
+    });
+    return rs;
+}
+function doFilter(v,filters,comp){
+    for(var i=0;i<filters.length;i++){
+        var f = filters[i];
+        var ins = FILTER_MAP[f[0]];
+        if(!ins)ins = comp[f[0]];
+        //removeIf(production)
+        assert(ins,comp.$name,XERROR.COMPILE.NOFILTER,"can not find filter '"+f[0]+"'");
+        //endRemoveIf(production)
+        var params = f[1];
+        params.unshift(v);
+        v = ins.apply(comp,params);
+    }
+    return v;
+}
+/**
+ * 把VDOM 转换成 真实DOM
+ */
+
+function transform(vnode,comp){
+	var n,cid = comp.$id;
+	if(vnode._isEl){
+		n = document.createElement(vnode.tag);
+		n._vid = vnode.vid;
+		vnode._cid = cid;
+
+		if(!vnode._comp){//uncompiled node dosen't exec directive
+			//directive init
+			var dircts = vnode.directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
+
+			if(dircts && dircts.length>0){
+				dircts.forEach(function(di){
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
+					d.onBind && d.onBind(vnode,part[1]);
+				});
+			}
+		}
+
+		for(var k in vnode.attributes){
+			if(k[0] === BIND_AB_PRIFX)continue;
+			var attr = vnode.attributes[k];
+			n.setAttribute(k,attr);
+		}
+
+		if(vnode.attributes[ATTR_REF_TAG]){
+			comp.$ref[vnode.attributes[ATTR_REF_TAG]] = n;
+		}
+		
+		if(vnode._comp){
+			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attributes);
+			vnode._comp = c;
+		}else{
+			if(vnode.children && vnode.children.length>0){
+				for(var i=0;i<vnode.children.length;i++){
+					var c = transform(vnode.children[i],comp);
+					n.appendChild(c);
+				}
+			}
+		}
+		
+	}else{
+		n = document.createTextNode(filterEntityTxt(vnode.txt));
+	}
+	vnode.dom = n;
+	return n;
+}
+function filterEntityTxt(str){
+	return str && str.replace?str
+	.replace(/&lt;/img,'<')
+	.replace(/&gt;/img,'>')
+	.replace(/&nbsp;/img,'\u00a0')
+	.replace(/&amp;/img,'&'):str;
+}
+//创建有类型组件
+function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
+	//handle component
+	if(type == 'component'){
+		type = attrs.is;
+		if(attrs['.is']){//'.is' value can only be a var
+			type = attrs['.is'];
+			type = new Function('scope',"with(scope){return "+type+"}")(parent);
+		}
+	}
+	var c = new Component(el);
+	c.$name = type;
+	//bind parent
+	parent.$children.push(c);
+	c.$parent = parent;
+	c.$root = parent.$root;
+	// c.$store = c.$root.$store;
+	c.$vnode = vnode;
+	c._props = attrs;
+	//ref
+	if(attrs[ATTR_REF_TAG]){
+		parent.$ref[attrs[ATTR_REF_TAG]] = c;
+	}
+	//global
+	if(attrs[ATTR_ID_TAG]){
+		impex.id[attrs[ATTR_ID_TAG]] = c;
+	}
+	//custom even
+	vnode.directives.forEach(function(di){
+		var dName = di[2].dName;
+		if(dName !== 'on')return;
+		
+		var type = di[2].dArgsAry[0];
+		var exp = di[3].vExp;
+		var fnStr = exp.replace(/\(.*\)/,'');
+		var fn = new Function('comp','with(comp){return '+fnStr+'}');
+
+		//parse context
+		di[1] = exp.replace(/this\./img,'impex._cs["'+parent.$id+'"].');
+
+        fn = fn.call(parent,parent);
+        if(parent[fnStr])
+        	fn = fn.bind(parent);
+       
+        if(fn){
+			c.on(type,fn);
+        }
+	});
+
+	c._slots = slots;
+	c._slotMap = slotMap;
+	c._innerHTML = vnode.raw.getInnerHTML();
+	
+	return c;
+}
+/**
+ * VDOM对比模块
+ * 包括
+ *     原始dom对比
+ *     组件对比
+ *     属性对比
+ *
+ * DOM更新包括
+ *     新增、删除、属性变更、文本变更
+ *
+ * 
+ */
+
+var forScopeQ = null;
+function compareVDOM(newVNode,oldVNode,comp){
+    forScopeQ = {};
+    if(isSameVNode(newVNode,oldVNode)){
+        compareSame(newVNode,oldVNode,comp);
+    }else{
+        //remove old,insert new
+        insertBefore(newVNode,oldVNode,oldVNode.parent?oldVNode.parent.children:null,oldVNode.parent,comp);
+        removeVNode(oldVNode);
+    }
+    return forScopeQ;
+}
+function isSameComponent(nv,ov) {
+    var c = impex._cs[ov._cid];
+    if(!c)return false;
+    //compare attrs
+    var nas = nv.raw.attributes;
+    var oas = c.$vnode.raw.attributes;
+    if(Object.keys(nas).length !== Object.keys(oas).length)return false;
+    for(var k in nas){
+        if(isUndefined(oas[k]))return false;
+    }
+    //compare slots
+    return nv.raw.getInnerHTML() == c._innerHTML;
+}
+function compareSame(newVNode,oldVNode,comp){
+    if(newVNode._comp){
+        forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
+        //update directive of components
+        oldVNode._comp_directives = newVNode.directives;
+        return;
+    }
+
+    if(newVNode.tag){
+        //update events forscope
+        oldVNode._forScopeQ = newVNode._forScopeQ;
+        
+        var renderedAttrs = Object.assign({},oldVNode.attributes);
+        //overwirte raw attrs
+        oldVNode.raw.attributes = newVNode.raw.attributes;
+        oldVNode.attributes = {};
+
+        //bind _attr
+        for(var k in oldVNode.raw.attributes){
+            oldVNode.attributes[k] = oldVNode.raw.attributes[k];
+        }
+
+        var nvdis = newVNode.directives,
+            ovdis = oldVNode.directives;
+        var nvDiMap = getDirectiveMap(nvdis),
+            ovDiMap = getDirectiveMap(ovdis);
+        var add=[],del=[],update=[];
+        //compare dirs
+        for(var i=ovdis.length;i--;){
+            var odi = ovdis[i];
+            var odiStr = odi[0]+odi[3];
+            if(!nvDiMap[odiStr]){
+                del.push(odi);
+            }
+        }
+        for(var i=nvdis.length;i--;){
+            var ndi = nvdis[i];
+            var ndiStr = ndi[0]+ndi[3];
+            if(ovDiMap[ndiStr]){
+                ovDiMap[ndiStr][2] = ndi[2];
+                update.push(ndi);
+            }else{
+                add.push(ndi);
+            }
+        }
+        //do del
+        for(var i=del.length;i--;){
+            var index = oldVNode.directives.indexOf(del[i]);
+            oldVNode.directives.splice(index,1);
+
+            var part = getDirectiveParam(del[i],comp);
+            var d = part[0];
+            d.onDestroy && d.onDestroy(oldVNode,part[1]);
+        }
+        //do update
+        update.forEach(function(di){
+            var part = getDirectiveParam(di,comp);
+            var d = part[0];
+            d.onUpdate && d.onUpdate(oldVNode,part[1],oldVNode.dom);
+        });
+        //add bind
+        add.forEach(function(di){
+            oldVNode.directives.push(di);
+            
+            var part = getDirectiveParam(di,comp);
+            var d = part[0];
+            d.onBind && d.onBind(oldVNode,part[1]);
+        });
+        //rebind component's
+        if(oldVNode._comp_directives){
+            oldVNode._comp_directives.forEach(function(di){
+                
+                var part = getDirectiveParam(di,comp);
+                var d = part[0];
+                d.onBind && d.onBind(oldVNode,part[1]);
+            });
+        }
+
+        //for unstated change like x-html
+        updateAttr(comp,oldVNode.attributes,renderedAttrs,oldVNode.dom,oldVNode.tag);
+    }else{
+        if(newVNode.txt !== oldVNode.txt){
+            updateTxt(newVNode,oldVNode);
+        }
+    }
+
+    if(newVNode.children && oldVNode.children){
+        compareChildren(newVNode.children,oldVNode.children,oldVNode,comp);
+    }else if(newVNode.children){
+        //插入新的整个子树
+        insertChildren(oldVNode,newVNode.children,comp);
+    }else if(oldVNode.children && oldVNode.children.length>0){
+        //删除旧的整个子树
+        removeVNode(oldVNode.children);
+    }
+}
+function getDirectiveMap(directives){
+    var map = {};
+    for(var i=directives.length;i--;){
+        var di = directives[i];
+        var diStr = di[0]+di[3];
+        map[diStr] = di;
+    }
+    return map;
+}
+function compareChildren(nc,oc,op,comp){
+    if(nc.length<1){
+        if(oc.length>0)
+            removeVNode(oc);
+        return;
+    }
+    var osp = 0,oep = oc.length-1,
+        nsp = 0,nep = nc.length-1,
+        os = oc[0],oe = oc[oep],
+        ns = nc[0],ne = nc[nep];
+
+    while(osp <= oep && nsp <= nep){
+        if(isSameVNode(ns,os)){
+            compareSame(ns,os,comp);
+            os = oc[++osp],
+            ns = nc[++nsp];
+            continue;
+        }else if(isSameVNode(ne,oe)){
+            compareSame(ne,oe,comp);
+            oe = oc[--oep],
+            ne = nc[--nep];
+            continue;
+        }else if(isSameVNode(ne,os)){
+            insertBefore(os,next(oe),oc,op,comp);
+            os = oc[osp];oep--;
+            ne = nc[--nep];
+            continue;
+        }else if(isSameVNode(ns,oe)){
+            insertBefore(oe,os,oc,op,comp);
+            oe = oc[oep];osp++;
+            ns = nc[++nsp];
+            continue;
+        }else{
+            //todo xid
+            
+            //插入ov之前，并删除ov
+            insertBefore(ns,os,oc,op,comp);
+            removeVNode(os);
+            os = oc[++osp],
+            ns = nc[++nsp];
+        }
+    }
+    //在osp位置，插入剩余的newlist，删除剩余的oldlist
+    if(osp == nsp && oep>nep){//right match case
+        var toDelList = oc.splice(osp,oep - nep);
+        if(toDelList.length>0){
+            removeVNode(toDelList);
+        }
+    }else if(osp <= oep && oep>0){
+        var toDelList = oc.splice(osp,oep-osp+1);
+        if(toDelList.length>0){
+            removeVNode(toDelList);
+        }
+    }
+    if(nsp <= nep){
+        var toAddList = nsp==nep?[nc[nsp]]:nc.splice(nsp,nep-nsp+1);
+        if(toAddList.length>0){
+            insertBefore(toAddList,oc[osp],oc,op,comp);
+        }
+    }
+}
+function insertBefore(nv,target,list,targetParent,comp){
+    if(list){
+        //处理vdom
+        if(nv.dom){//删除ov
+            var i = list.indexOf(nv);
+            if(i>-1)list.splice(i,1);
+        }
+        var p = targetParent;
+        if(target){
+            i = list.indexOf(target);
+            p = p || target.parent;
+            if(isArray(nv)){
+                for(var l=nv.length;l--;){
+                    nv[l].parent = p;
+                }
+                var args = [i,0].concat(nv);
+                list.splice.apply(list,args);
+            }else{
+                nv.parent = p;
+                list.splice(i,0,nv);
+            }//end if
+        }else{
+            if(isArray(nv)){
+                nv.forEach(function(n){
+                    list.push(n);
+                    n.parent = p;
+                });
+            }else{
+                nv.parent = p;
+                list.push(nv);
+            }//end if
+        }
+    }
+    //处理dom
+    var dom = nv.dom;
+    var compAry = [];
+    if(!dom){
+        if(isArray(nv)){
+            var fragment = document.createDocumentFragment();
+            for(var i=0;i<nv.length;i++){
+                var vn = nv[i];
+                var tmp = transform(vn,comp);
+
+                fragment.appendChild(tmp);
+            }
+            dom = fragment;
+        }else{
+            dom = transform(nv,comp);
+        }
+    }else{
+        dom.parentNode.removeChild(dom);
+    }
+    // if(dom.parentNode)dom.parentNode.removeChild(dom);
+    if(target){
+        var tdom = target.dom;
+        tdom.parentNode.insertBefore(dom,tdom);
+    }else{
+        targetParent.dom.appendChild(dom);
+    }
+}
+function next(nv){
+    var p = nv.parent;
+    var i = p.children.indexOf(nv);
+    return p.children[i+1];
+}
+function removeVNode(vnodes){
+    if(!isArray(vnodes))vnodes = [vnodes];
+    var parent = vnodes[0].parent;
+    for(var i=vnodes.length;i--;){
+        var vnode = vnodes[i];
+        var k = parent.children.indexOf(vnode);
+        if(k>-1){
+            parent.children.splice(k,1);
+        }
+        var p = vnode.dom.parentNode;
+        p && p.removeChild(vnode.dom);
+
+        //todo...   release other resource
+        if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
+            impex._cs[vnode._cid].destroy();
+        }
+    }
+}
+function insertChildren(parent,children,comp){
+    parent.children = children;
+    var fragment = document.createDocumentFragment();
+    var compAry = [];
+    for(var i=0;i<children.length;i++){
+        var vn = children[i];
+        var dom = transform(vn,comp);
+        fragment.appendChild(dom);
+    }
+    parent.dom.appendChild(fragment);
+}
+function isSameVNode(nv,ov){
+    if(nv._comp){
+        if(ov.tag === nv.tag)return true;//for loading component
+        if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
+        return isSameComponent(nv,ov);
+    }
+    return ov.tag === nv.tag;
+}
+function updateTxt(nv,ov){
+    ov.txt = nv.txt;
+    var dom = ov.dom;
+    dom.textContent = nv.txt;
+}
+function updateAttr(comp,newAttrs,oldAttrs,dom,tag){
+    //比较节点属性
+    var nvas = newAttrs;
+    var ovas = oldAttrs;
+    var nvasKs = Object.keys(nvas);
+    var ovasKs = Object.keys(ovas);
+    var isInputNode = tag === 'input'; 
+    for(var i=nvasKs.length;i--;){
+        var k = nvasKs[i];
+        var index = ovasKs.indexOf(k);
+        if(index<0){
+            dom.setAttribute(k,nvas[k]);
+            if(isInputNode && k === 'value'){
+                dom.value = nvas[k];
+            }
+        }else{
+            if(nvas[k] != ovas[k]){
+                dom.setAttribute(k,nvas[k]);
+                if(isInputNode && k === 'value'){
+                    dom.value = nvas[k];
+                }
+            }
+            ovasKs.splice(index,1);
+        }
+    }
+    for(var i=ovasKs.length;i--;){
+        if(ovasKs[i] === DOM_COMP_ATTR)continue;
+        dom.removeAttribute(ovasKs[i]);
+    }
+
+    //update ref
+    if(newAttrs[ATTR_REF_TAG]){
+        comp.$ref[newAttrs[ATTR_REF_TAG]] = dom;
+    }
+
+    //update new attrs
+    var comp_attr = oldAttrs[DOM_COMP_ATTR];
+    if(comp_attr)newAttrs[DOM_COMP_ATTR] = comp_attr;
+}
+
+
+
 /**
  * @classdesc 事件类，为所有组件提供自定义事件接口
  * 
  * @class 
  */
 function EventEmitter(){
-	this.__eeMap = {};
+	this._eeMap = {};
 }
 EventEmitter.prototype = {
 	/**
@@ -1897,7 +1900,7 @@ EventEmitter.prototype = {
 	 * @return {Object}   返回事件函数返回值
 	 */
 	on:function(type,handler,context) {
-		this.__eeMap[type] = [handler,context||this];
+		this._eeMap[type] = [handler,context||this];
 		return this;
 	},
 	/**
@@ -1906,10 +1909,10 @@ EventEmitter.prototype = {
 	 * @return {[type]}      [description]
 	 */
 	off:function(type) {
-		this.__eeMap[type] = null;
+		this._eeMap[type] = null;
 	},
 	emit:function(type){
-		var pair = this.__eeMap[type];
+		var pair = this._eeMap[type];
 		if(!pair)return;
 		var fn = pair[0],
 			ctx = pair[1];
@@ -1920,6 +1923,14 @@ EventEmitter.prototype = {
 			args.push(arguments[i]);
 		}
 		return fn.apply(ctx,args);
+	},
+	/**
+	 * 获取事件，可以用来实现同步的事件处理
+	 * @param  {String} type   事件类型
+	 * @return {Array}  [handler,context]
+	 */
+	getEvent:function(type) {
+		return this._eeMap[type];
 	}
 }
 /**
@@ -1935,61 +1946,43 @@ EventEmitter.prototype = {
 function Component (el) {
 	EventEmitter.call(this);
 
-	this.id = 'C_' + im_counter++;
+	this.$id = 'C_' + im_counter++;
 
 	/**
 	 * 对顶级元素的引用
 	 * @type {HTMLElement}
 	 */
-	this.el = el;
+	this.$el = el;
 	/**
 	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
-	this.refs = {};
+	this.$ref = {};
 	/**
 	 * 组件标签引用
 	 * @type {Object}
 	 */
-	this.compTags = {};
+	this.$compTags = {};
 	/**
-	 * 用于指定输入参数的限制
-	 * @type {Object}
+	 * 组件类型，在创建时由系统自动注入
 	 */
-	this.input = null;
-	/**
-	 * 组件名，在创建时由系统自动注入
-	 */
-	this.name;
+	this.$name;
 	/**
 	 * 对父组件的引用
 	 * @type {Component}
 	 */
-	this.parent;
+	this.$parent;
 	/**
 	 * 子组件列表
 	 * @type {Array}
 	 */
-	this.children = [];
-	//watchs
-	this.__watchMap = {};
-	this.__watchFn;
-	this.__watchOldVal;
-	this.__watchPaths = [];
-	//syncs
-	this.__syncFn = {};
-	this.__syncOldVal = {};
-	this.__syncFnForScope = {};
-	//computedstate
-	this.__dependence = {};
+	this.$children = [];
 
-	/**
-	 * 组件数据
-	 * @type {Object}
-	 */
-	this.state = {};
+	this._watchers = [];
+	this._combiningChange = false;
+	this._updateMap = {};
 
-	impex._cs[this.id] = this;
+	impex._cs[this.$id] = this;
 };
 function F(){}
 F.prototype = EventEmitter.prototype;  
@@ -1997,34 +1990,22 @@ Component.prototype = new F();
 Component.prototype.constructor = Component.constructor; 
 ext({
 	/**
-	 * 设置组件状态值
-	 * @param {String} path 状态路径
-	 * @param {Object} v  
-	 */
-	setState:function(path,v){
-		v = JSON.stringify(v);
-		var str = 'with(scope){'+path+'='+v+'}';
-		var fn = new Function('scope',str);
-		fn(this.state);
-		
-		return this;
-	},
-	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
-	 * @param  {Function} cbk      回调函数，[newVal,oldVal]
+	 * @param  {Function} cbk      回调函数，[newVal,oldVal,k]
 	 */
-	watch:function(path,cbk){
-		this.__watchPaths.push(path);
-		var str = '';
-		for(var i=this.__watchPaths.length;i--;){
-			var p = this.__watchPaths[i];
-			str += ','+JSON.stringify(p)+':'+p;
-		}
-		str = str.substr(1);
-		var fn = this.__watchFn = new Function('scope','with(scope){return {'+str+'}}');
-		this.__watchOldVal = fn(this.state);
-		this.__watchMap[path] = cbk;
+	$watch:function(path,cbk){
+		var watcher = new Watcher(function(change) {
+			cbk && cbk.call(this,change.newVal,change.oldVal,change.name);
+		},this);
+		console.log('watcher变更监控。。。。',this.$id);
+		Monitor.target = watcher;
+		//find monitor
+		var makeWatch = new Function('state','return state.'+path);
+
+		makeWatch(this.$state);
+		Monitor.target = null;
+		console.log('watcher变更监控。。。。end');
 
 		return this;
 	},
@@ -2033,143 +2014,118 @@ ext({
 	 */
 	destroy:function(){
 		this.onDestroy && this.onDestroy();
-		var id = this.id;
-		if(this.parent){
+		var id = this.$id;
+
+		this._watchers.forEach(function(watcher) {
+			watcher.dispose();
+		});
+		this._watchers = null;
+
+		if(this._updateTimer){
+			clearTimeout(this._updateTimer);
+			this._updateTimer = null;
+		}
+
+		if(this.$parent){
 			
-			this.parent.__syncFn[id] = null;
-			this.parent.__syncOldVal[id] = null;
-			this.parent.__syncFnForScope[id] = null;
-			delete this.parent.__syncFn[id];
-			delete this.parent.__syncOldVal[id];
-			delete this.parent.__syncFnForScope[id];
-			var index = this.parent.children.indexOf(this);
+			var index = this.$parent.$children.indexOf(this);
 			if(index > -1){
-				this.parent.children.splice(index,1);
+				this.$parent.$children.splice(index,1);
 			}
-			this.parent = null;
+			this.$parent = null;
 		}
 
-		while(this.children.length > 0){
-			this.children[0].destroy();
+		while(this.$children.length > 0){
+			this.$children[0].destroy();
 		}
 
-		this.children = 
+		this.$children = 
 		impex._cs[id] = null;
 		delete impex._cs[id];
 
-		destroyDirective(this.vnode,this);
+		destroyDirective(this.$vnode,this);
 
-		this.vnode = 
-		this.el = 
-		this.compTags = 
-		this.root = 
-		this.__dependence = 
+		this.$vnode = 
+		this.$el = 
+		this.$compTags = 
+		this.$root = 
 
-		this.refs = 
-		this.__nodes = 
-		this.__syncFn = 
-		this.id = 
-
-		this.__url = 
-		this.template = 
-		this.state = null;
+		this.$ref = 
+		this.$id = null;
 	},
 	/**
 	 * 如果一个引用参数发生了改变，那么子组件必须重载该方法，
 	 * 并自行判断是否真的修改了。但是更好的方案是，调用子组件的某个方法比如刷新之类
 	 */
-	onPropChange : function(newProps,oldProps){
-		for(var k in newProps){
-			var v = newProps[k];
-			if(v !== this.state[k]){
-				this.state[k] = v;
-			}
+	onPropChange:function(key,newVal,oldVal){
+		this[key] = newVal;
+    },
+    /**
+     * 把一个未挂载的根组件挂载到指定的dom中
+     * @param  {HTMLElement|String} target 挂载的目标dom或者选择器
+     */
+    $mount:function(target) {
+    	if(target){
+    		if(isString(target) && target.trim()){
+	    		target = document.querySelector(target);
+	    	}
+	    	target.append(this.$el);
+    	}
+
+    	mountComponent(this,this.$vnode);
+    },
+    //解析组件参数，并编译视图
+    _parse:function(opts) {
+    	opts = opts || COMP_MAP[this.$name];
+    	preprocess(this,opts);
+
+    	//lc onCreate
+    	this.onCreate && this.onCreate();
+
+		if(this._processedTmpl)
+			compileComponent(this);
+
+		//挂载组件
+		if(this.$el){
+			this.$mount();
 		}
-    }
+
+		//init children
+		for(var i = this.$children.length;i--;){
+			this.$children[i]._parse();
+		}
+	}
 },Component.prototype);
 
+function getDirectiveParam(di,comp) {
+	var dName = di[2].dName;
+	var d = DIRECT_MAP[dName];
+	var params = di[2].dArgsAry;
+	var filter = di[2].dFilter;
+	var v = di[1];
+	var exp = di[3].vExp;
+
+	return [d,{comp:comp,value:v,args:params,exp:exp,filter:filter}];
+}
+
 /*********	component handlers	*********/
-//////	init flow
-function buildOffscreenDOM(vnode,comp){
-	var n,cid = comp.id;
-	if(vnode._isEl){
-		n = document.createElement(vnode.tag);
-		n._vid = vnode.vid;
-		vnode._cid = cid;
-
-		if(!vnode._comp){//component dosen't exec directive
-			//directive init
-			var dircts = vnode._directives;
-			if(dircts && dircts.length>0){
-				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
-					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
-
-					d.onBind && d.onBind(vnode,{comp:comp,value:v,args:params,exp:exp});
-				});
-			}
-		}
-
-		for(var k in vnode.attrNodes){
-			if(k[0] === BIND_AB_PRIFX)continue;
-			var attr = vnode.attrNodes[k];
-			n.setAttribute(k,attr);
-		}
-
-		if(vnode.attrNodes[ATTR_REF_TAG]){
-			comp.refs[vnode.attrNodes[ATTR_REF_TAG]] = n;
-		}
-		
-		if(vnode._comp){
-			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attrNodes);
-			vnode._comp = c;
-		}else{
-			if(vnode.children && vnode.children.length>0){
-				for(var i=0;i<vnode.children.length;i++){
-					var c = buildOffscreenDOM(vnode.children[i],comp);
-					n.appendChild(c);
-				}
-			}
-		}
-		
-	}else{
-		n = document.createTextNode(filterEntity(vnode.txt));
-	}
-	vnode.dom = n;
-	return n;
-}
-function filterEntity(str){
-	return str && str.replace?str
-	.replace(/&lt;/img,'<')
-	.replace(/&gt;/img,'>')
-	.replace(/&nbsp;/img,'\u00a0')
-	.replace(/&amp;/img,'&'):str;
-}
-
 function callDirective(vnode,comp,type){
 	if(isUndefined(vnode.txt)){
-		if(!vnode._comp){//component dosen't exec directive
+		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
-			var dircts = vnode._directives;
+			var dircts = vnode.directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
 			if(dircts && dircts.length>0){
 				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
-					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
 					
 					if(type == 0){
-						d.onActive && d.onActive(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+						d.onActive && d.onActive(vnode,part[1],vnode.dom);
 					}else{
-						d.onUpdate && d.onUpdate(vnode,{comp:comp,value:v,args:params,exp:exp},vnode.dom);
+						d.onUpdate && d.onUpdate(vnode,part[1],vnode.dom);
 					}
 				});
 			}
@@ -2185,20 +2141,18 @@ function callDirective(vnode,comp,type){
 
 function destroyDirective(vnode,comp){
 	if(isUndefined(vnode.txt)){
-		if(!vnode._comp){//component dosen't exec directive
+		if(!vnode._comp){//uncompiled node  dosen't exec directive
 			//directive init
-			var dircts = vnode._directives;
+			var dircts = vnode.directives;
+			if(vnode._comp_directives){
+				dircts = dircts.concat(vnode._comp_directives);
+			}
 			if(dircts && dircts.length>0){
 				dircts.forEach(function(di){
-					var dName = di[1][0];
-					var d = DIRECT_MAP[dName];
-					if(!d)return;
+					var part = getDirectiveParam(di,comp);
+					var d = part[0];
 					
-					var params = di[1][1];
-					var v = di[2];
-					var exp = di[3];
-					
-					d.onDestroy && d.onDestroy(vnode,{comp:comp,value:v,args:params,exp:exp});
+					d.onDestroy && d.onDestroy(vnode,part[1]);
 				});
 			}
 
@@ -2210,192 +2164,277 @@ function destroyDirective(vnode,comp){
 		}//end if
 	}
 }
-function bindScopeStyle(name,css){
-	if(!css)return;
-	var cssStr = scopeStyle(name,css);
-	if(!COMP_CSS_MAP[name]){
-		//attach style
-		if(cssStr.trim().length>0){
-			var target = document.head.children[0];
-			if(target){
-				target.insertAdjacentHTML('afterend','<style>'+cssStr+'</style>');
-			}else{
-				document.head.innerHTML = '<style>'+cssStr+'</style>';
-			}
-		}
-		COMP_CSS_MAP[name] = true;	
-	}
-}
+
 /**
- * parse component template & to create vdom
+ * 在编译组件前进行预处理，包括
+ * 	解析组件模型
+ * 	参数绑定处理
+ * 	模版处理
+ * 	监控state
+ * 	计算状态处理
  */
-function parseComponent(comp){
-	if(comp.__loadSetting){
-		loadComp(comp);
-	}else{
-		if(comp.template){
-			preCompile(comp.template,comp);
+function preprocess(comp,opts) {
+    var tmpl = null,
+    	state = {},
+    	computeState = {},
+    	input = null;
+
+    //解析组件模型
+    if(opts){
+    	tmpl = opts.template;
+    	state = opts.state || {};
+    	input = opts.input;
+    	computeState = opts.computeState;
+
+    	var keys = Object.keys(opts);
+        for (var i=keys.length;i--;) {
+            var k = keys[i];
+            if(isFunction(opts[k])) {
+            	comp[k] = opts[k];
+            }
+        }
+		
+		if(isFunction(state)){
+			state = state.call(comp);
 		}
-		compileComponent(comp);
+	}
+
+	//解析入参，包括
+	//验证必填项和入参类型
+	//建立变量依赖
+	//触发onPropBind
+	if(comp._props){
+		var props = parseInputProps(comp,comp.$parent,comp._props,input);
+		for(var k in props){
+			state[k] = props[k];
+		}
+	}
+	
+	//编译前可以对模版视图或者slot的内容进行操作
+	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
+	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
+	//顶级组件不会调用该方法
+	if(tmpl){
+		if(comp.onBeforeCompile && comp.vnode)
+	        tmpl = comp.onBeforeCompile(tmpl,comp.vnode.raw);
+		comp._processedTmpl = tmpl.trim()
+	    .replace(/<!--[\s\S]*?-->/mg,'')
+	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
+	    .replace(/^\s+|\s+$/img,' ')
+	    .replace(/>\s([^<]*)\s</,function(a,b){
+	            return '>'+b+'<';
+	    });
+	}	
+
+	//observe state
+	observe(state,comp);
+
+	//removeIf(production)
+    //check computeState
+	for(var k in computeState){
+		var cs = computeState[k];
+		var fn = cs.get || cs;
+
+		assert(fn instanceof Function,comp.$name,XERROR.COMPONENT.COMPUTESTATE,"invalid computeState '"+k+"' ,it must be a function or an object with getter");
+	}
+	//endRemoveIf(production)
+
+	//compute state
+	for(var k in computeState){
+		var cs = computeState[k];
+		var fn = cs.get || cs;
+		//record hooks
+		var watcher = new Watcher(function(change,wtc) {
+			var v = wtc.fn.call(this,this);
+			this[wtc.k] = v;
+		},comp);
+		watcher.k = k;
+		watcher.fn = fn;
+
+		Monitor.target = watcher;
+		console.log('compute变更监控。。。。',comp.$id);
+		var v = fn.call(comp);
+		Monitor.target = null;
+		console.log('compute变更监控。。。。end');
+
+		comp.$state[k] = v;
+		comp.$state = defineProxy(comp.$state,null,comp,true);
 	}
 }
-function preCompile(tmpl,comp){
-	if(comp.onBeforeCompile)
-        tmpl = comp.onBeforeCompile(tmpl,comp.vnode._pnode);
-    
-    comp.compiledTmp = 
-    tmpl.trim()
-    .replace(/<!--[\s\S]*?-->/mg,'')
-    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-    .replace(/^\s+|\s+$/img,' ')
-    .replace(/>\s([^<]*)\s</,function(a,b){
-            return '>'+b+'<';
-    });
-}
-function doSlot(slotList,slots,slotMap){
-	if(slots || slotMap)
-		slotList.forEach(function(slot){
-			var parent = slot[0];
-			var node = slot[1];
-			var name = slot[2];
-			//update slot position everytime
-			var pos = parent.children.indexOf(node);
-			var params = [pos,1];
-			
-			if(name){
-				if(slotMap[name])
-					params.push(slotMap[name]);
-			}else{
-				params = params.concat(slots);
+function parseInputProps(comp,parent,parentAttrs,input,requires){
+
+	//解析input，抽取必须项
+	var requires = {};
+	if(input){
+		for(var k in input){
+			var arg = input[k];
+			if(arg.require){
+				requires[k] = type;
 			}
-			parent.children.splice.apply(parent.children,params);
-		});
-}
-function scopeStyle(host,style){
-	style = style.replace(/\n/img,'').trim()//.replace(/:host/img,host);
-	var isBody = false;
-	var selector = '';
-	var body = '';
-	var lastStyle = {};
-	var styles = [];
-	for(var i=0;i<style.length;i++){
-		var c = style[i];
-		if(isBody){
-			if(c === '}'){
-				isBody = false;
-				lastStyle.body = body.trim();
-				selector = '';
-				styles.push(lastStyle);
-				lastStyle = {};
-			}
-			body += c;
-		}else{
-			if(c === '{'){
-				isBody = true;
-				lastStyle.selector = selector.trim();
-				body = '';
+		}
+	}
+
+	var rs = {};
+	if(parentAttrs){
+		var depMap = {};
+		for(var k in parentAttrs){
+			var v = parentAttrs[k];
+			if(k == ATTR_REF_TAG){
 				continue;
 			}
-			selector += c;
+			k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
+			// xxxx
+			if(k[0] !== PROP_TYPE_PRIFX){
+				rs[k] = v;
+				continue;
+			}
+
+			// .xxxx
+			var n = k.substr(1);
+			depMap[n] = v;
+		}//end for
+		//创建watcher
+		for(k in depMap){
+			var vn = comp.$vnode;
+			var args = [parent];
+			var forScopeStart = '',forScopeEnd = '';
+			if(vn._forScopeQ)
+		        for(var i=0;i<vn._forScopeQ.length;i++){
+		            forScopeStart += 'with(arguments['+(1+i)+']){';
+		            forScopeEnd += '}';
+		            args.push(vn._forScopeQ[i]);
+		        }
+			var fn = new Function('scope','with(scope){'+forScopeStart+'return '+ depMap[k] +forScopeEnd+'}');
+			//建立parent的watcher
+			var watcher = new Watcher(function(change,wtc) {
+				this[wtc.k] = wtc.fn.apply(parent,wtc.args);
+			},comp);
+			watcher.k = k;
+			watcher.fn = fn;
+			watcher.args = args;
+			Monitor.target = watcher;
+			console.log('入参变更监控。。。。',comp.$id);
+			//removeIf(production)
+			try{
+		    //endRemoveIf(production)
+		       	rs[k] = fn.apply(parent,args);
+		    //removeIf(production)
+		    }catch(e){
+		        assert(false,comp.$name,XERROR.COMPONENT.DEP,"creating dependencies error with prop "+JSON.stringify(k)+": ",e);
+		    }
+		    //endRemoveIf(production)
+		    Monitor.target = null;
+		    console.log('入参变更监控。。。。end');
 		}
+		//验证input
+		for(var k in rs){
+			var v = rs[k];
+			if(input && k in input){
+				delete requires[k];
+				
+				//removeIf(production)
+				//check type 
+				if(isUndefined(input[k].type))continue;
+				assert((function(k,v,input,component){
+					if(!input[k] || !input[k].type)return false;
+					var checkType = input[k].type;
+					checkType = checkType instanceof Array?checkType:[checkType];
+					var vType = typeof v;
+					if(v instanceof Array){
+						vType = 'array';
+					}
+					if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+						return false;
+					}
+					return true;
+				})(k,v,input,comp),comp.$name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input prop ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
+				//endRemoveIf(production)
+			}
+		}//end for
 	}
 
-	var css = '';
-	host = '['+DOM_COMP_ATTR+'="'+host+'"]';
-	styles.forEach(function(style){
-		var parts = style.selector.split(',');
-		var tmp = '';
-		for(var i=0;i<parts.length;i++){
-			var name = parts[i].trim();
-			
-			if(name.indexOf(':host')===0){
-				tmp += ','+name.replace(/:host/,host);
-			}else{
-				tmp += ','+host + ' ' + name;
-			}
-		}
-		tmp = tmp.substr(1);
-		css += tmp + '{'+style.body+'}';
-	});
+	//removeIf(production)
+	//check requires
+	assert(Object.keys(requires).length==0,comp.$name,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
+	//endRemoveIf(production)
+	
+	if(!rs)return;
 
-	return css;
+	if(comp.onPropBind){
+		rs = comp.onPropBind(rs);
+	}
+
+	return rs;	
 }
 
-var g_computedState,
-	g_computedComp;
 function compileComponent(comp){
-	//init computedstate to state
-	for(var k in comp.computedState){
-		var cs = comp.computedState[k];
-		var fn = cs.get || cs;
-		comp.state[k] = cs;
-		//removeIf(production)
-		assert(fn instanceof Function,comp.name,XERROR.COMPONENT.COMPUTESTATE,"invalid computedState '"+k+"' ,it must be a function or an object with getter");
-		//endRemoveIf(production)
-	}
-
+	//监控state
+	var watcher = new Watcher(function(change) {
+		this._updateMap[change.name] = change;
+		if(!this._combiningChange){
+			ready2notify(this);
+		}
+		console.log('组件属性变更',arguments);
+	},comp);
+	Monitor.target = watcher;
+	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
+	Monitor.target = null;
+	console.log('组件属性变更监控。。。。end');
+
 	var pv = null;
-	if(comp.vnode){
-		pv = comp.vnode.parent;
+	if(comp.$vnode){
+		pv = comp.$vnode.parent;
 		var cs = pv.children;
-		var i = cs.indexOf(comp.vnode);
+		var i = cs.indexOf(comp.$vnode);
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
-		//for directives of component
-		vnode._directives = vnode._directives.concat(comp.vnode._directives);
+		//绑定组件上的指令
+		vnode._comp_directives = comp.$vnode.directives;
 	}
-	comp.vnode = vnode;
+	//覆盖编译后的vnode
+	comp.$vnode = vnode;
 	vnode.parent = pv;
 
-	//observe state
-	comp.state = Observer.observe(comp.state,comp);
+	comp.onCompile && comp.onCompile(comp.$vnode);//must handle slots before this callback 
+}
+function ready2notify(comp) {
+	comp._combiningChange = true;
+	console.log('ready2notify',comp.$id)
+	comp._updateTimer = setTimeout(function(){
+		//通知组件更新
+		updateComponent(comp,comp._updateMap);
 
-	//compute state
-	for(var k in comp.computedState){
-		var cs = comp.computedState[k];
-		var fn = cs.get || cs;
-		g_computedState = k;
-		g_computedComp = comp;
-		if(fn instanceof Function){
-			var v = fn.call(comp);
-			comp.state[k] = v;
-		}
-	}
-	g_computedComp = g_computedState = null;
+		console.log('update',comp.$id)
 
-	comp.onCompile && comp.onCompile(comp.vnode);//must handle slots before this callback 
+		//restore
+		comp._updateMap = {};
+		comp._combiningChange = false;
+	},20);
 }
 /**
  * 准备挂载组件到页面
  */
 function mountComponent(comp,parentVNode){
-	var dom = buildOffscreenDOM(comp.vnode,comp);
+	var dom = transform(comp.$vnode,comp);
 
 	//beforemount
 	comp.onBeforeMount && comp.onBeforeMount(dom);
-	comp.el.parentNode.replaceChild(dom,comp.el);
-	comp.el = dom;
 
-	//init children
-	for(var i = comp.children.length;i--;){
-		parseComponent(comp.children[i]);
-	}
-	//mount children
-	for(var i = 0;i<comp.children.length;i++){
-		if(!comp.children[i].__loadSetting)
-			mountComponent(comp.children[i],comp.vnode);
-	}
-	if(comp.name){
-		comp.el.setAttribute(DOM_COMP_ATTR,comp.name);
-		comp.vnode.setAttribute(DOM_COMP_ATTR,comp.name);
-	}
-	comp.onMount && comp.onMount(comp.el);
+	//mount
+	//在子组件之前插入页面可以在onMount中获取正确的dom样式
+	comp.$el.parentNode.replaceChild(dom,comp.$el);
+	comp.$el = dom;
 
-	comp.vnode.parent = parentVNode;
+	if(comp.$name){
+		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
+		comp.$vnode.setAttribute(DOM_COMP_ATTR,comp.$name);
+	}
+	
+	comp.onMount && comp.onMount(comp.$el);
 
-	callDirective(comp.vnode,comp,0);
+	callDirective(comp.$vnode,comp,0);
 }
 
 //////	update flow
@@ -2410,349 +2449,52 @@ function updateComponent(comp,changeMap){
 
 	//rebuild VDOM tree
 	var vnode = buildVDOMTree(comp);
-	//append component directives
-	vnode._directives = vnode._directives.concat(comp.vnode._directives);
 
 	//diffing
-	var forScopeQ = compareVDOM(vnode,comp.vnode,comp,forScopeQ);
+	var forScopeQ = compareVDOM(vnode,comp.$vnode,comp);
 
 	//mount subcomponents which created by VDOM 
-	for(var i = 0;i<comp.children.length;i++){
-		var c = comp.children[i];
-		if(!c.compiledTmp
-			&& !(c.__loadSetting && c.__loadSetting.loading)/* sync comp */){
-			parseComponent(c);
-			if(!c.__loadSetting)
-				mountComponent(c,c.vnode.parent);
+	for(var i = 0;i<comp.$children.length;i++){
+		var c = comp.$children[i];
+		if(isUndefined(c._processedTmpl)){
+			c._parse();
 		}
-	}
-
-	//call watchs
-	if(comp.__watchFn){
-		var newVal = comp.__watchFn(comp.state);
-		for(var k in newVal){
-			var nv = newVal[k];
-			var ov = comp.__watchOldVal[k];
-			if(nv !== ov || isObject(nv)){
-				comp.__watchMap[k].call(comp,nv,ov,k);
-			}
-		}
-		comp.__watchOldVal = newVal;
-	}	
-
-	//update children props
-	for(var uid in comp.__syncFn){
-		var changeProps = {};
-		var args = [comp.state];
-		if(forScopeQ[uid])comp.__syncFnForScope[uid] = forScopeQ[uid];
-		var sfs = comp.__syncFnForScope[uid];
-	    if(sfs)
-	        for(var i=0;i<sfs.length;i++){
-	            args.push(sfs[i]);
-	        }
-		var rs = comp.__syncFn[uid].apply(comp,args);
-		impex._cs[uid].onPropChange && impex._cs[uid].onPropChange(rs,comp.__syncOldVal[uid]);
-		comp.__syncOldVal[uid] = rs;
 	}
 
 	comp.onUpdate && comp.onUpdate(changeMap);
 
-	if(comp.vnode.children && comp.vnode.children.length>0){
-		for(var i=0;i<comp.vnode.children.length;i++){
-			callDirective(comp.vnode.children[i],comp);
+	//call directives of subcomponents
+	comp.$children.forEach(function(child) {
+		var cvnode = child.$vnode;
+		if(cvnode._comp_directives){
+			cvnode._comp_directives.forEach(function(di){
+				var part = getDirectiveParam(di,child);
+				var d = part[0];
+				
+				d.onUpdate && d.onUpdate(cvnode,part[1],cvnode.dom);
+			});
 		}
-	}//end if
-}
-
-
-
-function newComponent(tmpl,el,param){
-	var c = new Component(el);
-	c.template = tmpl;
-	c.name = 'ROOT';
-	if(param){
-		ext(param,c);
-
-		if(isFunction(param.state)){
-			c.state = param.state.call(c);
-		}
-	}
-
-	c.onCreate && c.onCreate();
-	
-	return c;
-}
-function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
-	//handle component
-	if(type == 'component'){
-		type = attrs.is;
-		if(attrs['.is']){//'.is' value can only be a var
-			type = attrs['.is'];
-			type = new Function('scope',"with(scope){return "+type+"}")(parent.state);
-		}
-	}
-	var param = COMP_MAP[type];
-	if(!param)return;
-	var c = new Component(el);
-	c.name = type;
-	//bind parent
-	parent.children.push(c);
-	c.parent = parent;
-	c.root = parent.root;
-	c.store = c.root.store;
-	c.vnode = vnode;
-	//ref
-	if(attrs[ATTR_REF_TAG]){
-		parent.refs[attrs[ATTR_REF_TAG]] = c;
-	}
-	//global
-	if(attrs[ATTR_ID_TAG]){
-		impex.id[attrs[ATTR_ID_TAG]] = c;
-	}
-	//custome even
-	vnode._directives.forEach(function(di){
-		var dName = di[1][0];
-		if(dName !== 'on')return;
-		
-		var type = di[1][1][0];
-		var exp = di[2];
-		var fnStr = exp.replace(/\(.*\)/,'');
-		var fn = new Function('comp','with(comp){return '+fnStr+'}');
-
-        fn = fn(parent);
-        if(parent[fnStr]){
-        	fn = fn.bind(parent);
-        }
-        if(fn)
-			c.on(type,fn);
 	});
-
-	c.attributes = attrs;
-	c.__slots = slots;
-	c.__slotMap = slotMap;
-	c._innerHTML = vnode._pnode.innerHTML();
-	
-	if(isFunction(param.loader)){
-		c.__loadSetting = param;
-		return c;
-	}
-	if(param){
-		ext(param,c);
-		
-		if(isFunction(param.state)){
-			c.state = param.state.call(c);
-		}else if(param.state){
-			c.state = {};
-			ext(param.state,c.state);
-		}
-	}
-	
-	c.onCreate && c.onCreate();
-
-	bindProps(c,parent,attrs);
-	
-	return c;
 }
 
-function bindProps(comp,parent,parentAttrs){
-	//check props
-	var requires = {};
-	var input = comp.input;
-	if(input){
-		for(var k in input){
-			var arg = input[k];
-			if(arg.require){
-				requires[k] = type;
-			}
-			if(!isUndefined(arg.value) && isUndefined(comp.state[k])){
-				comp.state[k] = arg.value;
-			}
-		}
-	}
-
-	var rs = null;
-	if(parentAttrs){
-		rs = handleProps(parentAttrs,comp,parent,input,requires);
-	}
-
-	//removeIf(production)
-	//check requires
-	assert(Object.keys(requires).length==0,comp.name,XERROR.INPUT.REQUIRE,"input attributes ["+Object.keys(requires).join(',')+"] are required");
-	//endRemoveIf(production)
-	
-	if(!rs)return;
-
-	if(comp.onPropBind){
-		comp.onPropBind(rs);
-	}else{
-		for(var k in rs){
-			var v = rs[k];
-			if(v instanceof Function){
-				comp[k] = v;
-			}else{
-				comp.state[k] = v;
-			}
-		}
-	}//end if	
+/**
+ * get vdom tree for component
+ */
+function buildVDOMTree(comp){
+    var root = null;
+    var fn = compile(comp._processedTmpl,comp);
+    //removeIf(production)
+    try{
+    //endRemoveIf(production)
+        root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter);
+    //removeIf(production)
+    }catch(e){
+        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.$attributes)+": ",e);
+    }
+    //endRemoveIf(production)
+    
+    return root;
 }
-function handleProps(parentAttrs,comp,parent,input,requires){
-	var str = '';
-	var strMap = {};
-	var computedState = {};
-	for(var k in parentAttrs){
-		var v = parentAttrs[k];
-		if(k == ATTR_REF_TAG){
-			continue;
-		}
-		k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
-		// xxxx
-		if(k[0] !== PROP_TYPE_PRIFX){
-			strMap[k] = v;
-			continue;
-		}
-
-		// .xxxx
-		var n = k.substr(1);
-		if(parent[v] instanceof Function){
-			v = 'this.'+v;
-		}
-		str += ','+JSON.stringify(n)+':'+v;
-	}//end for
-	str = str.substr(1);
-	var rs = {};
-	if(str){
-		var forScopeStart = '',forScopeEnd = '';
-		var vn = comp.vnode;
-		var args = [parent.state];
-		var sfs = parent.__syncFnForScope[comp.id] = [];
-	    if(vn._forScopeQ)
-	        for(var i=0;i<vn._forScopeQ.length;i++){
-	            forScopeStart += 'with(arguments['+(1+i)+']){';
-	            forScopeEnd += '}';
-	            args.push(vn._forScopeQ[i]);
-	            sfs.push(vn._forScopeQ[i]);
-	        }
-		var fn = parent.__syncFn[comp.id] = new Function('scope','with(scope){'+forScopeStart+'return {'+str+'}'+forScopeEnd+'}');
-		rs = parent.__syncOldVal[comp.id] = fn.apply(parent,args);
-	}	
-	var objs = [];
-	ext(strMap,rs);
-
-	//compute state
-	if(!isUndefined(strMap['store'])){
-		//removeIf(production)
-		assert(comp.store,comp.name,XERROR.STORE.NOSTORE,"there's no store injected into the 'render' method");
-		//endRemoveIf(production)
-		var states = null;
-		if(strMap['store']){
-			states = strMap['store'].split(' ');
-		}else{
-			states = Object.keys(comp.store.state);
-		}		
-		if(!comp.computedState)comp.computedState = {};
-		states.forEach(function(state) {
-			var csKey = null;
-			if(/[^\w]?(\w+)$/.test(state)){
-				csKey = RegExp.$1;
-				comp.computedState[csKey] = new Function('with(this.store.state){ return '+ csKey +'}');
-			}
-		});
-	}
-
-	for(var k in rs){
-		var v = rs[k];
-		if(isObject(v) && v.__im__oid){
-			objs.push(k);
-		}
-		if(input && k in input){
-			delete requires[k];
-			
-			//removeIf(production)
-			//check type 
-			if(isUndefined(input[k].type))continue;
-			assert((function(k,v,input,component){
-				if(!input[k] || !input[k].type)return false;
-				var checkType = input[k].type;
-				checkType = checkType instanceof Array?checkType:[checkType];
-				var vType = typeof v;
-				if(v instanceof Array){
-					vType = 'array';
-				}
-				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-					return false;
-				}
-				return true;
-			})(k,v,input,comp),comp.name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input attribute ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
-			//endRemoveIf(production)
-		}
-	}
-
-	return rs;
-}
-
-	var CMD_PREFIX = 'x-';//指令前缀
-	var CMD_PARAM_DELIMITER = ':';
-	var CMD_FILTER_DELIMITER = '.';
-
-	var EXP_START_TAG = '{{',
-		EXP_END_TAG = '}}';
-	var REG_CMD = /^x-.*/;
-	var ATTR_REF_TAG = 'ref';
-	var ATTR_ID_TAG = 'id';
-	var COMP_SLOT_TAG = 'component';
-	var PROP_TYPE_PRIFX = '.';
-
-	var EV_AB_PRIFX = ':';
-	var BIND_AB_PRIFX = '.';
-	var EXP_EXP = new RegExp(EXP_START_TAG+'(.+?)(?:(?:(?:=>)|(?:=&gt;))(.+?))?'+EXP_END_TAG,'img');
-
-	var DOM_COMP_ATTR = 'impex-component';
-
-	var SLOT = 'slot';
-
-	var im_counter = 0;
-
-	var DISPATCHERS = [];
-	var FILTER_MAP = {};
-	var DIRECT_MAP = {};
-	var COMP_MAP = {'component':1};
-	var EVENT_MAP = {};
-	var COMP_CSS_MAP = {};
-
-	//removeIf(production)
-	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror');
-	}
-	function assert(isTrue,compName,code,msg,e) {
-		!isTrue && error(compName,code,msg,e);
-	}
-	var XERROR = {
-		COMPONENT:{//1XXX
-			CONTAINER:1001,
-			TEMPLATEPROP:1002,
-			LOADERROR:1003,
-			LOADTIMEOUT:1004,
-			TEMPLATETAG:1005,
-			COMPUTESTATE:1006
-		},
-		COMPILE:{//2XXX
-			ONEROOT:2001,
-			EACH:2002,
-			HTML:2003,
-			ROOTTAG:2004,
-			ROOTCOMPONENT:2005,
-			NOFILTER:2006
-		},
-		//COMPONENT ATTRIBUTE ERRORS
-		INPUT:{//3XXX
-			REQUIRE:3001,
-			TYPE:3002
-		},
-		STORE:{//4XXX
-			NOSTORE:4001
-		}
-	}
-	//endRemoveIf(production)
 
 	/**
 	 * impex是一个用于开发web应用的组件式开发引擎，impex可以运行在桌面或移动端
@@ -2784,7 +2526,7 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 	     * @property {function} toString 返回版本
 	     */
 		this.version = {
-	        v:[0,99,0],
+	        v:[0,99,1],
 	        state:'alpha',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
@@ -2815,46 +2557,11 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object | Function | Promise} model 组件模型对象，或异步函数或promise对象
-		 * @param  {Object} [loadsetting] 加载异步组件还可以通过加载设置对象实现
-		 * @param {Object} loadsetting.loader 定义1-n个组件的加载器
-		 *        			{
-		 *        				'x-a':function(resolve,reject){...}
-		 *        				'xb':loadable(url)
-		 *        			}
-		 * @param {String | Function} [loading] html代码或返回html代码的函数，用于在组件加载时显示在组件的位置
-		 * @param {int} [delay] 在发出请求一段时间后再显示loading，防止快速加载造成的页面闪烁，单位ms。默认200
-		 * @param {String | Function} [error] html代码或返回html代码的函数，用于在组件加载错误时显示在组件的位置
-		 * @param {int} [timeout] 超时设置，单位ms。默认10000 
+		 * @param  {Object} model 组件模型对象
 		 * @return this
 		 */
 		this.component = function(name,model){
-			if(typeof model == 'object'){
-				COMP_MAP[name] = model;
-				return;
-			}
-			model = model || name;
-			var setting = {
-				timeout: model.timeout||10000,
-				delay:model.delay||200,
-				onError:model.error,
-				onLoading:model.loading,
-				loader:model
-			}
-			if(typeof name == "object"){
-				var loader = name.loader;
-				for(var k in loader){
-					var tmp = new Object();
-					tmp.timeout = setting.timeout;
-					tmp.delay = setting.delay;
-					tmp.onError = setting.error;
-					tmp.onLoading = setting.loading;
-					COMP_MAP[k] = tmp;
-					COMP_MAP[k].loader = loader[k];
-				}
-			}else{
-				COMP_MAP[name] = setting;
-			}
+			COMP_MAP[name] = model;
 			
 			return this;
 		}
@@ -2905,50 +2612,56 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		}
 
 		/**
-		 * 渲染一段HTML匿名组件到指定容器，比如
-		 * <pre>
-		 * 	<div id="entry"></div>
-		 * 	...
-		 * 	impex.renderTo('<x-app></x-app>','#entry'...)
-		 * </pre>
-		 * @param  {String} tmpl 字符串模板
-		 * @param  {HTMLElement | String} container 匿名组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
-		 */
-		this.renderTo = function(tmpl,container,model){
-            if(isString(container)){
-            	container = document.querySelector(container);
-            }
-            //removeIf(production)
-            assert(container.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"container element must be inside <body> tag");
-            //endRemoveIf(production)
-			var comp = newComponent(tmpl,container,model);
-			comp.root = comp;
-
-			parseComponent(comp);
-			mountComponent(comp);
-
-			return comp;
-		}
-
-		/**
 		 * 渲染一个DOM节点组件，比如
 		 * <pre>
-		 * 	<x-stage id="entry"><x-stage>
+		 * 	<x-stage id="entry" @click="showStage()"><x-stage>
 		 * 	...
-		 * 	impex.render('#entry'...)
+		 * 	impex.create({
+		 * 		el:'$entry',
+		 * 		state:{...},
+		 * 		showStage:function(){}
+		 * 	})
 		 * </pre>
-		 * 如果DOM元素本身并不是组件,系统会创建一个匿名组件，也就是说
-		 * impex总会从渲染一个组件作为一切的开始
-		 * @param  {HTMLElement | String} node 组件入口，可以是DOM节点或选择器字符
-		 * @param  {Object} model 组件模型，如果节点本身已经是组件，该参数会覆盖原有参数 
+		 * 创建一个impex实例。
+		 * 如果有el参数那就会以el为根渲染一个组件树，如果el参数是已经挂载的DOM节点或者选择器，
+		 * 渲染完成后的组件树会自动挂载到页面，否则需要手动挂载
+		 * 如果el参数为空，会创建一个只对state监控的非视图组件，无法挂载
+		 * 
+		 * @param  {Object} opts  
+		 * @param  {var} [opts.el] DOM节点或选择器字符串或一段HTML代码
+		 * @param  {Object} [opts.state] 组件状态，内部所有属性会被监控
+		 * @param  {Object} [opts.computeState] 计算状态
+		 * @param  {...} [functions] 所有函数都会直接绑定到组件上
 		 */
-		this.render = function(node,model){
-			if(isString(node)){
-            	node = document.querySelector(node);
+		this.create = function(opts){
+			var tmpl = null;
+			var el = opts.el;
+			if(el instanceof HTMLElement){
+				//removeIf(production)
+	            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+	            //endRemoveIf(production)
+				tmpl = el.outerHTML;
+			}else if(isString(el) && el.trim()){
+				try{
+            		el = document.querySelector(el);
+            		//removeIf(production)
+		            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+		            //endRemoveIf(production)
+            		tmpl = el.outerHTML;
+				}catch(e){
+					tmpl = el;
+				}
             }
-            var tmpl = node.outerHTML;
-            return this.renderTo(tmpl,node,model);
+
+            //创建根组件
+			var root = new Component(isString(el)?null:el);
+			root.$name = 'ROOT';
+			root.$root = root;
+
+			opts.template = tmpl;
+			root._parse(opts);
+
+            return root;
 		}
 
 		Object.defineProperty(this,'_cs',{enumerable: false,writable: true,value:{}});
@@ -2957,8 +2670,6 @@ function handleProps(parentAttrs,comp,parent,input,requires){
 		this.Component = Component;
 
 		this.EventEmitter = EventEmitter;
-
-		this._Observer = Observer;
 	}
 
 
@@ -3004,7 +2715,16 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
     },
     onUpdate:function(vnode,data) {
+        vnode.setAttribute('style',vnode.raw.attributes.style);
         this.onBind(vnode,data);
+    },
+    onDestroy:function(vnode){
+        if(isUndefined(vnode.raw.attributes.style)){
+            vnode.removeAttribute('style');
+        }else{
+            vnode.setAttribute('style',vnode.raw.attributes.style);  
+        }
+        
     },
     filterName:function(k){
         return k.replace(/-([a-z])/img,function(a,b){
@@ -3046,8 +2766,15 @@ impex.directive('style',{
         vnode.setAttribute('class',clsAry.join(' '));
     },
     onUpdate:function(vnode,data) {
-        vnode.setAttribute('class','');
+        vnode.setAttribute('class',vnode.raw.attributes.class);
         this.onBind(vnode,data);
+    },
+    onDestroy:function(vnode,data) {
+        if(isUndefined(vnode.raw.attributes.class)){
+            vnode.removeAttribute('class');
+        }else{
+            vnode.setAttribute('class',vnode.raw.attributes.class);   
+        }
     }
 })
 /**
@@ -3059,7 +2786,7 @@ impex.directive('style',{
     onBind:function(vnode,data){
         var args = data.args;
         for(var i=args.length;i--;){
-            vnode.on(args[i],data.value);
+            vnode.on(args[i],data.value,data.filter);
         }
     },
     onDestroy:function(vnode,data){
@@ -3081,10 +2808,10 @@ impex.directive('style',{
 
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].onBind(vnode,data);
+                    DIRECT_MAP[p].onUpdate(vnode,data);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].onBind(vnode,data);
+                    DIRECT_MAP[p].onUpdate(vnode,data);
                     break;
                 default:
                     vnode.setAttribute(p,data.value);
@@ -3093,6 +2820,22 @@ impex.directive('style',{
     },
     onUpdate:function(vnode,data) {
         this.onBind(vnode,data);
+    },
+    onDestroy:function(vnode,data) {
+        var args = data.args;
+        for(var i=args.length;i--;){
+            var p = args[i];
+            switch(p){
+                case 'style':
+                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    break;
+                case 'class':
+                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    break;
+                default:
+                    vnode.removeAttribute(p);
+            }//end switch
+        }//end for
     }
 })
 /**
@@ -3114,6 +2857,12 @@ impex.directive('style',{
     onUpdate:function(vnode,data,dom) {
         var style = this.onBind(vnode,data);
         dom.setAttribute('style',style);
+    },
+    onDestroy:function(vnode) {
+        var style = vnode.getAttribute('style');
+        if(!style)return;
+        style = style.replace(/;display\s*:\s*none\s*;?/,'');
+        vnode.setAttribute('style',style);
     }
 })
 /**
@@ -3134,14 +2883,13 @@ impex.directive('style',{
  */
 .directive('model',{
     onBind:function(vnode,data){
-        vnode.__exp = data.exp;
-        vnode.__store = data.args && data.args[0]=='store'?true:false;
+        vnode._exp = data.exp;
         switch(vnode.tag){
             case 'select':
                 vnode.on('change',this.handleChange);
                 break;
             case 'input':
-                var type = vnode.attrNodes.type;
+                var type = vnode.attributes.type;
                 if(type == 'radio' || type == 'checkbox'){
                     vnode.on('change',this.handleChange);
                     break;
@@ -3212,13 +2960,13 @@ function handleInput(e,vnode,comp){
 function changeModelCheck(e,vnode,comp){
     var t = e.target || e.srcElement;
     var val = t.value;
-    var str = 'with(scope){return '+vnode.__exp+'}';
+    var str = 'with(scope){return '+vnode._exp+'}';
     var fn = new Function('scope',str);
     var parts = null;
     if(!this){
-        parts = fn(comp.state);
+        parts = fn(comp);
     }else{
-        parts = fn(this.state);
+        parts = fn(this);
     }
     if(isArray(parts)){
         parts = parts.concat();
@@ -3236,11 +2984,8 @@ function changeModelCheck(e,vnode,comp){
     setModel(vnode,parts,comp);
 }
 function setModel(vnode,value,comp){
-    if(vnode.__store){
-        comp.store.commit('model',vnode.__exp,value);
-    }else{
-        comp.setState(vnode.__exp,value);
-    }
+    var fn = new Function('comp','v','comp.'+vnode._exp+'= v;');
+    fn(comp,value);
 }
 impex.filter('json',function(v){
     return JSON.stringify(v);
@@ -3284,6 +3029,7 @@ impex.filter('json',function(v){
     if(!isArray(v)){
         return v;
     }
+    v = v.concat();
     if(!count)return v;
     return v.splice(start||0,count);
 })
@@ -3294,6 +3040,7 @@ impex.filter('json',function(v){
     if(!isArray(v)){
         return v;
     }
+    v = v.concat();
     v.sort(function(a,b){
         var x = key?a[key]:a,
             y = key?b[key]:b;

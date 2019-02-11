@@ -26,7 +26,7 @@
             <span slot="ss">content</span>
         </x-demo>
         <br>
-        <button :click="add()">add x</button>
+        <button @click="add()">add x</button>
         
         
         lastTextNode:{{end}}
@@ -35,12 +35,12 @@
         impex.component('x-demo',{
             template:'<div>parent x:[{{pa}}] + y:[{{y}}] = {{pa+y}}\
                         <p></p>\
-                            <button :click="add()">add y</button>\
+                            <button @click="add()">add y</button>\
                         <slot></slot>\
                         <slot name="ss"></slot>\
                         </div>',
             add:function() {
-                this.state.y ++;
+                this.y ++;
             },
             onMount:function(argument) {
             	this.op();
@@ -50,19 +50,8 @@
                 y:100
             }
         });
-        impex.render('#demo',{
-                add:function() {
-                    this.state.x ++;
-                    delete this.state.a.b.x;
-                },
-                onInit:function(){
-                    this.watch('a.b.x',function(){
-                        console.log(arguments)
-                    })
-                },
-                open:function(){
-                	console.log(3434)
-                },
+        impex.create({
+                el:'#demo',
                 state:{
                     show:true,
                     x:10,
@@ -74,6 +63,18 @@
                     },
                     start:'the start',
                     end:'the end'
+                },
+                add:function() {
+                    this.x ++;
+                    delete this.a.b.x;
+                },
+                onInit:function(){
+                    this.watch('a.b.x',function(){
+                        console.log(arguments)
+                    })
+                },
+                open:function(){
+                    console.log(3434)
                 }
             });
         //测试项

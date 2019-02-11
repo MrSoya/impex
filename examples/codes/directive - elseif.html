@@ -20,7 +20,7 @@
     
         
         <div id="demo">
-            <i x-if="a.x > 4" transition="test" .a="aaa" :click:xx.a="alert(aaa)">more than 4 </i>
+            <i x-if="a.x > 4" transition="test">more than 4 </i>
             <i x-else-if="a.x < 4" transition="test">less then 4 </i>
             <i x-else transition="test">equal to 4</i>
             <br>
@@ -32,7 +32,8 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
             	state:{
             		aaa : 10,
 	                a : {

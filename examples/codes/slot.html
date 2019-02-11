@@ -23,8 +23,8 @@
             impex.component('x-panel',{
                 template:"<div>name: <slot name='name'></slot><br>age: <slot name='age'></slot></div>",
                 onMount:function(){
-                    console.log(this.state.name)
-                    console.log(this.state.age)
+                    console.log(this.name)
+                    console.log(this.age)
                 }
             });
 
@@ -33,12 +33,13 @@
             });
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     no:1
                 },
                 onMount:function(){
-                    console.log(this.refs.btn)
+                    console.log(this.$ref.btn)
                 }
             });
             

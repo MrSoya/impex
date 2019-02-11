@@ -11,41 +11,30 @@
     </head>
     <body >
         <div id="demo">
-            storeX({{x}}) + storeY({{y}}) 
+            <p>
+                computeState:<br>
+                a({{a}}) + b({{b}}) 
+            </p>
+
+            storeX({{store.x}}) + storeY({{store.y}}) 
             <x-panel>
                 <input type="number" .value="x" x-model="x" number>
             </x-panel>
-            <button :click="addx()">addx</button>
-            <button :click="addy()">addy</button>
+            <button @click="addx()">addx</button>
+            <button @click="addy()">addy</button>
         </div>
         
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
-            //store 不能直接修改state，必须通过action
-            var store = new impex.Store({
-                state:{
-                    x:1,
-                    y:2
-                },
-                actions:{
-                    addx:function(){
-                        this.state.x++;
-                    },
-                    addy:function(){
-                        this.state.y++;
-                    }
-                }
-            });
-
             impex.component('x-panel',{
                 template:'<span> + x({{x}}) = {{z}} <p><slot></slot></p></span>',
                 state:{
-                    x:store.state.x
+                    x:3
                 },
-                computedState:{
+                computeState:{
                     z:function(){
-                        return this.state.x + store.state.x + store.state.y;
+                        return this.x + store.x + store.y;
                     }
                 },
                 onUpdate:function(argument) {
@@ -53,26 +42,34 @@
                 },
                 callback:function(argument) {
                     console.log('store: ',argument)
-                },
-                onCompile:function(){
-                    store.subscribe('addx addy',this.callback);
+                }
+            });
+
+            var store = impex.create({
+                state:{
+                    x:1,
+                    y:2
                 }
             });
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
+                state:{
+                    x:1,y:2
+                },//初始化store
                 addx:function() {
-                    store.commit('addx');
+                    store.x++;
                 },
                 addy:function() {
-                    store.commit('addy');
+                    store.y++;
                 },
-                computedState:{
-                    x:function () {
-                        return store.state.x;
+                computeState:{
+                    a:function () {
+                        return store.x;
                     },
-                    y:function () {
-                        return store.state.y;
+                    b:function () {
+                        return store.y;
                     }
                 }
             });

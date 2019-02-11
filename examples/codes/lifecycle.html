@@ -10,9 +10,9 @@
 
 
         <div id="demo">
-            <button :click="load($event)">点击加载组件</button>
-            <button :click="changeX()">点击修改参数</button>
-            <button :click="destroyComp()">点击销毁组件</button>
+            <button @click="load($event)">点击加载组件</button>
+            <button @click="changeX()">点击修改参数</button>
+            <button @click="destroyComp()">点击销毁组件</button>
             <div x-html="comp"></div>
             <p x-html="info"></p>
         </div>
@@ -39,8 +39,8 @@
                     // return false;
                 },
                 onPropChange:function(newPrps,oldProops){
-                    if(this.state.p != newPrps['p'])
-                        this.state.p = newPrps['p'];
+                    if(this.p != newPrps['p'])
+                        this.p = newPrps['p'];
                     // this.logger('propChange...');
                     // 不能再子组件的onPropChange里修改父组件的state，会导致死循环
                     console.log('propChange...');
@@ -52,32 +52,33 @@
                     i:0
                 },
                 update:function(){
-                    this.state.i++;
+                    this.i++;
                 },
-                template:"<button :click='update()'>被点了{{i}}次,可变参数{{p}}</button>"
+                template:"<button @click='update()'>被点了{{i}}次,可变参数{{p}}</button>"
             });
 
             //渲染
-            impex.render('#demo',{
-                load:function(e) {
-                    e.target.style.display = 'none';
-                    this.state.info += '<p>loading...</p>';
-                    this.state.comp = '<x-comp .logger="this.record.bind(this)" .p="x"></x-comp>';
-                },
-                record:function(msg){
-                    this.state.info += '<p>'+msg+'</p>';
-                },
-                changeX:function(){
-                    this.state.x += 1;
-                },
-                destroyComp:function(){
-                    this.children[0] && this.children[0].destroy();
-                    this.state.comp = '';
-                },
+            impex.create({
+                el:'#demo',
                 state:{
                     comp:'',
                     info:'',
                     x:10
+                },
+                load:function(e) {
+                    e.target.style.display = 'none';
+                    this.info += '<p>loading...</p>';
+                    this.comp = '<x-comp .logger="this.record.bind(this)" .p="x"></x-comp>';
+                },
+                record:function(msg){
+                    this.info += '<p>'+msg+'</p>';
+                },
+                changeX:function(){
+                    this.x += 1;
+                },
+                destroyComp:function(){
+                    this.$children[0] && this.$children[0].destroy();
+                    this.comp = '';
                 }
             });
             

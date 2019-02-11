@@ -22,10 +22,11 @@
             });
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 onMount:function() {
-                    console.log('dom ref:'+this.refs.rdom);
-                    console.log('comp ref:'+this.refs.rcomp);
+                    console.log('dom ref:'+this.$ref.rdom);
+                    console.log('comp ref:'+this.$ref.rcomp);
                 }
             });
             

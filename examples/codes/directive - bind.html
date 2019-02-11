@@ -18,7 +18,7 @@
         <div id="demo">
             绑定title属性
             <p>
-                <a x-bind:title="address">Hello impex ! <br/>website:{{address}}</a>
+                <a x-bind:href="address">Hello impex ! <br/>website:{{address}}</a>
                 <br>
                     change address:<input type="text" x-model="address">
             </p>
@@ -46,7 +46,8 @@
         <script type="text/javascript">
             
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 state:{
                     address:'https://github.com/MrSoya/impex'
                 },

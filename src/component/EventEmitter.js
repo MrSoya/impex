@@ -4,7 +4,7 @@
  * @class 
  */
 function EventEmitter(){
-	this.__eeMap = {};
+	this._eeMap = {};
 }
 EventEmitter.prototype = {
 	/**
@@ -15,7 +15,7 @@ EventEmitter.prototype = {
 	 * @return {Object}   返回事件函数返回值
 	 */
 	on:function(type,handler,context) {
-		this.__eeMap[type] = [handler,context||this];
+		this._eeMap[type] = [handler,context||this];
 		return this;
 	},
 	/**
@@ -24,10 +24,10 @@ EventEmitter.prototype = {
 	 * @return {[type]}      [description]
 	 */
 	off:function(type) {
-		this.__eeMap[type] = null;
+		this._eeMap[type] = null;
 	},
 	emit:function(type){
-		var pair = this.__eeMap[type];
+		var pair = this._eeMap[type];
 		if(!pair)return;
 		var fn = pair[0],
 			ctx = pair[1];
@@ -45,6 +45,6 @@ EventEmitter.prototype = {
 	 * @return {Array}  [handler,context]
 	 */
 	getEvent:function(type) {
-		return this.__eeMap[type];
+		return this._eeMap[type];
 	}
 }

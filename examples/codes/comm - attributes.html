@@ -28,7 +28,7 @@
                 修改组件参数:<input type="text" x-model="msg">
                 <p style="text-indent: 2rem;">
                     子组件：
-                    <x-comp .content="msg" date="Date.now()" .time="time">
+                    <x-comp .content="msg" .date="Date.now()" .time="time">
                     </x-comp>
                 </p>
             </p>
@@ -42,15 +42,15 @@
                 template:"<div><p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
                 <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
                 <p>time:{{time}}   ——同步类型参数，会触发更新</p></div>",
-                onPropChange:function(newProps){
+                onPropChange:function(key,newVal){
                     //手动同步
-                    this.state.time = newProps.time;
-                    this.state.content = newProps.content;
+                    this[key] = newVal;
                 }
             });
 
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     msg:'这是参数',
                     time:new Date().getTime()
@@ -58,7 +58,7 @@
                 onMount:function() {
                     var that = this;
                     setInterval(function(){
-                        that.state.time = new Date().getTime();
+                        that.time = new Date().getTime();
                     },1000);
                 }
             });

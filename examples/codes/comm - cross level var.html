@@ -12,15 +12,16 @@
         model -> view
         <div id="demo">
             <x-a>
+                store.value in x-a: {{store.value}}
                 <x-b >
-                    <x-c store="value">
-                        <input .value="value">
+                    store.value in x-b: {{store.value}}
+                    <x-c>
+                        store.value in x-c: {{store.value}}
                     </x-c>
                 </x-b>
             </x-a>
 
-            
-            <button :click="change()">change</button>
+            <input type="text" .value="v" x-model="v">
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
@@ -34,21 +35,21 @@
             impex.component('x-c',{
                 template:'<div><slot></slot></div>'
             });
-            var store = new impex.Store({
+            var store = impex.create({
                 state:{
                     value:1
-                },
-                actions:{
-                    change:function(delta){
-                        this.state.value = delta+Math.random();
-                    }
                 }
             });
             //渲染
-            var debug = impex.render('#demo',{
-                store:store,
-                change:function(argument) {
-                    store.commit('change',Math.random()*100);
+            var debug = impex.create({
+                el:'#demo',
+                state:{
+                    v:store.value
+                },
+                onMount:function() {
+                    this.$watch('v',function(newVal) {
+                        store.value = newVal;
+                    })
                 }
             });
         </script>

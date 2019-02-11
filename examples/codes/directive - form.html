@@ -99,7 +99,8 @@
             });
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 state:{
                     name : 'impex',
                     v : impex.version.toString(),

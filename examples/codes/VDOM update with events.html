@@ -12,18 +12,19 @@
         -->
         <div id="demo">
             <div x-for="list2 as item" id="d1">
-            	<div x-for="list as xx" .id="xx" :pointerdown="show(xx)">{{xx}}</div>
+            	<div x-for="list as xx" .id="xx" @pointerdown="show(xx)">{{xx}}</div>
             </div>
             <div x-if="list2.length==0" id="d2">
-            	<div :click="alert(3434)">123213213</div>
+            	<div @click="alert(3434)">click 3434</div>
             </div>
-            <button :click="change()">change</button>
+            <button @click="change()">change</button>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
             	state:{
             		aaa : 10,
 	                a : {
@@ -39,8 +40,8 @@
             		console.log(xx)
             	},
                 change:function(){
-                	this.state.list = [2,1];
-                	this.state.list2 = [3];
+                	this.list = [2,1];
+                	this.list2 = [3];
                 }
             });
             

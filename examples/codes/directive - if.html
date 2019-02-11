@@ -20,8 +20,8 @@
     
         
         <div id="demo">
-            <i x-if="a.x > 4" transition="test">if </i>
-            <i x-else transition="test">else </i>
+            <i x-if="a.x > 4" transition="test">true </i>
+            <i x-else transition="test">false </i>
             <br>
             x>4:<input x-model="a.x">
         </div>
@@ -29,7 +29,8 @@
         <script type="text/javascript">
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
             	state:{
             		aaa : 10,
 	                a : {

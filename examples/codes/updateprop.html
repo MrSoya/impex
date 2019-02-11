@@ -8,7 +8,7 @@
     </head>
     <body>
         <div id="demo">
-            <x-a .items="items" .odd="3">
+            <x-a .items="items">
                 <x-c .items="items"></x-c>
             </x-a>
 
@@ -22,18 +22,8 @@
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
-
             impex.component('x-a',{
-            	onPropBind:function(props){
-                    //回调内修改state并不会触发onUpdate
-            		this.state.items = JSON.parse(JSON.stringify(props.items));
-                    console.log(props)
-            	},
-                onPropChange:function(newProps,oldProps){
-                    //手动处理参数变更
-                    console.log(arguments);
-                    this.state.items = newProps;
-                },
+            	
                 template:`<div>
                     <b>x-a</b>:  {{items =>json}}
                     <p style="text-indent:2rem;"><slot></slot></p>
@@ -41,9 +31,6 @@
                 `
             });
             impex.component('x-b',{
-                //自动处理参数变更，引用类型不会自动处理
-                // onPropChange:function(newProps,oldProps){
-                // },
                 template:`
                     <div><b>x-b</b>:  {{items =>json}}</div>
                 `
@@ -56,11 +43,10 @@
 
             
             //渲染
-            var debug = impex.render('#demo',{
-                begin:function(){
-                    return 1;
-                },
+            var debug = impex.create({
+                el:'#demo',
                 state:{
+                    items1:{a:1},
                     items:[
                         {name:11,children:[
                             {name:1111}
@@ -68,6 +54,9 @@
                         {name:22},
                         {name:33},
                     ]
+                },
+                begin:function(){
+                    return 1;
                 }
             });
         </script>

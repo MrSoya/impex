@@ -26,7 +26,7 @@
                     <i>info / g.info</i> --> {{info}} / {{g.info}}
                 </label>
                 <!-- global function -->
-                <button :click="show($event)">
+                <button @click="show($event)">
                     {{g.name}}
                 </button>
             </x-child2>
@@ -63,7 +63,8 @@
             }
 
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo'
             });
 
             

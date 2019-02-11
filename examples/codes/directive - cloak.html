@@ -25,20 +25,8 @@
         <script type="text/javascript">
             function render(){
                 //渲染
-                var debug = impex.render('#demo',{
-                    state:{
-                        clsAry:['c1','c2','c3'],
-                        addC1:true,
-                        addC2:true,
-                        addC3:true
-                    },
-                    onMount:function(){
-                        this.ss = Date.now();
-                    },
-                    toggleClass:function(type) {
-                        this.state[type] = !this.state[type];
-                    }
-                    
+                var debug = impex.create({
+                    el:'#demo'
                 });
             }
             

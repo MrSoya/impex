@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <!-- <script type="text/javascript" src="../../impex.dev.all.js"></script> -->
+    </head>
+    <body >
+        
+        <div id="demo" >
+            {{obj => json}}
+            <p>
+                计算属性:{{x}}
+                <x-panel .x="obj.x.a"></x-panel>
+            </p>
+            <button @click="changeValue()">changeValue</button>
+            <button @click="changeObj()">changeObj</button>
+            <button @click="changeObjWithoutKey()">changeObjWithoutKey</button>
+            <button @click="setAry()">setAry</button>
+        </div>
+        bug原因：对比VNODE时，如果是组件直接返回了。而组件只更新指令，对于没有指令的组件输入参数就无法更新了.
+        <script type="text/javascript">
+            impex.component("x-panel",{
+                template:'<div>{{x}}</div>',
+                state:{
+                    x:-1
+                }
+            })
+            
+            //渲染
+            var root = impex.create({
+                el:'#demo',
+                state:{
+                    obj:{
+                        x:{
+                            a:1
+                        }
+                    },
+                    y:1
+                },
+                computeState:{
+                    x:function(argument) {
+                        return this.y+this.obj.x.a;
+                    }
+                },
+                changeValue:function(dom){
+                    this.obj.x.a = Math.random();
+                },
+                changeObj:function(argument) {//变更对象后，obj丢失了x的setter/getter
+                    this.obj = {x:{a:Math.random()}};
+                },
+                changeObjWithoutKey:function(argument) {
+                    this.obj = {y:Math.random()};
+                },
+                setAry:function(argument) {
+                    this.obj.x.a = [1,2,3];
+                }
+            });
+        </script>
+    </body>
+</html>

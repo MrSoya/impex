@@ -87,16 +87,17 @@
                 <div x-class="{'c1':addC1,'c2':addC2,'c3':addC3}">
                     class
                 </div>
-                <button :click="toggleClass('addC1')"> toggle c1</button>
-                <button :click="toggleClass('addC2')"> toggle c2</button>
-                <button :click="toggleClass('addC3')"> toggle c3</button>
+                <button @click="toggleClass('addC1')"> toggle c1</button>
+                <button @click="toggleClass('addC2')"> toggle c2</button>
+                <button @click="toggleClass('addC3')"> toggle c3</button>
             </p>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            var debug = impex.render('#demo',{
+            var debug = impex.create({
+                el:'#demo',
                 state:{
                     clsAry:['c1','c2','c3'],
                     addC1:true,
@@ -107,7 +108,7 @@
                     this.ss = Date.now();
                 },
                 toggleClass:function(type) {
-                    this.state[type] = !this.state[type];
+                    this[type] = !this[type];
                 }
                 
             });

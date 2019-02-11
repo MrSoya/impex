@@ -5,6 +5,7 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
         <style type="text/css">
             .parent{
+                display: inline-block;
                 width: 200px;
                 height: 200px;
                 background-color: #999;
@@ -23,6 +24,7 @@
                 background-color: #fff;
             }
             .neighbor{
+                display: inline-block;
                 /*margin-top: 50px;*/
                 width: 100px;
                 height: 100px;
@@ -34,11 +36,13 @@
     <body>
         <div id="demo">
             <div class="parent" 
-            :mouseover="console.log('over parent')" 
-            :mouseenter="console.log('enter parent',$event,$vnode)" 
-            :mouseleave="console.log('leave parent')" >
+            @mouseover="changeInfo('over parent')" 
+            @mouseenter="changeInfo('enter parent')" 
+            @mouseleave="changeInfo('leave parent')" >
                 parent
-                <div class="child" :mouseover1="cancelBubble($event)">
+                <div class="child" 
+            @mouseenter="changeInfo('enter child')" 
+            @mouseleave="changeInfo('leave child')">
                     child
                     <div class="grandchildren">
                         grandchildren
@@ -49,15 +53,28 @@
             <div class="neighbor">
                 neighbor
             </div>
+
+
+            <p x-for="infoList as item">
+                {{item}}
+            </p>
         </div>
     
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
+                state:{
+                    infoList:[]
+                },
                 cancelBubble:function(e) {
                     e.stopPropagation();
+                },
+                changeInfo:function(msg) {
+                    this.infoList.push(msg);
+                    if(this.infoList.length>8)this.infoList.shift();
                 }
             });
             

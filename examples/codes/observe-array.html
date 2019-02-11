@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <!-- <script type="text/javascript" src="../../impex.dev.all.js"></script> -->
+    </head>
+    <body >
+        
+        <div id="demo" >
+            {{ary=>json}}
+            <p>
+                计算属性:{{x}}
+            </p>
+            <button @click="change()">更换数组</button>
+            <button @click="changeP1()">更换数组位1</button>
+            <button @click="push()">push</button>
+            <button @click="pop()">pop</button>
+            <button @click="unshift()">unshift</button>
+            <button @click="shift()">shift</button>
+            <button @click="splice()">删除第一个</button>
+            <button @click="reverse()">reverse</button>
+            <button @click="sort()">sort</button>
+        </div>
+        bug原因：对比VNODE时，如果是组件直接返回了。而组件只更新指令，对于没有指令的组件输入参数就无法更新了.
+        <script type="text/javascript">
+            
+            //渲染
+            var root = impex.create({
+                el:'#demo',
+                state:{
+                    ary:[1,3],
+                    y:1
+                },
+                computeState:{
+                    x:function(argument) {
+                        return this.y+this.ary[0];
+                    }
+                },
+                change:function(dom){
+                    this.ary = [Math.random(),Math.random()];
+                },
+                changeP1:function(argument) {
+                    this.ary[0] = Math.random();
+                },
+                push:function(argument) {
+                    this.ary.push(8,9);
+                },
+                pop:function(argument) {
+                    this.ary.pop();
+                },
+                unshift:function(argument) {
+                    this.ary.unshift(5,6,7);
+                },
+                shift:function(argument) {
+                    this.ary.shift();
+                },
+                splice:function(argument) {
+                    this.ary.splice(0,1,[2,[3,4]]);
+                },
+                reverse:function(argument) {
+                    this.ary.reverse();
+                },
+                sort:function(argument) {
+                    this.ary.sort(function(a,b) {
+                        return a-b;
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

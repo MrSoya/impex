@@ -29,12 +29,13 @@
             });
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     no:1 
                 },
                 onMount:function(){
-                    console.log(this.refs.btn)
+                    console.log(this.$ref.btn)
                 }
             });
             

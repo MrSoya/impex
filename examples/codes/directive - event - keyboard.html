@@ -36,7 +36,7 @@
             <ul>
                 <li>键盘事件可以通过设置filter来过滤key</li>
             </ul>
-            <input :keypress="anyKey()" :keydown.enter="enterKey()" :keyup.control="ctrlKey()">
+            <input @keypress="anyKey()" @keydown.enter="enterKey()" @keyup.control="ctrlKey()">
             <ul>
                 <li>按键次数：{{keyCount}} </li>
                 <li>回车次数：{{enterCount}} </li>
@@ -48,20 +48,21 @@
         <script type="text/javascript">
             
             //渲染
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     enterCount:0,
                     ctrlCount:0,
                     keyCount:0
                 },
                 anyKey:function(e) {
-                    this.state.keyCount++;
+                    this.keyCount++;
                 },
                 enterKey:function(e) {
-                    this.state.enterCount++;
+                    this.enterCount++;
                 },
                 ctrlKey:function(e) {
-                    this.state.ctrlCount++;
+                    this.ctrlCount++;
                 }
             });
             

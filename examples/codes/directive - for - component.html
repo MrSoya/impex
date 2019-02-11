@@ -33,7 +33,7 @@
                     }
                 },
                 changeV:function(){
-                    this.state.v = !this.state.v;
+                    this.v = !this.v;
                 },
                 func:function(){
                     return 12;
@@ -42,13 +42,14 @@
             impex.component('x-b',{
                 template:'<b ref="xxb">xb{{x}}</b>',
                 onMount:function(){
-                    console.log(this.state.x)
+                    console.log(this.x)
                 }
             });
             impex.component('x-c',{
                 template:'<b>xc</b>'
             });
-            impex.render('#demo',{
+            impex.create({
+                el:'#demo',
                 state:{
                     mod:2
                 }

@@ -40,25 +40,26 @@
             .small-font{
                 font-size: 1rem;
             }
+
+            [x-cloak]{
+                display: none;
+            }
         </style>
     </head>
     <body>
-    	<dir id="container">
-            
-        </dir>
-        <script type="text/tmpl" id="tmpl">
-                <div class="calc">
-                    <div class="block-display" x-class="{'small-font':exp.length >9&&exp.length<20,'normal-font':exp.length >20}">
-                        {{exp => format}}
-                    </div>
-                    <div class="block-buttons">
-                        <div x-for="buttons as btn" style="">
-                            <button :click="addExp(btn)">{{btn}}</button>
-                        </div>
-                        <div style="clear: both;"></div>
-                    </div>
+    	<dir id="demo">
+            <div class="calc" x-cloak>
+                <div class="block-display" x-class="{'small-font':exp.length >9&&exp.length<20,'normal-font':exp.length >20}">
+                    {{exp => format}}
                 </div>
-        </script>
+                <div class="block-buttons">
+                    <div x-for="buttons as btn" style="">
+                        <button @click="addExp(btn)">{{btn}}</button>
+                    </div>
+                    <div style="clear: both;"></div>
+                </div>
+            </div>
+        </dir>
     </body>
     <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
@@ -76,9 +77,8 @@
             });
 
             //渲染
-            impex.renderTo(
-                document.getElementById('tmpl').innerText,
-                document.getElementById('container'),{
+            impex.create({
+                el:'#demo',
                 state:{
                     buttons:[
                         '1','2','3','+',
@@ -90,7 +90,7 @@
                     exp:'0',
                 },
                 clear:function () {
-                    this.state.exp = '0';
+                    this.exp = '0';
                 },
                 addExp:function(v){
                     switch(v){
@@ -98,15 +98,15 @@
                             this.clear();
                             return;
                         case '←':
-                            if(this.state.exp.length>1)
-                                this.state.exp = this.state.exp.substring(0,this.state.exp.length-1);
+                            if(this.exp.length>1)
+                                this.exp = this.exp.substring(0,this.exp.length-1);
                             return;
                         case '=':
-                            var v = eval(this.state.exp.replace(/^0/,''));
-                            this.state.exp = v+'';
+                            var v = eval(this.exp.replace(/^0/,''));
+                            this.exp = v+'';
                             return;
                         default:
-                            this.state.exp += v;
+                            this.exp += v;
                     }
                 }
             });
