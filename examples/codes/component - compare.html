@@ -22,10 +22,10 @@
             <fieldset>
                 <legend>slot不同时，组件会删除重建</legend>
                 <x-comp x-if="flag2" .color="color">
-                    slot内的一段文字
+                    ，以及slot内的一段文字
                 </x-comp>
                 <x-comp x-else >
-                    还是slot内的一段文字
+                    ，以及slot内的另一段文字
                 </x-comp>
                 <button @click="change2()">变更</button>
             </fieldset>

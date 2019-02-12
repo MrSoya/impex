@@ -277,7 +277,7 @@ function preprocess(comp,opts) {
     //解析组件模型
     if(opts){
     	tmpl = opts.template;
-    	state = opts.state || {};
+    	state = Object.assign({},opts.state);
     	input = opts.input;
     	computeState = opts.computeState;
 
