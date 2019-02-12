@@ -26,13 +26,6 @@ function compareVDOM(newVNode,oldVNode,comp){
 function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
     if(!c)return false;
-    //compare attrs
-    var nas = nv.raw.attributes;
-    var oas = c.$vnode.raw.attributes;
-    if(Object.keys(nas).length !== Object.keys(oas).length)return false;
-    for(var k in nas){
-        if(isUndefined(oas[k]))return false;
-    }
     //compare slots
     return nv.raw.getInnerHTML() == c._innerHTML;
 }
@@ -41,6 +34,8 @@ function compareSame(newVNode,oldVNode,comp){
         forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
         //update directive of components
         oldVNode._comp_directives = newVNode.directives;
+        //判断是否需要更新属性
+        impex._cs[oldVNode._cid]._checkUpdate(newVNode.attributes);
         return;
     }
 

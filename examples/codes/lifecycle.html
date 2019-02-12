@@ -21,12 +21,17 @@
 
             //自定义组件
             impex.component('x-comp',{
-                onCreate:function(){
-                    console.log('create...');
+                onPropBind:function(props){
+                    props.logger('propBind...'+ JSON.stringify(props));
+                    this.logger = props.logger;
+                    return props;
                 },
-                onBeforeCompile:function(tmpl){
+                onBeforeCompile:function(tmpl,rawNode){
                     this.logger('beforeCompile...');
                     return tmpl;
+                },
+                onCreate:function(){
+                    console.log('create...');
                 },
                 onCompile:function(){
                     this.logger('compile...');
@@ -34,16 +39,16 @@
                 onMount:function(){
                     this.logger('mount...');
                 },
+                onBeforeUpdate:function(changes){
+                    this.logger('beforeUpdate...');
+                },
                 onUpdate:function(){
                     this.logger('update...');
-                    // return false;
                 },
-                onPropChange:function(newPrps,oldProops){
-                    if(this.p != newPrps['p'])
-                        this.p = newPrps['p'];
-                    // this.logger('propChange...');
-                    // 不能再子组件的onPropChange里修改父组件的state，会导致死循环
-                    console.log('propChange...');
+                onPropChange:function(k,newVal,oldVal){
+                    this.logger('propChange...');
+                    //重载函数后，必须手动赋值
+                    this[k] = newVal;
                 },
                 onDestroy:function(){
                     this.logger('destroy...');
@@ -51,14 +56,14 @@
                 state:{
                     i:0
                 },
-                update:function(){
+                update:function() {
                     this.i++;
                 },
                 template:"<button @click='update()'>被点了{{i}}次,可变参数{{p}}</button>"
             });
 
             //渲染
-            impex.create({
+            var root = impex.create({
                 el:'#demo',
                 state:{
                     comp:'',

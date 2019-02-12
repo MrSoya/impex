@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impexui - layout</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <link rel="stylesheet" type="text/css" href="../themes/default.css"/>
+        <link rel="stylesheet" type="text/css" href="../lib/fontawesome/css/font-awesome.min.css"/>
+    </head>
+    <body>
+        组件对比时的不同更新模式
+        <div id="demo">
+            <fieldset>
+                <legend>属性不同时，组件会更新</legend>
+
+                &lt;div .style="{color:color}"&gt;{ {msg} }&lt;/div&gt;
+                <x-comp x-if="flag"></x-comp>
+                <x-comp x-else .color="color"></x-comp>
+
+                <button @click="change()">变更</button>
+            </fieldset>
+            <fieldset>
+                <legend>slot不同时，组件会删除重建</legend>
+                <x-comp x-if="flag2" .color="color">
+                    slot内的一段文字
+                </x-comp>
+                <x-comp x-else >
+                    还是slot内的一段文字
+                </x-comp>
+                <button @click="change2()">变更</button>
+            </fieldset>
+        </div>
+    </body>
+    <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+    <script type="text/javascript">
+        impex.component("x-comp",{
+            template:'<div .style="{color:color}">{{msg}}<slot></slot></div>',
+            state:{
+                msg:'内置的一段文字',
+                color:'red'
+            }
+        });
+        impex.create({
+            el:'#demo',
+            state:{
+                color:'blue',
+                flag:true,
+                flag2:true
+            },
+            change:function() {
+                this.flag = !this.flag;
+            },
+            change2:function() {
+                this.flag2 = !this.flag2;
+            }
+        });
+    </script>
+    </body>
+</html>

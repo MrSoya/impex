@@ -46,6 +46,7 @@ function Component (el) {
 	this._watchers = [];
 	this._combiningChange = false;
 	this._updateMap = {};
+	this._lastProps = {};
 
 	impex._cs[this.$id] = this;
 };
@@ -159,6 +160,35 @@ ext({
 		for(var i = this.$children.length;i--;){
 			this.$children[i]._parse();
 		}
+	},
+	//VDOM对比时，自动检测需要更新入参
+	//该方法并不会立即更新组件的state，只是增加一个更新标记
+	//在父组件完成VDOM对比后才会开始更新
+	_checkUpdate:function(props) {
+		var oldPropsStr = JSON.stringify(this._props);
+		var newPropsStr = JSON.stringify(props);
+		if(oldPropsStr == newPropsStr)return;
+
+		this._needUpdate = true;
+		this._props = props;
+	},
+	_updateProps:function() {
+		var newProps = parseInputProps(this,this.$parent,this._props,this._input);
+		
+		for(var k in newProps){
+			//记录旧值
+			this._lastProps[k] = this[k];
+			this[k] = newProps[k];
+		}
+		//重置多余属性
+		this._propKeys.forEach(function(k) {
+			if(!(k in newProps)){
+				this[k] = this._lastProps[k] || undefined;
+			}
+		},this);
+
+		this._propKeys = Object.keys(newProps);
+		this._needUpdate = false;
 	}
 },Component.prototype);
 
@@ -264,24 +294,29 @@ function preprocess(comp,opts) {
 		}
 	}
 
+	if(input){
+		comp._input = input;
+	}
+
 	//解析入参，包括
 	//验证必填项和入参类型
 	//建立变量依赖
 	//触发onPropBind
 	if(comp._props){
 		var props = parseInputProps(comp,comp.$parent,comp._props,input);
+		comp._propKeys = Object.keys(props);
 		for(var k in props){
 			state[k] = props[k];
 		}
 	}
-	
+
 	//编译前可以对模版视图或者slot的内容进行操作
 	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
 	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
 	//顶级组件不会调用该方法
 	if(tmpl){
-		if(comp.onBeforeCompile && comp.vnode)
-	        tmpl = comp.onBeforeCompile(tmpl,comp.vnode.raw);
+		if(comp.onBeforeCompile && comp.$vnode)
+	        tmpl = comp.onBeforeCompile(tmpl,comp.$vnode.raw);
 		comp._processedTmpl = tmpl.trim()
 	    .replace(/<!--[\s\S]*?-->/mg,'')
 	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
@@ -289,7 +324,7 @@ function preprocess(comp,opts) {
 	    .replace(/>\s([^<]*)\s</,function(a,b){
 	            return '>'+b+'<';
 	    });
-	}	
+	}
 
 	//observe state
 	observe(state,comp);
@@ -326,7 +361,7 @@ function preprocess(comp,opts) {
 		comp.$state = defineProxy(comp.$state,null,comp,true);
 	}
 }
-function parseInputProps(comp,parent,parentAttrs,input,requires){
+function parseInputProps(comp,parent,parentAttrs,input){
 
 	//解析input，抽取必须项
 	var requires = {};
@@ -334,7 +369,7 @@ function parseInputProps(comp,parent,parentAttrs,input,requires){
 		for(var k in input){
 			var arg = input[k];
 			if(arg.require){
-				requires[k] = type;
+				requires[k] = 1;
 			}
 		}
 	}
@@ -372,7 +407,8 @@ function parseInputProps(comp,parent,parentAttrs,input,requires){
 			var fn = new Function('scope','with(scope){'+forScopeStart+'return '+ depMap[k] +forScopeEnd+'}');
 			//建立parent的watcher
 			var watcher = new Watcher(function(change,wtc) {
-				this[wtc.k] = wtc.fn.apply(parent,wtc.args);
+				var newVal = wtc.fn.apply(parent,wtc.args);
+				this.onPropChange && this.onPropChange(wtc.k,newVal,this[wtc.k]);
 			},comp);
 			watcher.k = k;
 			watcher.fn = fn;
@@ -436,9 +472,7 @@ function compileComponent(comp){
 	//监控state
 	var watcher = new Watcher(function(change) {
 		this._updateMap[change.name] = change;
-		if(!this._combiningChange){
-			ready2notify(this);
-		}
+		ready2notify(this);
 		console.log('组件属性变更',arguments);
 	},comp);
 	Monitor.target = watcher;
@@ -466,7 +500,9 @@ function compileComponent(comp){
 }
 function ready2notify(comp) {
 	comp._combiningChange = true;
-	console.log('ready2notify',comp.$id)
+
+	if(comp._updateTimer)
+		clearTimeout(comp._updateTimer);
 	comp._updateTimer = setTimeout(function(){
 		//通知组件更新
 		updateComponent(comp,comp._updateMap);
@@ -528,8 +564,13 @@ function updateComponent(comp,changeMap){
 
 	comp.onUpdate && comp.onUpdate(changeMap);
 
-	//call directives of subcomponents
+	//更新子组件
 	comp.$children.forEach(function(child) {
+		//更新子组件
+		if(child._needUpdate){
+			child._updateProps();
+		}
+
 		var cvnode = child.$vnode;
 		if(cvnode._comp_directives){
 			cvnode._comp_directives.forEach(function(di){
