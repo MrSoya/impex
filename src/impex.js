@@ -29,7 +29,7 @@
 	     */
 		this.version = {
 	        v:[0,99,1],
-	        state:'alpha',
+	        state:'ZhuJi',
 	        toString:function(){
 	            return impex.version.v.join('.') + ' ' + impex.version.state;
 	        }
@@ -114,6 +114,20 @@
 		}
 
 		/**
+		 * 增加一个插件到插件列表。
+		 * 插件会在首次渲染前进行安装，相同插件对象只会增加一次
+		 * @param  {Object} plugin 插件对象，至少实现install回调接口
+		 */
+		this.add = function(plugin) {
+			if(!plugin)return;
+			//removeIf(production)
+            assert(isFunction(plugin.install),'impex',XERROR.PLUGIN.NOINSTALL,'can not find "install" function in plugin "'+JSON.stringify(plugin)+'"');
+            //endRemoveIf(production)
+            if(PLUGIN_LIST.indexOf(plugin)<0)
+            	PLUGIN_LIST.push(plugin);
+		}
+
+		/**
 		 * 渲染一个DOM节点组件，比如
 		 * <pre>
 		 * 	<x-stage id="entry" @click="showStage()"><x-stage>
@@ -153,6 +167,13 @@
 				}catch(e){
 					tmpl = el;
 				}
+            }
+            //安装插件
+            if(!PluginInited){
+            	PluginInited = true;
+            	PLUGIN_LIST.forEach(function(plugin) {
+            		plugin.install(this,dispatch);
+            	},this);
             }
 
             //创建根组件

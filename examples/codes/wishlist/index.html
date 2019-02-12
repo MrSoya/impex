@@ -12,8 +12,8 @@
 		<header>
 			<h2>wish list</h2>
 			<ul>
-				<li .class="{active:showGoing}" @pointerdown="changeTab('going')">going</li>
-				<li .class="{active:!showGoing}" @pointerdown="changeTab('done')">done</li>
+				<li .class="{active:showGoing}" @mousedown="changeTab('going')">going</li>
+				<li .class="{active:!showGoing}" @mousedown="changeTab('done')">done</li>
 			</ul>
 		</header>
 		<main>
@@ -38,9 +38,9 @@
 		<section class="panel" .class="{open:inEdit}">
 			<input type="text" name="title" maxlength="15" x-model="newWish.title" placeholder="title">
 			<input type="text" name="cost" maxlength="7" x-model="newWish.cost" number placeholder="￥cost">
-			<button @tap="submit()">↑</button>
+			<button @click="submit()">↑</button>
 		</section>
-		<a class="addbtn" .class="{close:inEdit}" @tap="openEdit()">+</a>
+		<a class="addbtn" .class="{close:inEdit}" @click="openEdit()">+</a>
 	</section>
 	<script type="text/javascript" src="../../lib/impex/impex.dev.all.js"></script>
 	<script type="text/javascript" src="js/filters.js"></script>

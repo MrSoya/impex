@@ -1,6 +1,6 @@
 impex.component("x-wish",{
     template:`
-    <div .class="{show:show}" class="x-wish" @tap="open()">
+    <div .class="{show:show}" class="x-wish" @click="open()">
             <div class="progress" .style="{width:progress+'%'}"></div>
             <span class="title">
                 {{title}}
@@ -8,7 +8,7 @@ impex.component("x-wish",{
             <span class="cost">{{cost=>formatRMB}}</span>
             <div class="done" x-if="done">已在 {{time => formatDate}} 达成</div>
             <ul class="target">
-                <li x-for="1 to 5 as i" .class="{passed:i*2*10<=progress}" @tap="setProgress(i*2*10)">{{i*2*10}}%</li>
+                <li x-for="1 to 5 as i" .class="{passed:i*2*10<=progress}" @click="setProgress(i*2*10)">{{i*2*10}}%</li>
             </ul>
         </div>`,
     state:{

@@ -28,6 +28,9 @@
 	var DIRECT_MAP = {};
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
+	var PLUGIN_LIST = [];
+
+	var PluginInited = false;
 
 	//removeIf(production)
 	function error(compName,code,msg,e){
@@ -60,8 +63,8 @@
 			REQUIRE:3001,
 			TYPE:3002
 		},
-		STORE:{//4XXX
-			NOSTORE:4001
+		PLUGIN:{//4xxx
+			NOINSTALL:4001
 		}
 	}
 	//endRemoveIf(production)

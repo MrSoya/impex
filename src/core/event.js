@@ -1,5 +1,5 @@
 /**
- * for DOM event delegation，support mouseEvent , touchEvent and pointerEvent
+ * for DOM event delegation，support mouseEvent
  */
 function dispatch(type,e) {
     var p = e.target;
@@ -69,182 +69,55 @@ function contains(a,b){
 //scope vars
 var vnodes_mouseEntered = [];
 
-//touch/mouse/pointer events
-var userAgent = self.navigator.userAgent.toLowerCase();
-var isAndroid = userAgent.indexOf('android')>0?true:false;
-var isIphone = userAgent.indexOf('iphone')>0?true:false;
-var isIpad = userAgent.indexOf('ipad')>0?true:false;
-var isWphone = userAgent.indexOf('windows phone')>0?true:false;
-var isMobile = isIphone || isIpad || isAndroid || isWphone;
-if(isMobile){
-    var FLING_INTERVAL = 200;
-    var lastTapTime = 0;
-    var timer;
-    var hasMoved = false;
-    var canceled = false;
-    var fling_data;
-    ///////////////////// touch events /////////////////////
-    document.addEventListener('touchstart',doStart,true);
-    document.addEventListener('touchmove',doMove,true);
-    document.addEventListener('touchend',doEnd,true);
-    document.addEventListener('touchcancel',doCancel,true);
-    function doStart(e){
-        dispatch('touchstart',e);
-        dispatch('pointerdown',e);
+///////////////////// 鼠标事件分派器 /////////////////////
+document.addEventListener('click',doClick,true);
+document.addEventListener('dblclick',doDblClick,true);
+document.addEventListener('mousedown',doMousedown,true);
+document.addEventListener('mousemove',doMousemove,true);
+document.addEventListener('mouseup',doMouseup,true);
 
-        //start timer
-        timer = setTimeout(function(){
-            dispatch('press',e);
-        },800);
+document.addEventListener('mouseout',doMouseout,true);
+document.addEventListener('mouseover',doMouseover,true);
 
-        hasMoved = false;
-        canceled = false;
+function doClick(e) {
+    dispatch('click',e);
+}
 
-        //handle fling
-        var touch = e.touches[0];
-        fling_data = {
-            x:touch.clientX,
-            y:touch.clientY,
-            t:Date.now()
-        };
-    }
-    function doMove(e){
-        clearTimeout(timer);
+function doDblClick(e) {
+    dispatch('dblclick',e);
+}
+    
+function doMousedown(e){
+    dispatch('mousedown',e);
+}
+function doMousemove(e){
+    dispatch('mousemove',e);
+}
+function doMouseup(e){
+    dispatch('mouseup',e);
+}
+function doMouseout(e){
+    dispatch('mouseout',e);
+    dispatch('mouseleave',e);
 
-        dispatch('touchmove',e);
-        dispatch('pointermove',e);
-
-        hasMoved = true;
-    }
-    function doCancel(e){
-        clearTimeout(timer);
-
-        canceled = true;
-        dispatch('touchcancel',e);
-        dispatch('pointercancel',e);
-    }
-    function doEnd(e){
-        clearTimeout(timer);
+    //check entered
+    var t = e.target;
+    var toDel = [];
+    vnodes_mouseEntered.forEach(function(vnode) {
+        if(!contains(vnode.dom,t))return;
+        var toElement = e.toElement || e.relatedTarget;
+        if(contains(vnode.dom,toElement))return;
         
-        dispatch('touchend',e);
-        dispatch('pointerup',e);
-
-        if(canceled)return;
-
-        if(!hasMoved){
-            dispatch('tap',e);
-
-            if(Date.now() - lastTapTime < 300){
-                dispatch('dbltap',e);
-            }
-
-            lastTapTime = Date.now();
-        }else{
-            var touch = e.changedTouches[0];
-            var dx = touch.clientX,
-                dy = touch.clientY;
-
-            var data = fling_data;
-            var sx = data.x,
-                sy = data.y,
-                st = data.t;
-
-            var long = Date.now() - st;
-            var s = Math.sqrt((dx-sx)*(dx-sx)+(dy-sy)*(dy-sy)) >> 0;
-            //时间小于interval并且位移大于20px才触发fling
-            if(long <= FLING_INTERVAL && s > 20){
-                var r = Math.atan2(dy-sy,dx-sx);
-
-                var extra = {
-                    slope:r,
-                    interval:long,
-                    distance:s
-                }
-
-                dispatch('fling',e,extra);
-            }
-        }
-    }
-}else{
-    ///////////////////// 鼠标事件分派器 /////////////////////
-    document.addEventListener('click',doClick,true);
-    document.addEventListener('dblclick',doDblClick,true);
-    document.addEventListener('mousedown',doMousedown,true);
-    document.addEventListener('mousemove',doMousemove,true);
-    document.addEventListener('mouseup',doMouseup,true);
-    window.addEventListener('blur',doMouseCancel,true);
-    var type = self.onmousewheel == null?'mousewheel':'DOMMouseScroll';
-    document.addEventListener(type,doMousewheel,true);
-
-    document.addEventListener('mouseout',doMouseout,true);
-    document.addEventListener('mouseover',doMouseover,true);
-
-    var inited = true;
-    var lastClickTime = 0;
-    var timer;
-
-    function doClick(e) {
-        dispatch('click',e);
-        dispatch('tap',e);
-    }
-
-    function doDblClick(e) {
-        dispatch('dblclick',e);
-        dispatch('dbltap',e);
-    }
-        
-    function doMousedown(e){
-        dispatch('mousedown',e);
-        dispatch('pointerdown',e);
-
-        //start timer
-        timer = setTimeout(function(){
-            dispatch('press',e);
-        },800);
-    }
-    function doMousemove(e){
-        clearTimeout(timer);
-
-        dispatch('mousemove',e);
-        dispatch('pointermove',e);
-    }
-    function doMouseup(e){
-        clearTimeout(timer);
-
-        dispatch('mouseup',e);
-        dispatch('pointerup',e);
-    }
-    function doMouseCancel(e){
-        clearTimeout(timer);
-
-        dispatch('pointercancel',e);                
-    }
-    function doMouseout(e){
-        dispatch('mouseout',e);
-        dispatch('mouseleave',e);
-
-        //check entered
-        var t = e.target;
-        var toDel = [];
-        vnodes_mouseEntered.forEach(function(vnode) {
-            if(!contains(vnode.dom,t))return;
-            var toElement = e.toElement || e.relatedTarget;
-            if(contains(vnode.dom,toElement))return;
-            
-            toDel.push(vnode);
-        });
-        toDel.forEach(function(vnode) {
-            var i = vnodes_mouseEntered.indexOf(vnode);
-            vnodes_mouseEntered.splice(i,1);
-        });
-    }
-    function doMouseover(e){
-        dispatch('mouseover',e);
-        dispatch('mouseenter',e);
-    }
-    function doMousewheel(e){
-        dispatch('mousewheel',e);
-    }
+        toDel.push(vnode);
+    });
+    toDel.forEach(function(vnode) {
+        var i = vnodes_mouseEntered.indexOf(vnode);
+        vnodes_mouseEntered.splice(i,1);
+    });
+}
+function doMouseover(e){
+    dispatch('mouseover',e);
+    dispatch('mouseenter',e);
 }
 
 //model events

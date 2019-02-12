@@ -12,7 +12,7 @@
         -->
         <div id="demo">
             <div x-for="list2 as item" id="d1">
-            	<div x-for="list as xx" .id="xx" @pointerdown="show(xx)">{{xx}}</div>
+            	<div x-for="list as xx" .id="xx" @mousedown="show(xx)">{{xx}}</div>
             </div>
             <div x-if="list2.length==0" id="d2">
             	<div @click="alert(3434)">click 3434</div>
