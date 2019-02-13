@@ -8,6 +8,23 @@
             to[k] = from[k];
         }
     }
+    function extend(ctor,parentCtor,opts){
+        ctor.prototype = Object.create(parentCtor.prototype,{_super:{value:parentCtor.prototype}});
+        ctor.prototype.constructor = ctor;
+
+        //类型属性绑定到构造函数
+        ctor.props = opts.props;
+        ctor.tmpl = opts.template;
+        ctor.state = opts.state;
+        ctor.computeState = opts.computeState;
+        //函数绑定到原型
+        for(var k in opts){
+            if(k != 'state' && isFunction(opts[k]))
+                ctor.prototype[k] = opts[k];
+        }
+
+        return ctor;
+    }
     function isObject(obj){
         return typeof(obj) === 'object' && obj !== null;
     }

@@ -14,7 +14,7 @@ EventEmitter.prototype = {
 	 * @param  {Object} [context] 上下文
 	 * @return {Object}   返回事件函数返回值
 	 */
-	on:function(type,handler,context) {
+	$on:function(type,handler,context) {
 		this._eeMap[type] = [handler,context||this];
 		return this;
 	},
@@ -23,10 +23,10 @@ EventEmitter.prototype = {
 	 * @param  {[type]} type [description]
 	 * @return {[type]}      [description]
 	 */
-	off:function(type) {
+	$off:function(type) {
 		this._eeMap[type] = null;
 	},
-	emit:function(type){
+	$emit:function(type){
 		var pair = this._eeMap[type];
 		if(!pair)return;
 		var fn = pair[0],
@@ -44,7 +44,7 @@ EventEmitter.prototype = {
 	 * @param  {String} type   事件类型
 	 * @return {Array}  [handler,context]
 	 */
-	getEvent:function(type) {
+	$getEvent:function(type) {
 		return this._eeMap[type];
 	}
 }

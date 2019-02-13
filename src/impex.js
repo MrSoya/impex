@@ -64,7 +64,9 @@
 		 * @return this
 		 */
 		this.component = function(name,opts){
-			COMP_MAP[name] = opts;
+			COMP_MAP[name] = extend(function() {
+				this._super.constructor.apply(this,arguments);
+			},Component,opts);
 			
 			return this;
 		}
@@ -133,35 +135,8 @@
 		 * @param  {Object} mixin 混入对象
 		 */
 		this.mixin = function(mixin) {
-			var newProto = Object.create(Component.prototype);
-			for (var k in mixin) {
-				if(LCS.indexOf(k)>-1){
-					newProto[k] = wrap(mixin[k],newProto[k],k);
-				}else{
-					if (!Component.prototype[k]) {//重名优先组件
-                        newProto[k] = mixin[k];
-                    }
-				}
-			}
-			Component.prototype = newProto;
+			Mixins.push(mixin);
 		}
-		function wrap(fn,superFn,k) {
-            return function() {
-                var rs = fn.apply(this,arguments);
-                if(superFn){
-                	switch(k){
-	                	case 'onPropsBind':
-	                	case 'onBeforeCompile':
-	                	case 'onBeforeUpdate':
-	                		rs = superFn.call(this,rs);
-	                	default:
-	                		superFn.apply(this,arguments);
-	                }
-                }
-                
-                return rs;
-            }
-        }
 
 		/**
 		 * 渲染一个DOM节点组件，比如
@@ -213,12 +188,16 @@
             }
 
             //创建根组件
-			var root = new Component(isString(el)?null:el);
+			opts.template = tmpl;
+			var RootComponent = extend(function() {
+				this._super.constructor.apply(this,arguments);
+			},Component,opts);
+			var root = new RootComponent();
 			root.$name = 'ROOT';
 			root.$root = root;
+			root.$el = isString(el)?null:el;
 
-			opts.template = tmpl;
-			root._parse(opts);
+			root._parse();
 
             return root;
 		}

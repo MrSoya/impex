@@ -9,13 +9,14 @@
             使用插件实现store的所有属性注入组件state
             
             <x-a>
-                <x-b>
+                <x-b .value="$store.value">
                     <p>in x-b {{value}}</p>
                 </x-b>
-                <p>in x-a {{value}}</p>
+                <p>$store.value in x-a {{$store.value}}</p>
+                <p>value in x-a {{value}}</p>
             </x-a>
             <x-c>
-                <p>in x-c {{value}}</p>
+                <p>in x-c {{$store.value}}</p>
             </x-c>
 
             <div x-html="html"></div>
@@ -30,7 +31,10 @@
         <script type="text/javascript">
             //注册组件
             impex.component('x-a',{
-                template:'<div><b>x-a</b><slot></slot></div>'
+                template:'<div><b>x-a</b><slot></slot></div>',
+                state:{
+                    value:11
+                }
             });
             impex.component('x-b',{
                 template:'<div style="text-indent:2rem"><b>x-b</b><slot></slot></div>'
@@ -38,31 +42,17 @@
             impex.component('x-c',{
                 template:'<div><b>x-c</b><slot></slot></div>',
                 onPropsBind:function(props) {
-                    console.log(props);
+                    console.log('base...',props);
                     return props;
                 }
             });
 
-            var storePlugin = {
-                install:function(impex,dispatch) {
-                    var store = window.$store = impex.create({
-                        state:{
-                            value:1
-                        }
-                    });
-
-                    //注入
-                    impex.mixin({
-                        onPropsBind:function(props) {
-                            for(var k in $store.$state){
-                                props['.'+k] = '$store.'+k;
-                            }
-                            return props;
-                        }
-                    });
+            window.$store = impex.create({
+                state:{
+                    x:0,
+                    value:1
                 }
-            };
-            impex.add(storePlugin);
+            });
             
             //渲染
             var root = impex.create({
@@ -87,7 +77,7 @@
                     // });
                 },
                 addComp:function() {
-                    this.html = '<x-a>x: {{x}}</x-a>'
+                    this.html = '<x-a>x: {{$store.x}}</x-a>'
                 },
                 changeNew:function() {
                     $store.x++;

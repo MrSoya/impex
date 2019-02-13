@@ -8,7 +8,7 @@
  * 
  * @class 
  */
-function Component (el) {
+var Component = extend(function(props) {
 	EventEmitter.call(this);
 
 	this.$id = 'C_' + im_counter++;
@@ -17,7 +17,7 @@ function Component (el) {
 	 * 对顶级元素的引用
 	 * @type {HTMLElement}
 	 */
-	this.$el = el;
+	this.$el;
 	/**
 	 * 对顶级虚拟元素的引用
 	 */
@@ -47,18 +47,14 @@ function Component (el) {
 	 */
 	this.$children = [];
 
+	this._props = props;
 	this._watchers = [];
 	this._combiningChange = false;
 	this._updateMap = {};
 	this._lastProps = {};
 
 	impex._cs[this.$id] = this;
-};
-function F(){}
-F.prototype = EventEmitter.prototype;  
-Component.prototype = new F();  
-Component.prototype.constructor = Component.constructor; 
-ext({
+},EventEmitter,{
 	$setState:function(stateObj) {
 		for(var k in stateObj){
 			this.$state[k] = stateObj[k];
@@ -153,9 +149,8 @@ ext({
     	mountComponent(this,this.$vel);
     },
     //解析组件参数，并编译视图
-    _parse:function(opts) {
-    	opts = opts || COMP_MAP[this.$name];
-    	preprocess(this,opts);
+    _parse:function() {
+    	preprocess(this);
 
     	//lc onCreate
     	this.onCreate && this.onCreate();
@@ -203,8 +198,29 @@ ext({
 
 		this._propKeys = Object.keys(newProps);
 		this._needUpdate = false;
+	},
+	_append:function(child) {
+		this.$children.push(child);
+		child.$parent = this;
+		child.$root = this.$root;
 	}
-},Component.prototype);
+});
+
+//生命周期调用函数
+function callPropsBind(comp,arg) {
+	//mixins
+	Mixins.forEach(function(mixin) {
+		if(mixin.onPropsBind){
+			arg = mixin.onPropsBind.call(comp,arg);
+		}
+	});
+	//prototypes
+	while(comp && comp['onPropsBind']){
+        arg = comp['onPropsBind'].call(comp,arg);
+        comp = comp._super;
+    }
+    return arg;
+}
 
 function getDirectiveParam(di,comp) {
 	var dName = di[2].dName;
@@ -282,32 +298,16 @@ function destroyDirective(vnode,comp){
  * 	监控state
  * 	计算状态处理
  */
-function preprocess(comp,opts) {
-    var tmpl = null,
-    	state = {},
-    	computeState = {},
-    	props = null;
+function preprocess(comp) {
+    var tmpl = comp.constructor.tmpl,
+    	state = comp.constructor.state,
+    	computeState = comp.constructor.computeState,
+    	props = comp.constructor.props;
 
-    //解析组件模型
-    if(opts){
-    	tmpl = opts.template;
-    	state = opts.state;
-    	props = opts.props;
-    	computeState = opts.computeState;
-
-    	var keys = Object.keys(opts);
-        for (var i=keys.length;i--;) {
-            var k = keys[i];
-            if(isFunction(opts[k])) {
-            	comp[k] = opts[k];
-            }
-        }
-		
-		if(isFunction(state)){
-			state = state.call(comp);
-		}
-		state = Object.assign({},state);
+	if(isFunction(state)){
+		state = state.call(comp);
 	}
+	state = Object.assign({},state);
 
 	comp._propsType = props;
 
@@ -316,9 +316,8 @@ function preprocess(comp,opts) {
 	//建立变量依赖
 	//触发onPropsBind
 	var propMap = Object.assign({},comp._props);
-	if(comp.onPropsBind){
-		propMap = comp.onPropsBind(propMap);
-	}
+	
+	propMap = callPropsBind(comp,propMap);
 
 	if(propMap && comp.$name != 'ROOT'){
 		var calcProps = parseProps(comp,comp.$parent,propMap,props);

@@ -70,14 +70,12 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			type = new Function('scope',"with(scope){return "+type+"}")(parent);
 		}
 	}
-	var c = new Component(el);
+	var c = new COMP_MAP[type](attrs);
 	c.$name = type;
-	//bind parent
-	parent.$children.push(c);
-	c.$parent = parent;
-	c.$root = parent.$root;
+	c.$el = el;
 	c.$vel = vnode;
-	c._props = attrs;
+	//bind parent
+	parent._append(c);
 	//ref
 	if(attrs[ATTR_REF_TAG]){
 		parent.$ref[attrs[ATTR_REF_TAG]] = c;
