@@ -29,6 +29,17 @@
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var PLUGIN_LIST = [];
+	var LCS = [
+		'onCreate',
+		'onPropsBind',
+		'onBeforeCompile',
+		'onCompile',
+		'onBeforeMount',
+		'onMount',
+		'onBeforeUpdate',
+		'onUpdate',
+		'onPropChange'
+	];
 
 	var PluginInited = false;
 

@@ -19,6 +19,10 @@ function Component (el) {
 	 */
 	this.$el = el;
 	/**
+	 * 对顶级虚拟元素的引用
+	 */
+	this.$vel;
+	/**
 	 * 对子组件/dom的引用
 	 * @type {Object}
 	 */
@@ -55,6 +59,14 @@ F.prototype = EventEmitter.prototype;
 Component.prototype = new F();  
 Component.prototype.constructor = Component.constructor; 
 ext({
+	$setState:function(stateObj) {
+		for(var k in stateObj){
+			this.$state[k] = stateObj[k];
+		}
+		
+		//reobserve state
+		observe(this.$state,this);
+	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
@@ -109,9 +121,9 @@ ext({
 		impex._cs[id] = null;
 		delete impex._cs[id];
 
-		destroyDirective(this.$vnode,this);
+		destroyDirective(this.$vel,this);
 
-		this.$vnode = 
+		this.$vel = 
 		this.$el = 
 		this.$compTags = 
 		this.$root = 
@@ -138,7 +150,7 @@ ext({
 	    	target.append(this.$el);
     	}
 
-    	mountComponent(this,this.$vnode);
+    	mountComponent(this,this.$vel);
     },
     //解析组件参数，并编译视图
     _parse:function(opts) {
@@ -173,7 +185,9 @@ ext({
 		this._props = props;
 	},
 	_updateProps:function() {
-		var newProps = parseInputProps(this,this.$parent,this._props,this._input);
+		if(!this._needUpdate)return;
+		//todo 这里要修改为触发onPropsChange，并且在Change里面进行下面的逻辑！！！
+		var newProps = parseProps(this,this.$parent,this._props,this._propsType);
 		
 		for(var k in newProps){
 			//记录旧值
@@ -272,13 +286,13 @@ function preprocess(comp,opts) {
     var tmpl = null,
     	state = {},
     	computeState = {},
-    	input = null;
+    	props = null;
 
     //解析组件模型
     if(opts){
     	tmpl = opts.template;
-    	state = Object.assign({},opts.state);
-    	input = opts.input;
+    	state = opts.state;
+    	props = opts.props;
     	computeState = opts.computeState;
 
     	var keys = Object.keys(opts);
@@ -292,31 +306,38 @@ function preprocess(comp,opts) {
 		if(isFunction(state)){
 			state = state.call(comp);
 		}
+		state = Object.assign({},state);
 	}
 
-	if(input){
-		comp._input = input;
-	}
+	comp._propsType = props;
 
 	//解析入参，包括
 	//验证必填项和入参类型
 	//建立变量依赖
-	//触发onPropBind
-	if(comp._props){
-		var props = parseInputProps(comp,comp.$parent,comp._props,input);
-		comp._propKeys = Object.keys(props);
-		for(var k in props){
-			state[k] = props[k];
+	//触发onPropsBind
+	var propMap = Object.assign({},comp._props);
+	if(comp.onPropsBind){
+		propMap = comp.onPropsBind(propMap);
+	}
+
+	if(propMap && comp.$name != 'ROOT'){
+		var calcProps = parseProps(comp,comp.$parent,propMap,props);
+		comp._propKeys = Object.keys(calcProps);
+		for(var k in calcProps){
+			state[k] = calcProps[k];
 		}
 	}
+
+	//observe state
+	observe(state,comp);
 
 	//编译前可以对模版视图或者slot的内容进行操作
 	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
 	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
 	//顶级组件不会调用该方法
 	if(tmpl){
-		if(comp.onBeforeCompile && comp.$vnode)
-	        tmpl = comp.onBeforeCompile(tmpl,comp.$vnode.raw);
+		if(comp.onBeforeCompile && comp.$vel)
+	        tmpl = comp.onBeforeCompile(tmpl,comp.$vel.raw);
 		comp._processedTmpl = tmpl.trim()
 	    .replace(/<!--[\s\S]*?-->/mg,'')
 	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
@@ -325,9 +346,6 @@ function preprocess(comp,opts) {
 	            return '>'+b+'<';
 	    });
 	}
-
-	//observe state
-	observe(state,comp);
 
 	//removeIf(production)
     //check computeState
@@ -361,7 +379,7 @@ function preprocess(comp,opts) {
 		comp.$state = defineProxy(comp.$state,null,comp,true);
 	}
 }
-function parseInputProps(comp,parent,parentAttrs,input){
+function parseProps(comp,parent,parentAttrs,input){
 
 	//解析input，抽取必须项
 	var requires = {};
@@ -395,7 +413,7 @@ function parseInputProps(comp,parent,parentAttrs,input){
 		}//end for
 		//创建watcher
 		for(k in depMap){
-			var vn = comp.$vnode;
+			var vn = comp.$vel;
 			var args = [parent];
 			var forScopeStart = '',forScopeEnd = '';
 			if(vn._forScopeQ)
@@ -458,12 +476,6 @@ function parseInputProps(comp,parent,parentAttrs,input){
 	//check requires
 	assert(Object.keys(requires).length==0,comp.$name,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
 	//endRemoveIf(production)
-	
-	if(!rs)return;
-
-	if(comp.onPropBind){
-		rs = comp.onPropBind(rs);
-	}
 
 	return rs;	
 }
@@ -482,21 +494,21 @@ function compileComponent(comp){
 	console.log('组件属性变更监控。。。。end');
 
 	var pv = null;
-	if(comp.$vnode){
-		pv = comp.$vnode.parent;
+	if(comp.$vel){
+		pv = comp.$vel.parent;
 		var cs = pv.children;
-		var i = cs.indexOf(comp.$vnode);
+		var i = cs.indexOf(comp.$vel);
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
 		//绑定组件上的指令
-		vnode._comp_directives = comp.$vnode.directives;
+		vnode._comp_directives = comp.$vel.directives;
 	}
 	//覆盖编译后的vnode
-	comp.$vnode = vnode;
+	comp.$vel = vnode;
 	vnode.parent = pv;
 
-	comp.onCompile && comp.onCompile(comp.$vnode);//must handle slots before this callback 
+	comp.onCompile && comp.onCompile(comp.$vel);//must handle slots before this callback 
 }
 function ready2notify(comp) {
 	comp._combiningChange = true;
@@ -518,7 +530,7 @@ function ready2notify(comp) {
  * 准备挂载组件到页面
  */
 function mountComponent(comp,parentVNode){
-	var dom = transform(comp.$vnode,comp);
+	var dom = transform(comp.$vel,comp);
 
 	//beforemount
 	comp.onBeforeMount && comp.onBeforeMount(dom);
@@ -530,12 +542,12 @@ function mountComponent(comp,parentVNode){
 
 	if(comp.$name){
 		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
-		comp.$vnode.setAttribute(DOM_COMP_ATTR,comp.$name);
+		comp.$vel.setAttribute(DOM_COMP_ATTR,comp.$name);
 	}
 	
 	comp.onMount && comp.onMount(comp.$el);
 
-	callDirective(comp.$vnode,comp,0);
+	callDirective(comp.$vel,comp,0);
 }
 
 //////	update flow
@@ -552,7 +564,7 @@ function updateComponent(comp,changeMap){
 	var vnode = buildVDOMTree(comp);
 
 	//diffing
-	var forScopeQ = compareVDOM(vnode,comp.$vnode,comp);
+	var forScopeQ = compareVDOM(vnode,comp.$vel,comp);
 
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.$children.length;i++){
@@ -567,11 +579,9 @@ function updateComponent(comp,changeMap){
 	//更新子组件
 	comp.$children.forEach(function(child) {
 		//更新子组件
-		if(child._needUpdate){
-			child._updateProps();
-		}
+		child._updateProps();
 
-		var cvnode = child.$vnode;
+		var cvnode = child.$vel;
 		if(cvnode._comp_directives){
 			cvnode._comp_directives.forEach(function(di){
 				var part = getDirectiveParam(di,child);

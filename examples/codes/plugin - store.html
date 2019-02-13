@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div id="demo">
+            使用插件实现store的所有属性注入组件state
+            
+            <x-a>
+                <x-b>
+                    <p>in x-b {{value}}</p>
+                </x-b>
+                <p>in x-a {{value}}</p>
+            </x-a>
+            <x-c>
+                <p>in x-c {{value}}</p>
+            </x-c>
+
+            <div x-html="html"></div>
+
+            <button @click="change()">1.change store value</button>
+            <button @click="set()">2.set store state</button>
+            <button @click="addComp()">3.add comp</button>
+            <button @click="changeNew()">4.change new state</button>
+        </div>
+    
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            //注册组件
+            impex.component('x-a',{
+                template:'<div><b>x-a</b><slot></slot></div>'
+            });
+            impex.component('x-b',{
+                template:'<div style="text-indent:2rem"><b>x-b</b><slot></slot></div>'
+            });
+            impex.component('x-c',{
+                template:'<div><b>x-c</b><slot></slot></div>',
+                onPropsBind:function(props) {
+                    console.log(props);
+                    return props;
+                }
+            });
+
+            var storePlugin = {
+                install:function(impex,dispatch) {
+                    var store = window.$store = impex.create({
+                        state:{
+                            value:1
+                        }
+                    });
+
+                    //注入
+                    impex.mixin({
+                        onPropsBind:function(props) {
+                            for(var k in $store.$state){
+                                props['.'+k] = '$store.'+k;
+                            }
+                            return props;
+                        }
+                    });
+                }
+            };
+            impex.add(storePlugin);
+            
+            //渲染
+            var root = impex.create({
+                el:'#demo',
+                state:{
+                    html:''
+                },
+                change:function(e){
+                    $store.value++;
+                },
+                set:function(argument) {
+                    //改变状态
+                    $store.$setState({
+                        x:1,
+                        value:8
+                    });
+                    //改变store
+                    // window.$store = impex.create({
+                    //     state:{
+                    //         x:1
+                    //     }
+                    // });
+                },
+                addComp:function() {
+                    this.html = '<x-a>x: {{x}}</x-a>'
+                },
+                changeNew:function() {
+                    $store.x++;
+                }
+            });
+            
+        </script>
+    </body>
+</html>

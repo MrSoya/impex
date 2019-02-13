@@ -59,11 +59,12 @@
 		 * 定义的组件实质是创建了一个组件类的子类，该类的行为和属性由model属性
 		 * 指定，当impex解析对应指令时，会动态创建子类实例<br/>
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
-		 * @param  {Object} model 组件模型对象
+		 * @param  {Object} opts 组件选项
+		 * @param  {Object} opts.props 属性验证
 		 * @return this
 		 */
-		this.component = function(name,model){
-			COMP_MAP[name] = model;
+		this.component = function(name,opts){
+			COMP_MAP[name] = opts;
 			
 			return this;
 		}
@@ -126,6 +127,41 @@
             if(PLUGIN_LIST.indexOf(plugin)<0)
             	PLUGIN_LIST.push(plugin);
 		}
+
+		/**
+		 * 全局mix接口，混入属性会影响之后创建的所有组件
+		 * @param  {Object} mixin 混入对象
+		 */
+		this.mixin = function(mixin) {
+			var newProto = Object.create(Component.prototype);
+			for (var k in mixin) {
+				if(LCS.indexOf(k)>-1){
+					newProto[k] = wrap(mixin[k],newProto[k],k);
+				}else{
+					if (!Component.prototype[k]) {//重名优先组件
+                        newProto[k] = mixin[k];
+                    }
+				}
+			}
+			Component.prototype = newProto;
+		}
+		function wrap(fn,superFn,k) {
+            return function() {
+                var rs = fn.apply(this,arguments);
+                if(superFn){
+                	switch(k){
+	                	case 'onPropsBind':
+	                	case 'onBeforeCompile':
+	                	case 'onBeforeUpdate':
+	                		rs = superFn.call(this,rs);
+	                	default:
+	                		superFn.apply(this,arguments);
+	                }
+                }
+                
+                return rs;
+            }
+        }
 
 		/**
 		 * 渲染一个DOM节点组件，比如

@@ -76,8 +76,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 	parent.$children.push(c);
 	c.$parent = parent;
 	c.$root = parent.$root;
-	// c.$store = c.$root.$store;
-	c.$vnode = vnode;
+	c.$vel = vnode;
 	c._props = attrs;
 	//ref
 	if(attrs[ATTR_REF_TAG]){

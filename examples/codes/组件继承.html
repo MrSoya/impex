@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div id="demo">
+            定义一个新组件，应该类似于定义了一个Component的子类,
+            而现在则是把所有属性挂在了实例上
+            
+        </div>
+    
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            //测试内容
+            //1. state挂原型上，然后new实例，是否共享？
+            //2. function挂原型上，然后new实例，是否共享？
+            
+
+            /*********** 场景模拟 ************/
+            var state = {
+                x:1,
+                y:{a:2}
+            };
+            var CMAP = {'root':Comp};
+            function component(name,opts) {
+                CMAP[name] = extend('root',opts);
+            }
+
+            function extend(cname,opts) {
+                var parent = CMAP[cname];
+                var c = new Function('CMAP["'+cname+'"].call(this)');
+                c.prototype = Object.create(parent.prototype,{_super:{value:parent.prototype}});
+                c.prototype.constructor = c;
+                //函数绑定到原型
+                for(k in opts){
+                    c.prototype[k] = opts[k];
+                }
+                return c;
+            }
+
+            function callRecursive(fname,obj) {
+                while(obj && obj[fname]){
+                    obj[fname].call(obj);
+                    obj = obj._super;
+                }
+            }
+
+            //组件基类
+            function Comp() {
+                this.p1 = [];
+                console.log('comp...')
+            }
+            Comp.prototype = {
+                a:function(argument) {
+                    console.log(this.name,'base');
+                },
+                bb:{a:1},//对象原型一定会共享
+                x:1,//常量原型不会导致共享
+                _a:function() {//递归调用原型链上所有函数
+                    callRecursive('a',this);
+                }
+            }
+
+            //注册组件
+            component("xx",{
+                a:function(argument) {
+                    console.log(this.name,'xx');
+                }
+            });
+
+            //继承xx
+            var d = extend('xx',{
+                a:function(argument) {
+                    console.log(this.name,'xxxx');
+                }
+            })
+
+            //模拟mixin，生命周期递归调用
+            //如果实现全局每个组件实例new的时候都调用的函数，那么一定要实现成基类
+            var baseClass = Comp;
+            function mixin(opts) {
+                CMAP[name] = extend('root',opts);
+            }
+
+            //创建组件实例
+            var c = new CMAP["xx"];
+            c._a();
+            var cc = new CMAP["xx"];
+
+            new d()._a();
+        </script>
+    </body>
+</html>
