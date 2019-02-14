@@ -102,7 +102,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
         	fn = fn.bind(parent);
        
         if(fn){
-			c.on(type,fn);
+			c.$on(type,fn);
         }
 	});
 

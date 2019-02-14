@@ -54,6 +54,10 @@ var Component = extend(function(props) {
 	this._lastProps = {};
 
 	impex._cs[this.$id] = this;
+
+	
+	//lc onCreate
+	this.onCreate && this.onCreate();
 },EventEmitter,{
 	$setState:function(stateObj) {
 		for(var k in stateObj){
@@ -151,9 +155,6 @@ var Component = extend(function(props) {
     //解析组件参数，并编译视图
     _parse:function() {
     	preprocess(this);
-
-    	//lc onCreate
-    	this.onCreate && this.onCreate();
 
 		if(this._processedTmpl)
 			compileComponent(this);
@@ -479,14 +480,24 @@ function parseProps(comp,parent,parentAttrs,input){
 	return rs;	
 }
 
-function compileComponent(comp){
-	//监控state
+/**
+ * 创建组件视图监控，每个组件只能创建一个watcher
+ */
+var ViewWatcherMap = {};
+function getViewWatcher(comp) {
+	if(ViewWatcherMap[comp.$id])return ViewWatcherMap[comp.$id];
 	var watcher = new Watcher(function(change) {
 		this._updateMap[change.name] = change;
 		ready2notify(this);
 		console.log('组件属性变更',arguments);
 	},comp);
-	Monitor.target = watcher;
+	ViewWatcherMap[comp.$id] = watcher;
+	return watcher;
+}
+
+function compileComponent(comp){
+	//监控state
+	Monitor.target = getViewWatcher(comp);
 	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
 	Monitor.target = null;
@@ -560,7 +571,11 @@ function updateComponent(comp,changeMap){
 	if(renderable === false)return;
 
 	//rebuild VDOM tree
+	Monitor.target = getViewWatcher(comp);
+	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
+	Monitor.target = null;
+	console.log('组件属性变更监控。。。。end');
 
 	//diffing
 	var forScopeQ = compareVDOM(vnode,comp.$vel,comp);
@@ -604,7 +619,7 @@ function buildVDOMTree(comp){
         root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.$attributes)+": ",e);
+        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp._props)+": ",e);
     }
     //endRemoveIf(production)
     
