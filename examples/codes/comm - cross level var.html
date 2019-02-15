@@ -47,8 +47,8 @@
                     v:store.value
                 },
                 onMount:function() {
-                    this.$watch('v',function(newVal) {
-                        store.value = newVal;
+                    this.$watch('v',function(change) {
+                        store.value = change.newVal;
                     })
                 }
             });

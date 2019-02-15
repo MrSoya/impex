@@ -31,7 +31,6 @@ var gulp = require('gulp'),
         'src/core/event.js',
 
         'src/observe/Change.js',
-        'src/observe/Watcher.js',
         'src/observe/Monitor.js',
         'src/observe/observer.js',
 
@@ -42,6 +41,7 @@ var gulp = require('gulp'),
 
         'src/component/EventEmitter.js',
         'src/component/Component.js',
+        'src/component/watchers.js',
 
         'src/impex.js',
 

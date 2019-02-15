@@ -23,7 +23,8 @@
                     value:10
                 },
                 onCompile : function(){
-                    this.$watch('value',function(newVal,oldVal){
+                    this.$watch('value',function(change){
+                        var newVal = change.newVal;
                         var nv = /^-?[0-9]+$/.test(newVal);
                         if(!nv && nv!==''){
                             this.value = parseFloat(newVal)||'';

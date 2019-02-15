@@ -17,7 +17,7 @@ impex.component("x-wish",{
         time:'',
         done:false
     },
-    input:{
+    props:{
         title:{
             type:'string',
             require:true
@@ -30,9 +30,9 @@ impex.component("x-wish",{
     setProgress : function(prog){
         this.progress = prog;
         if(prog == 100){
-            this.emit('done',this.id);
+            this.$emit('done',this.id);
         }
-        this.emit('progress',this.id,prog);
+        this.$emit('progress',this.id,prog);
     },
     open:function() {
         if(this.done)return;

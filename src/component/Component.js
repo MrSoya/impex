@@ -46,13 +46,15 @@ var Component = extend(function(props) {
 	 * @type {Array}
 	 */
 	this.$children = [];
-
-	this._props = props;
-	this._watchers = [];
-	this._combiningChange = false;
+	/**
+	 * 计算后的参数map
+	 */
+	this.$props;
+	this._props = props;//raw props
+	this._watchers = [];//use to del
 	this._updateMap = {};
-	this._lastProps = {};
-
+	this._propMap = {};
+	this._propWatcher = {};
 	impex._cs[this.$id] = this;
 
 	
@@ -70,14 +72,13 @@ var Component = extend(function(props) {
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
-	 * @param  {Function} cbk      回调函数，[newVal,oldVal,k]
+	 * @param  {Function} cbk      回调函数，[change]
 	 */
 	$watch:function(path,cbk){
-		var watcher = new Watcher(function(change) {
-			cbk && cbk.call(this,change.newVal,change.oldVal,change.name);
-		},this);
+		cbk = cbk.bind(this);
+		this._watchers.push(cbk);
 		console.log('watcher变更监控。。。。',this.$id);
-		Monitor.target = watcher;
+		Monitor.target = cbk;
 		//find monitor
 		var makeWatch = new Function('state','return state.'+path);
 
@@ -90,22 +91,34 @@ var Component = extend(function(props) {
 	/**
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
-	destroy:function(){
+	$destroy:function(){
 		this.onDestroy && this.onDestroy();
 		var id = this.$id;
 
+		//clear watchers
 		this._watchers.forEach(function(watcher) {
-			watcher.dispose();
+			watcher.monitors.forEach(function(m) {
+				m.removeWatcher(watcher);
+			});
 		});
+		var vw = this._viewWatcher;
+		vw.monitors.forEach(function(m) {
+			m.removeWatcher(vw);
+		});
+		this._viewWatcher = 
 		this._watchers = null;
 
 		if(this._updateTimer){
 			clearTimeout(this._updateTimer);
 			this._updateTimer = null;
 		}
+		if(this._propTimer){
+			clearTimeout(this._propTimer);
+			this._propTimer = null;
+		}
 
+		//clear refs
 		if(this.$parent){
-			
 			var index = this.$parent.$children.indexOf(this);
 			if(index > -1){
 				this.$parent.$children.splice(index,1);
@@ -114,7 +127,7 @@ var Component = extend(function(props) {
 		}
 
 		while(this.$children.length > 0){
-			this.$children[0].destroy();
+			this.$children[0].$destroy();
 		}
 
 		this.$children = 
@@ -123,21 +136,22 @@ var Component = extend(function(props) {
 
 		destroyDirective(this.$vel,this);
 
+		this._props = 
+		this._watchers = 
+		this._updateMap = 
+		this._propMap = 
+		this._propWatcher = 
+
 		this.$vel = 
 		this.$el = 
 		this.$compTags = 
 		this.$root = 
+		this.$state = 
+		this.$props = 
 
 		this.$ref = 
 		this.$id = null;
 	},
-	/**
-	 * 如果一个引用参数发生了改变，那么子组件必须重载该方法，
-	 * 并自行判断是否真的修改了。但是更好的方案是，调用子组件的某个方法比如刷新之类
-	 */
-	onPropChange:function(key,newVal,oldVal){
-		this[key] = newVal;
-    },
     /**
      * 把一个未挂载的根组件挂载到指定的dom中
      * @param  {HTMLElement|String} target 挂载的目标dom或者选择器
@@ -164,6 +178,8 @@ var Component = extend(function(props) {
 			this.$mount();
 		}
 
+		console.log('mounted',this.$id)
+
 		//init children
 		for(var i = this.$children.length;i--;){
 			this.$children[i]._parse();
@@ -182,29 +198,27 @@ var Component = extend(function(props) {
 	},
 	_updateProps:function() {
 		if(!this._needUpdate)return;
-		//todo 这里要修改为触发onPropsChange，并且在Change里面进行下面的逻辑！！！
-		var newProps = parseProps(this,this.$parent,this._props,this._propsType);
+		var newProps = parseProps(this,this.$parent,this._props,this.constructor.props);
 		
-		for(var k in newProps){
-			//记录旧值
-			this._lastProps[k] = this[k];
-			this[k] = newProps[k];
-		}
-		//重置多余属性
-		this._propKeys.forEach(function(k) {
-			if(!(k in newProps)){
-				this[k] = this._lastProps[k] || undefined;
-			}
-		},this);
+		this.onPropsChange && this.onPropsChange(newProps);
 
-		this._propKeys = Object.keys(newProps);
+		this.$props = newProps;
+
 		this._needUpdate = false;
 	},
 	_append:function(child) {
 		this.$children.push(child);
 		child.$parent = this;
 		child.$root = this.$root;
-	}
+	},
+	/******* 默认实现 ********/
+	onPropsChange:function(newProps){
+		this.$setState(newProps);
+    },
+    onBeforeCompile:function(tmpl,rawNode) {
+    	this.$setState(this.$props);
+    	return tmpl;
+    }
 });
 
 //生命周期调用函数
@@ -310,8 +324,6 @@ function preprocess(comp) {
 	}
 	state = Object.assign({},state);
 
-	comp._propsType = props;
-
 	//解析入参，包括
 	//验证必填项和入参类型
 	//建立变量依赖
@@ -322,30 +334,15 @@ function preprocess(comp) {
 
 	if(propMap && comp.$name != 'ROOT'){
 		var calcProps = parseProps(comp,comp.$parent,propMap,props);
-		comp._propKeys = Object.keys(calcProps);
+		var obj = {};
 		for(var k in calcProps){
-			state[k] = calcProps[k];
+			obj[k] = calcProps[k];
 		}
+		comp.$props = obj;
 	}
 
 	//observe state
 	observe(state,comp);
-
-	//编译前可以对模版视图或者slot的内容进行操作
-	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
-	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
-	//顶级组件不会调用该方法
-	if(tmpl){
-		if(comp.onBeforeCompile && comp.$vel)
-	        tmpl = comp.onBeforeCompile(tmpl,comp.$vel.raw);
-		comp._processedTmpl = tmpl.trim()
-	    .replace(/<!--[\s\S]*?-->/mg,'')
-	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-	    .replace(/^\s+|\s+$/img,' ')
-	    .replace(/>\s([^<]*)\s</,function(a,b){
-	            return '>'+b+'<';
-	    });
-	}
 
 	//removeIf(production)
     //check computeState
@@ -362,12 +359,7 @@ function preprocess(comp) {
 		var cs = computeState[k];
 		var fn = cs.get || cs;
 		//record hooks
-		var watcher = new Watcher(function(change,wtc) {
-			var v = wtc.fn.call(this,this);
-			this[wtc.k] = v;
-		},comp);
-		watcher.k = k;
-		watcher.fn = fn;
+		var watcher = getComputeWatcher(fn,k,comp);
 
 		Monitor.target = watcher;
 		console.log('compute变更监控。。。。',comp.$id);
@@ -377,6 +369,22 @@ function preprocess(comp) {
 
 		comp.$state[k] = v;
 		comp.$state = defineProxy(comp.$state,null,comp,true);
+	}
+
+	//编译前可以对模版视图或者slot的内容进行操作
+	//可以通过RawNode来获取组件的innerHTML或者结构化的RawNode节点
+	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
+	//顶级组件不会调用该方法
+	if(tmpl){
+		if(comp.onBeforeCompile && comp.$vel)
+	        tmpl = comp.onBeforeCompile(tmpl,comp.$vel.raw);
+		comp._processedTmpl = tmpl.trim()
+	    .replace(/<!--[\s\S]*?-->/mg,'')
+	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
+	    .replace(/^\s+|\s+$/img,' ')
+	    .replace(/>\s([^<]*)\s</,function(a,b){
+	            return '>'+b+'<';
+	    });
 	}
 }
 function parseProps(comp,parent,parentAttrs,input){
@@ -422,17 +430,17 @@ function parseProps(comp,parent,parentAttrs,input){
 		            forScopeEnd += '}';
 		            args.push(vn._forScopeQ[i]);
 		        }
-			var fn = new Function('scope','with(scope){'+forScopeStart+'return '+ depMap[k] +forScopeEnd+'}');
-			//建立parent的watcher
-			var watcher = new Watcher(function(change,wtc) {
-				var newVal = wtc.fn.apply(parent,wtc.args);
-				this.onPropChange && this.onPropChange(wtc.k,newVal,this[wtc.k]);
-			},comp);
-			watcher.k = k;
-			watcher.fn = fn;
-			watcher.args = args;
-			Monitor.target = watcher;
-			console.log('入参变更监控。。。。',comp.$id);
+			var fn = new Function('scope',
+				'with(scope){'+forScopeStart+'return '
+				+ depMap[k] +forScopeEnd+'}');
+			//建立prop watcher
+			var propWatcherKey = k+'-'+parent.$id;
+			if(!comp._propWatcher[propWatcherKey]){
+				var watcher = getPropWatcher(fn,k,args,comp);
+				Monitor.target = watcher;
+
+				console.log('入参变更监控。。。。',comp.$id);
+			}
 			//removeIf(production)
 			try{
 		    //endRemoveIf(production)
@@ -442,8 +450,12 @@ function parseProps(comp,parent,parentAttrs,input){
 		        assert(false,comp.$name,XERROR.COMPONENT.DEP,"creating dependencies error with prop "+JSON.stringify(k)+": ",e);
 		    }
 		    //endRemoveIf(production)
-		    Monitor.target = null;
-		    console.log('入参变更监控。。。。end');
+		    if(!comp._propWatcher[propWatcherKey]){
+			    //记录watcher，防止重复
+			    comp._propWatcher[propWatcherKey] = 1;
+			    Monitor.target = null;
+			    console.log('入参变更监控。。。。end');
+		    }
 		}
 		//验证input
 		for(var k in rs){
@@ -480,21 +492,6 @@ function parseProps(comp,parent,parentAttrs,input){
 	return rs;	
 }
 
-/**
- * 创建组件视图监控，每个组件只能创建一个watcher
- */
-var ViewWatcherMap = {};
-function getViewWatcher(comp) {
-	if(ViewWatcherMap[comp.$id])return ViewWatcherMap[comp.$id];
-	var watcher = new Watcher(function(change) {
-		this._updateMap[change.name] = change;
-		ready2notify(this);
-		console.log('组件属性变更',arguments);
-	},comp);
-	ViewWatcherMap[comp.$id] = watcher;
-	return watcher;
-}
-
 function compileComponent(comp){
 	//监控state
 	Monitor.target = getViewWatcher(comp);
@@ -519,22 +516,6 @@ function compileComponent(comp){
 	vnode.parent = pv;
 
 	comp.onCompile && comp.onCompile(comp.$vel);//must handle slots before this callback 
-}
-function ready2notify(comp) {
-	comp._combiningChange = true;
-
-	if(comp._updateTimer)
-		clearTimeout(comp._updateTimer);
-	comp._updateTimer = setTimeout(function(){
-		//通知组件更新
-		updateComponent(comp,comp._updateMap);
-
-		console.log('update',comp.$id)
-
-		//restore
-		comp._updateMap = {};
-		comp._combiningChange = false;
-	},20);
 }
 /**
  * 准备挂载组件到页面

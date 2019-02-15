@@ -50,14 +50,14 @@
                     this.x =23;
                 },
                 onMount : function(){
-                    this.$watch('x',function(newVal,oldVal){
+                    this.$watch('x',function(change){
                         // this.info +=
                         //  '<p>a.b.x change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.$watch('b',function(newVal,oldVal){
+                    this.$watch('b',function(change){
                         // this.info += '<p>b change:'+JSON.stringify(oldVal)+"-->"+JSON.stringify(newVal)+'</p>';
                     });
-                    this.$watch('a.b.c.list',function(newVal,oldVal){
+                    this.$watch('a.b.c.list',function(change){
                         //如果监控状态是一个对象，那么必须手动比较新旧值是否相同
                         if(newVal.length == oldVal.length)return;
 

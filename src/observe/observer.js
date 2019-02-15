@@ -15,7 +15,7 @@ function defineProxy(state,pmonitor,target,isRoot) {
         var react = null;
         var monitor = null;
 
-        //对象被重新赋值后出发
+        //对象被重新赋值后触发
         if(pmonitor && pmonitor.value){
             var desc = Object.getOwnPropertyDescriptor(pmonitor.value,k);
             if(desc && desc.get){
@@ -64,7 +64,7 @@ function proxy(k,v,t,target,isRoot,monitor) {
             }
             
             //触发更新
-            monitor.notify(v,'update');
+            monitor.notify(v);
         }
     };
     

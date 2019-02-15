@@ -11,23 +11,30 @@ Monitor.prototype = {
 	/**
 	 * 通知watcher进行更新
 	 */
-	notify:function(newVal,type) {
+	notify:function(newVal) {
 		this.value = newVal;
 
-		var c = new Change(this.key,newVal,this.value,type,this.target);
+		var c = new Change(this.key,newVal,this.value,this.target);
 		this.watchers.forEach(function(watcher) {
-			watcher.key = this.key;
-			watcher.update(c);
-		},this);
+			watcher(c);
+		});
 	},
 	/**
 	 * 收集依赖
 	 */
 	collect:function() {
-		if(Monitor.target){
-			Monitor.target.depend(this);
-			if(this.watchers.indexOf(Monitor.target)<0)
-				this.watchers.push(Monitor.target);
+		var mt = Monitor.target;
+
+		if(mt){
+			if(!mt.monitors){
+				mt.monitors = [];
+			}//record to del
+			if(mt.monitors.indexOf(this)<0){
+				mt.monitors.push(this);
+				mt.key = this.key;
+			}
+			if(this.watchers.indexOf(mt)<0)
+				this.watchers.push(mt);
 		}
 	},
 	/**

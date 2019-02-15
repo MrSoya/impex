@@ -276,7 +276,7 @@ function removeVNode(vnodes){
 
         //todo...   release other resource
         if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
-            impex._cs[vnode._cid].destroy();
+            impex._cs[vnode._cid].$destroy();
         }
     }
 }

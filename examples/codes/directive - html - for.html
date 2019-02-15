@@ -29,7 +29,7 @@
                     }
                 },
                 onMount:function(argument) {
-                    this.$watch("row",function(newVal,oldVal){
+                    this.$watch("row",function(change){
                         console.log(arguments)
                     });
                     var that = this;
