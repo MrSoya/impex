@@ -24,8 +24,8 @@
         <script type="text/javascript">
             impex.component("x-panel",{
                 template:'<div>{{x}}</div>',
-                state:{
-                    x:-1
+                state:function(){
+                    return {x:-1}
                 }
             })
             

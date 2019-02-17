@@ -9,7 +9,7 @@ function observe(state,target) {
    	target.$state = defineProxy(state,null,target,true);
 }
 function defineProxy(state,pmonitor,target,isRoot) {
-    var t = Array.isArray(state)?wrapArray([],target,pmonitor):{};
+    var t = Array.isArray(state)?wrapArray(state,target,pmonitor):state;
     for(var k in state){
         var v = state[k];
         var react = null;
@@ -24,9 +24,11 @@ function defineProxy(state,pmonitor,target,isRoot) {
         }
         
         //monitor has existed
+        var needProxy = true;
         var desc = Object.getOwnPropertyDescriptor(state,k);
         if(desc && desc.get){
             monitor = desc.get.__mm__;
+            needProxy = false;
         }
         if(!monitor){
             monitor = new Monitor();
@@ -34,7 +36,8 @@ function defineProxy(state,pmonitor,target,isRoot) {
         if(isObject(v)){
             v = defineProxy(v,monitor,target,false);
         }
-        proxy(k,v,t,target,isRoot,monitor);
+        if(needProxy)
+            proxy(k,v,t,target,isRoot,monitor);
     }
     return t;
 }

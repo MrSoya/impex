@@ -64,6 +64,11 @@
 		 * @return this
 		 */
 		this.component = function(name,opts){
+
+		    //removeIf(production)
+			assert(!opts.state || opts.state instanceof Function,name,XERROR.COMPONENT.STATE,"state must be a function ");
+			//endRemoveIf(production)
+	
 			COMP_MAP[name] = extend(function() {
 				this._super.constructor.apply(this,arguments);
 			},Component,opts);
@@ -189,6 +194,13 @@
 
             //创建根组件
 			opts.template = tmpl;
+			var state = opts.state;
+			if(state && !isFunction(state)){
+				opts.state = function() {
+					return state;
+				}
+			}
+
 			var RootComponent = extend(function() {
 				this._super.constructor.apply(this,arguments);
 			},Component,opts);

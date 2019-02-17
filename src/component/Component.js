@@ -221,22 +221,6 @@ var Component = extend(function(props) {
     }
 });
 
-//生命周期调用函数
-function callPropsBind(comp,arg) {
-	//mixins
-	Mixins.forEach(function(mixin) {
-		if(mixin.onPropsBind){
-			arg = mixin.onPropsBind.call(comp,arg);
-		}
-	});
-	//prototypes
-	while(comp && comp['onPropsBind']){
-        arg = comp['onPropsBind'].call(comp,arg);
-        comp = comp._super;
-    }
-    return arg;
-}
-
 function getDirectiveParam(di,comp) {
 	var dName = di[2].dName;
 	var d = DIRECT_MAP[dName];
@@ -319,27 +303,15 @@ function preprocess(comp) {
     	computeState = comp.constructor.computeState,
     	props = comp.constructor.props;
 
-	if(isFunction(state)){
-		state = state.call(comp);
-	}
-	state = Object.assign({},state);
-
 	//解析入参，包括
 	//验证必填项和入参类型
 	//建立变量依赖
-	//触发onPropsBind
-	var propMap = Object.assign({},comp._props);
+	var calcProps = parseProps(comp,comp.$parent,comp._props,props);
+	comp.$props = calcProps;
 	
-	propMap = callPropsBind(comp,propMap);
-
-	if(propMap && comp.$name != 'ROOT'){
-		var calcProps = parseProps(comp,comp.$parent,propMap,props);
-		var obj = {};
-		for(var k in calcProps){
-			obj[k] = calcProps[k];
-		}
-		comp.$props = obj;
-	}
+	//此时可以访问$props
+	if(state)
+		state = state.call(comp);
 
 	//observe state
 	observe(state,comp);
@@ -368,7 +340,7 @@ function preprocess(comp) {
 		console.log('compute变更监控。。。。end');
 
 		comp.$state[k] = v;
-		comp.$state = defineProxy(comp.$state,null,comp,true);
+		defineProxy(comp.$state,null,comp,true);
 	}
 
 	//编译前可以对模版视图或者slot的内容进行操作
