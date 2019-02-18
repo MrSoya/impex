@@ -67,8 +67,9 @@
 
 		    //removeIf(production)
 			assert(!opts.state || opts.state instanceof Function,name,XERROR.COMPONENT.STATE,"state must be a function ");
+			assert(!opts.mixins || isArray(opts.mixins),name,XERROR.COMPONENT.MIXINS,"mixins must be an array ");
 			//endRemoveIf(production)
-	
+			
 			COMP_MAP[name] = extend(function() {
 				this._super.constructor.apply(this,arguments);
 			},Component,opts);

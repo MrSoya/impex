@@ -30,6 +30,14 @@
 	var EVENT_MAP = {};
 	var PLUGIN_LIST = [];
 	var Mixins = [];
+	var LC = [
+		'onCreate',
+		'onCompile',
+		'onMount',
+		'onBeforeMount',
+		'onUpdate',
+		'onDestroy'
+	];
 
 	var PluginInited = false;
 
@@ -49,7 +57,8 @@
 			TEMPLATETAG:1005,
 			COMPUTESTATE:1006,
 			DEP:1007,
-			STATE:1008
+			STATE:1008,
+			MIXINS:1009
 		},
 		COMPILE:{//2XXX
 			ONEROOT:2001,

@@ -22,6 +22,31 @@
             if(k != 'state' && isFunction(opts[k]))
                 ctor.prototype[k] = opts[k];
         }
+        //绑定mixins
+        if(opts.mixins){
+            var lcQ = [];
+            var fns = {};
+            opts.mixins.forEach(function(mixin) {
+                var lcMap = {};
+                for(var k in mixin){
+                    if(isFunction(mixin[k])){
+                        if(LC.indexOf(k)>-1){
+                            lcMap[k] = mixin[k];
+                        }else{
+                            fns[k] = mixin[k];
+                        }
+                    }
+                }
+                if(Object.keys(lcMap).length>0)
+                    lcQ.push(lcMap);
+            });
+            ctor.lcq = lcQ;
+
+            for(var k in fns){//组件优先
+                if(!ctor.prototype[k])
+                    ctor.prototype[k] = fns[k];
+            }
+        }
 
         return ctor;
     }

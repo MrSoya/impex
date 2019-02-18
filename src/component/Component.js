@@ -56,10 +56,6 @@ var Component = extend(function(props) {
 	this._propMap = {};
 	this._propWatcher = {};
 	impex._cs[this.$id] = this;
-
-	
-	//lc onCreate
-	this.onCreate && this.onCreate();
 },EventEmitter,{
 	$setState:function(stateObj) {
 		for(var k in stateObj){
@@ -92,19 +88,22 @@ var Component = extend(function(props) {
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	$destroy:function(){
-		this.onDestroy && this.onDestroy();
+		callLifecycle(this,'onDestroy');
+		
 		var id = this.$id;
 
 		//clear watchers
 		this._watchers.forEach(function(watcher) {
-			watcher.monitors.forEach(function(m) {
-				m.removeWatcher(watcher);
-			});
+			if(watcher.monitors)
+				watcher.monitors.forEach(function(m) {
+					m.removeWatcher(watcher);
+				});
 		});
 		var vw = this._viewWatcher;
-		vw.monitors.forEach(function(m) {
-			m.removeWatcher(vw);
-		});
+		if(vw.monitors)
+			vw.monitors.forEach(function(m) {
+				m.removeWatcher(vw);
+			});
 		this._viewWatcher = 
 		this._watchers = null;
 
@@ -170,6 +169,10 @@ var Component = extend(function(props) {
     _parse:function() {
     	preprocess(this);
 
+		//触发onCreate
+		
+		callLifecycle(this,'onCreate');
+
 		if(this._processedTmpl)
 			compileComponent(this);
 
@@ -214,12 +217,16 @@ var Component = extend(function(props) {
 	/******* 默认实现 ********/
 	onPropsChange:function(newProps){
 		this.$setState(newProps);
-    },
-    onBeforeCompile:function(tmpl,rawNode) {
-    	this.$setState(this.$props);
-    	return tmpl;
     }
 });
+
+function callLifecycle(comp,lcName,argAry) {
+	var lcq = comp.constructor.lcq;
+	lcq && lcq.forEach(function(lcMap) {
+		lcMap[lcName] && lcMap[lcName].apply(comp,argAry);
+	});
+	comp[lcName] && comp[lcName].apply(comp,argAry);
+}
 
 function getDirectiveParam(di,comp) {
 	var dName = di[2].dName;
@@ -487,7 +494,7 @@ function compileComponent(comp){
 	comp.$vel = vnode;
 	vnode.parent = pv;
 
-	comp.onCompile && comp.onCompile(comp.$vel);//must handle slots before this callback 
+	callLifecycle(comp,'onCompile');//must handle slots before this callback 
 }
 /**
  * 准备挂载组件到页面
@@ -496,7 +503,7 @@ function mountComponent(comp,parentVNode){
 	var dom = transform(comp.$vel,comp);
 
 	//beforemount
-	comp.onBeforeMount && comp.onBeforeMount(dom);
+	callLifecycle(comp,'onBeforeMount',[dom]);
 
 	//mount
 	//在子组件之前插入页面可以在onMount中获取正确的dom样式
@@ -508,7 +515,7 @@ function mountComponent(comp,parentVNode){
 		comp.$vel.setAttribute(DOM_COMP_ATTR,comp.$name);
 	}
 	
-	comp.onMount && comp.onMount(comp.$el);
+	callLifecycle(comp,'onMount');
 
 	callDirective(comp.$vel,comp,0);
 }
@@ -541,7 +548,7 @@ function updateComponent(comp,changeMap){
 		}
 	}
 
-	comp.onUpdate && comp.onUpdate(changeMap);
+	callLifecycle(comp,'onUpdate',[changeMap]);
 
 	//更新子组件
 	comp.$children.forEach(function(child) {
