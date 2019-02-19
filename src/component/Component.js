@@ -170,14 +170,13 @@ var Component = extend(function(props) {
     	preprocess(this);
 
 		//触发onCreate
-		
 		callLifecycle(this,'onCreate');
 
 		if(this._processedTmpl)
 			compileComponent(this);
 
 		//挂载组件
-		if(this.$el){
+		if(this.$el && this.$el.parentElement){
 			this.$mount();
 		}
 

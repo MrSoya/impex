@@ -61,6 +61,7 @@
 		 * @param  {string} name  组件名，全小写，必须是ns-name格式，至少包含一个"-"
 		 * @param  {Object} opts 组件选项
 		 * @param  {Object} opts.props 属性验证
+		 * @param  {Function|String} opts.extends 继承类
 		 * @return this
 		 */
 		this.component = function(name,opts){
@@ -70,9 +71,14 @@
 			assert(!opts.mixins || isArray(opts.mixins),name,XERROR.COMPONENT.MIXINS,"mixins must be an array ");
 			//endRemoveIf(production)
 			
+			var extd = Component;
+			if(opts.extends){
+				extd = isFunction(opts.extends)?opts.extends:COMP_MAP[opts.extends];
+			}
+
 			COMP_MAP[name] = extend(function() {
-				this._super.constructor.apply(this,arguments);
-			},Component,opts);
+				extd.apply(this,arguments);
+			},extd,opts);
 			
 			return this;
 		}
@@ -167,7 +173,7 @@
 		 * @param  {...} [functions] 所有函数都会直接绑定到组件上
 		 */
 		this.create = function(opts){
-			var tmpl = null;
+			var tmpl = opts.template;
 			var el = opts.el;
 			if(el instanceof HTMLElement){
 				//removeIf(production)
@@ -208,7 +214,7 @@
 			var root = new RootComponent();
 			root.$name = 'ROOT';
 			root.$root = root;
-			root.$el = isString(el)?null:el;
+			root.$el = isObject(el)?el:document.createElement('template');
 
 			root._parse();
 
