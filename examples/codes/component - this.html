@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            div{
+                padding: 2rem;
+                border:1px solid #000;
+            }
+        </style>
+    </head>
+    <body>
+        在一个组件的视图中的this，永远指向视图所在的组件
+        <ul>
+            <li>slot: this指向被插入的组件</li>
+            <li>参数: this指向视图所在组件</li>
+            <li>dom事件-绑定时: this指向视图所在组件</li>
+            <li>dom事件-调用时: this指向函数所在组件或bind后的context</li>
+            <li>自定义事件-绑定时: this指向视图所在组件</li>
+            <li>自定义事件-调用时: this指向发出事件组件的父组件</li>
+        </ul>
+        <div id="demo">
+            this.$name: {{this.$name}}
+
+            <x-a @click="showName($event,this)" .child-load="childLoad" @onload="childLoad()">
+                this.$name: {{this.$name}}  click
+                <x-b @onload="childLoad">
+                    this.$name: {{this.$name}}
+                    <x-c @click="this.$parent.$parent.showName()">
+                        this.$name: {{this.$name}}
+                    </x-c>
+                </x-b>
+            </x-a>
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            impex.component('x-a',{
+                template:'<div><slot></slot></div>',
+                state:function(argument) {
+                    this.childLoad = this.$props.childLoad;
+                },
+                onMount:function(argument) {
+                    this.$emit('onload',1,1,2);
+                }
+            });
+            impex.component('x-b',{
+                template:'<div><slot></slot></div>',
+                onMount:function(argument) {
+                    this.$emit('onload');
+                }
+            });
+            impex.component('x-c',{
+                template:'<div><slot></slot></div>'
+            });
+            
+            //渲染
+            var root = impex.create({
+                el:'#demo',
+                showName:function(e,comp) {
+                    debugger;
+                    console.log(this.$name+' clicked',comp);
+                },
+                childLoad:function(argument) {
+                    console.log(this.$name+' loaded');
+                }
+            });
+        </script>
+    </body>
+</html>
