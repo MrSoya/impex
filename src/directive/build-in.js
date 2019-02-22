@@ -11,7 +11,7 @@
  * <div x-style="obj" >...</div>
  */
 impex.directive('style',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         var v = data.value;
         if(isString(v)){
             var rs = {};
@@ -39,11 +39,11 @@ impex.directive('style',{
         }
         vnode.setAttribute('style',style);
     },
-    onUpdate:function(vnode,data) {
+    update:function(vnode,data) {
         vnode.setAttribute('style',vnode.raw.attributes.style);
-        this.onBind(vnode,data);
+        this.bind(vnode,data);
     },
-    onDestroy:function(vnode){
+    unbind:function(vnode){
         if(isUndefined(vnode.raw.attributes.style)){
             vnode.removeAttribute('style');
         }else{
@@ -65,7 +65,7 @@ impex.directive('style',{
  * <div x-class="{cls1:boolExp,cls2:boolExp,cls3:boolExp}" >...</div>
  */
 .directive('class',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         var v = data.value;
         var cls = vnode.getAttribute('class')||'';
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
@@ -90,11 +90,11 @@ impex.directive('style',{
         
         vnode.setAttribute('class',clsAry.join(' '));
     },
-    onUpdate:function(vnode,data) {
+    update:function(vnode,data) {
         vnode.setAttribute('class',vnode.raw.attributes.class);
-        this.onBind(vnode,data);
+        this.bind(vnode,data);
     },
-    onDestroy:function(vnode,data) {
+    unbind:function(vnode,data) {
         if(isUndefined(vnode.raw.attributes.class)){
             vnode.removeAttribute('class');
         }else{
@@ -108,13 +108,13 @@ impex.directive('style',{
  * <br/>使用方式2：<img :load:mousedown:touchstart="hi()" :dblclick="hello()">
  */
 .directive('on',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         var args = data.args;
         for(var i=args.length;i--;){
-            vnode.on(args[i],data.value,data.filter);
+            vnode.on(args[i],data.exp,data.modifiers);
         }
     },
-    onDestroy:function(vnode,data){
+    unbind:function(vnode,data){
         var args = data.args;
         for(var i=args.length;i--;){
             vnode.off(args[i]);
@@ -126,36 +126,36 @@ impex.directive('style',{
  * <br/>使用方式：<img x-bind:src="exp">
  */
 .directive('bind',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
 
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].onUpdate(vnode,data);
+                    DIRECT_MAP[p].update(vnode,data);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].onUpdate(vnode,data);
+                    DIRECT_MAP[p].update(vnode,data);
                     break;
                 default:
                     vnode.setAttribute(p,data.value);
             }//end switch
         }//end for
     },
-    onUpdate:function(vnode,data) {
-        this.onBind(vnode,data);
+    update:function(vnode,data) {
+        this.bind(vnode,data);
     },
-    onDestroy:function(vnode,data) {
+    unbind:function(vnode,data) {
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    DIRECT_MAP[p].unbind(vnode,data);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].onDestroy(vnode,data);
+                    DIRECT_MAP[p].unbind(vnode,data);
                     break;
                 default:
                     vnode.removeAttribute(p);
@@ -168,7 +168,7 @@ impex.directive('style',{
  * <br/>使用方式：<div x-show="exp"></div>
  */
 .directive('show',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         var style = vnode.getAttribute('style')||'';
         if(data.value){
             style = style.replace(/;display\s*:\s*none\s*;?/,'');
@@ -179,11 +179,11 @@ impex.directive('style',{
         vnode.setAttribute('style',style);
         return style;
     },
-    onUpdate:function(vnode,data,dom) {
-        var style = this.onBind(vnode,data);
+    update:function(vnode,data,dom) {
+        var style = this.bind(vnode,data);
         dom.setAttribute('style',style);
     },
-    onDestroy:function(vnode) {
+    unbind:function(vnode) {
         var style = vnode.getAttribute('style');
         if(!style)return;
         style = style.replace(/;display\s*:\s*none\s*;?/,'');
@@ -207,7 +207,7 @@ impex.directive('style',{
  * <br/>使用方式：<input x-model="model.prop">
  */
 .directive('model',{
-    onBind:function(vnode,data){
+    bind:function(vnode,data){
         vnode._exp = data.exp;
         switch(vnode.tag){
             case 'select':

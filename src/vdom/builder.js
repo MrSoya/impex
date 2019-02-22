@@ -1,23 +1,23 @@
 /**
  * VDOM构建器，用来构建VDOM树
  */
-function createElement(comp,rid,children,diCalcExpMap,html,forScopeAry){
+function createElement(comp,rid,children,html,forScopeAry){
     var raw = RNODE_MAP[rid];
     var tag = raw.tag;
     var rs = new VNode(tag,raw);
 
-    //把计算后的指令表达式值放入vnode中
-    for(var k in raw.directives){
-        var di = raw.directives[k];
-        di[1] = diCalcExpMap[k];
-        rs.directives.push([di[0],di[1],di[2],di[3]]);
-    }
     //复制原始属性
     rs.attributes = Object.assign({},raw.attributes);
     rs._isEl = true;
     if(forScopeAry.length>0)
         rs._forScopeQ = forScopeAry;
-    if (COMP_MAP[tag] || tag == 'component') {
+    var isComp = COMP_MAP[tag] || tag == 'component';
+    //把计算后的指令表达式值放入vnode中
+    for(var k in raw.directives){
+        var di = raw.directives[k];
+        rs.directives.push([di[0],undefined,di[2],di[3],isComp?true:false]);
+    }
+    if (isComp) {
         rs._comp = true;
         
         rs._slots = raw.children;

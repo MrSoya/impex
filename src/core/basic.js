@@ -5,7 +5,13 @@
 
 	var CMD_PREFIX = 'x-';//指令前缀
 	var CMD_PARAM_DELIMITER = ':';
-	var CMD_FILTER_DELIMITER = '.';
+	var CMD_MODIFIER_DELIMITER = '.';
+
+	//modifiers
+	var EVENT_MODIFIER_NATIVE = 'native';
+	var EVENT_MODIFIER_STOP = 'stop';
+	var EVENT_MODIFIER_PREVENT = 'prevent';
+	var EVENT_MODIFIER_SELF = 'self';
 
 	var EXP_START_TAG = '{{',
 		EXP_END_TAG = '}}';
@@ -29,15 +35,24 @@
 	var COMP_MAP = {'component':1};
 	var EVENT_MAP = {};
 	var PLUGIN_LIST = [];
-	var Mixins = [];
-	var LC = [
-		'onCreate',
-		'onCompile',
-		'onMount',
-		'onBeforeMount',
-		'onUpdate',
-		'onDestroy'
-	];
+	var Mixins = [];//global mixins
+
+	var LC_DI = {//指令生命周期
+		'bind':'bind',
+		'append':'append',
+		'update':'update',
+		'unbind':'unbind'
+	};
+	var LC_CO = {//指令生命周期
+		'created':'created',
+		'compile':'compile',
+		'willMount':'willMount',
+		'mounted':'mounted',
+		'destroy':'destroy',
+		'willUpdate':'willUpdate',
+		'updated':'updated',
+		'propsChange':'propsChange'
+	};
 
 	var PluginInited = false;
 

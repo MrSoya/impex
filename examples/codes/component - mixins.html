@@ -14,7 +14,7 @@
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             var M1 = {
-                onCreate:function() {
+                created:function() {
                     console.log('M1');
                 },
                 info:function() {
@@ -22,7 +22,7 @@
                 }
             };
             var M2 = {
-                onCreate:function() {
+                created:function() {
                     console.log('M2');
                 }
             };
@@ -30,7 +30,7 @@
             impex.component("x-div",{
                 mixins:[M1,M2],
                 template:'<div><slot></slot></div>',
-                onCreate:function(){
+                created:function(){
                     console.log('x-div');
                 }
             });

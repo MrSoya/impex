@@ -40,9 +40,11 @@
                 }
             },
             template:'<div .style="{color:colour}">{{msg}}<slot></slot></div>',
-            state:{
-                msg:'内置的一段文字',
-                colour:'red'
+            state:function(argument) {
+                return {
+                    msg:'内置的一段文字',
+                    colour:this.$props.colour || 'red'
+                };
             }
         });
         var root = impex.create({

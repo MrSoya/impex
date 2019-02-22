@@ -2,6 +2,28 @@
  * 为组件提供watcher，以及watcher的响应
  */
 
+
+function getDirectiveWatcher(directiveParams,vnode,comp,getter,scope){
+	var watcher = function(change) {
+		var d = directiveParams[0];
+		var data = directiveParams[1];
+		//计算新值
+		var v = getter(scope);
+		data.value = v;
+		d.update && d.update(vnode,data,vnode.dom);
+	}
+	comp._watchers.push(watcher);
+	return watcher;
+}
+
+function getComputeWatcher(getter,computeKey,comp){
+	var watcher = function() {
+		var v = getter.call(comp,comp);
+		comp[computeKey] = v;
+	}
+	comp._watchers.push(watcher);
+	return watcher;
+}
 /**
  * 创建组件视图监控
  * 当视图中的任何state发生变更后都会发出
@@ -15,14 +37,6 @@ function getViewWatcher(comp) {
 		console.log('组件属性变更',change);
 	}
 	return comp._viewWatcher;
-}
-function getComputeWatcher(getter,computeKey,comp){
-	var watcher = function() {
-		var v = getter.call(comp,comp);
-		comp[computeKey] = v;
-	}
-	comp._watchers.push(watcher);
-	return watcher;
 }
 function getPropWatcher(computer,propKey,args,comp){
 	var watcher = function() {
@@ -55,7 +69,7 @@ function notify2prop(comp) {
 	}
 	comp._propTimer = setTimeout(function(){
 		//通知属性变更
-		comp.onPropsChange && comp.onPropsChange(comp._propMap);
+		callLifecycle(comp,LC_CO.propsChange,[comp._propMap]);
 		console.log('notify2prop',comp._propMap)
 
 		//restore

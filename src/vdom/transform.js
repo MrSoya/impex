@@ -10,19 +10,30 @@ function transform(vnode,comp){
 		vnode._cid = cid;
 
 		if(!vnode._comp){//uncompiled node dosen't exec directive
-			//directive init
-			var dircts = vnode.directives;
-			if(vnode._comp_directives){
-				dircts = dircts.concat(vnode._comp_directives);
-			}
+			//除了事件，都绑定
+			vnode.directives.forEach(function(di){
+				var dName = di[2].dName;
+				if(dName == 'on')return;
+				var part = getDirectiveParam(di,comp);
+				var exp = di[3].vExp;
+				var isCompDi = di[4];
+				var scope = isCompDi?comp.$parent:comp;
+				
+				var fn = new Function('scope','with(scope){return ('+ exp +')}');
+				var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope);
 
-			if(dircts && dircts.length>0){
-				dircts.forEach(function(di){
-					var part = getDirectiveParam(di,comp);
-					var d = part[0];
-					d.onBind && d.onBind(vnode,part[1]);
-				});
-			}
+				Monitor.target = watcher;
+				console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
+				var v = fn(scope);
+				Monitor.target = null;
+				console.log('指令监控。。。。end');
+
+				di[1] = v;//init value
+			});
+			
+
+			//directive bind
+			callDirective(LC_DI.bind,vnode,comp);
 		}
 
 		for(var k in vnode.attributes){
@@ -43,6 +54,8 @@ function transform(vnode,comp){
 				for(var i=0;i<vnode.children.length;i++){
 					var c = transform(vnode.children[i],comp);
 					n.appendChild(c);
+					//directive append
+					callDirective(LC_DI.append,vnode,comp);
 				}
 			}
 		}
@@ -85,26 +98,44 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 		impex.id[attrs[ATTR_ID_TAG]] = c;
 	}
 	//custom even
-	vnode.directives.forEach(function(di){
+	for(var k=vnode.directives.length;k--;){
+		var di = vnode.directives[k];
 		var dName = di[2].dName;
-		if(dName !== 'on')return;
+		if(dName !== 'on')continue;
 		
 		var type = di[2].dArgsAry[0];
 		var exp = di[3].vExp;
-		var fnStr = exp.replace(/\(.*\)/,'');
-		var fn = new Function('comp','with(comp){return '+fnStr+'}');
-
-		//parse context
-		di[1] = exp.replace(/this\./img,'impex._cs["'+parent.$id+'"].');
-
-        fn = fn.call(parent,parent);
-        if(parent[fnStr])
-        	fn = fn.bind(parent);
+		var modifiers = di[2].dModifiers;
+		var fn = null;
+		var onlyName = !/\(.*\)/.test(exp);
+		var emptyParen = !onlyName && !/\(.+\)/.test(exp);
        
-        if(fn){
-			c.$on(type,fn);
-        }
-	});
+		//native
+		if(modifiers && modifiers.indexOf(EVENT_MODIFIER_NATIVE)>-1){
+			if(onlyName){
+				exp += '()';
+			}
+			
+			di[1] = '$emit("'+type+'",this.$parent,$event,$vnode)';
+		}else{
+			if(emptyParen){
+				exp = exp.substr(0,exp.indexOf('('));
+				onlyName = true;
+			}
+			if(onlyName){
+				//查找context
+				var ctx = exp.substr(0,exp.lastIndexOf('.'));
+				ctx = ctx || 'this';
+
+				exp += '.apply('+ctx+',arguments)';
+			}
+			vnode.directives[k] = null;
+		}
+
+		fn = new Function('$event','$vnode','with(this){return '+exp+'}');
+
+		c.$on(type,fn,parent);
+	}
 
 	c._slots = slots;
 	c._slotMap = slotMap;

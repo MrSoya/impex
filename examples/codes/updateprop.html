@@ -23,7 +23,11 @@
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             impex.component('x-a',{
-            	
+            	state:function(argument) {
+                    return {
+                        items:this.$props.items
+                    }
+                },
                 template:`<div>
                     <b>x-a</b>:  {{items =>json}}
                     <p style="text-indent:2rem;"><slot></slot></p>
@@ -31,11 +35,21 @@
                 `
             });
             impex.component('x-b',{
+                state:function(argument) {
+                    return {
+                        items:this.$props.items
+                    }
+                },
                 template:`
                     <div><b>x-b</b>:  {{items =>json}}</div>
                 `
             });
             impex.component('x-c',{
+                state:function(argument) {
+                    return {
+                        items:this.$props.items
+                    }
+                },
                 template:`
                     <div><b>x-c</b>:  {{items =>json}}</div>
                 `

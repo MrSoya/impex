@@ -88,7 +88,7 @@ var Component = extend(function(props) {
 	 * 销毁组件，会销毁组件模型，以及对应视图，以及子组件的模型和视图
 	 */
 	$destroy:function(){
-		callLifecycle(this,'onDestroy');
+		callLifecycle(this,LC_CO.destroy);
 		
 		var id = this.$id;
 
@@ -169,8 +169,7 @@ var Component = extend(function(props) {
     _parse:function() {
     	preprocess(this);
 
-		//触发onCreate
-		callLifecycle(this,'onCreate');
+		callLifecycle(this,LC_CO.created);
 
 		if(this._processedTmpl)
 			compileComponent(this);
@@ -202,7 +201,7 @@ var Component = extend(function(props) {
 		if(!this._needUpdate)return;
 		var newProps = parseProps(this,this.$parent,this._props,this.constructor.props);
 		
-		this.onPropsChange && this.onPropsChange(newProps);
+		callLifecycle(this,LC_CO.propsChange,[newProps]);
 
 		this.$props = newProps;
 
@@ -214,77 +213,50 @@ var Component = extend(function(props) {
 		child.$root = this.$root;
 	},
 	/******* 默认实现 ********/
-	onPropsChange:function(newProps){
+	propsChange:function(newProps){
 		this.$setState(newProps);
     }
 });
 
+/**
+ * 如果生命周期回调有返回值，并且有多个回调函数，返回值以最后一次回调返回的结果为准
+ */
 function callLifecycle(comp,lcName,argAry) {
 	var lcq = comp.constructor.lcq;
+	var rs = null;
 	lcq && lcq.forEach(function(lcMap) {
-		lcMap[lcName] && lcMap[lcName].apply(comp,argAry);
+		lcMap[lcName] && (rs = lcMap[lcName].apply(comp,argAry));
 	});
-	comp[lcName] && comp[lcName].apply(comp,argAry);
+	comp[lcName] && (rs = comp[lcName].apply(comp,argAry));
+	return rs;
 }
 
 function getDirectiveParam(di,comp) {
 	var dName = di[2].dName;
 	var d = DIRECT_MAP[dName];
 	var params = di[2].dArgsAry;
-	var filter = di[2].dFilter;
+	var modifiers = di[2].dModifiers;
 	var v = di[1];
 	var exp = di[3].vExp;
 
-	return [d,{comp:comp,value:v,args:params,exp:exp,filter:filter}];
+	return [d,{comp:comp,value:v,args:params,exp:exp,modifiers:modifiers}];
 }
 
 /*********	component handlers	*********/
-function callDirective(vnode,comp,type){
-	if(isUndefined(vnode.txt)){
-		if(!vnode._comp){//uncompiled node  dosen't exec directive
-			//directive init
-			var dircts = vnode.directives;
-			if(vnode._comp_directives){
-				dircts = dircts.concat(vnode._comp_directives);
-			}
-			if(dircts && dircts.length>0){
-				dircts.forEach(function(di){
-					var part = getDirectiveParam(di,comp);
-					var d = part[0];
-					
-					if(type == 0){
-						d.onActive && d.onActive(vnode,part[1],vnode.dom);
-					}else{
-						d.onUpdate && d.onUpdate(vnode,part[1],vnode.dom);
-					}
-				});
-			}
-
-			if(vnode.children && vnode.children.length>0){
-				for(var i=0;i<vnode.children.length;i++){
-					callDirective(vnode.children[i],comp,type);
-				}
-			}//end if
-		}//end if
-	}
+function callDirective(type,vnode,comp){
+	vnode.directives.forEach(function(di){
+		var part = getDirectiveParam(di,comp);
+		var d = part[0];
+		
+		d[type] && d[type](vnode,part[1],vnode.dom);
+	});
 }
 
 function destroyDirective(vnode,comp){
 	if(isUndefined(vnode.txt)){
 		if(!vnode._comp){//uncompiled node  dosen't exec directive
-			//directive init
-			var dircts = vnode.directives;
-			if(vnode._comp_directives){
-				dircts = dircts.concat(vnode._comp_directives);
-			}
-			if(dircts && dircts.length>0){
-				dircts.forEach(function(di){
-					var part = getDirectiveParam(di,comp);
-					var d = part[0];
-					
-					d.onDestroy && d.onDestroy(vnode,part[1]);
-				});
-			}
+
+			callDirective(LC_DI.unbind,vnode,comp);
 
 			if(vnode.children && vnode.children.length>0){
 				for(var i=0;i<vnode.children.length;i++){
@@ -354,8 +326,9 @@ function preprocess(comp) {
 	//但是任何试图修改raw的操作都是无效的，因为此时的vnode在组件编译后会被替换
 	//顶级组件不会调用该方法
 	if(tmpl){
-		if(comp.onBeforeCompile && comp.$vel)
-	        tmpl = comp.onBeforeCompile(tmpl,comp.$vel.raw);
+		var procTmpl = callLifecycle(comp,LC_CO.compile,[tmpl,comp.$vel?comp.$vel.raw:null]);
+		if(typeof procTmpl == 'string')tmpl = procTmpl;
+
 		comp._processedTmpl = tmpl.trim()
 	    .replace(/<!--[\s\S]*?-->/mg,'')
 	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
@@ -486,14 +459,17 @@ function compileComponent(comp){
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
-		//绑定组件上的指令
-		vnode._comp_directives = comp.$vel.directives;
+
+		//除了组件自定义事件外，其他指令都绑定到编译后的节点上
+		comp.$vel.directives.forEach(function(di) {
+			if(di != null)
+				vnode.directives.push(di);
+		});
 	}
+
 	//覆盖编译后的vnode
 	comp.$vel = vnode;
 	vnode.parent = pv;
-
-	callLifecycle(comp,'onCompile');//must handle slots before this callback 
 }
 /**
  * 准备挂载组件到页面
@@ -501,22 +477,22 @@ function compileComponent(comp){
 function mountComponent(comp,parentVNode){
 	var dom = transform(comp.$vel,comp);
 
-	//beforemount
-	callLifecycle(comp,'onBeforeMount',[dom]);
+	callLifecycle(comp,LC_CO.willMount,[dom]);
 
 	//mount
 	//在子组件之前插入页面可以在onMount中获取正确的dom样式
 	comp.$el.parentNode.replaceChild(dom,comp.$el);
 	comp.$el = dom;
 
+	//directive append
+	callDirective(LC_DI.append,comp.$vel,comp);
+
 	if(comp.$name){
 		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
 		comp.$vel.setAttribute(DOM_COMP_ATTR,comp.$name);
 	}
 	
-	callLifecycle(comp,'onMount');
-
-	callDirective(comp.$vel,comp,0);
+	callLifecycle(comp,LC_CO.mounted);
 }
 
 //////	update flow
@@ -524,9 +500,7 @@ function updateComponent(comp,changeMap){
 	var renderable = true;
 	var syncPropMap = {};
 	
-	if(comp.onBeforeUpdate){
-		renderable = comp.onBeforeUpdate(changeMap);
-	}
+	renderable = callLifecycle(comp,LC_CO.willUpdate,[changeMap]);
 	if(renderable === false)return;
 
 	//rebuild VDOM tree
@@ -547,22 +521,12 @@ function updateComponent(comp,changeMap){
 		}
 	}
 
-	callLifecycle(comp,'onUpdate',[changeMap]);
+	callLifecycle(comp,LC_CO.updated,[changeMap]);
 
 	//更新子组件
 	comp.$children.forEach(function(child) {
 		//更新子组件
 		child._updateProps();
-
-		var cvnode = child.$vel;
-		if(cvnode._comp_directives){
-			cvnode._comp_directives.forEach(function(di){
-				var part = getDirectiveParam(di,child);
-				var d = part[0];
-				
-				d.onUpdate && d.onUpdate(cvnode,part[1],cvnode.dom);
-			});
-		}
 	});
 }
 

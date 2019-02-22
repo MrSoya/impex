@@ -193,7 +193,7 @@ function parseHTML_attrs(attrs,node,compNode){
             }
 
             if(parseDir){
-                attrNode.push({dName:dName,dArgsAry:directive[1],dFilter:directive[2]});
+                attrNode.push({dName:dName,dArgsAry:directive[1],dModifiers:directive[2]});
                 attrNode.push({vExp:expStr,vFilterAry:expFilterAry});
                 node.directives[aName] = attrNode;
             }
@@ -241,7 +241,7 @@ function parseExpFilter(filterStr,isTxt){
 function isDirectiveVNode(attrName,comp,isCompNode){
     var rs = null;
     var params = null;
-    var filter = null;
+    var modifiers = null;
     if(REG_CMD.test(attrName)){
         var c = attrName.replace(CMD_PREFIX,'');
         var CPDI = c.indexOf(CMD_PARAM_DELIMITER);
@@ -270,16 +270,17 @@ function isDirectiveVNode(attrName,comp,isCompNode){
     }
 
     if(params){
-        var fi = params.indexOf(CMD_FILTER_DELIMITER);
-        if(fi > -1){
-            filter = params.substr(fi+1);
-            params = params.substring(0,fi);
+        var mIndex = params.indexOf(CMD_MODIFIER_DELIMITER);
+        if(mIndex > -1){
+            modifiers = params.substr(mIndex+1);
+            modifiers = modifiers.split('.');
+            params = params.substring(0,mIndex);
         }
 
         params = params.split(CMD_PARAM_DELIMITER);
     }
 
-    return rs?[rs,params,filter]:rs;
+    return rs?[rs,params,modifiers]:rs;
 }
 //解析for语句：datasource，alias
 //包括to和普通语法

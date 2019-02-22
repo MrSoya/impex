@@ -30,7 +30,7 @@
                 var lcMap = {};
                 for(var k in mixin){
                     if(isFunction(mixin[k])){
-                        if(LC.indexOf(k)>-1){
+                        if(LC_CO[k]){
                             lcMap[k] = mixin[k];
                         }else{
                             fns[k] = mixin[k];

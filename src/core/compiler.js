@@ -110,9 +110,8 @@ function buildEvalStr(raw,forScopeAry){
             ifEnd = ':';
         }
 
-        var diCalcExpMap = buildDirectiveExp(raw.directives);
         var innerHTML = raw.html || 'null';
-        var nodeStr = '_ce(this,"'+raw.rid+'",['+children+'],{'+diCalcExpMap+'},'+innerHTML+','+forScopeChainStr;
+        var nodeStr = '_ce(this,"'+raw.rid+'",['+children+'],'+innerHTML+','+forScopeChainStr;
         if(raw.tag == 'template'){
             nodeStr = '_tmp(['+children+'],'+forScopeChainStr;
         }
@@ -151,17 +150,6 @@ function buildEvalStr(raw,forScopeAry){
     }
 
     return str;
-}
-function buildDirectiveExp(map){
-    var dirStr = '';
-    for(var k in map){
-        var attr = map[k];
-        var exp = attr[3].vExp;
-        var dName = attr[2].dName;
-        var calcExp = dName === 'on'||dName === 'model'?JSON.stringify(exp):exp;
-        dirStr += ',"'+k+'":'+ (calcExp || 'null');
-    }//end for
-    return dirStr.substr(1);
 }
 function buildTxtStr(q){
     var rs = '';

@@ -32,8 +32,6 @@ function isSameComponent(nv,ov) {
 function compareSame(newVNode,oldVNode,comp){
     if(newVNode._comp){
         forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
-        //update directive of components
-        oldVNode._comp_directives = newVNode.directives;
         //判断是否需要更新属性
         impex._cs[oldVNode._cid]._checkUpdate(newVNode.attributes);
         return;
@@ -81,16 +79,8 @@ function compareSame(newVNode,oldVNode,comp){
             var index = oldVNode.directives.indexOf(del[i]);
             oldVNode.directives.splice(index,1);
 
-            var part = getDirectiveParam(del[i],comp);
-            var d = part[0];
-            d.onDestroy && d.onDestroy(oldVNode,part[1]);
+            callDirective(LC_DI.unbind,oldVNode,comp);
         }
-        //do update
-        update.forEach(function(di){
-            var part = getDirectiveParam(di,comp);
-            var d = part[0];
-            d.onUpdate && d.onUpdate(oldVNode,part[1],oldVNode.dom);
-        });
         //add bind
         add.forEach(function(di){
             oldVNode.directives.push(di);
@@ -99,15 +89,6 @@ function compareSame(newVNode,oldVNode,comp){
             var d = part[0];
             d.onBind && d.onBind(oldVNode,part[1]);
         });
-        //rebind component's
-        if(oldVNode._comp_directives){
-            oldVNode._comp_directives.forEach(function(di){
-                
-                var part = getDirectiveParam(di,comp);
-                var d = part[0];
-                d.onBind && d.onBind(oldVNode,part[1]);
-            });
-        }
 
         //for unstated change like x-html
         updateAttr(comp,oldVNode.attributes,renderedAttrs,oldVNode.dom,oldVNode.tag);

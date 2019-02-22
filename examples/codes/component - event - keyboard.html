@@ -38,7 +38,10 @@
                 <li>表达式的this，始终指向节点所在域的组件</li>
             </ul>
             <x-div>
-                <x-input @keypress="this.$parent.anyKey()" @keydown.enter="this.$parent.enterKey()" @keyup.control="this.$parent.ctrlKey()"></x-input>
+                <x-input 
+                @keypress.native="this.$parent.anyKey" 
+                @keydown.enter.native="this.$parent.enterKey" 
+                @keyup.control.native="this.$parent.ctrlKey"></x-input>
             </x-div>
             <ul>
                 <li>按键次数：{{keyCount}} </li>
@@ -67,13 +70,13 @@
                 },
                 prop:1,
                 anyKey:function(e) {
-                    this.keyCount++;
+                    root.keyCount++;
                 },
                 enterKey:function(e) {
-                    this.enterCount++;
+                    root.enterCount++;
                 },
                 ctrlKey:function(e) {
-                    this.ctrlCount++;
+                    root.ctrlCount++;
                 }
             });
             

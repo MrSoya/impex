@@ -13,9 +13,9 @@ function dispatch(type,e) {
         if(!tmp)continue;
 
         var vnode = tmp[0];
+        var t = e.target;
 
         if(type == 'mouseleave'){
-            var t = e.target;
             if(!contains(vnode.dom,t))return;
             var toElement = e.toElement || e.relatedTarget;
             if(contains(vnode.dom,toElement))return;
@@ -24,18 +24,35 @@ function dispatch(type,e) {
             if(i>-1)vnodes_mouseEntered.splice(i,1);
         }
         if(type == 'mouseenter'){
-            var t = e.target;
             var fromElement = e.relatedTarget;
             if(contains(vnode.dom,t) && vnode.dom != t && vnodes_mouseEntered.indexOf(vnode)>-1)return;
             if(fromElement && contains(vnode.dom,fromElement))return;
             vnodes_mouseEntered.push(vnode);
         }
 
-        var filter = tmp[1];
+        //处理前置修饰符
+        var modifiers = tmp[1];
+        if(modifiers && modifiers.length>0){
+            //键盘事件
+            if(type.indexOf('key')===0){
+                var keys = modifiers.filter(function(mod) {
+                    switch(mod){
+                        case EVENT_MODIFIER_NATIVE:
+                        case EVENT_MODIFIER_STOP:
+                        case EVENT_MODIFIER_PREVENT:
+                        case EVENT_MODIFIER_SELF:
+                            return false;
+                    }
+                    return true;
+                });
 
-        if(type.indexOf('key')===0 && filter){
-            if(e.key.toLowerCase() != filter)continue;
+                if(keys[0] && e.key.toLowerCase() != keys[0])continue;
+            }
+            if(modifiers.indexOf(EVENT_MODIFIER_SELF)>-1){
+                if(vnode.dom !== t)continue;
+            }
         }
+        
 
         var fn = tmp[2];
         var cid = tmp[3];
@@ -53,6 +70,17 @@ function dispatch(type,e) {
         }
 
         canceled = e.cancelBubble;
+
+        //后置修饰符
+        if(modifiers && modifiers.length>0){
+            if(modifiers.indexOf(EVENT_MODIFIER_STOP)>-1){
+                canceled = true;
+                e.stopPropagation();
+            }
+            if(modifiers.indexOf(EVENT_MODIFIER_PREVENT)>-1){
+                e.preventDefault();
+            }
+        }
         
     }while((p = p.parentNode) && p.tagName != 'BODY' && !canceled);
 }

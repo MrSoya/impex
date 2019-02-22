@@ -6,7 +6,7 @@
     </head>
     <body >
         impex组件生命周期包括：<br>
-        创建——>预编译——>编译——>显示——>(状态变更——>)销毁 四个阶段
+        创建——>编译——>显示——>(状态变更——>)销毁 四个阶段
 
 
         <div id="demo">
@@ -21,45 +21,47 @@
 
             //自定义组件
             impex.component('x-comp',{
-                onPropBind:function(props){
-                    props.logger('propBind...'+ JSON.stringify(props));
-                    this.logger = props.logger;
-                    return props;
+                created:function(){
+                    this.logger('created...');
                 },
-                onBeforeCompile:function(tmpl,rawNode){
-                    this.logger('beforeCompile...');
+                compile:function(tmpl,rawNode){
+                    // console.log('compile...',rawNode);
+                    this.logger('compile...');
                     return tmpl;
                 },
-                onCreate:function(){
-                    console.log('create...');
+                willMount:function(){
+                    this.logger('willMount...');
                 },
-                onCompile:function(){
-                    this.logger('compile...');
+                mounted:function(){
+                    this.logger('mounted...');
                 },
-                onMount:function(){
-                    this.logger('mount...');
+                willUpdate:function(changes){
+                    this.logger('willUpdate...'+JSON.stringify(changes));
                 },
-                onBeforeUpdate:function(changes){
-                    this.logger('beforeUpdate...');
+                updated:function(changes){
+                    this.logger('updated...');
                 },
-                onUpdate:function(){
-                    this.logger('update...');
-                },
-                onPropChange:function(k,newVal,oldVal){
-                    this.logger('propChange...');
+                propsChange:function(newProps){
+                    this.logger('propsChange...'+JSON.stringify(newProps));
                     //重载函数后，必须手动赋值
-                    this[k] = newVal;
+                    this.$setState(newProps);
                 },
-                onDestroy:function(){
+                destroy:function(){
                     this.logger('destroy...');
                 },
-                state:{
-                    i:0
+                state:function() {
+                    var props = this.$props;
+                    props.logger('state init with $props...'+ JSON.stringify(props));
+                    this.logger = props.logger;
+                    return {
+                        count:0,
+                        p:props.p
+                    };
                 },
-                update:function() {
-                    this.i++;
+                updateCount:function() {
+                    this.count++;
                 },
-                template:"<button @click='update()'>被点了{{i}}次,可变参数{{p}}</button>"
+                template:"<button @click='updateCount()'>被点了{{count}}次,可变参数{{p}}</button>"
             });
 
             //渲染
