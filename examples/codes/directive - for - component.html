@@ -19,9 +19,14 @@
         <script type="text/javascript">
             impex.component('x-a',{
                 template:'<p><a ref="xa"><slot></slot></a></p>',
-                state:{
-                    msg:111,
-                    v:true
+                state:function(argument) {
+                    return {
+                        msg:111,
+                        v:true
+                    };
+                },
+                created:function(argument) {
+                    this.$setState(this.$props);
                 },
                 props:{
                     msg:{
@@ -41,7 +46,10 @@
             });
             impex.component('x-b',{
                 template:'<b ref="xxb">xb{{x}}</b>',
-                onMount:function(){
+                created:function(argument) {
+                    this.$setState(this.$props);
+                },
+                mounted:function(){
                     console.log(this.x)
                 }
             });

@@ -10,14 +10,7 @@
     <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
     </head>
     <body>
-        impex可以直接渲染命名组件
-<pre>
-<code>
-    &lt;x-demo id="demo"&gt;&lt;/x-demo&gt;
-    //渲染命名组件
-    impex.render(document.getElementById('demo'));
-</code>
-</pre>
+        
     <div id="demo">
         firstTextNode:{{start}}
         <br>
@@ -42,12 +35,17 @@
             add:function() {
                 this.y ++;
             },
-            onMount:function(argument) {
+            mounted:function(argument) {
             	this.op();
             },
-            state:{
-                show:true,
-                y:100
+            state:function(argument) {
+                var props = this.$props;
+                this.op = props.op;
+                return {
+                    show:true,
+                    y:100,
+                    pa:props.pa
+                };
             }
         });
         impex.create({
@@ -56,34 +54,16 @@
                     show:true,
                     x:10,
                     y:20,
-                    a:{
-                        b:{
-                            x:10
-                        }
-                    },
                     start:'the start',
                     end:'the end'
                 },
                 add:function() {
                     this.x ++;
-                    delete this.a.b.x;
-                },
-                onInit:function(){
-                    this.watch('a.b.x',function(){
-                        console.log(arguments)
-                    })
                 },
                 open:function(){
                     console.log(3434)
                 }
             });
-        //测试项
-        //1. 组件的正确解析 OK
-        //2. slot OK
-        //3. 父组件同步参数修改影响子组件 OK
-        //4. 渲染入口多个平行节点，包括文本节点 OK
-        //
-        //组件模板多个表达式解析出现问题 OK
     </script>
     </body>
 </html>

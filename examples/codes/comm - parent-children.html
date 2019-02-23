@@ -26,13 +26,22 @@
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             impex.component('x-a',{
-                template:'<div><slot></slot></div>'
+                template:'<div><slot></slot></div>',
+                state:function(){
+                    return {data:this.$props.data}
+                }
             });
             impex.component('x-b',{
-                template:'<div><slot></slot></div>'
+                template:'<div><slot></slot></div>',
+                state:function(){
+                    return {data:this.$props.data}
+                }
             });
             impex.component('x-c',{
-                template:'<div><slot></slot></div>'
+                template:'<div><slot></slot></div>',
+                state:function(){
+                    return {value:this.$props.value}
+                }
             });
             
             //渲染

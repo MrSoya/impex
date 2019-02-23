@@ -24,7 +24,7 @@
         <div id="demo">
             this.$name: {{this.$name}}
 
-            <!-- <x-a 
+            <x-a 
                 @click.native.self="showName" 
                 @onload="childLoad"
                 >
@@ -35,12 +35,7 @@
                         this.$name: {{this.$name}} click
                     </x-c>
                 </x-b>
-            </x-a> -->
-            <x-d @click.native="alert(3434)" x-show="value<20" .v="value"></x-d>
-
-            <x-d @click.native="alert(122)" x-show="value<20" .v="value"></x-d>
-            
-            <button @click="toggleShow()">change</button>
+            </x-a>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
@@ -63,7 +58,7 @@
                 template:'<div><slot></slot></div>'
             });
             impex.component('x-d',{
-                template:'<div><input .value="v" x-if="v<10"><b>111</b></div>',
+                template:'<div><input .value="v"></div>',
                 state:function(argument) {
                     return {
                         v:0

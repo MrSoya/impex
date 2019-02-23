@@ -15,7 +15,7 @@
         <script type="text/javascript">
         
             impex.directive('change',{
-                onBind : function(vnode){
+                bind : function(el,data,vnode){
                     var a = 10;
                     vnode.on('change',function(e){
                         var v = e.target.options[e.target.selectedIndex].value;

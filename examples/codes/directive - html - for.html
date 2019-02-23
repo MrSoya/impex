@@ -13,7 +13,7 @@
             <!-- <div x-for="list as item">
             	<x-panel .row="item"></x-panel>
             </div> -->
-            <x-button @click="this.add()">
+            <x-button @click.native="this.add()">
                 <span>增加</span>
             </x-button>
         </div>
@@ -21,14 +21,17 @@
             //自定义组件
             impex.component('x-panel',{
                 template:"<span>row:{{row}} {{x}}</span>",
-                state:{
-                    x:0,
-                	row:'',
-                    a:{
-                        b:2
-                    }
+                state:function() {
+                    var props = this.$props;
+                    return {
+                        x:props.x,
+                        row:props.row,
+                        a:{
+                            b:2
+                        }
+                    };
                 },
-                onMount:function(argument) {
+                mounted:function(argument) {
                     this.$watch("row",function(change){
                         console.log(arguments)
                     });

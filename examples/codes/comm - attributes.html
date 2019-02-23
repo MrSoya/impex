@@ -28,7 +28,7 @@
                 修改组件参数:<input type="text" x-model="msg">
                 <p style="text-indent: 2rem;">
                     子组件：
-                    <x-comp .content="msg" .date="Date.now()" .time="time">
+                    <x-comp .content="msg" date="Date.now()" .time="time">
                     </x-comp>
                 </p>
             </p>
@@ -42,9 +42,13 @@
                 template:"<div><p >content:{{content}}  ——类型参数，取到了父组件的值</p>\
                 <p >date:{{date}}  ——字符串参数，当作字符串处理</p>\
                 <p>time:{{time}}   ——同步类型参数，会触发更新</p></div>",
-                onPropChange:function(key,newVal){
-                    //手动同步
-                    this[key] = newVal;
+                state:function(){
+                    var props = this.$props;
+                    return {
+                        content:props.content,
+                        date:props.date,
+                        time:props.time
+                    }
                 }
             });
 
@@ -55,7 +59,7 @@
                     msg:'这是参数',
                     time:new Date().getTime()
                 },
-                onMount:function() {
+                mounted:function() {
                     var that = this;
                     setInterval(function(){
                         that.time = new Date().getTime();

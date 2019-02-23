@@ -13,7 +13,9 @@
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
         	impex.component("x-a",{
-        		state:{x:1},
+        		state:function(argument) {
+                    return {x:1};
+                },
         		template:'<div .x="x">aaa</div>'
         	})
         	impex.component("x-b",{

@@ -98,13 +98,8 @@
 
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
-            impex.directive('keydown',{
-                onActive:function(){
-                    this.on('keydown',this.value);
-                }
-            })
             impex.directive('checked',{
-                onUpdate:function(vnode,data,dom){
+                update:function(dom,data){
                     dom.checked = data.value;
                 }
             })

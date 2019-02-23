@@ -11,11 +11,17 @@ impex.component("x-wish",{
                 <li x-for="1 to 5 as i" .class="{passed:i*2*10<=progress}" @click="setProgress(i*2*10)">{{i*2*10}}%</li>
             </ul>
         </div>`,
-    state:{
-        progress:0,
-        show:false,
-        time:'',
-        done:false
+    state:function(){
+    	var props = this.$props;
+    	return {
+	        progress:props.progress||0,
+	        show:false,
+	        time:props.time||'',
+	        done:props.done
+	    };
+    },
+    created:function(argument) {
+    	this.$setState(this.$props);
     },
     props:{
         title:{

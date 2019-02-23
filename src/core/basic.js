@@ -39,7 +39,7 @@
 
 	var LC_DI = {//指令生命周期
 		'bind':'bind',
-		'append':'append',
+		'appended':'appended',
 		'update':'update',
 		'unbind':'unbind'
 	};

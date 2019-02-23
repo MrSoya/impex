@@ -45,7 +45,7 @@
                 state:{
                     v:store.value
                 },
-                onMount:function() {
+                mounted:function() {
                     this.$watch('v',function(change) {
                         store.value = change.newVal;
                     })

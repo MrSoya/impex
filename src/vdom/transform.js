@@ -8,6 +8,14 @@ function transform(vnode,comp){
 		n = document.createElement(vnode.tag);
 		n._vid = vnode.vid;
 		vnode._cid = cid;
+		vnode.dom = n;
+
+		//初始化属性
+		for(var k in vnode.attributes){
+			if(k[0] === BIND_AB_PRIFX)continue;
+			var attr = vnode.attributes[k];
+			n.setAttribute(k,attr);
+		}
 
 		if(!vnode._comp){//uncompiled node dosen't exec directive
 			//除了事件，都绑定
@@ -19,12 +27,14 @@ function transform(vnode,comp){
 				var isCompDi = di[4];
 				var scope = isCompDi?comp.$parent:comp;
 				
-				var fn = new Function('scope','with(scope){return ('+ exp +')}');
-				var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope);
+				var fnData = getForScopeFn(vnode,scope,exp);
+				var args = fnData[1];
+				var fn = fnData[0];
+				var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope,args);
 
 				Monitor.target = watcher;
 				console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
-				var v = fn(scope);
+				var v = fn.apply(scope,args);
 				Monitor.target = null;
 				console.log('指令监控。。。。end');
 
@@ -34,12 +44,6 @@ function transform(vnode,comp){
 
 			//directive bind
 			callDirective(LC_DI.bind,vnode,comp);
-		}
-
-		for(var k in vnode.attributes){
-			if(k[0] === BIND_AB_PRIFX)continue;
-			var attr = vnode.attributes[k];
-			n.setAttribute(k,attr);
 		}
 
 		if(vnode.attributes[ATTR_REF_TAG]){
@@ -54,16 +58,16 @@ function transform(vnode,comp){
 				for(var i=0;i<vnode.children.length;i++){
 					var c = transform(vnode.children[i],comp);
 					n.appendChild(c);
-					//directive append
-					callDirective(LC_DI.append,vnode,comp);
 				}
 			}
+			//directive
+			callDirective(LC_DI.appended,vnode,comp);
 		}
 		
 	}else{
 		n = document.createTextNode(filterEntityTxt(vnode.txt));
+		vnode.dom = n;
 	}
-	vnode.dom = n;
 	return n;
 }
 function filterEntityTxt(str){

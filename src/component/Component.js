@@ -189,11 +189,15 @@ var Component = extend(function(props) {
 	//VDOM对比时，自动检测需要更新入参
 	//该方法并不会立即更新组件的state，只是增加一个更新标记
 	//在父组件完成VDOM对比后才会开始更新
-	_checkUpdate:function(props) {
+	//如果组件的forscope发生变动，组件参数需要重新计算
+	_checkUpdate:function(props,forScope) {
 		var oldPropsStr = JSON.stringify(this._props);
 		var newPropsStr = JSON.stringify(props);
-		if(oldPropsStr == newPropsStr)return;
+		if(!forScope && oldPropsStr == newPropsStr)return;
 
+		if(forScope){
+			this.$vel._forScopeQ = forScope;
+		}
 		this._needUpdate = true;
 		this._props = props;
 	},
@@ -243,12 +247,12 @@ function getDirectiveParam(di,comp) {
 }
 
 /*********	component handlers	*********/
-function callDirective(type,vnode,comp){
-	vnode.directives.forEach(function(di){
+function callDirective(type,vnode,comp,directives){
+	(directives||vnode.directives).forEach(function(di){
 		var part = getDirectiveParam(di,comp);
 		var d = part[0];
 		
-		d[type] && d[type](vnode,part[1],vnode.dom);
+		d[type] && d[type](vnode.dom,part[1],vnode);
 	});
 }
 
@@ -373,17 +377,9 @@ function parseProps(comp,parent,parentAttrs,input){
 		//创建watcher
 		for(k in depMap){
 			var vn = comp.$vel;
-			var args = [parent];
-			var forScopeStart = '',forScopeEnd = '';
-			if(vn._forScopeQ)
-		        for(var i=0;i<vn._forScopeQ.length;i++){
-		            forScopeStart += 'with(arguments['+(1+i)+']){';
-		            forScopeEnd += '}';
-		            args.push(vn._forScopeQ[i]);
-		        }
-			var fn = new Function('scope',
-				'with(scope){'+forScopeStart+'return '
-				+ depMap[k] +forScopeEnd+'}');
+			var fnData = getForScopeFn(vn,parent,depMap[k]);
+			var args = fnData[1];
+			var fn = fnData[0];
 			//建立prop watcher
 			var propWatcherKey = k+'-'+parent.$id;
 			if(!comp._propWatcher[propWatcherKey]){
@@ -484,8 +480,8 @@ function mountComponent(comp,parentVNode){
 	comp.$el.parentNode.replaceChild(dom,comp.$el);
 	comp.$el = dom;
 
-	//directive append
-	callDirective(LC_DI.append,comp.$vel,comp);
+	//directive
+	callDirective(LC_DI.appended,comp.$vel,comp);
 
 	if(comp.$name){
 		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
@@ -511,7 +507,7 @@ function updateComponent(comp,changeMap){
 	console.log('组件属性变更监控。。。。end');
 
 	//diffing
-	var forScopeQ = compareVDOM(vnode,comp.$vel,comp);
+	compareVDOM(vnode,comp.$vel,comp);
 
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.$children.length;i++){

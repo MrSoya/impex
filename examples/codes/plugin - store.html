@@ -32,19 +32,18 @@
             //注册组件
             impex.component('x-a',{
                 template:'<div><b>x-a</b><slot></slot></div>',
-                state:{
-                    value:11
+                state:function() {
+                    return {value:11};
                 }
             });
             impex.component('x-b',{
-                template:'<div style="text-indent:2rem"><b>x-b</b><slot></slot></div>'
+                template:'<div style="text-indent:2rem"><b>x-b</b><slot></slot></div>',
+                created:function(argument) {
+                    this.$setState(this.$props)
+                }
             });
             impex.component('x-c',{
-                template:'<div><b>x-c</b><slot></slot></div>',
-                onPropsBind:function(props) {
-                    console.log('base...',props);
-                    return props;
-                }
+                template:'<div><b>x-c</b><slot></slot></div>'
             });
 
             window.$store = impex.create({

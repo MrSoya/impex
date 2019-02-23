@@ -11,7 +11,7 @@
  * <div x-style="obj" >...</div>
  */
 impex.directive('style',{
-    bind:function(vnode,data){
+    appended:function(el,data,vnode){
         var v = data.value;
         if(isString(v)){
             var rs = {};
@@ -23,12 +23,12 @@ impex.directive('style',{
             }
             v = rs;
         }
-        var style = vnode.getAttribute('style')||'';
+        var style = vnode.attributes.style||'';
         for(var k in v){
             var n = this.filterName(k);
             var val = v[k];
             n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
-            style += n+':'+val+';';
+            style += ';'+n+':'+val;
             // if(val.indexOf('!important')){
             //     val = val.replace(/!important\s*;?$/,'');
             //     n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
@@ -37,19 +37,18 @@ impex.directive('style',{
             //     style[n] = val;
             // }
         }
-        vnode.setAttribute('style',style);
+        el.setAttribute('style',style);
     },
-    update:function(vnode,data) {
-        vnode.setAttribute('style',vnode.raw.attributes.style);
-        this.bind(vnode,data);
+    update:function(el,data,vnode) {
+        this.appended(el,data,vnode);
     },
-    unbind:function(vnode){
-        if(isUndefined(vnode.raw.attributes.style)){
-            vnode.removeAttribute('style');
+    unbind:function(el,data,vnode){
+        var style = vnode.attributes.style;
+        if(style){
+            el.setAttribute('style',style);
         }else{
-            vnode.setAttribute('style',vnode.raw.attributes.style);  
+            el.removeAttribute('style');
         }
-        
     },
     filterName:function(k){
         return k.replace(/-([a-z])/img,function(a,b){
@@ -65,9 +64,9 @@ impex.directive('style',{
  * <div x-class="{cls1:boolExp,cls2:boolExp,cls3:boolExp}" >...</div>
  */
 .directive('class',{
-    bind:function(vnode,data){
+    appended:function(el,data,vnode){
         var v = data.value;
-        var cls = vnode.getAttribute('class')||'';
+        var cls = vnode.attributes.class||'';
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
         var appendCls = null;
         if(isString(v)){
@@ -88,17 +87,17 @@ impex.directive('style',{
             }
         });
         
-        vnode.setAttribute('class',clsAry.join(' '));
+        el.setAttribute('class',clsAry.join(' '));
     },
-    update:function(vnode,data) {
-        vnode.setAttribute('class',vnode.raw.attributes.class);
-        this.bind(vnode,data);
+    update:function(el,data,vnode) {
+        this.appended(el,data,vnode);
     },
-    unbind:function(vnode,data) {
-        if(isUndefined(vnode.raw.attributes.class)){
-            vnode.removeAttribute('class');
+    unbind:function(el,data,vnode) {
+        var cls = vnode.attributes.class;
+        if(cls){
+            el.setAttribute('class',cls);
         }else{
-            vnode.setAttribute('class',vnode.raw.attributes.class);   
+            el.removeAttribute('class');
         }
     }
 })
@@ -108,13 +107,16 @@ impex.directive('style',{
  * <br/>使用方式2：<img :load:mousedown:touchstart="hi()" :dblclick="hello()">
  */
 .directive('on',{
-    bind:function(vnode,data){
+    bind:function(el,data,vnode){
         var args = data.args;
         for(var i=args.length;i--;){
-            vnode.on(args[i],data.exp,data.modifiers);
+            vnode.on(args[i],data.value||data.exp,data.modifiers);
         }
     },
-    unbind:function(vnode,data){
+    update:function(el,data,vnode) {
+        this.bind(el,data,vnode);
+    },
+    unbind:function(el,data,vnode){
         var args = data.args;
         for(var i=args.length;i--;){
             vnode.off(args[i]);
@@ -124,41 +126,42 @@ impex.directive('style',{
 /**
  * 绑定视图属性，并用表达式的值设置属性
  * <br/>使用方式：<img x-bind:src="exp">
+ * <br/>快捷方式：<img .src="exp">
  */
 .directive('bind',{
-    bind:function(vnode,data){
+    appended:function(el,data,vnode){
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
 
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].update(vnode,data);
+                    DIRECT_MAP[p].update(el,data,vnode);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].update(vnode,data);
+                    DIRECT_MAP[p].update(el,data,vnode);
                     break;
                 default:
-                    vnode.setAttribute(p,data.value);
+                    el.setAttribute(p,data.value);
             }//end switch
         }//end for
     },
-    update:function(vnode,data) {
-        this.bind(vnode,data);
+    update:function(el,data,vnode) {
+        this.appended(el,data,vnode);
     },
-    unbind:function(vnode,data) {
+    unbind:function(el,data,vnode) {
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
             switch(p){
                 case 'style':
-                    DIRECT_MAP[p].unbind(vnode,data);
+                    DIRECT_MAP[p].unbind(el,data,vnode);
                     break;
                 case 'class':
-                    DIRECT_MAP[p].unbind(vnode,data);
+                    DIRECT_MAP[p].unbind(el,data,vnode);
                     break;
                 default:
-                    vnode.removeAttribute(p);
+                    el.removeAttribute(p);
             }//end switch
         }//end for
     }
@@ -168,26 +171,24 @@ impex.directive('style',{
  * <br/>使用方式：<div x-show="exp"></div>
  */
 .directive('show',{
-    bind:function(vnode,data){
-        var style = vnode.getAttribute('style')||'';
+    bind:function(el,data){
+        var style = el.getAttribute('style')||'';
         if(data.value){
             style = style.replace(/;display\s*:\s*none\s*;?/,'');
         }else{
             style = style.replace(/;display:none;/,'') + ';display:none;';
         }
         
-        vnode.setAttribute('style',style);
-        return style;
+        el.setAttribute('style',style);
     },
-    update:function(vnode,data,dom) {
-        var style = this.bind(vnode,data);
-        dom.setAttribute('style',style);
+    update:function(el,data,vnode) {
+        this.bind(el,data);
     },
-    unbind:function(vnode) {
-        var style = vnode.getAttribute('style');
+    unbind:function(el,data,vnode) {
+        var style = el.getAttribute('style');
         if(!style)return;
         style = style.replace(/;display\s*:\s*none\s*;?/,'');
-        vnode.setAttribute('style',style);
+        el.setAttribute('style',style);
     }
 })
 /**
@@ -207,7 +208,7 @@ impex.directive('style',{
  * <br/>使用方式：<input x-model="model.prop">
  */
 .directive('model',{
-    bind:function(vnode,data){
+    bind:function(el,data,vnode){
         vnode._exp = data.exp;
         switch(vnode.tag){
             case 'select':

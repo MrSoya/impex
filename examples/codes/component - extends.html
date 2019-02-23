@@ -13,7 +13,7 @@
         <script type="text/javascript">
             impex.component("x-human",{
                 template:'<div>human</div>',
-                onCreate:function(){
+                created:function(){
                     var props = this.$props;
                     this.$setState({
                         name:props.name,
@@ -38,7 +38,7 @@
                     this.readme += '我叫'+this.name;
                     this._super.speak.call(this);
                 },
-                onMount:function(dom){
+                mounted:function(dom){
                     this.speak();
                 }
             });

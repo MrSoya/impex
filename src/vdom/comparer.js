@@ -10,10 +10,7 @@
  *
  * 
  */
-
-var forScopeQ = null;
 function compareVDOM(newVNode,oldVNode,comp){
-    forScopeQ = {};
     if(isSameVNode(newVNode,oldVNode)){
         compareSame(newVNode,oldVNode,comp);
     }else{
@@ -21,7 +18,6 @@ function compareVDOM(newVNode,oldVNode,comp){
         insertBefore(newVNode,oldVNode,oldVNode.parent?oldVNode.parent.children:null,oldVNode.parent,comp);
         removeVNode(oldVNode);
     }
-    return forScopeQ;
 }
 function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
@@ -31,14 +27,14 @@ function isSameComponent(nv,ov) {
 }
 function compareSame(newVNode,oldVNode,comp){
     if(newVNode._comp){
-        forScopeQ[oldVNode._cid] = newVNode._forScopeQ;
         //判断是否需要更新属性
-        impex._cs[oldVNode._cid]._checkUpdate(newVNode.attributes);
+        impex._cs[oldVNode._cid]._checkUpdate(newVNode.attributes,newVNode._forScopeQ);
         return;
     }
 
     if(newVNode.tag){
         //update events forscope
+        var forScopeChanged = JSON.stringify(newVNode._forScopeQ) != JSON.stringify(oldVNode._forScopeQ);
         oldVNode._forScopeQ = newVNode._forScopeQ;
         
         var renderedAttrs = Object.assign({},oldVNode.attributes);
@@ -59,36 +55,46 @@ function compareSame(newVNode,oldVNode,comp){
         //compare dirs
         for(var i=ovdis.length;i--;){
             var odi = ovdis[i];
-            var odiStr = odi[0]+odi[3];
+            var odiStr = odi[0]+odi[3].vExp;
             if(!nvDiMap[odiStr]){
                 del.push(odi);
             }
         }
         for(var i=nvdis.length;i--;){
             var ndi = nvdis[i];
-            var ndiStr = ndi[0]+ndi[3];
-            if(ovDiMap[ndiStr]){
-                ovDiMap[ndiStr][2] = ndi[2];
-                update.push(ndi);
-            }else{
+            var ndiStr = ndi[0]+ndi[3].vExp;
+            if(!ovDiMap[ndiStr]){
                 add.push(ndi);
+            }else if(ovDiMap[ndiStr][1] != nvDiMap[ndiStr][1]){
+                update.push(ndi);
             }
         }
         //do del
         for(var i=del.length;i--;){
             var index = oldVNode.directives.indexOf(del[i]);
             oldVNode.directives.splice(index,1);
-
-            callDirective(LC_DI.unbind,oldVNode,comp);
         }
-        //add bind
+        if(del.length>0)
+            callDirective(LC_DI.unbind,oldVNode,comp,del);
+        //add
         add.forEach(function(di){
             oldVNode.directives.push(di);
-            
-            var part = getDirectiveParam(di,comp);
-            var d = part[0];
-            d.onBind && d.onBind(oldVNode,part[1]);
         });
+        if(add.length>0)
+            callDirective(LC_DI.update,oldVNode,comp,add);
+        //update 
+        if(forScopeChanged){
+            update.forEach(function(di){
+                var exp = di[3].vExp;
+                var fnData = getForScopeFn(oldVNode,comp,exp);
+                var args = fnData[1];
+                var fn = fnData[0];
+                var v = fn.apply(comp,args);
+                di[1] = v;
+            });
+            
+            callDirective(LC_DI.update,oldVNode,comp,update);
+        }
 
         //for unstated change like x-html
         updateAttr(comp,oldVNode.attributes,renderedAttrs,oldVNode.dom,oldVNode.tag);
@@ -112,7 +118,7 @@ function getDirectiveMap(directives){
     var map = {};
     for(var i=directives.length;i--;){
         var di = directives[i];
-        var diStr = di[0]+di[3];
+        var diStr = di[0]+di[3].vExp;
         map[diStr] = di;
     }
     return map;

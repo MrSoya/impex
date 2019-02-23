@@ -23,6 +23,8 @@ function parseHTML(str){
     var roots = [];
     var slotList = [];
     var compNode;
+    var preRid = -1;
+    var outPre = true;
     while(str.length>0){
         if(!startNodeData){
             startNodeData = TAG_START_EXP.exec(str);
@@ -33,43 +35,55 @@ function parseHTML(str){
             var index = startNodeData.index + startNodeData[0].length;
             str = str.substr(index);
         }
-        //build VNode
-        var tagName = startNodeData[1];
-        var node = new RawNode(tagName);
-        node.outerHTML = startNodeData[0];
-        node.innerHTML = str;
-        var parentNode = stack[stack.length-1];
-        if(parentNode){
-            parentNode.children.push(node);
-        }else{
-            roots.push(node);
+        //build RawNode
+        if(outPre){
+            var tagName = startNodeData[1];
+            var node = new RawNode(tagName);
+            node.outerHTML = startNodeData[0];
+            node.innerHTML = str;
+            var parentNode = stack[stack.length-1];
+            if(parentNode){
+                parentNode.children.push(node);
+            }else{
+                roots.push(node);
+            }
+            if(COMP_MAP[tagName]){
+                compNode = node;
+                compStack.push(node);
+            }
+            var attrStr = startNodeData[2].trim();
+            var attrAry = attrStr.match(TAG_ATTR_EXP);
+            if(attrAry){
+                preRid = parseHTML_attrs(attrAry,node,compNode);
+            }
         }
-        if(COMP_MAP[tagName]){
-            compNode = node;
-            compStack.push(node);
+        
+
+        if(preRid>-1 && outPre){
+            outPre = false;
+            console.log('enter pre')
         }
-        var attrStr = startNodeData[2].trim();
-        var attrAry = attrStr.match(TAG_ATTR_EXP);
-        if(attrAry)parseHTML_attrs(attrAry,node,compNode);
 
         //handle void el root
         if(str.length<1)break;
 
         //handle slot
-        if(tagName === SLOT){
-            slotList.push([parentNode,node,node.attributes.name?node.attributes.name:null]);
-        }else if(node.attributes.slot){
-            var slotComp = compNode;
-            if(slotComp === node){//component can be inserted into slots
-                slotComp = compStack[compStack.length-1-1];
+        if(outPre){
+            if(tagName === SLOT){
+                slotList.push([parentNode,node,node.attributes.name?node.attributes.name:null]);
+            }else if(node.attributes.slot){
+                var slotComp = compNode;
+                if(slotComp === node){//component can be inserted into slots
+                    slotComp = compStack[compStack.length-1-1];
+                }
+                if(slotComp)slotComp.slotMap[node.attributes.slot] = node;
             }
-            if(slotComp)slotComp.slotMap[node.attributes.slot] = node;
         }
-
         if(VOIDELS.indexOf(tagName)<0)stack.push(node);
         else{
             node.innerHTML = '';
         }
+        
 
         //check
         var nextNodeData = TAG_START_EXP.exec(str);
@@ -81,11 +95,11 @@ function parseHTML(str){
         var nextIndex = nextNodeData?nextNodeData.index:-1;
         parentNode = stack[stack.length-1];
         if(nextIndex>-1 && nextIndex < endIndex){
-            parseHTML_txt(str.substr(0,nextIndex),parentNode);
+            if(outPre)parseHTML_txt(str.substr(0,nextIndex),parentNode);
 
             str = str.substr(nextIndex + nextNodeData[0].length);
         }else{
-            parseHTML_txt(str.substr(0,endIndex),parentNode);
+            if(outPre)parseHTML_txt(str.substr(0,endIndex),parentNode);
 
             var lastEndIndex = endIndex + endNodeData[0].length;
             TAG_END_EXP_G.lastIndex = 0;
@@ -96,8 +110,7 @@ function parseHTML(str){
                     compStack.pop();
                     compNode = compStack[compStack.length-1];
                 }
-
-                if(tmp === node){
+                if(outPre && tmp === node){
                     if(node.innerHTML == endNodeData.input){
                         node.innerHTML = endNodeData.input.substring(0,endNodeData.index);
                     }else{
@@ -112,7 +125,7 @@ function parseHTML(str){
                 //endRemoveIf(production)
                 endIndex = endNodeData.index;
                 var txt = str.substring(lastEndIndex,endNodeData.index);
-                if(txt.trim()){
+                if(outPre && txt.trim()){
                     if(endIndex>nextIndex){
                         var tmp = TAG_START_EXP.exec(txt);
                         if(tmp){
@@ -123,6 +136,14 @@ function parseHTML(str){
                         node = stack[stack.length-1];
                         parseHTML_txt(txt,node);
                     }                    
+                }
+                if(!outPre && tmp.rid === preRid && stack[stack.length-1].rid !== preRid){
+                    outPre = true;
+                    preRid = -1;
+                    var preTxt = new RawNode();
+                    preTxt.txtQ = [parentNode.getInnerHTML()];
+                    parentNode.children.push(preTxt);
+                    console.log('out pre')
                 }
                 lastEndIndex = endIndex + endNodeData[0].length;
             }while(endIndex < nextIndex);
@@ -148,6 +169,8 @@ function parseHTML_attrs(attrs,node,compNode){
 
         var attrNode = [aName,value];
         var directive = isDirectiveVNode(aName,node,compNode && node == compNode);
+        //pre only
+        if(directive == 'pre')return node.rid;
         if(directive){
             var expStr = null,expFilterAry = null;
             if(value){
@@ -254,7 +277,13 @@ function isDirectiveVNode(attrName,comp,isCompNode){
         }
 
         switch(c){
-            case 'if':case 'else-if':case 'else':case 'for':case 'html':return c;
+            case 'if':
+            case 'else-if':
+            case 'else':
+            case 'for':
+            case 'html':
+            case 'pre':
+            return c;
         }
 
         //removeIf(production)

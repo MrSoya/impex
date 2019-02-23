@@ -19,44 +19,49 @@
         </div>
         
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
-        <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
             var eventbus = new impex.EventEmitter;
 
             impex.component('x-total',{
                 template:'<div>x+y = {{x+y}}</div>',
-                state:{
-                    x:999,
-                    y:1
+                state:function(argument) {
+                    return {
+                        x:999,
+                        y:1
+                    };
                 },
-                onCompile:function(){
+                willMount:function(){
                     var that = this;
                     eventbus
-                    .on('addx',function(x){
+                    .$on('addx',function(x){
                         that.x = x;
                     })
-                    .on('addy',function(y){
+                    .$on('addy',function(y){
                         that.y = y;
                     })
                 }
             });
             impex.component('x-addx',{
                 template:'<label><button @click="add()">Addx</button>x={{x}}</label>',
-                state:{
-                    x:999
+                state:function() {
+                    return {
+                        x:999
+                    };
                 },
                 add:function(){
-                    eventbus.emit('addx',++this.x);
+                    eventbus.$emit('addx',++this.x);
                 }
             });
 
             impex.component('x-addy',{
                 template:'<label><button @click="add()">Addy</button>y={{y}}</label>',
-                state:{
-                    y:1
+                state:function() {
+                    return {
+                        y:1
+                    };
                 },
                 add:function(){
-                    eventbus.emit('addy',++this.y);
+                    eventbus.$emit('addy',++this.y);
                 }
             });
 

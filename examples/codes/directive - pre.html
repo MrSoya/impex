@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html >
+    <head>
+        <title>Impex Demo</title>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        x-pre指令可以让编译器把节点内部所有内容当作文本处理
+
+        <div id="demo">
+            <x-x>
+                <div x-pre>
+                    使用了x-pre指令{{ exp }}
+                    <b>{{msg}}</b>
+                    <i>{{msg2}}</i>
+                    <x-comp></x-comp>
+                    {{23232}}
+                </div>
+            </x-x>
+            <div>
+                未使用x-pre指令
+                <b>{{msg}}</b>
+                <i>{{msg2}}</i>
+            </div>
+        </div>
+        <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
+        <script type="text/javascript">
+            impex.component("x-x",{
+                template:'<b><slot></slot></b>'
+            });
+            //渲染
+            var debug = impex.create({
+                el:'#demo',
+                state:{
+                    msg:'文本内容',
+                    msg2:'另一段文本内容'
+                }
+                
+            });
+        </script>
+    </body>
+</html>

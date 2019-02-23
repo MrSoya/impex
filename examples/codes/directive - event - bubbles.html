@@ -18,6 +18,7 @@
         </style>
     </head>
     <body>
+        阻止事件冒泡，除调用原生方法外，还可以使用事件修饰符.stop
         <div id="demo">
             <label>
                 cancelBubble
@@ -25,6 +26,7 @@
             </label>
             <div class="parent" @click="alert('parent')">
                 click me
+                <!-- @click.stop -->
                 <div class="child" @click="cancelEvent($event)">
                     click me
                 </div>

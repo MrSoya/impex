@@ -45,11 +45,8 @@
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             impex.component('x-a',{
-                state:{
-                    xx:1
-                },
-                onMount:function(dom){
-                    var that = this;
+                state:function(argument) {
+                    return {xx:1}
                 },
                 template:'<b .class="xx"><slot></slot></b>'
             });

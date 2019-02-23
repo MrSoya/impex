@@ -19,6 +19,11 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-panel',{
+                state:function(argument) {
+                    return {
+                        no:this.$props.no
+                    }
+                },
                 template:`<div><header><slot name='head'></slot></header>
                            <section><slot name='body'></slot></section>
                            <footer><slot name='foot'></slot></footer></div>` 
@@ -34,7 +39,7 @@
                 state:{
                     no:1 
                 },
-                onMount:function(){
+                mounted:function(){
                     console.log(this.$ref.btn)
                 }
             });

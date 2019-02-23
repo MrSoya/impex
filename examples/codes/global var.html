@@ -37,14 +37,18 @@
         <script type="text/javascript">
             impex.component('x-child1',{
                 template:'<div>child1 :{{info}}<slot></slot></div>',
-                state:{
-                    info:" in local 1"
+                state:function() {
+                    return {
+                        info:" in local 1"
+                    }
                 }
             });
             impex.component('x-child2',{
                 template:'<div>child2 :{{info}}<slot></slot></div>',
-                state:{
-                    info:" in local 2"
+                state:function() {
+                    return {
+                        info:" in local 2"
+                    }
                 }
             });
 

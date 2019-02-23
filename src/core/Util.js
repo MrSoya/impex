@@ -1,13 +1,29 @@
 /**
  * utils
  */
-    function ext(from,to){
-        var keys = Object.keys(from);
-        for (var i=keys.length;i--;) {
-            var k = keys[i];
-            to[k] = from[k];
-        }
+    // function ext(from,to){
+    //     var keys = Object.keys(from);
+    //     for (var i=keys.length;i--;) {
+    //         var k = keys[i];
+    //         to[k] = from[k];
+    //     }
+    // }
+    function getForScopeFn(vnode,scope,fnExp) {
+        var args = [scope];
+        var forScopeStart = '',forScopeEnd = '';
+        var forScopeQ = vnode._forScopeQ;
+            if(forScopeQ)
+                for(var i=0;i<forScopeQ.length;i++){
+                    forScopeStart += 'with(arguments['+(1+i)+']){';
+                    forScopeEnd += '}';
+                    args.push(forScopeQ[i]);
+                }
+            var fn = new Function('scope',
+                'with(scope){'+forScopeStart+'return '
+                + fnExp +forScopeEnd+'}');
+        return [fn,args];
     }
+
     function extend(ctor,parentCtor,opts){
         ctor.prototype = Object.create(parentCtor.prototype,{_super:{value:parentCtor.prototype}});
         ctor.prototype.constructor = ctor;

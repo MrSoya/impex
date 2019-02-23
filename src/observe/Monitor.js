@@ -6,6 +6,7 @@ function Monitor(){
 	this.target;
 	this.value;
 	this.watchers = [];
+	this.parent;
 }
 Monitor.prototype = {
 	/**
@@ -18,6 +19,11 @@ Monitor.prototype = {
 		this.watchers.forEach(function(watcher) {
 			watcher(c);
 		});
+
+		//通知父对象
+		if(this.parent){
+			this.parent.notify(this.parent.value);
+		}
 	},
 	/**
 	 * 收集依赖

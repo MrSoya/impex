@@ -6,7 +6,7 @@
  *  ...
  */
 function observe(state,target) {
-   	target.$state = defineProxy(state,null,target,true);
+   	target.$state = defineProxy(state,null,target,true)||{};
 }
 function defineProxy(state,pmonitor,target,isRoot) {
     var t = Array.isArray(state)?wrapArray(state,target,pmonitor):state;
@@ -33,6 +33,8 @@ function defineProxy(state,pmonitor,target,isRoot) {
         if(!monitor){
             monitor = new Monitor();
         }
+        if(pmonitor)
+            monitor.parent = pmonitor;
         if(isObject(v)){
             v = defineProxy(v,monitor,target,false);
         }

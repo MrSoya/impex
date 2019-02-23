@@ -62,7 +62,7 @@
 				},
 				inEdit:false //是否正在编辑，用来控制新增显示
 			},
-			onBeforeMount:function(dom){
+			willMount:function(dom){
 				//这里演示从远程(服务端)读取数据，你可以使用任何习惯的库来实现远程访问接口
 				// var that = this;
 				// var xhr = new XMLHttpRequest();

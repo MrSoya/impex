@@ -25,19 +25,18 @@
         </div>
         
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
-        <script type="text/javascript" src="../../ext/impex.ext.store.js"></script>
         <script type="text/javascript">
             impex.component('x-panel',{
                 template:'<span> + x({{x}}) = {{z}} <p><slot></slot></p></span>',
-                state:{
-                    x:3
+                state:function(argument) {
+                    return {x:3}
                 },
                 computeState:{
                     z:function(){
                         return this.x + store.x + store.y;
                     }
                 },
-                onUpdate:function(argument) {
+                updated:function(argument) {
                     console.log('state: ',argument)
                 },
                 callback:function(argument) {

@@ -1,16 +1,14 @@
 /**
  * 为组件提供watcher，以及watcher的响应
  */
-
-
-function getDirectiveWatcher(directiveParams,vnode,comp,getter,scope){
+function getDirectiveWatcher(directiveParams,vnode,comp,getter,scope,args){
 	var watcher = function(change) {
 		var d = directiveParams[0];
 		var data = directiveParams[1];
 		//计算新值
-		var v = getter(scope);
+		var v = getter.apply(scope,args);
 		data.value = v;
-		d.update && d.update(vnode,data,vnode.dom);
+		d.update && d.update(vnode.dom,data,vnode);
 	}
 	comp._watchers.push(watcher);
 	return watcher;

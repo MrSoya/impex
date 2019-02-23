@@ -15,7 +15,9 @@
 <code>
     &lt;x-demo id="demo"&gt;&lt;/x-demo&gt;
     //渲染命名组件
-    impex.render(document.getElementById('demo'));
+    impex.create({
+        el:'#demo',
+        ...
 </code>
 </pre>
     <div id="demo">
@@ -25,10 +27,10 @@
     </div>
     <script type="text/javascript">
         impex.component('x-demo',{
-            template:'<div>children</div>',
-            onMount:function(argument) {
+            template:'<div>children loaded</div>',
+            mounted:function(argument) {
             	//emit custom event
-                this.emit('mount',1);
+                this.$emit('mount',1);
             }
         });
         impex.create({
