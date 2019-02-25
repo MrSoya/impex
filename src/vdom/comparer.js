@@ -261,9 +261,11 @@ function removeVNode(vnodes){
         var p = vnode.dom.parentNode;
         p && p.removeChild(vnode.dom);
 
-        //todo...   release other resource
         if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
             impex._cs[vnode._cid].$destroy();
+        }
+        if(vnode.children && vnode.children.length>0){
+            removeVNode(vnode.children);
         }
     }
 }
