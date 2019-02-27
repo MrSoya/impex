@@ -35,56 +35,88 @@ function compareSame(newVNode,oldVNode,comp){
     if(newVNode.tag){
         //update events forscope
         var forScopeChanged = JSON.stringify(newVNode._forScopeQ) != JSON.stringify(oldVNode._forScopeQ);
-        oldVNode._forScopeQ = newVNode._forScopeQ;
+        if(newVNode._forScopeQ)
+            oldVNode._forScopeQ = newVNode._forScopeQ;
         
-        var renderedAttrs = Object.assign({},oldVNode.attributes);
-        //overwirte raw attrs
-        oldVNode.raw.attributes = newVNode.raw.attributes;
-        oldVNode.attributes = {};
-
-        //bind _attr
-        for(var k in oldVNode.raw.attributes){
-            oldVNode.attributes[k] = oldVNode.raw.attributes[k];
-        }
+        //只对比视图上的属性
+        var newProps = newVNode.raw.props;
+        var oldProps = oldVNode.raw.props;
+        var npk = Object.keys(newProps);
+        var opk = Object.keys(oldProps);
+        var dom = oldVNode.dom;
 
         var nvdis = newVNode.directives,
             ovdis = oldVNode.directives;
         var nvDiMap = getDirectiveMap(nvdis),
             ovDiMap = getDirectiveMap(ovdis);
-        var add=[],del=[],update=[];
-        //compare dirs
-        for(var i=ovdis.length;i--;){
-            var odi = ovdis[i];
-            var odiStr = odi[0]+odi[3].vExp;
-            if(!nvDiMap[odiStr]){
-                del.push(odi);
+
+        var addAttrs=[],delAttrs=[];
+        var addDis=[],delDis=[];
+
+        //add attr
+        for(var nk in newProps){
+            var ov = oldProps[nk];
+            var nv = newProps[nk];
+            if(opk.indexOf(nk)<0){
+                if(nv.isDi){
+                    addDis.push(nvDiMap[nk]);
+                }else{
+                    addAttrs.push([nk,nv.v]);
+                }
+            }else if(ov.v != nv.v){
+                if(nv.isDi){
+                    delDis.push(ovDiMap[nk]);
+                    addDis.push(nvDiMap[nk]);
+                }else{
+                    addAttrs.push([nk,nv.v]);
+                }
             }
         }
-        for(var i=nvdis.length;i--;){
-            var ndi = nvdis[i];
-            var ndiStr = ndi[0]+ndi[3].vExp;
-            if(!ovDiMap[ndiStr]){
-                add.push(ndi);
-            }else if(ovDiMap[ndiStr][1] != nvDiMap[ndiStr][1]){
-                update.push(ndi);
+        //del attr
+        opk.forEach(function(k) {
+            if(npk.indexOf(k)<0){
+                if(oldProps[k].isDi){
+                    delDis.push(ovDiMap[k]);
+                }else{
+                    delAttrs.push(k);
+                }
             }
-        }
-        //do del
-        for(var i=del.length;i--;){
-            var index = oldVNode.directives.indexOf(del[i]);
-            oldVNode.directives.splice(index,1);
-        }
-        if(del.length>0)
-            callDirective(LC_DI.unbind,oldVNode,comp,del);
-        //add
-        add.forEach(function(di){
+        });
+
+        oldVNode.raw.props = newVNode.raw.props;
+
+
+        /********** 更新 dom **********/
+        addAttrs.forEach(function(attr) {
+            var k = attr[0];
+            var v = attr[1];
+            dom.setAttribute(k,v);
+            if(dom.tagName =='INPUT' && k === 'value'){
+                dom.value = v;
+            }
+            //update ref
+            if(k == ATTR_REF_TAG)comp.$ref[v] = dom;
+        });
+        delAttrs.forEach(function(k) {
+            dom.removeAttribute(k);
+        });
+        /********** 更新 指令 **********/
+        addDis.forEach(function(di) {
             oldVNode.directives.push(di);
         });
-        if(add.length>0)
-            callDirective(LC_DI.update,oldVNode,comp,add);
-        //update 
+        if(addDis.length>0)
+            callDirective(LC_DI.update,oldVNode,comp,addDis);
+        delDis.forEach(function(di) {
+            var i = oldVNode.directives.indexOf(di);
+            oldVNode.directives.splice(i,1);
+        });
+        if(delDis.length>0)
+            callDirective(LC_DI.unbind,oldVNode,comp,delDis);
+
+
+        //update when for scope changed
         if(forScopeChanged){
-            update.forEach(function(di){
+            ovdis.forEach(function(di){
                 var exp = di[3].vExp;
                 var fnData = getForScopeFn(oldVNode,comp,exp);
                 var args = fnData[1];
@@ -93,11 +125,8 @@ function compareSame(newVNode,oldVNode,comp){
                 di[1] = v;
             });
             
-            callDirective(LC_DI.update,oldVNode,comp,update);
+            callDirective(LC_DI.update,oldVNode,comp,ovdis);
         }
-
-        //for unstated change like x-html
-        updateAttr(comp,oldVNode.attributes,renderedAttrs,oldVNode.dom,oldVNode.tag);
     }else{
         if(newVNode.txt !== oldVNode.txt){
             updateTxt(newVNode,oldVNode);
@@ -118,8 +147,7 @@ function getDirectiveMap(directives){
     var map = {};
     for(var i=directives.length;i--;){
         var di = directives[i];
-        var diStr = di[0]+di[3].vExp;
-        map[diStr] = di;
+        map[di[0]] = di;
     }
     return map;
 }
@@ -293,44 +321,3 @@ function updateTxt(nv,ov){
     var dom = ov.dom;
     dom.textContent = nv.txt;
 }
-function updateAttr(comp,newAttrs,oldAttrs,dom,tag){
-    //比较节点属性
-    var nvas = newAttrs;
-    var ovas = oldAttrs;
-    var nvasKs = Object.keys(nvas);
-    var ovasKs = Object.keys(ovas);
-    var isInputNode = tag === 'input'; 
-    for(var i=nvasKs.length;i--;){
-        var k = nvasKs[i];
-        var index = ovasKs.indexOf(k);
-        if(index<0){
-            dom.setAttribute(k,nvas[k]);
-            if(isInputNode && k === 'value'){
-                dom.value = nvas[k];
-            }
-        }else{
-            if(nvas[k] != ovas[k]){
-                dom.setAttribute(k,nvas[k]);
-                if(isInputNode && k === 'value'){
-                    dom.value = nvas[k];
-                }
-            }
-            ovasKs.splice(index,1);
-        }
-    }
-    for(var i=ovasKs.length;i--;){
-        if(ovasKs[i] === DOM_COMP_ATTR)continue;
-        dom.removeAttribute(ovasKs[i]);
-    }
-
-    //update ref
-    if(newAttrs[ATTR_REF_TAG]){
-        comp.$ref[newAttrs[ATTR_REF_TAG]] = dom;
-    }
-
-    //update new attrs
-    var comp_attr = oldAttrs[DOM_COMP_ATTR];
-    if(comp_attr)newAttrs[DOM_COMP_ATTR] = comp_attr;
-}
-
-

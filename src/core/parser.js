@@ -169,8 +169,10 @@ function parseHTML_attrs(attrs,node,compNode){
 
         var attrNode = [aName,value];
         var directive = isDirectiveVNode(aName,node,compNode && node == compNode);
+       
         //pre only
         if(directive == 'pre')return node.rid;
+
         if(directive){
             var expStr = null,expFilterAry = null;
             if(value){
@@ -219,9 +221,14 @@ function parseHTML_attrs(attrs,node,compNode){
                 attrNode.push({dName:dName,dArgsAry:directive[1],dModifiers:directive[2]});
                 attrNode.push({vExp:expStr,vFilterAry:expFilterAry});
                 node.directives[aName] = attrNode;
+
+                //props
+                node.props[aName] = {v:value,isDi:aName};
             }
         }else{
             node.attributes[aName] = value;
+            //props
+            node.props[aName] = {v:value};
         }
     }
 }

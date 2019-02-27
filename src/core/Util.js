@@ -1,13 +1,6 @@
 /**
  * utils
  */
-    // function ext(from,to){
-    //     var keys = Object.keys(from);
-    //     for (var i=keys.length;i--;) {
-    //         var k = keys[i];
-    //         to[k] = from[k];
-    //     }
-    // }
     function getForScopeFn(vnode,scope,fnExp) {
         var args = [scope];
         var forScopeStart = '',forScopeEnd = '';

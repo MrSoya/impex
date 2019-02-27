@@ -120,7 +120,7 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 				exp += '()';
 			}
 			
-			di[1] = '$emit("'+type+'",this.$parent,$event,$vnode)';
+			di[1] = '$emit("'+type+'",$event,$vnode)';
 		}else{
 			if(emptyParen){
 				exp = exp.substr(0,exp.indexOf('('));
@@ -136,7 +136,10 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			vnode.directives[k] = null;
 		}
 
-		fn = new Function('$event','$vnode','with(this){return '+exp+'}');
+		fn = new Function('$event','$vnode',
+			'var args = [$event,$vnode];var fss = "with(this){",fse = "}";var fsq = $vnode._forScopeQ;'+
+			'if(fsq){fsq.forEach(function(scope,i) {fss += "with(arguments["+(i+2)+"]){";fse += "}";args.push(scope);});}'+
+			'return new Function("$event","$vnode",fss+" return '+exp+'"+fse).apply(this,args)');
 
 		c.$on(type,fn,parent);
 	}

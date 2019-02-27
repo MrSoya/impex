@@ -461,6 +461,9 @@ function compileComponent(comp){
 			if(di != null)
 				vnode.directives.push(di);
 		});
+
+		//forScope
+		vnode._forScopeQ = comp.$vel._forScopeQ;
 	}
 
 	//覆盖编译后的vnode

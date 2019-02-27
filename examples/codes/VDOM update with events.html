@@ -6,10 +6,6 @@
     </head>
     <body>
     
-        <!--
-			故障场景演示：
-			当d2被d1替换时，第一个div不应该还保留有click事件，而应该是pointerdown事件
-        -->
         <div id="demo">
             <div x-for="list2 as item" id="d1">
             	<div x-for="list as xx" .id="xx" @mousedown="show(xx)">{{xx}}</div>

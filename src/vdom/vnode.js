@@ -10,6 +10,7 @@ function RawNode(tag) {
     this.children = [];
     this.directives = {};//{name:[dName,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
     this.attributes = {};
+    this.props = {};//模版解析后的原始属性map
     this.txtQ;
     this.slotMap = {};
     this.outerHTML;
@@ -36,11 +37,8 @@ function VNode(tag,rawNode){
     this.children = [];
     this.dom;
     this.vid = vn_counter++;
-    //和真实DOM保持一致的当前节点属性，
-    //不仅包含原始属性，也可能包含通过指令或者接口调用而产生的其他属性
-    this.attributes;
-    //[name,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
-    this.directives = [];
+    this.attributes;//和真实DOM保持一致的当前节点特性
+    this.directives = [];//[name,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
     this._hasEvent;
     this._slots;
     this._comp;//组件
