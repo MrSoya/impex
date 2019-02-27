@@ -143,6 +143,9 @@ impex.directive('style',{
                     break;
                 default:
                     el.setAttribute(p,data.value);
+                    if(el.tagName=='INPUT' && p=='value'){
+                        el.value = data.value;
+                    }
             }//end switch
         }//end for
     },
