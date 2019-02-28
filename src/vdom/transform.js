@@ -33,10 +33,10 @@ function transform(vnode,comp){
 				var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope,args);
 
 				Monitor.target = watcher;
-				console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
+				// console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
 				var v = fn.apply(scope,args);
 				Monitor.target = null;
-				console.log('指令监控。。。。end');
+				// console.log('指令监控。。。。end');
 
 				di[1] = v;//init value
 			});
@@ -121,6 +121,9 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 			}
 			
 			di[1] = '$emit("'+type+'",$event,$vnode)';
+			exp = 'var args = [$event,$vnode];var fss = "with(this){",fse = "}";'+
+			'if($vnode&&$vnode._forScopeQ){var fsq = $vnode._forScopeQ;fsq.forEach(function(scope,i) {fss += "with(arguments["+(i+2)+"]){";fse += "}";args.push(scope);});}'+
+			'return new Function("$event","$vnode",fss+" return '+exp+'"+fse).apply(this,args)'
 		}else{
 			if(emptyParen){
 				exp = exp.substr(0,exp.indexOf('('));
@@ -133,13 +136,11 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 
 				exp += '.apply('+ctx+',arguments)';
 			}
+			exp = 'with(this){ return '+exp+'}';
 			vnode.directives[k] = null;
 		}
 
-		fn = new Function('$event','$vnode',
-			'var args = [$event,$vnode];var fss = "with(this){",fse = "}";var fsq = $vnode._forScopeQ;'+
-			'if(fsq){fsq.forEach(function(scope,i) {fss += "with(arguments["+(i+2)+"]){";fse += "}";args.push(scope);});}'+
-			'return new Function("$event","$vnode",fss+" return '+exp+'"+fse).apply(this,args)');
+		fn = new Function('$event','$vnode',exp);
 
 		c.$on(type,fn,parent);
 	}

@@ -26,12 +26,6 @@ function isSameComponent(nv,ov) {
     return nv.raw.getInnerHTML() == c._innerHTML;
 }
 function compareSame(newVNode,oldVNode,comp){
-    if(newVNode._comp){
-        //判断是否需要更新属性
-        impex._cs[oldVNode._cid]._checkUpdate(newVNode.attributes,newVNode._forScopeQ);
-        return;
-    }
-
     if(newVNode.tag){
         //update events forscope
         var forScopeChanged = JSON.stringify(newVNode._forScopeQ) != JSON.stringify(oldVNode._forScopeQ);
@@ -39,8 +33,8 @@ function compareSame(newVNode,oldVNode,comp){
             oldVNode._forScopeQ = newVNode._forScopeQ;
         
         //只对比视图上的属性
-        var newProps = newVNode.raw.props;
-        var oldProps = oldVNode.raw.props;
+        var newProps = newVNode.props;
+        var oldProps = oldVNode.props;
         var npk = Object.keys(newProps);
         var opk = Object.keys(oldProps);
         var dom = oldVNode.dom;
@@ -82,50 +76,63 @@ function compareSame(newVNode,oldVNode,comp){
                 }
             }
         });
+        oldVNode.props = newVNode.props;
 
-        oldVNode.raw.props = newVNode.raw.props;
-
-
-        /********** 更新 dom **********/
-        addAttrs.forEach(function(attr) {
-            var k = attr[0];
-            var v = attr[1];
-            dom.setAttribute(k,v);
-            if(dom.tagName =='INPUT' && k === 'value'){
-                dom.value = v;
-            }
-            //update ref
-            if(k == ATTR_REF_TAG)comp.$ref[v] = dom;
-        });
-        delAttrs.forEach(function(k) {
-            dom.removeAttribute(k);
-        });
+        if(!newVNode._comp){
+            /********** 更新 dom **********/
+            addAttrs.forEach(function(attr) {
+                var k = attr[0];
+                var v = attr[1];
+                dom.setAttribute(k,v);
+                if(dom.tagName =='INPUT' && k === 'value'){
+                    dom.value = v;
+                }
+                //update ref
+                if(k == ATTR_REF_TAG)comp.$ref[v] = dom;
+            });
+            delAttrs.forEach(function(k) {
+                dom.removeAttribute(k);
+            });
+        }
         /********** 更新 指令 **********/
-        addDis.forEach(function(di) {
-            oldVNode.directives.push(di);
-        });
-        if(addDis.length>0)
-            callDirective(LC_DI.update,oldVNode,comp,addDis);
-        delDis.forEach(function(di) {
-            var i = oldVNode.directives.indexOf(di);
-            oldVNode.directives.splice(i,1);
-        });
-        if(delDis.length>0)
+        if(delDis.length>0){
+            delDis.forEach(function(di) {
+                var i = oldVNode.directives.indexOf(di);
+                oldVNode.directives.splice(i,1);
+            });
             callDirective(LC_DI.unbind,oldVNode,comp,delDis);
-
-
+        }
+        if(addDis.length>0){
+            addDis.forEach(function(di) {
+                oldVNode.directives.push(di);
+            });
+            callDirective(LC_DI.update,oldVNode,comp,addDis);
+        }
+        
+        if(newVNode._comp){
+            comp = impex._cs[oldVNode._cid];
+        }
         //update when for scope changed
         if(forScopeChanged){
             ovdis.forEach(function(di){
                 var exp = di[3].vExp;
+                var name = di[2].dName;
+                if(name == 'on')return;
+
                 var fnData = getForScopeFn(oldVNode,comp,exp);
                 var args = fnData[1];
                 var fn = fnData[0];
                 var v = fn.apply(comp,args);
                 di[1] = v;
             });
-            
             callDirective(LC_DI.update,oldVNode,comp,ovdis);
+        }
+
+        //组件更新属性
+        if(newVNode._comp){
+            if(addAttrs.length>0 || delAttrs.length>0 || forScopeChanged)
+                comp._updateProps(newVNode.attributes);
+            return;
         }
     }else{
         if(newVNode.txt !== oldVNode.txt){

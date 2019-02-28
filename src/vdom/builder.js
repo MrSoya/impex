@@ -7,6 +7,7 @@ function createElement(comp,rid,children,html,forScopeAry){
     var rs = new VNode(tag,raw);
 
     //复制原始属性
+    rs.props = Object.assign({},raw.props);
     rs.attributes = Object.assign({},raw.attributes);
     rs._isEl = true;
     if(forScopeAry.length>0)

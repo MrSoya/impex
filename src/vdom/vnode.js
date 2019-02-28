@@ -37,6 +37,7 @@ function VNode(tag,rawNode){
     this.children = [];
     this.dom;
     this.vid = vn_counter++;
+    this.props;//模版解析后的原始属性map
     this.attributes;//和真实DOM保持一致的当前节点特性
     this.directives = [];//[name,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
     this._hasEvent;

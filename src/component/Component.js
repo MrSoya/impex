@@ -186,30 +186,12 @@ var Component = extend(function(props) {
 			this.$children[i]._parse();
 		}
 	},
-	//VDOM对比时，自动检测需要更新入参
-	//该方法并不会立即更新组件的state，只是增加一个更新标记
-	//在父组件完成VDOM对比后才会开始更新
-	//如果组件的forscope发生变动，组件参数需要重新计算
-	_checkUpdate:function(props,forScope) {
-		var oldPropsStr = JSON.stringify(this._props);
-		var newPropsStr = JSON.stringify(props);
-		if(!forScope && oldPropsStr == newPropsStr)return;
-
-		if(forScope){
-			this.$vel._forScopeQ = forScope;
-		}
-		this._needUpdate = true;
-		this._props = props;
-	},
-	_updateProps:function() {
-		if(!this._needUpdate)return;
-		var newProps = parseProps(this,this.$parent,this._props,this.constructor.props);
+	_updateProps:function(attrs) {
+		var newProps = parseProps(this,this.$parent,attrs,this.constructor.props);
 		
 		callLifecycle(this,LC_CO.propsChange,[newProps]);
 
 		this.$props = newProps;
-
-		this._needUpdate = false;
 	},
 	_append:function(child) {
 		this.$children.push(child);
@@ -455,15 +437,6 @@ function compileComponent(comp){
 		if(i>-1){
 			cs.splice(i,1,vnode);
 		}
-
-		//除了组件自定义事件外，其他指令都绑定到编译后的节点上
-		comp.$vel.directives.forEach(function(di) {
-			if(di != null)
-				vnode.directives.push(di);
-		});
-
-		//forScope
-		vnode._forScopeQ = comp.$vel._forScopeQ;
 	}
 
 	//覆盖编译后的vnode
@@ -479,7 +452,7 @@ function mountComponent(comp,parentVNode){
 	callLifecycle(comp,LC_CO.willMount,[dom]);
 
 	//mount
-	//在子组件之前插入页面可以在onMount中获取正确的dom样式
+	//在子组件之前插入页面可以在mounted中获取正确的dom样式
 	comp.$el.parentNode.replaceChild(dom,comp.$el);
 	comp.$el = dom;
 
@@ -521,12 +494,6 @@ function updateComponent(comp,changeMap){
 	}
 
 	callLifecycle(comp,LC_CO.updated,[changeMap]);
-
-	//更新子组件
-	comp.$children.forEach(function(child) {
-		//更新子组件
-		child._updateProps();
-	});
 }
 
 /**
@@ -545,5 +512,18 @@ function buildVDOMTree(comp){
     }
     //endRemoveIf(production)
     
+    if(comp.$vel){
+		//除了组件自定义事件外，其他指令都绑定到编译后的节点上
+		comp.$vel.directives.forEach(function(di) {
+			if(di != null)
+				root.directives.push(di);
+		});
+
+		//forScope
+		root._forScopeQ = comp.$vel._forScopeQ;
+		//raw props
+		root.raw.props = comp.$vel.raw.props;
+	}
+
     return root;
 }
