@@ -8,7 +8,7 @@
  * 
  * @class 
  */
-var Component = extend(function(props) {
+var Component = extend(function(attrs) {
 	EventEmitter.call(this);
 
 	this.$id = 'C_' + im_counter++;
@@ -50,7 +50,7 @@ var Component = extend(function(props) {
 	 * 计算后的参数map
 	 */
 	this.$props;
-	this._props = props;//raw props
+	this._attrs = attrs;//raw props
 	this._watchers = [];//use to del
 	this._updateMap = {};
 	this._propMap = {};
@@ -135,7 +135,7 @@ var Component = extend(function(props) {
 
 		destroyDirective(this.$vel,this);
 
-		this._props = 
+		this._attrs = 
 		this._watchers = 
 		this._updateMap = 
 		this._propMap = 
@@ -235,6 +235,13 @@ function callDirective(type,vnode,comp,directives){
 		var d = part[0];
 		
 		d[type] && d[type](vnode.dom,part[1],vnode);
+
+		if(LC_DI.unbind == type){
+			var watcher = di[5];
+			watcher && watcher.monitors && watcher.monitors.forEach(function(m) {
+				m.removeWatcher(watcher);
+			});
+		}
 	});
 }
 
@@ -270,7 +277,7 @@ function preprocess(comp) {
 	//解析入参，包括
 	//验证必填项和入参类型
 	//建立变量依赖
-	var calcProps = parseProps(comp,comp.$parent,comp._props,props);
+	var calcProps = parseProps(comp,comp.$parent,comp._attrs,props);
 	comp.$props = calcProps;
 	
 	//此时可以访问$props
@@ -508,7 +515,7 @@ function buildVDOMTree(comp){
         root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp._props)+": ",e);
+        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp._attrs)+": ",e);
     }
     //endRemoveIf(production)
     

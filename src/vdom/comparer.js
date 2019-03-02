@@ -32,9 +32,10 @@ function compareSame(newVNode,oldVNode,comp){
         if(newVNode._forScopeQ)
             oldVNode._forScopeQ = newVNode._forScopeQ;
         
+        var compareCompNode = newVNode._comp;
         //只对比视图上的属性
         var newProps = newVNode.props;
-        var oldProps = oldVNode.props;
+        var oldProps = compareCompNode?impex._cs[oldVNode._cid]._props:oldVNode.props;
         var npk = Object.keys(newProps);
         var opk = Object.keys(oldProps);
         var dom = oldVNode.dom;
@@ -76,9 +77,15 @@ function compareSame(newVNode,oldVNode,comp){
                 }
             }
         });
-        oldVNode.props = newVNode.props;
 
-        if(!newVNode._comp){
+        //reset
+        if(compareCompNode){
+            impex._cs[oldVNode._cid]._props = newVNode.props;
+        }else{
+            oldVNode.props = newVNode.props;
+        }
+
+        if(!compareCompNode){
             /********** 更新 dom **********/
             addAttrs.forEach(function(attr) {
                 var k = attr[0];
@@ -105,11 +112,13 @@ function compareSame(newVNode,oldVNode,comp){
         if(addDis.length>0){
             addDis.forEach(function(di) {
                 oldVNode.directives.push(di);
+
+                monitorDirective(di,impex._cs[oldVNode._cid],oldVNode);
             });
-            callDirective(LC_DI.update,oldVNode,comp,addDis);
+            callDirective(LC_DI.bind,oldVNode,comp,addDis);
         }
         
-        if(newVNode._comp){
+        if(compareCompNode){
             comp = impex._cs[oldVNode._cid];
         }
         //update when for scope changed
@@ -129,7 +138,7 @@ function compareSame(newVNode,oldVNode,comp){
         }
 
         //组件更新属性
-        if(newVNode._comp){
+        if(compareCompNode){
             if(addAttrs.length>0 || delAttrs.length>0 || forScopeChanged)
                 comp._updateProps(newVNode.attributes);
             return;

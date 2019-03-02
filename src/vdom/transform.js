@@ -20,25 +20,7 @@ function transform(vnode,comp){
 		if(!vnode._comp){//uncompiled node dosen't exec directive
 			//除了事件，都绑定
 			vnode.directives.forEach(function(di){
-				var dName = di[2].dName;
-				if(dName == 'on')return;
-				var part = getDirectiveParam(di,comp);
-				var exp = di[3].vExp;
-				var isCompDi = di[4];
-				var scope = isCompDi?comp.$parent:comp;
-				
-				var fnData = getForScopeFn(vnode,scope,exp);
-				var args = fnData[1];
-				var fn = fnData[0];
-				var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope,args);
-
-				Monitor.target = watcher;
-				// console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
-				var v = fn.apply(scope,args);
-				Monitor.target = null;
-				// console.log('指令监控。。。。end');
-
-				di[1] = v;//init value
+				monitorDirective(di,comp,vnode);
 			});
 			
 
@@ -144,10 +126,34 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,attrs){
 
 		c.$on(type,fn,parent);
 	}
-
+	c._props = vnode.props;
 	c._slots = slots;
 	c._slotMap = slotMap;
 	c._innerHTML = vnode.raw.getInnerHTML();
 	
 	return c;
+}
+
+function monitorDirective(di,comp,vnode) {
+	var dName = di[2].dName;
+	if(dName == 'on')return;
+
+	var part = getDirectiveParam(di,comp);
+	var exp = di[3].vExp;
+	var isCompDi = di[4];
+	var scope = isCompDi?comp.$parent:comp;
+	
+	var fnData = getForScopeFn(vnode,scope,exp);
+	var args = fnData[1];
+	var fn = fnData[0];
+	var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope,args);
+
+	Monitor.target = watcher;
+	// console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
+	var v = fn.apply(scope,args);
+	Monitor.target = null;
+	// console.log('指令监控。。。。end');
+
+	di[1] = v;//init value
+	di[5] = watcher;
 }
