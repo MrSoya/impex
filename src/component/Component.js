@@ -65,6 +65,14 @@ var Component = extend(function(attrs) {
 		//reobserve state
 		observe(this.$state,this);
 	},
+	$nextTick:function(fn){
+		var tm = TicksMap[this.$id];
+		if(!tm){
+			tm = TicksMap[this.$id] = [];
+		}
+		if(tm.indexOf(fn)<0)
+			tm.push(fn);
+	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
 	 * @param  {String} path 属性路径，比如a.b.c
@@ -73,14 +81,12 @@ var Component = extend(function(attrs) {
 	$watch:function(path,cbk){
 		cbk = cbk.bind(this);
 		this._watchers.push(cbk);
-		console.log('watcher变更监控。。。。',this.$id);
 		Monitor.target = cbk;
 		//find monitor
 		var makeWatch = new Function('state','return state.'+path);
 
 		makeWatch(this.$state);
 		Monitor.target = null;
-		console.log('watcher变更监控。。。。end');
 
 		return this;
 	},
@@ -178,8 +184,6 @@ var Component = extend(function(attrs) {
 		if(this.$el && this.$el.parentElement){
 			this.$mount();
 		}
-
-		console.log('mounted',this.$id)
 
 		//init children
 		for(var i = this.$children.length;i--;){
@@ -305,10 +309,8 @@ function preprocess(comp) {
 		var watcher = getComputeWatcher(fn,k,comp);
 
 		Monitor.target = watcher;
-		console.log('compute变更监控。。。。',comp.$id);
 		var v = fn.call(comp);
 		Monitor.target = null;
-		console.log('compute变更监控。。。。end');
 
 		comp.$state[k] = v;
 		defineProxy(comp.$state,null,comp,true);
@@ -374,8 +376,6 @@ function parseProps(comp,parent,parentAttrs,input){
 			if(!comp._propWatcher[propWatcherKey]){
 				var watcher = getPropWatcher(fn,k,args,comp);
 				Monitor.target = watcher;
-
-				console.log('入参变更监控。。。。',comp.$id);
 			}
 			//removeIf(production)
 			try{
@@ -389,9 +389,7 @@ function parseProps(comp,parent,parentAttrs,input){
 		    if(!comp._propWatcher[propWatcherKey]){
 			    //记录watcher，防止重复
 			    comp._propWatcher[propWatcherKey] = 1;
-			    Monitor.target = null;
-			    console.log('入参变更监控。。。。end');
-		    }
+			    Monitor.target = null;		    }
 		}
 		//验证input
 		for(var k in rs){
@@ -431,10 +429,8 @@ function parseProps(comp,parent,parentAttrs,input){
 function compileComponent(comp){
 	//监控state
 	Monitor.target = getViewWatcher(comp);
-	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
 	Monitor.target = null;
-	console.log('组件属性变更监控。。。。end');
 
 	var pv = null;
 	if(comp.$vel){
@@ -484,10 +480,8 @@ function updateComponent(comp,changeMap){
 
 	//rebuild VDOM tree
 	Monitor.target = getViewWatcher(comp);
-	console.log('组件属性变更监控。。。。',comp.$id);
 	var vnode = buildVDOMTree(comp);
 	Monitor.target = null;
-	console.log('组件属性变更监控。。。。end');
 
 	//diffing
 	compareVDOM(vnode,comp.$vel,comp);

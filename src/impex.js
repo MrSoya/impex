@@ -151,6 +151,16 @@
 		}
 
 		/**
+		 * 全局范围内，任何视图发生变更后触发
+		 * @param  {Function} fn 回调函数
+		 */
+		this.nextTick = function(fn){
+			var tm = TicksMap['global'];
+			if(tm.indexOf(fn)<0)
+				tm.push(fn);
+		}
+
+		/**
 		 * 渲染一个DOM节点组件，比如
 		 * <pre>
 		 * 	<x-stage id="entry" @click="showStage()"><x-stage>

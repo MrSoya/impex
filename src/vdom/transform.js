@@ -138,7 +138,7 @@ function monitorDirective(di,comp,vnode) {
 	var dName = di[2].dName;
 	if(dName == 'on')return;
 
-	var part = getDirectiveParam(di,comp);
+	var param = getDirectiveParam(di,comp);
 	var exp = di[3].vExp;
 	var isCompDi = di[4];
 	var scope = isCompDi?comp.$parent:comp;
@@ -146,7 +146,13 @@ function monitorDirective(di,comp,vnode) {
 	var fnData = getForScopeFn(vnode,scope,exp);
 	var args = fnData[1];
 	var fn = fnData[0];
-	var watcher = getDirectiveWatcher(part,vnode,comp,fn,scope,args);
+	fn.di = param[0];
+	fn.data = param[1];
+	fn.vnode = vnode;
+	fn.scope = scope;
+	fn.args = args;
+	fn.dName = dName;
+	var watcher = getDirectiveWatcher(fn,comp);
 
 	Monitor.target = watcher;
 	// console.log('指令监控。。。。',comp.$id,vnode.tag,dName);

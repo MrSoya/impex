@@ -1,14 +1,9 @@
 /**
  * 为组件提供watcher，以及watcher的响应
  */
-function getDirectiveWatcher(directiveParams,vnode,comp,getter,scope,args){
-	var watcher = function(change) {
-		var d = directiveParams[0];
-		var data = directiveParams[1];
-		//计算新值
-		var v = getter.apply(scope,args);
-		data.value = v;
-		d.update && d.update(vnode.dom,data,vnode);
+function getDirectiveWatcher(getter,comp){
+	var watcher = function() {
+		addEvent('D',getter.vnode.vid+'-'+getter.dName,getter,comp);
 	}
 	comp._watchers.push(watcher);
 	return watcher;
@@ -30,47 +25,77 @@ function getViewWatcher(comp) {
 	if(comp._viewWatcher)return comp._viewWatcher;
 
 	comp._viewWatcher = function(change) {
-		comp._updateMap[change.name] = change;
-		notify2state(comp);
-		console.log('组件属性变更',change);
+		addEvent('V',change.name,change,comp);
 	}
 	return comp._viewWatcher;
 }
 function getPropWatcher(computer,propKey,args,comp){
 	var watcher = function() {
-		var v = computer.apply(comp.parent,args);
-		comp._propMap[propKey] = v;
-		notify2prop(comp);
+		addEvent('P',propKey,computer.apply(comp.parent,args),comp);
 	}
 	// watcher.id = comp.$id+'-'+propKey;//防止重复
 	comp._watchers.push(watcher);
 	return watcher;
 }
 
-function notify2state(comp) {
-	if(comp._updateTimer){
-		clearTimeout(comp._updateTimer);
+/**
+ * 添加一个事件到事件队列中，并启动事件处理器
+ */
+var EventProcesser = null;
+function addEvent(type,name,event,comp) {
+	var typeMap = EventQ[comp.$id];
+	if(!typeMap){
+		typeMap = EventQ[comp.$id] = {
+			D:{},
+			V:{},
+			P:{}
+		}; 
 	}
-	comp._updateTimer = setTimeout(function(){
-		//通知组件更新
-		updateComponent(comp,comp._updateMap);
+	typeMap[type][name] = event;
 
-		console.log('update',comp.$id)
+	if(!EventProcesser){
+		EventProcesser = setTimeout(function(){
+			//按照组件分组，处理不同的事件类型
+			//参数、视图、指令
+			var compIds = Object.keys(EventQ);
+			compIds.forEach(function(cid) {
+				var ev = EventQ[cid];
+				var comp = impex._cs[cid];
 
-		//restore
-		comp._updateMap = {};
-	},20);
-}
-function notify2prop(comp) {
-	if(comp._propTimer){
-		clearTimeout(comp._propTimer);
-	}
-	comp._propTimer = setTimeout(function(){
-		//通知属性变更
-		callLifecycle(comp,LC_CO.propsChange,[comp._propMap]);
-		console.log('notify2prop',comp._propMap)
+				/********* 参数更新 *********/
+				var propMap = ev.P;
+				callLifecycle(comp,LC_CO.propsChange,[propMap]);
+				//restore
+				ev.P = {};
 
-		//restore
-		comp._propMap = {};
-	},20);
+				/********* 视图更新 *********/
+				updateComponent(comp,ev.V);
+				ev.V = {};
+
+				/********* 指令更新 *********/
+				var dis = ev.D;
+				for(var k in dis){
+					var getter = dis[k];
+					var v = getter.apply(getter.scope,getter.args);
+					getter.data.value = v;
+					var d = getter.di;
+					d.update && d.update(getter.vnode.dom,getter.data,getter.vnode);
+				}
+				ev.D = {};
+
+				/********* ticks *********/
+				var ticks = TicksMap[cid];
+				ticks && ticks.forEach(function(fn) {
+					fn.call(comp);
+				});
+			});
+
+			//next tick
+			TicksMap['global'].forEach(function(fn) {
+				fn();
+			});
+
+			EventProcesser = null;
+		},20);
+	}	
 }

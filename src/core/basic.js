@@ -37,6 +37,9 @@
 	var PLUGIN_LIST = [];
 	var Mixins = [];//global mixins
 
+	var TicksMap = {global:[]};
+	var EventQ = {};//全局事件队列
+
 	var LC_DI = {//指令生命周期
 		'bind':'bind',
 		'appended':'appended',
