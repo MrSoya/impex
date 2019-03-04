@@ -87,6 +87,9 @@ function compareSame(newVNode,oldVNode,comp){
 
         if(!compareCompNode){
             /********** 更新 dom **********/
+            delAttrs.forEach(function(k) {
+                dom.removeAttribute(k);
+            });
             addAttrs.forEach(function(attr) {
                 var k = attr[0];
                 var v = attr[1];
@@ -97,10 +100,8 @@ function compareSame(newVNode,oldVNode,comp){
                 //update ref
                 if(k == ATTR_REF_TAG)comp.$ref[v] = dom;
             });
-            delAttrs.forEach(function(k) {
-                dom.removeAttribute(k);
-            });
         }
+
         /********** 更新 指令 **********/
         if(delDis.length>0){
             delDis.forEach(function(di) {
@@ -311,6 +312,7 @@ function removeVNode(vnodes){
         if(vnode.children && vnode.children.length>0){
             removeVNode(vnode.children);
         }
+        vnode.children = vnode.directives = null;
     }
 }
 function insertChildren(parent,children,comp){

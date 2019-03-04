@@ -65,13 +65,14 @@ var Component = extend(function(attrs) {
 		//reobserve state
 		observe(this.$state,this);
 	},
-	$nextTick:function(fn){
-		var tm = TicksMap[this.$id];
-		if(!tm){
-			tm = TicksMap[this.$id] = [];
+	$nextTick:function(fn) {
+		var tks = TickMap[this.$id];
+		if(!tks){
+			tks = TickMap[this.$id] = [];
 		}
-		if(tm.indexOf(fn)<0)
-			tm.push(fn);
+		if(tks.indexOf(fn)<0){
+			tks.push(fn);
+		}
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
@@ -389,7 +390,8 @@ function parseProps(comp,parent,parentAttrs,input){
 		    if(!comp._propWatcher[propWatcherKey]){
 			    //记录watcher，防止重复
 			    comp._propWatcher[propWatcherKey] = 1;
-			    Monitor.target = null;		    }
+			    Monitor.target = null;
+		    }
 		}
 		//验证input
 		for(var k in rs){
@@ -495,6 +497,13 @@ function updateComponent(comp,changeMap){
 	}
 
 	callLifecycle(comp,LC_CO.updated,[changeMap]);
+
+	//TickMap
+	var tks = TickMap[comp.$id];
+	if(tks)
+		tks.forEach(function(tk) {
+			tk.call(comp);
+		});
 }
 
 /**

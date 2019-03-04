@@ -23,7 +23,8 @@ impex.directive('style',{
             }
             v = rs;
         }
-        var style = vnode.attributes.style||'';
+        var style = vnode.props.style;
+        style = style?style.v:'';
         for(var k in v){
             var n = this.filterName(k);
             var val = v[k];
@@ -43,9 +44,9 @@ impex.directive('style',{
         this.appended(el,data,vnode);
     },
     unbind:function(el,data,vnode){
-        var style = vnode.attributes.style;
+        var style = vnode.props.style;
         if(style){
-            el.setAttribute('style',style);
+            el.setAttribute('style',style.v);
         }else{
             el.removeAttribute('style');
         }
@@ -57,7 +58,8 @@ impex.directive('style',{
     }
 })
 /**
- * 外部样式指令
+ * 外部样式指令，如果节点上还有class属性，并且与x-class中的相同，那么将会被x-class覆盖。
+ * 当指令卸载时，会把原class属性还原
  * <br/>使用方式：
  * <div x-class="'cls1 cls2 cls3 ...'" >...</div>
  * <div x-class="['cls1','cls2','cls3']" >...</div>
@@ -66,7 +68,8 @@ impex.directive('style',{
 .directive('class',{
     appended:function(el,data,vnode){
         var v = data.value;
-        var cls = vnode.attributes.class||'';
+        var cls = vnode.props.class;
+        cls = cls?cls.v:'';
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
         var appendCls = null;
         if(isString(v)){
@@ -93,9 +96,10 @@ impex.directive('style',{
         this.appended(el,data,vnode);
     },
     unbind:function(el,data,vnode) {
-        var cls = vnode.attributes.class;
+        //还原原始视图样式
+        var cls = vnode.props.class;
         if(cls){
-            el.setAttribute('class',cls);
+            el.setAttribute('class',cls.v);
         }else{
             el.removeAttribute('class');
         }
@@ -129,7 +133,7 @@ impex.directive('style',{
  * <br/>快捷方式：<img .src="exp">
  */
 .directive('bind',{
-    appended:function(el,data,vnode){
+    bind:function(el,data,vnode) {
         var args = data.args;
         for(var i=args.length;i--;){
             var p = args[i];
@@ -150,7 +154,7 @@ impex.directive('style',{
         }//end for
     },
     update:function(el,data,vnode) {
-        this.appended(el,data,vnode);
+        this.bind(el,data,vnode);
     },
     unbind:function(el,data,vnode) {
         var args = data.args;

@@ -61,7 +61,6 @@ function parseHTML(str){
 
         if(preRid>-1 && outPre){
             outPre = false;
-            console.log('enter pre')
         }
 
         //handle void el root
@@ -143,7 +142,6 @@ function parseHTML(str){
                     var preTxt = new RawNode();
                     preTxt.txtQ = [parentNode.getInnerHTML()];
                     parentNode.children.push(preTxt);
-                    console.log('out pre')
                 }
                 lastEndIndex = endIndex + endNodeData[0].length;
             }while(endIndex < nextIndex);

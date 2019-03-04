@@ -51,6 +51,5 @@ Monitor.prototype = {
 		if(i>-1){
 			this.watchers.splice(i,1);
 		}
-		console.log('removeWatcher',this.key)
 	}
 };

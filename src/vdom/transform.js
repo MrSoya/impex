@@ -16,6 +16,7 @@ function transform(vnode,comp){
 			var attr = vnode.attributes[k];
 			n.setAttribute(k,attr);
 		}
+		n.setAttribute('vid',vnode.vid);
 
 		if(!vnode._comp){//uncompiled node dosen't exec directive
 			//除了事件，都绑定
@@ -138,27 +139,18 @@ function monitorDirective(di,comp,vnode) {
 	var dName = di[2].dName;
 	if(dName == 'on')return;
 
-	var param = getDirectiveParam(di,comp);
+	var part = getDirectiveParam(di,comp);
 	var exp = di[3].vExp;
 	var isCompDi = di[4];
 	var scope = isCompDi?comp.$parent:comp;
-	
 	var fnData = getForScopeFn(vnode,scope,exp);
 	var args = fnData[1];
 	var fn = fnData[0];
-	fn.di = param[0];
-	fn.data = param[1];
-	fn.vnode = vnode;
-	fn.scope = scope;
-	fn.args = args;
-	fn.dName = dName;
-	var watcher = getDirectiveWatcher(fn,comp);
+	var watcher = getDirectiveWatcher(exp,part,vnode,comp,scope);
 
 	Monitor.target = watcher;
-	// console.log('指令监控。。。。',comp.$id,vnode.tag,dName);
 	var v = fn.apply(scope,args);
 	Monitor.target = null;
-	// console.log('指令监控。。。。end');
 
 	di[1] = v;//init value
 	di[5] = watcher;
