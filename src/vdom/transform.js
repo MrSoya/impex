@@ -16,7 +16,6 @@ function transform(vnode,comp){
 			var attr = vnode.attributes[k];
 			n.setAttribute(k,attr);
 		}
-		n.setAttribute('vid',vnode.vid);
 
 		if(!vnode._comp){//uncompiled node dosen't exec directive
 			//除了事件，都绑定

@@ -12,24 +12,65 @@
  */
 impex.directive('style',{
     appended:function(el,data,vnode){
-        var v = data.value;
-        if(isString(v)){
+        var styleMap = data.value;
+        if(isString(styleMap)){
             var rs = {};
-            var tmp = v.split(';');
+            var tmp = styleMap.split(';');
             for(var i=tmp.length;i--;){
                 if(!tmp[i])continue;
                 var pair = tmp[i].split(':');
                 rs[pair[0]] = pair[1];
             }
-            v = rs;
+            styleMap = rs;
         }
-        var style = vnode.props.style;
-        style = style?style.v:'';
-        for(var k in v){
-            var n = this.filterName(k);
-            var val = v[k];
-            n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
-            style += ';'+n+':'+val;
+        //转换为css key
+        var addStyles = {};
+        for(var k in styleMap){
+            var sk = k.trim().replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+            addStyles[sk] = styleMap[k];
+        }
+        var lastStyles = vnode._lastStyleMap||{};
+        var styleMap = {};//当前dom样式
+        el.style.cssText.split(';').forEach(function(kv) {
+            if(!kv)return;
+
+            var pair = kv.split(':');
+            var k = pair[0].trim();
+            if(!lastStyles[k])//删除上一次样式
+                styleMap[k] = pair[1];
+        });
+        //增加
+        for(var k in addStyles){
+            styleMap[k] = addStyles[k];
+        }
+        
+        vnode._lastStyleAry = addStyles;
+        el.setAttribute('style',this.getCssText(styleMap));
+    },
+    update:function(el,data,vnode) {
+        this.appended(el,data,vnode);
+    },
+    unbind:function(el,data,vnode){
+        if(!el.style.cssText)return;
+        //删除当前dom中的对应样式
+        var lastStyles = vnode._lastStyleMap;
+        if(!lastStyles)return;
+        var styleMap = {};//当前dom样式
+        el.style.cssText.split(';').forEach(function(kv) {
+            if(!kv)return;
+
+            var pair = kv.split(':');
+            var k = pair[0].trim();
+            if(!lastStyles[k])//删除上一次样式
+                styleMap[k] = pair[1];
+        });
+        el.setAttribute('style',this.getCssText(styleMap));
+    },
+    getCssText:function(styleMap) {
+        var style = '';
+        for(var k in styleMap){
+            var val = styleMap[k];
+            style += ';'+k+':'+val;
             // if(val.indexOf('!important')){
             //     val = val.replace(/!important\s*;?$/,'');
             //     n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
@@ -38,28 +79,13 @@ impex.directive('style',{
             //     style[n] = val;
             // }
         }
-        el.setAttribute('style',style);
-    },
-    update:function(el,data,vnode) {
-        this.appended(el,data,vnode);
-    },
-    unbind:function(el,data,vnode){
-        var style = vnode.props.style;
-        if(style){
-            el.setAttribute('style',style.v);
-        }else{
-            el.removeAttribute('style');
-        }
-    },
-    filterName:function(k){
-        return k.replace(/-([a-z])/img,function(a,b){
-            return b.toUpperCase();
-        });
+        return style;
     }
 })
 /**
- * 外部样式指令，如果节点上还有class属性，并且与x-class中的相同，那么将会被x-class覆盖。
- * 当指令卸载时，会把原class属性还原
+ * 样式指令，会对dom当前的className进行修改
+ * 更新时，会对比新的指令值，移除不存在的样式，添加新样式
+ * 卸载时，会移除所有指令样式
  * <br/>使用方式：
  * <div x-class="'cls1 cls2 cls3 ...'" >...</div>
  * <div x-class="['cls1','cls2','cls3']" >...</div>
@@ -68,41 +94,64 @@ impex.directive('style',{
 .directive('class',{
     appended:function(el,data,vnode){
         var v = data.value;
-        var cls = vnode.props.class;
-        cls = cls?cls.v:'';
+        var cls = el.className;//dom已有样式
         var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
-        var appendCls = null;
-        if(isString(v)){
-            appendCls = v.split(' ');
-        }else if(isArray(v)){
-            appendCls = v;
-        }else{
-            appendCls = [];
-            for(var k in v){
-                var val = v[k];
-                if(val)
-                    appendCls.push(k);
-            }
+        var addCls = this.getClassAry(data);
+        var lastCls = vnode._lastClassAry;
+        //删除上一次样式
+        if(lastCls){
+            lastCls.forEach(function(c) {
+                if(!c)return;
+                var i = clsAry.indexOf(c.trim());
+                if(i>-1){
+                    clsAry.splice(i,1);
+                }
+            });
         }
-        appendCls.forEach(function(c) {
+        
+        //增加
+        addCls.forEach(function(c) {
             if(c && clsAry.indexOf(c.trim())<0){
                 clsAry.push(c);
             }
         });
         
+        vnode._lastClassAry = addCls;
         el.setAttribute('class',clsAry.join(' '));
     },
     update:function(el,data,vnode) {
         this.appended(el,data,vnode);
     },
     unbind:function(el,data,vnode) {
-        //还原原始视图样式
-        var cls = vnode.props.class;
-        if(cls){
-            el.setAttribute('class',cls.v);
+        if(!el.className)return;
+        //删除当前dom中的对应样式
+        var delCls = vnode._lastClassAry;
+        var clsAry = el.className.replace(/\s+/mg,' ').split(' ');
+        delCls.forEach(function(cls) {
+            if(!cls)return;
+            var i = clsAry.indexOf(cls);
+            if(i>-1){
+                clsAry.splice(i,1);
+            }
+        });
+        el.setAttribute('class',clsAry.join(' '));
+    },
+    getClassAry:function(data) {
+        var v = data.value;
+        var addCls = null;
+        if(isString(v)){
+            addCls = v.split(' ');
+        }else if(isArray(v)){
+            addCls = v;
         }else{
-            el.removeAttribute('class');
+            addCls = [];
+            for(var k in v){
+                var val = v[k];
+                if(val)
+                    addCls.push(k);
+            }
         }
+        return addCls;
     }
 })
 /**
