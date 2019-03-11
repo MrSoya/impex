@@ -25,7 +25,6 @@
                     this.logger('created...');
                 },
                 compile:function(tmpl,rawNode){
-                    // console.log('compile...',rawNode);
                     this.logger('compile...');
                     return tmpl;
                 },
@@ -42,6 +41,8 @@
                     this.logger('updated...');
                 },
                 propsChange:function(newProps){
+                    if(newProps.p == this.$props.p)return;
+
                     this.logger('propsChange...'+JSON.stringify(newProps));
                     //重载函数后，必须手动赋值
                     this.$setState(newProps);

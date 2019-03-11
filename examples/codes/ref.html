@@ -24,9 +24,9 @@
             //渲染
             var debug = impex.create({
                 el:'#demo',
-                onMount:function() {
-                    console.log('dom ref:'+this.$ref.rdom);
-                    console.log('comp ref:'+this.$ref.rcomp);
+                mounted:function() {
+                    console.log('dom ref:',this.$ref.rdom);
+                    console.log('comp ref:',this.$ref.rcomp);
                 }
             });
             
