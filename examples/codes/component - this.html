@@ -22,17 +22,17 @@
             <li>自定义事件-调用时: this指向函数调用对象</li>
         </ul>
         <div id="demo">
-            this.$name: {{this.$name}}
+            this.$name: {{$name}}
 
             <x-a 
-                @click.native.self="showName" 
-                @onload="childLoad"
+                @click.native.self="showName()" 
+                @onload="childLoad()"
                 >
-                this.$name: {{this.$name}}  click
+                this.$name: {{$name}}  click
                 <x-b @onload="Global.fn()">
-                    this.$name: {{this.$name}}
-                    <x-c @click.native="this.$parent.$parent.showName($event)">
-                        this.$name: {{this.$name}} click
+                    this.$name: {{$name}}
+                    <x-c @click.native="$parent.$parent.showName($event)">
+                        this.$name: {{$name}} click
                     </x-c>
                 </x-b>
             </x-a>
@@ -44,13 +44,13 @@
                 state:function(argument) {
                     this.childLoad = this.$props.childLoad;
                 },
-                onMount:function(argument) {
+                mounted:function(argument) {
                     this.$emit('onload',1,1,2);
                 }
             });
             impex.component('x-b',{
                 template:'<div><slot></slot></div>',
-                onMount:function(argument) {
+                mounted:function(argument) {
                     this.$emit('onload','x-b',this);
                 }
             });

@@ -1,20 +1,12 @@
 /**
  * utils
  */
-    function getForScopeFn(vnode,scope,fnExp) {
-        var args = [scope];
-        var forScopeStart = '',forScopeEnd = '';
-        var forScopeQ = vnode._forScopeQ;
-            if(forScopeQ)
-                for(var i=0;i<forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(1+i)+']){';
-                    forScopeEnd += '}';
-                    args.push(forScopeQ[i]);
-                }
-            var fn = new Function('scope',
-                'with(scope){'+forScopeStart+'return '
-                + fnExp +forScopeEnd+'}');
-        return [fn,args];
+    function convertEntityStr(str){
+        return str.replace(/&amp;/mg,'&')
+    }
+
+    function copy(obj) {
+        return Object.assign({}, obj);
     }
 
     function extend(ctor,parentCtor,opts){
@@ -70,6 +62,9 @@
     }
     function isUndefined(obj){
         return obj === undefined;
+    }
+    function isDefined(obj){
+        return obj !== undefined;
     }
     function isFunction(obj){
         return obj instanceof Function;

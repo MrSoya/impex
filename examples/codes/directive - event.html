@@ -10,7 +10,7 @@
             <button 
                 @mousedown="onmouse($event)"
                 @mouseup="onmouse(root,$event)" 
-                x-on:dblclick="showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！
+                @dblclick="showMe($event);root.tip='!!';showMe2(arguments[0]);">点我两下试试！！
             </button>
         </div>
     

@@ -8,7 +8,7 @@
  * 
  * @class 
  */
-var Component = extend(function(attrs) {
+var Component = extend(function(props) {
 	EventEmitter.call(this);
 
 	this.$id = 'C_' + im_counter++;
@@ -49,12 +49,9 @@ var Component = extend(function(attrs) {
 	/**
 	 * 计算后的参数map
 	 */
-	this.$props;
-	this._attrs = attrs;//raw props
+	this.$props = props;
 	this._watchers = [];//use to del
 	this._updateMap = {};
-	this._propMap = {};
-	this._propWatcher = {};
 	impex._cs[this.$id] = this;
 },EventEmitter,{
 	$setState:function(stateObj) {
@@ -65,14 +62,18 @@ var Component = extend(function(attrs) {
 		//reobserve state
 		observe(this.$state,this);
 	},
+	/**
+	 * 回调会在当前任务队列执行完成后调用
+	 * @param  {Function} fn 回调函数
+	 */
 	$nextTick:function(fn) {
-		var tks = TickMap[this.$id];
-		if(!tks){
-			tks = TickMap[this.$id] = [];
-		}
-		if(tks.indexOf(fn)<0){
-			tks.push(fn);
-		}
+		addTask(new Task(fn.bind(this)));
+	},
+	/**
+	 * 强制组件立即更新视图
+	 */
+	$forceUpdate:function() {
+		updateComponent(this,{});
 	},
 	/**
 	 * 监控当前组件中的模型属性变化，如果发生变化，会触发回调
@@ -81,11 +82,12 @@ var Component = extend(function(attrs) {
 	 */
 	$watch:function(path,cbk){
 		cbk = cbk.bind(this);
-		this._watchers.push(cbk);
-		Monitor.target = cbk;
+		var watcher = getWatchWatcher(cbk);
+	
+		this._watchers.push(watcher);
+		Monitor.target = watcher;
 		//find monitor
 		var makeWatch = new Function('state','return state.'+path);
-
 		makeWatch(this.$state);
 		Monitor.target = null;
 
@@ -118,10 +120,6 @@ var Component = extend(function(attrs) {
 			clearTimeout(this._updateTimer);
 			this._updateTimer = null;
 		}
-		if(this._propTimer){
-			clearTimeout(this._propTimer);
-			this._propTimer = null;
-		}
 
 		//clear refs
 		if(this.$parent){
@@ -142,11 +140,8 @@ var Component = extend(function(attrs) {
 
 		destroyDirective(this.$vel,this);
 
-		this._attrs = 
 		this._watchers = 
 		this._updateMap = 
-		this._propMap = 
-		this._propWatcher = 
 
 		this.$vel = 
 		this.$el = 
@@ -191,12 +186,46 @@ var Component = extend(function(attrs) {
 			this.$children[i]._parse();
 		}
 	},
-	_updateProps:function(attrs) {
-		var newProps = parseProps(this,this.$parent,attrs,this.constructor.props);
-		
-		callLifecycle(this,LC_CO.propsChange,[newProps]);
+	_update:function(newVnode) {
+		var newProps = newVnode.attrs;
+		//仅进行非引用类型参数判断
+		var update = false;
+		var npk = Object.keys(newProps);
+		var opk = Object.keys(this.$props);
+		if(npk.length != opk.length){
+			update = true;
+		}else{
+			for(var k in newProps){
+				if(this.$props[k] != newProps[k] || isObject(newProps[k])){
+					update = true;
+					break;
+				}
+			}
+		}
 
-		this.$props = newProps;
+		//更新自定义事件
+		if(newVnode.events){
+			bindCustomEvent(newVnode.events,this);
+		}
+		//更新组件指令
+		if(newVnode.directives){
+			var dis = this._directives = newVnode.directives;
+			//只做更新
+			for(var k in dis){
+				var nd = dis[k];
+				var od = this.$vel.directives[k];
+				if(od.value != nd.value){
+					this.$vel.directives[k] = nd;
+					callDirective(LC_DI.update,this.$vel,this,nd);
+				}
+			}
+		}
+		
+		
+		if(update){
+			callLifecycle(this,LC_CO.propsChange,[newProps]);
+			this.$props = newProps;
+		}
 	},
 	_append:function(child) {
 		this.$children.push(child);
@@ -204,6 +233,12 @@ var Component = extend(function(attrs) {
 		child.$root = this.$root;
 	},
 	/******* 默认实现 ********/
+	/**
+	 * 默认的propsChange回调可能存在很大的性能风险，
+	 * 而且有可能会导致死循环
+	 * @param  {[type]} newProps [description]
+	 * @return {[type]}          [description]
+	 */
 	propsChange:function(newProps){
 		this.$setState(newProps);
     }
@@ -222,39 +257,24 @@ function callLifecycle(comp,lcName,argAry) {
 	return rs;
 }
 
-function getDirectiveParam(di,comp) {
-	var dName = di[2].dName;
-	var d = DIRECT_MAP[dName];
-	var params = di[2].dArgsAry;
-	var modifiers = di[2].dModifiers;
-	var v = di[1];
-	var exp = di[3].vExp;
-
-	return [d,{comp:comp,value:v,args:params,exp:exp,modifiers:modifiers}];
-}
-
 /*********	component handlers	*********/
-function callDirective(type,vnode,comp,directives){
-	(directives||vnode.directives).forEach(function(di){
-		var part = getDirectiveParam(di,comp);
-		var d = part[0];
-		
-		d[type] && d[type](vnode.dom,part[1],vnode);
-
-		if(LC_DI.unbind == type){
-			var watcher = di[5];
-			watcher && watcher.monitors && watcher.monitors.forEach(function(m) {
-				m.removeWatcher(watcher);
-			});
-		}
-	});
+function callDirectives(type,vnode,comp,directives){
+	for(var k in directives){
+		var di = directives[k];
+		var d = DIRECT_MAP[di.name];
+		d[type] && d[type](vnode.dom,di,vnode);
+	}
+}
+function callDirective(type,vnode,comp,directive) {
+	var d = DIRECT_MAP[directive.name];
+	d[type] && d[type](vnode.dom,directive,vnode);
 }
 
 function destroyDirective(vnode,comp){
 	if(isUndefined(vnode.txt)){
 		if(!vnode._comp){//uncompiled node  dosen't exec directive
 
-			callDirective(LC_DI.unbind,vnode,comp);
+			callDirectives(LC_DI.unbind,vnode,comp,vnode.directives);
 
 			if(vnode.children && vnode.children.length>0){
 				for(var i=0;i<vnode.children.length;i++){
@@ -279,11 +299,9 @@ function preprocess(comp) {
     	computeState = comp.constructor.computeState,
     	props = comp.constructor.props;
 
-	//解析入参，包括
 	//验证必填项和入参类型
-	//建立变量依赖
-	var calcProps = parseProps(comp,comp.$parent,comp._attrs,props);
-	comp.$props = calcProps;
+	if(props)
+		checkProps(comp,props);
 	
 	//此时可以访问$props
 	if(state)
@@ -308,6 +326,7 @@ function preprocess(comp) {
 		var fn = cs.get || cs;
 		//record hooks
 		var watcher = getComputeWatcher(fn,k,comp);
+		comp._watchers.push(watcher);
 
 		Monitor.target = watcher;
 		var v = fn.call(comp);
@@ -334,7 +353,7 @@ function preprocess(comp) {
 	    });
 	}
 }
-function parseProps(comp,parent,parentAttrs,input){
+function checkProps(comp,input){
 
 	//解析input，抽取必须项
 	var requires = {};
@@ -347,88 +366,45 @@ function parseProps(comp,parent,parentAttrs,input){
 		}
 	}
 
-	var rs = {};
-	if(parentAttrs){
-		var depMap = {};
-		for(var k in parentAttrs){
-			var v = parentAttrs[k];
-			if(k == ATTR_REF_TAG){
-				continue;
-			}
-			k = k.replace(/-[a-z0-9]/g,function(a){return a[1].toUpperCase()});
-			// xxxx
-			if(k[0] !== PROP_TYPE_PRIFX){
-				rs[k] = v;
-				continue;
-			}
-
-			// .xxxx
-			var n = k.substr(1);
-			depMap[n] = v;
-		}//end for
-		//创建watcher
-		for(k in depMap){
-			var vn = comp.$vel;
-			var fnData = getForScopeFn(vn,parent,depMap[k]);
-			var args = fnData[1];
-			var fn = fnData[0];
-			//建立prop watcher
-			var propWatcherKey = k+'-'+parent.$id;
-			if(!comp._propWatcher[propWatcherKey]){
-				var watcher = getPropWatcher(fn,k,args,comp);
-				Monitor.target = watcher;
-			}
+	var rs = comp.$props;
+	//验证input
+	for(var k in rs){
+		var v = rs[k];
+		if(input && k in input){
+			delete requires[k];
+			
 			//removeIf(production)
-			try{
-		    //endRemoveIf(production)
-		       	rs[k] = fn.apply(parent,args);
-		    //removeIf(production)
-		    }catch(e){
-		        assert(false,comp.$name,XERROR.COMPONENT.DEP,"creating dependencies error with prop "+JSON.stringify(k)+": ",e);
-		    }
-		    //endRemoveIf(production)
-		    if(!comp._propWatcher[propWatcherKey]){
-			    //记录watcher，防止重复
-			    comp._propWatcher[propWatcherKey] = 1;
-			    Monitor.target = null;
-		    }
+			//check type 
+			if(isUndefined(input[k].type))continue;
+			assert((function(k,v,input,component){
+				if(!input[k] || !input[k].type)return false;
+				var checkType = input[k].type;
+				checkType = checkType instanceof Array?checkType:[checkType];
+				var vType = typeof v;
+				if(v instanceof Array){
+					vType = 'array';
+				}
+				if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
+					return false;
+				}
+				return true;
+			})(k,v,input,comp),comp.$name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input prop ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
+			//endRemoveIf(production)
 		}
-		//验证input
-		for(var k in rs){
-			var v = rs[k];
-			if(input && k in input){
-				delete requires[k];
-				
-				//removeIf(production)
-				//check type 
-				if(isUndefined(input[k].type))continue;
-				assert((function(k,v,input,component){
-					if(!input[k] || !input[k].type)return false;
-					var checkType = input[k].type;
-					checkType = checkType instanceof Array?checkType:[checkType];
-					var vType = typeof v;
-					if(v instanceof Array){
-						vType = 'array';
-					}
-					if(vType !== 'undefined' && checkType.indexOf(vType) < 0){
-						return false;
-					}
-					return true;
-				})(k,v,input,comp),comp.$name,XERROR.INPUT.TYPE,"invalid type ["+(v instanceof Array?'array':(typeof v))+"] of input prop ["+k+"];should be ["+(input[k].type && input[k].type.join?input[k].type.join(','):input[k].type)+"]");
-				//endRemoveIf(production)
-			}
-		}//end for
-	}
+	}//end for
 
 	//removeIf(production)
 	//check requires
 	assert(Object.keys(requires).length==0,comp.$name,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
 	//endRemoveIf(production)
-
-	return rs;	
 }
 
 function compileComponent(comp){
+	if(comp.$vel){
+		//绑定组件事件
+		bindCustomEvent(comp.$vel.events,comp);
+	}
+
 	//监控state
 	Monitor.target = getViewWatcher(comp);
 	var vnode = buildVDOMTree(comp);
@@ -448,6 +424,33 @@ function compileComponent(comp){
 	comp.$vel = vnode;
 	vnode.parent = pv;
 }
+function bindCustomEvent(events,comp) {
+	var natives = undefined;
+	if(events){
+		/**
+		 * 对原生组件事件进行转换
+		 */
+		for(var k in events){
+			var ev = events[k];
+			var modifiers = ev.modifiers;
+			//native
+			var handler = ev.value;
+			if(modifiers && modifiers.indexOf(EVENT_MODIFIER_NATIVE)>-1){
+				ev.value = getCustomEvHandler(k,comp);
+				if(!natives)natives = {};
+				natives[k] = ev;
+			}
+
+			comp.$on(k,handler,comp.$parent);
+		}
+	}
+	comp._natives = natives;
+}
+function getCustomEvHandler(k,comp) {
+	return function($event,$vnode) {
+		comp.$emit(k,$event,$vnode);
+	}
+}
 /**
  * 准备挂载组件到页面
  */
@@ -462,11 +465,10 @@ function mountComponent(comp,parentVNode){
 	comp.$el = dom;
 
 	//directive
-	callDirective(LC_DI.appended,comp.$vel,comp);
+	callDirectives(LC_DI.appended,comp.$vel,comp,comp.$vel.directives);
 
 	if(comp.$name){
 		comp.$el.setAttribute(DOM_COMP_ATTR,comp.$name);
-		comp.$vel.setAttribute(DOM_COMP_ATTR,comp.$name);
 	}
 	
 	callLifecycle(comp,LC_CO.mounted);
@@ -475,18 +477,13 @@ function mountComponent(comp,parentVNode){
 //////	update flow
 function updateComponent(comp,changeMap){
 	var renderable = true;
-	var syncPropMap = {};
-	
 	renderable = callLifecycle(comp,LC_CO.willUpdate,[changeMap]);
 	if(renderable === false)return;
 
-	//rebuild VDOM tree
-	Monitor.target = getViewWatcher(comp);
-	var vnode = buildVDOMTree(comp);
-	Monitor.target = null;
-
 	//diffing
-	compareVDOM(vnode,comp.$vel,comp);
+	Monitor.target = getViewWatcher(comp);
+	diff(comp);
+	Monitor.target = null;
 
 	//mount subcomponents which created by VDOM 
 	for(var i = 0;i<comp.$children.length;i++){
@@ -497,13 +494,6 @@ function updateComponent(comp,changeMap){
 	}
 
 	callLifecycle(comp,LC_CO.updated,[changeMap]);
-
-	//TickMap
-	var tks = TickMap[comp.$id];
-	if(tks)
-		tks.forEach(function(tk) {
-			tk.call(comp);
-		});
 }
 
 /**
@@ -515,25 +505,12 @@ function buildVDOMTree(comp){
     //removeIf(production)
     try{
     //endRemoveIf(production)
-        root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter);
+        root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter,compileVDOMStr);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp._attrs)+": ",e);
+        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.$props)+": ",e);
     }
     //endRemoveIf(production)
-    
-    if(comp.$vel){
-		//除了组件自定义事件外，其他指令都绑定到编译后的节点上
-		comp.$vel.directives.forEach(function(di) {
-			if(di != null)
-				root.directives.push(di);
-		});
-
-		//forScope
-		root._forScopeQ = comp.$vel._forScopeQ;
-		//raw props
-		root.raw.props = comp.$vel.raw.props;
-	}
 
     return root;
 }

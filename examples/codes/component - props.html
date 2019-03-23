@@ -9,8 +9,7 @@
             组件参数可以设置类型和是否必须，如果不满足条件会报错
         </p>
         <div id="demo">
-            传递参数：<x-input .value="s"></x-input>
-            默认参数：<x-input .type="12"></x-input>
+            <x-input .value="s" .class="'a'" .style="'color:red'"></x-input>
         </div>
         
 
@@ -20,14 +19,20 @@
         <script type="text/javascript">
             //自定义组件
             impex.component('x-input',{
-                input:{
+                props:{
                     type:{
                         type:'string',
                         require:true
                     },
                     value:{
-                        type:['boolean','string'],
-                        value:'111'
+                        type:['boolean','number']
+                    }
+                },
+                state:function() {
+                    //组件上的class/style属性不会绑定为dom的对应属性，只会成为组件参数
+                    console.log(this.$props)
+                    return {
+                        value:this.$props.value
                     }
                 },
                 template:"<p style='border:1px solid red'>{{value}}</p>"

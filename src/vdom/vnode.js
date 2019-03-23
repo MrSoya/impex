@@ -7,12 +7,17 @@ var rn_counter = 0;
 function RawNode(tag) {
     this.rid = rn_counter++;
     this.tag = tag;
-    this.children = [];
-    this.directives = {};//{name:[dName,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
-    this.attributes = {};
-    this.props = {};//模版解析后的原始属性map
+    this.children;
+    this.directives;//{name:{name,args,modifiers,exp,filters}
+    this.attrs;
     this.txtQ;
-    this.slotMap = {};
+    this.ref;
+    this.events;
+    this.class;
+    this.style;
+    this.slot;//slot="xx"
+    this.isComp = false;
+    this.slotMap;
     this.outerHTML;
     this.innerHTML;
 }
@@ -30,20 +35,20 @@ RawNode.prototype = {
         return this.outerHTML+this.getInnerHTML()+'</'+this.tag+'>';
     }
 }
-
-function VNode(tag,rawNode){
+function VNode(tag,rawNode,attrs,di,events,ref,cls,style){
     this.tag = tag;
     this.txt;
-    this.children = [];
+    this.children;
     this.dom;
     this.vid = vn_counter++;
-    this.props;//模版解析后的原始属性map
-    this.attributes;//和真实DOM保持一致的当前节点特性
-    this.directives = [];//[name,value,{dName,dArgsAry,dModifiers},{vExp,vFilterAry}]
-    this._hasEvent;
+    this.attrs = attrs;
+    this.directives = di;
+    this.events = events;
+    this.ref = ref;
+    this.class = cls;
+    this.style = style;
     this._slots;
-    this._comp;//组件
-    this._forScopeQ;
+    this.scope;//组件
     //原始信息
     this.raw = rawNode;
 }
@@ -51,41 +56,15 @@ VNode.prototype = {
     /**
      * 绑定事件到该节点
      * @param {String} type 事件类型
-     * @param {String|Function} exp 表达式或回调函数
+     * @param {Function} handler 事件处理函数
      * @param {Array} modifiers 修饰符数组
      */
-    on:function(type,exp,modifiers){
+    on:function(type,handler,modifiers){
         var evMap = EVENT_MAP[type];
         if(!evMap){
             evMap = EVENT_MAP[type] = {};
         }
-        var fn = false;
-        if(isFunction(exp)){
-            fn = true;
-        }
-        if(fn){
-            evMap[this.vid] = [this,modifiers,exp,this._cid,fn];
-        }else{
-            var declare = this.getAttribute('var');
-            if(declare){
-                var list = declare.replace(/^{|}$/mg,'').split(',');
-                var str = '';
-                list.forEach(function(de) {
-                    var pair = de.split(':');
-                    str += 'var '+ pair[0] +'='+pair[1]+';';
-                });
-                declare = str;
-            }
-            var forScopeStart = '',forScopeEnd = '';
-            if(this._forScopeQ)
-                for(var i=0;i<this._forScopeQ.length;i++){
-                    forScopeStart += 'with(arguments['+(3/* event.js line 47 */+i)+']){';
-                    forScopeEnd += '}';
-                }
-            evMap[this.vid] = [this,modifiers,new Function('comp,$event,$vnode','with(comp){'+forScopeStart+declare+";"+exp+forScopeEnd+'}'),this._cid];
-        }
-
-        this._hasEvent = true;
+        evMap[this.vid] = [this,modifiers,handler];
     },
     /**
      * 卸载事件
@@ -101,16 +80,5 @@ VNode.prototype = {
                 if(evMap)evMap[this.vid] = null;
             }
         }
-    },
-    setAttribute:function(k,v){
-        this.attributes[k] = v;
-        return this;
-    },
-    getAttribute:function(k){
-        return this.attributes[k];
-    },
-    removeAttribute:function(k) {
-        this.attributes[k] = null;
-        delete this.attributes[k];
     }
 };

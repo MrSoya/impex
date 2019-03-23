@@ -10,139 +10,48 @@
  *
  * 
  */
-function compareVDOM(newVNode,oldVNode,comp){
+function diff(comp){
+    var newVNode = buildVDOMTree(comp);
+    var oldVNode = comp.$vel;
+
     if(isSameVNode(newVNode,oldVNode)){
-        compareSame(newVNode,oldVNode,comp);
+        updateView(newVNode,oldVNode,comp);
     }else{
         //remove old,insert new
         insertBefore(newVNode,oldVNode,oldVNode.parent?oldVNode.parent.children:null,oldVNode.parent,comp);
         removeVNode(oldVNode);
     }
+    comp.$vel = newVNode;
 }
 function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
     if(!c)return false;
     //compare slots
-    return nv.raw.getInnerHTML() == c._innerHTML;
+    return nv._hasSlots?nv.raw.getInnerHTML() == c._innerHTML:true;
 }
-function compareSame(newVNode,oldVNode,comp){
+function updateView(newVNode,oldVNode,comp){
+    var dom = newVNode.dom = oldVNode.dom;
+    newVNode._cid = oldVNode._cid;
+    newVNode.scope = oldVNode.scope;
     if(newVNode.tag){
-        //update events forscope
-        var forScopeChanged = JSON.stringify(newVNode._forScopeQ) != JSON.stringify(oldVNode._forScopeQ);
-        if(newVNode._forScopeQ)
-            oldVNode._forScopeQ = newVNode._forScopeQ;
-        
         var compareCompNode = newVNode._comp;
-        //只对比视图上的属性
-        var newProps = newVNode.props;
-        var oldProps = compareCompNode?impex._cs[oldVNode._cid]._props:oldVNode.props;
-        var npk = Object.keys(newProps);
-        var opk = Object.keys(oldProps);
-        var dom = oldVNode.dom;
-
-        var nvdis = newVNode.directives,
-            ovdis = oldVNode.directives;
-        var nvDiMap = getDirectiveMap(nvdis),
-            ovDiMap = getDirectiveMap(ovdis);
-
-        var addAttrs=[],delAttrs=[];
-        var addDis=[],delDis=[];
-
-        //add attr
-        for(var nk in newProps){
-            var ov = oldProps[nk];
-            var nv = newProps[nk];
-            if(opk.indexOf(nk)<0){
-                if(nv.isDi){
-                    addDis.push(nvDiMap[nk]);
-                }else{
-                    addAttrs.push([nk,nv.v]);
-                }
-            }else if(ov.v != nv.v){
-                if(nv.isDi){
-                    delDis.push(ovDiMap[nk]);
-                    addDis.push(nvDiMap[nk]);
-                }else{
-                    addAttrs.push([nk,nv.v]);
-                }
+        //update $props
+        if(compareCompNode){
+            /**
+             * 对于组件节点，直接把oldVnode接入新的VDOMtree，
+             * 通过新属性来保持对dom的同步更新
+             */
+            var np = newVNode.parent;
+            var i = np.children.indexOf(newVNode);
+            if(i>-1){
+                np.children.splice(i,1,oldVNode);
             }
-        }
-        //del attr
-        opk.forEach(function(k) {
-            if(npk.indexOf(k)<0){
-                if(oldProps[k].isDi){
-                    delDis.push(ovDiMap[k]);
-                }else{
-                    delAttrs.push(k);
-                }
-            }
-        });
-
-        //reset
-        if(compareCompNode){
-            impex._cs[oldVNode._cid]._props = newVNode.props;
-        }else{
-            oldVNode.props = newVNode.props;
-        }
-
-        if(!compareCompNode){
-            /********** 更新 dom **********/
-            delAttrs.forEach(function(k) {
-                dom.removeAttribute(k);
-            });
-            addAttrs.forEach(function(attr) {
-                var k = attr[0];
-                var v = attr[1];
-                dom.setAttribute(k,v);
-                if(dom.tagName =='INPUT' && k === 'value'){
-                    dom.value = v;
-                }
-                //update ref
-                if(k == ATTR_REF_TAG)comp.$ref[v] = dom;
-            });
-        }
-
-        /********** 更新 指令 **********/
-        if(delDis.length>0){
-            delDis.forEach(function(di) {
-                var i = oldVNode.directives.indexOf(di);
-                oldVNode.directives.splice(i,1);
-            });
-            callDirective(LC_DI.unbind,oldVNode,comp,delDis);
-        }
-        if(addDis.length>0){
-            addDis.forEach(function(di) {
-                oldVNode.directives.push(di);
-
-                monitorDirective(di,impex._cs[oldVNode._cid],oldVNode);
-            });
-            callDirective(LC_DI.bind,oldVNode,comp,addDis);
-        }
-        
-        if(compareCompNode){
-            comp = impex._cs[oldVNode._cid];
-        }
-        //update when for scope changed
-        if(forScopeChanged){
-            ovdis.forEach(function(di){
-                var exp = di[3].vExp;
-                var name = di[2].dName;
-                if(name == 'on')return;
-
-                var fnData = getForScopeFn(oldVNode,comp,exp);
-                var args = fnData[1];
-                var fn = fnData[0];
-                var v = fn.apply(comp,args);
-                di[1] = v;
-            });
-            callDirective(LC_DI.update,oldVNode,comp,ovdis);
-        }
-
-        //组件更新属性
-        if(compareCompNode){
-            if(addAttrs.length>0 || delAttrs.length>0 || forScopeChanged)
-                comp._updateProps(newVNode.attributes);
+            oldVNode.scope._update(newVNode);
             return;
+        }else{
+            PATCHES.forEach(function(patch) {
+                patch(newVNode,oldVNode,comp,dom);
+            });
         }
     }else{
         if(newVNode.txt !== oldVNode.txt){
@@ -160,14 +69,6 @@ function compareSame(newVNode,oldVNode,comp){
         removeVNode(oldVNode.children);
     }
 }
-function getDirectiveMap(directives){
-    var map = {};
-    for(var i=directives.length;i--;){
-        var di = directives[i];
-        map[di[0]] = di;
-    }
-    return map;
-}
 function compareChildren(nc,oc,op,comp){
     if(nc.length<1){
         if(oc.length>0)
@@ -181,12 +82,12 @@ function compareChildren(nc,oc,op,comp){
 
     while(osp <= oep && nsp <= nep){
         if(isSameVNode(ns,os)){
-            compareSame(ns,os,comp);
+            updateView(ns,os,comp);
             os = oc[++osp],
             ns = nc[++nsp];
             continue;
         }else if(isSameVNode(ne,oe)){
-            compareSame(ne,oe,comp);
+            updateView(ne,oe,comp);
             oe = oc[--oep],
             ne = nc[--nep];
             continue;
@@ -223,7 +124,7 @@ function compareChildren(nc,oc,op,comp){
         }
     }
     if(nsp <= nep){
-        var toAddList = nsp==nep?[nc[nsp]]:nc.splice(nsp,nep-nsp+1);
+        var toAddList = nsp==nep?[nc[nsp]]:nc.slice(nsp,nep+1);
         if(toAddList.length>0){
             insertBefore(toAddList,oc[osp],oc,op,comp);
         }
@@ -236,7 +137,7 @@ function insertBefore(nv,target,list,targetParent,comp){
             var i = list.indexOf(nv);
             if(i>-1)list.splice(i,1);
         }
-        var p = targetParent;
+        /*var p = targetParent;
         if(target){
             i = list.indexOf(target);
             p = p || target.parent;
@@ -260,7 +161,7 @@ function insertBefore(nv,target,list,targetParent,comp){
                 nv.parent = p;
                 list.push(nv);
             }//end if
-        }
+        }*/
     }
     //处理dom
     var dom = nv.dom;
@@ -306,7 +207,7 @@ function removeVNode(vnodes){
         var p = vnode.dom.parentNode;
         p && p.removeChild(vnode.dom);
 
-        if(impex._cs[vnode._cid] && vnode.getAttribute(DOM_COMP_ATTR)){
+        if(impex._cs[vnode._cid] && vnode.dom.getAttribute(DOM_COMP_ATTR)){
             impex._cs[vnode._cid].$destroy();
         }
         if(vnode.children && vnode.children.length>0){
@@ -329,7 +230,7 @@ function insertChildren(parent,children,comp){
 function isSameVNode(nv,ov){
     if(nv._comp){
         if(ov.tag === nv.tag)return true;//for loading component
-        if(!ov.tag || (ov.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
+        if(!ov.tag || (ov.dom.getAttribute(DOM_COMP_ATTR) != nv.tag))return false;
         return isSameComponent(nv,ov);
     }
     return ov.tag === nv.tag;
@@ -338,4 +239,216 @@ function updateTxt(nv,ov){
     ov.txt = nv.txt;
     var dom = ov.dom;
     dom.textContent = nv.txt;
+}
+
+var PATCHES = [updateAttrs,updateRef,updateClass,updateStyle,updateEvents,updateDirectives];
+function updateAttrs(newVNode,oldVNode,comp,dom) {
+    if(!newVNode.attrs && !oldVNode.attrs)return;
+
+    var nAttrs = newVNode.attrs;
+    var oAttrs = newVNode._comp&&oldVNode.scope?oldVNode.scope.$props:oldVNode.attrs;
+    if(nAttrs)
+        for(var k in nAttrs){
+            var v = nAttrs[k];
+            if(!oAttrs || v != oAttrs[k]){
+                dom.setAttribute(k,v);
+                if(dom.tagName =='INPUT' && k === 'value'){
+                    dom.value = v;
+                }
+            }
+        }
+    if(oAttrs){
+        var nAttrKeys = Object.keys(nAttrs);
+        for(var k in oAttrs){
+            if(nAttrKeys.indexOf(k)<0){
+                dom.removeAttribute(k);
+            }
+        }
+    }
+        
+}
+function updateRef(newVNode,oldVNode,comp,dom) {
+    var nRef = newVNode.ref,
+        oRef = oldVNode.ref;
+    if(!nRef && !oRef)return;
+    if(nRef == oRef)return;
+
+    if(nRef){
+        comp.$ref[nRef] = dom;
+    }else{
+        comp.$ref[oRef] = null;
+    }
+}
+function updateDirectives(newVNode,oldVNode,comp,dom) {
+    var nvdis = newVNode.directives,
+        ovdis = oldVNode.directives;
+
+    if(!nvdis && !ovdis)return;
+
+    if(nvdis)
+    for(var k in nvdis){
+        var v = nvdis[k];
+        if(!ovdis || isUndefined(ovdis[k])){
+            callDirective(LC_DI.bind,newVNode,comp,v);
+        }else if(ovdis[k].exp != v.exp){
+            callDirective(LC_DI.unbind,oldVNode,comp,ovdis[k]);
+            callDirective(LC_DI.bind,newVNode,comp,v);
+        }else{
+            callDirective(LC_DI.update,newVNode,comp,v);
+        }
+    }
+    if(ovdis)
+    for(var k in ovdis){
+        if(!nvdis || isUndefined(nvdis[k])){
+            callDirective(LC_DI.unbind,newVNode,comp,ovdis[k]);
+        }
+    }
+}
+function updateEvents(newVNode,oldVNode,comp,dom) {
+    var nEvs = newVNode.events,
+        oEvs = oldVNode.events;
+
+    if(!nEvs && !oEvs)return;
+
+    /**
+     * 设置dom为新的vid
+     */
+    if(nEvs){
+        dom._vid = newVNode.vid;
+        for(var k in nEvs){
+            var ev = nEvs[k];
+            var args = [k];
+            if(ev.args)args = args.concat(ev.args);
+            for(var i=args.length;i--;){
+                newVNode.on(args[i],ev.value,ev.modifiers);
+            }
+        }
+    }
+    
+    if(oEvs)
+    for(var k in oEvs){
+        var ev = oEvs[k];
+        var args = [k];
+        if(ev.args)args = args.concat(ev.args);
+        for(var i=args.length;i--;){
+            oldVNode.off(args[i],ev.value,ev.modifiers);
+        }
+    }
+}
+function updateClass(newVNode,oldVNode,comp,dom) {
+    if(!newVNode.class && !oldVNode.class)return;
+    if(newVNode.class == oldVNode.class)return;
+    
+    /**
+     * class更新不会影响dom已有或者非库添加的样式类
+     */
+    var cls = dom.className;//dom已有样式
+    var clsAry = cls.trim().replace(/\s+/mg,' ').split(' ');
+    var addCls = getClassAry(newVNode.class);
+    var lastCls = getClassAry(oldVNode.class);
+    //删除上一次样式
+    if(lastCls){
+        lastCls.forEach(function(c) {
+            if(!c)return;
+            var i = clsAry.indexOf(c.trim());
+            if(i>-1){
+                clsAry.splice(i,1);
+            }
+        });
+    }
+    
+    //增加
+    addCls.forEach(function(c) {
+        if(c && clsAry.indexOf(c.trim())<0){
+            clsAry.push(c);
+        }
+    });
+    var cls = clsAry.join(' ');
+    
+    // if(isObject(newVNode.class))
+    //     newVNode.class = copy(newVNode.class);
+    if(dom._lastCls != cls){
+        dom.setAttribute('class',cls);
+        dom._lastCls = cls;
+    }
+    
+}
+function getClassAry(v) {
+    var addCls = null;
+    if(isString(v)){
+        addCls = v.split(' ');
+    }else if(isArray(v)){
+        addCls = v;
+    }else{
+        addCls = [];
+        for(var k in v){
+            var val = v[k];
+            if(val)
+                addCls.push(k);
+        }
+    }
+    return addCls;
+}
+function updateStyle(newVNode,oldVNode,comp,dom) {
+    if(!newVNode.style && !oldVNode.style)return;
+    if(!isObject(newVNode.style) && newVNode.style == oldVNode.style)return;
+    
+    var lastStyles = oldVNode.style||{};
+    var styleMap = {};//当前dom样式
+    var style = dom.getAttribute('style');
+    if(style)
+        style.split(';').forEach(function(kv) {
+            if(!kv)return;
+
+            var pair = kv.split(':');
+            var k = pair[0].trim();
+            if(!lastStyles[k])//删除上一次样式
+                styleMap[k] = pair[1];
+        });
+    var nsMap = newVNode.style;
+    if(nsMap){
+        if(isString(nsMap)){
+            var rs = {};
+            var tmp = nsMap.split(';');
+            for(var i=tmp.length;i--;){
+                if(!tmp[i])continue;
+                var pair = tmp[i].split(':');
+                rs[pair[0]] = pair[1];
+            }
+            nsMap = rs;
+        }
+        //转换为css key
+        var addStyles = {};
+        for(var k in nsMap){
+            var sk = k.trim().replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+            addStyles[sk] = nsMap[k];
+        }
+        //增加
+        for(var k in addStyles){
+            styleMap[k] = addStyles[k];
+        }
+        // if(isObject(newVNode.style))
+        //     newVNode.style = copy(newVNode.style);
+    }
+    style = getCssText(styleMap);
+
+    if(dom._lastStyle != style){
+        dom.setAttribute('style',style);
+        dom._lastStyle = style;
+    }
+}
+function getCssText(styleMap) {
+    var style = '';
+    for(var k in styleMap){
+        var val = styleMap[k];
+        style += ';'+k+':'+val;
+        // if(val.indexOf('!important')){
+        //     val = val.replace(/!important\s*;?$/,'');
+        //     n = n.replace(/[A-Z]/mg,function(a){return '-'+a.toLowerCase()});
+        //     style.setProperty(n, v, "important");
+        // }else{
+        //     style[n] = val;
+        // }
+    }
+    return style;
 }

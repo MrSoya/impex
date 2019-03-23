@@ -39,9 +39,9 @@
             </ul>
             <x-div>
                 <x-input 
-                @keypress.native="this.$parent.anyKey" 
-                @keydown.enter.native="this.$parent.enterKey" 
-                @keyup.control.native="this.$parent.ctrlKey"></x-input>
+                @keypress.native="$parent.anyKey()" 
+                @keydown.enter.native="$parent.enterKey()" 
+                @keyup.control.native="$parent.ctrlKey()"></x-input>
             </x-div>
             <ul>
                 <li>按键次数：{{keyCount}} </li>

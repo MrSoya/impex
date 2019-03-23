@@ -10,13 +10,12 @@
     <body>
         
         <div id="demo">
+            1-<input type="text" x-model="end" .value="end">
             <ul>
                 <li x-for="begin() to end as k,v =>orderBy::orderDir" step="5">
                     {{$index+":"+k}}
                 </li>
             </ul>
-
-            1-<input type="text" x-model="end" .value="end">
         </div>
         <script type="text/javascript">
             var s = Date.now();

@@ -11,9 +11,17 @@
                 <div slot="head" ref="name">head {{no}}</div>
                 <div slot="body" ref="body">
                     <x-button2>body</x-button2>
+                    <x-button2></x-button2>
                 </div>
-                <div slot="foot" ref="foot">foot</div>
+                <!-- <div slot="foot" ref="foot">foot</div> -->
             </x-panel>
+            <x-panel>
+                <b slot="foot">foot</b>
+            </x-panel>
+            <x-panel>
+                <i slot="head" >head</i>
+            </x-panel>
+            <x-panel></x-panel>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
@@ -34,13 +42,10 @@
             });
             
             //渲染
-            impex.create({
+            var root = impex.create({
                 el:'#demo',
                 state:{
                     no:1 
-                },
-                mounted:function(){
-                    console.log(this.$ref.btn)
                 }
             });
             

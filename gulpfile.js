@@ -41,6 +41,7 @@ var gulp = require('gulp'),
 
         'src/component/EventEmitter.js',
         'src/component/Component.js',
+        'src/component/Task.js',
         'src/component/watchers.js',
 
         'src/impex.js',

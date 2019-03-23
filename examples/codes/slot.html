@@ -3,6 +3,11 @@
     <head>
         <title>Impex Demo</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <style type="text/css">
+            .panel{
+                border:1px solid red;
+            }
+        </style>
     </head>
     <body >
         
@@ -16,15 +21,17 @@
                 来自slot的内容
                 <span slot="age" ref="age">13</span>
             </x-button2>
+            <x-button2 >
+            </x-button2>
         </div>
         <script type="text/javascript" src="../lib/impex/impex.dev.all.js"></script>
         <script type="text/javascript">
             //自定义组件
             impex.component('x-panel',{
-                template:"<div>name: <slot name='name'></slot><br>age: <slot name='age'></slot></div>",
-                onMount:function(){
-                    console.log(this.name)
-                    console.log(this.age)
+                template:"<div class='panel'>name: <slot name='name'></slot><br>age: <slot name='age'></slot></div>",
+                mounted:function(){
+                    console.log('name:',this.$ref.name)
+                    console.log('age:',this.$ref.age)
                 }
             });
 
@@ -38,7 +45,7 @@
                 state:{
                     no:1
                 },
-                onMount:function(){
+                mounted:function(){
                     console.log(this.$ref.btn)
                 }
             });

@@ -1,53 +1,46 @@
 /**
  * VDOM构建器，用来构建VDOM树
  */
-function createElement(comp,rid,children,html,forScopeAry){
+function createElement(rootNode,comp,cls,style,attrs,directs,events,rid,children,html){
     var raw = RNODE_MAP[rid];
     var tag = raw.tag;
-    var rs = new VNode(tag,raw);
+    if(tag == ATTR_SLOT_TAG)return;
+    
+    var rs = new VNode(tag,raw,attrs,directs,events,raw.ref,cls,style);
 
-    //复制原始属性
-    rs.props = Object.assign({},raw.props);
-    rs.attributes = Object.assign({},raw.attributes);
-    rs._isEl = true;
-    if(forScopeAry.length>0)
-        rs._forScopeQ = forScopeAry;
     var isComp = COMP_MAP[tag] || tag == 'component';
-    //把计算后的指令表达式值放入vnode中
-    for(var k in raw.directives){
-        var di = raw.directives[k];
-        rs.directives.push([di[0],undefined,di[2],di[3],isComp?true:false]);
+    /**
+     * 对组件顶级节点绑定组件原生事件和组件指令
+     */
+    if(rootNode){
+        var cevs = comp._natives;
+        if(cevs){
+            if(!rs.events)rs.events = {};
+            for(var k in cevs){
+                rs.events[k] = cevs[k];
+            }
+        }
+        var cdis = comp._directives;
+        if(cdis){
+            if(!rs.directives)rs.directives = {};
+            for(var k in cdis){
+                rs.directives[k] = cdis[k];
+            }
+        }
     }
+
     if (isComp) {
         rs._comp = true;
         
-        rs._slots = raw.children;
-        rs._slotMap = raw.slotMap;
+        if(raw.children || raw.slotMap){
+            rs._hasSlots = true;
+            rs._slots = raw.children;
+            rs._slotMap = raw.slotMap;
+        }        
         return rs;
     }
     if(html != null){
-        var forScopeStart = '',forScopeEnd = '';
-        var root,str;
-        var args = [comp,createElement,createTemplate,createText,createElementList,doFilter];
-        //build for scope
-        var scopeAry = [];
-        var argCount = args.length;
-        if(rs._forScopeQ)
-            for(var i=0;i<rs._forScopeQ.length;i++){
-                var tmp = 'forScope'+FORSCOPE_COUNT++;
-                forScopeStart += 'with('+tmp+'){';
-                forScopeEnd += '}';
-                args.push(rs._forScopeQ[i]);
-                scopeAry.push(tmp);
-            }
-
-        str = compileVDOMStr('<'+tag+'>'+html+'</'+tag+'>',comp,scopeAry);
-
-        var argStr = scopeAry.length>0?','+scopeAry.toString():'';
-        
-        var fn = new Function('comp,_ce,_tmp,_ct,_li,_fi'+argStr,'with(comp){'+forScopeStart+'return '+str+';'+forScopeEnd+'}');
-        root = fn.apply(comp,args);
-        children = root.children || [];
+        children = html.children || [];
     }
     
     if(children.length>0){
@@ -69,10 +62,7 @@ function createElement(comp,rid,children,html,forScopeAry){
     
     return rs;
 }
-function createTemplate(children,forScope){
-    var fsq = null;
-    if(forScope)
-        fsq = [forScope];
+function createTemplate(children){
     var rs = [];
     if(children.length>0){
         children.forEach(function(node){
@@ -80,25 +70,9 @@ function createTemplate(children,forScope){
                 if(node instanceof Array){
                     node.forEach(function(c){
                         rs.push(c);
-                        if(fsq){
-                            var cfsq = c._forScopeQ;
-                            if(cfsq){
-                                c._forScopeQ = fsq.concat(cfsq);
-                            }else{
-                                c._forScopeQ = fsq;
-                            }
-                        }
                     });
                 }else{
                     rs.push(node);
-                    if(fsq){
-                        var cfsq = node._forScopeQ;
-                        if(cfsq){
-                            node._forScopeQ = fsq.concat(cfsq);
-                        }else{
-                            node._forScopeQ = fsq;
-                        }
-                    }
                 }//end if
             }//end if
         });
@@ -111,14 +85,10 @@ function createText(txt){
     rs.txt = txt && txt.toString?txt.toString():txt;
     return rs;
 }
-function createElementList(ds,iterator,scope,k,v){
+function createElementList(ds,iterator,scope){
     var rs = [];
     ds.forEach(function(item,i){
-        var forScope = {$index:i};
-        
-        if(k)forScope[k] = i;
-        forScope[v] = item;
-        var tmp = iterator.call(scope,forScope);
+        var tmp = iterator.call(scope,i,item,i);
         if(tmp){
             if(isArray(tmp)){
                 rs = rs.concat(tmp);

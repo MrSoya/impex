@@ -53,22 +53,9 @@ function dispatch(type,e) {
             }
         }
         
-
         var fn = tmp[2];
-        var cid = tmp[3];
-        var isFn = tmp[4];
-        var comp = impex._cs[cid];
-        if(isFn){
-            fn.call(comp,e,vnode);
-        }else{
-            var args = [comp,e,vnode];
-            if(vnode._forScopeQ)
-                for(var i=0;i<vnode._forScopeQ.length;i++){
-                    args.push(vnode._forScopeQ[i]);
-                }
-            fn.apply(comp,args);
-        }
-
+        fn.call(vnode.scope,e,vnode);
+        
         canceled = e.cancelBubble;
 
         //后置修饰符

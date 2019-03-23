@@ -18,6 +18,7 @@
 	var REG_CMD = /^x-.*/;
 	var ATTR_REF_TAG = 'ref';
 	var ATTR_ID_TAG = 'id';
+	var ATTR_SLOT_TAG = 'slot';
 	var COMP_SLOT_TAG = 'component';
 	var PROP_TYPE_PRIFX = '.';
 

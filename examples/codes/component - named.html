@@ -12,13 +12,9 @@
     <body>
         
     <div id="demo">
-        firstTextNode:{{start}}
-        <br>
         <x-demo .pa="x" .op="open" id="x">
-            <div>test</div>
-            <span slot="ss">content</span>
+            
         </x-demo>
-        <br>
         <button @click="add()">add x</button>
         
         
@@ -48,7 +44,7 @@
                 };
             }
         });
-        impex.create({
+        var root = impex.create({
                 el:'#demo',
                 state:{
                     show:true,

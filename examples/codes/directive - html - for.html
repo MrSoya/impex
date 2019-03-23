@@ -10,20 +10,18 @@
         
         <div id="demo" >
             <div x-for="list as item" x-html="getHTML(item)"></div>
-            <!-- <div x-for="list as item">
-            	<x-panel .row="item"></x-panel>
-            </div> -->
-            <x-button @click.native="this.add()">
+            <x-button @click.native="add()">
                 <span>增加</span>
             </x-button>
         </div>
         <script type="text/javascript">
             //自定义组件
             impex.component('x-panel',{
-                template:"<span>row:{{row}} {{x}}</span>",
+                template:"<span @mousedown='console.log(3434)'>row:{{row}} {{x}} {{i}}</span>",
                 state:function() {
                     var props = this.$props;
                     return {
+                        i:props.i,
                         x:props.x,
                         row:props.row,
                         a:{
@@ -62,8 +60,7 @@
                     this.list = [1,2,3];
                 },
                 getHTML:function(item) {
-                    console.log(item)
-                	return '<x-panel @click.native="alert('+item+')" row="'+item+'" .x="x+y+1"></x-panel>';
+                	return '<x-panel .i="$index" @click.native="alert('+item+')" row="'+item+'" .x="x+y+1"></x-panel>';
                 }
             });
         </script>

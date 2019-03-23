@@ -1,72 +1,79 @@
-/**
- * 为组件提供watcher，以及watcher的响应
- */
-function getDirectiveWatcher(exp,directiveParams,vnode,comp,scope){
-	var watcher = function(change) {
-		var d = directiveParams[0];
-		var data = directiveParams[1];
-		//计算新值
-		var fnData = getForScopeFn(vnode,scope,exp);
-		var v = fnData[0].apply(scope,fnData[1]);
-		data.value = v;
-		d.update && d.update(vnode.dom,data,vnode);
-	}
-	comp._watchers.push(watcher);
-	return watcher;
+function getWatchWatcher(cbk) {
+	var task = new Task(function() {
+		cbk(this.change);
+	});
+	return function(change) {
+		task.change = change;
+		addTask(task);
+	};
 }
-
 function getComputeWatcher(getter,computeKey,comp){
-	var watcher = function() {
+	var task = new Task(function() {
 		var v = getter.call(comp,comp);
 		comp[computeKey] = v;
-	}
-	comp._watchers.push(watcher);
-	return watcher;
+	});
+	return function() {
+		addTask(task);
+	};
 }
-/**
- * 创建组件视图监控
- * 当视图中的任何state发生变更后都会发出
- */
 function getViewWatcher(comp) {
 	if(comp._viewWatcher)return comp._viewWatcher;
 
+	var task = new Task(function() {
+		updateComponent(comp,comp._updateMap);
+		comp._updateMap = {};
+	});
 	comp._viewWatcher = function(change) {
 		comp._updateMap[change.name] = change;
-		notify2state(comp);
+		addTask(task);
 	}
 	return comp._viewWatcher;
 }
-function getPropWatcher(computer,propKey,args,comp){
-	var watcher = function() {
-		var v = computer.apply(comp.parent,args);
-		comp._propMap[propKey] = v;
-		notify2prop(comp);
+
+var called = {};
+var taskQ = [];
+var nextQ = [];
+var waiting = true;
+var executing = false;
+function addTask(task) {
+	if(executing && called[task.id]){
+		if(nextQ.indexOf(task)<0)
+		    nextQ.push(task);
+		return;
+	}else{
+		if(taskQ.indexOf(task)<0)
+			taskQ.push(task);
 	}
-	comp._watchers.push(watcher);
-	return watcher;
+
+	if(waiting){
+		setTimeout(function(){
+			execute();
+		},0);
+		waiting = false;
+	}
 }
 
-function notify2state(comp) {
-	if(comp._updateTimer){
-		clearTimeout(comp._updateTimer);
+function execute() {
+	executing = true;
+	
+	for(var i=0;i<taskQ.length;i++){
+		var task = taskQ[i];
+		called[task.id] = 1;
+		task.run();
 	}
-	comp._updateTimer = setTimeout(function(){
-		//通知组件更新
-		updateComponent(comp,comp._updateMap);
 
-		//restore
-		comp._updateMap = {};
-	},20);
-}
-function notify2prop(comp) {
-	if(comp._propTimer){
-		clearTimeout(comp._propTimer);
+	/**
+	 * 在队列执行期间产生的任务，会在队列执行完成后立即执行
+	 */
+	for(var i=0;i<nextQ.length;i++){
+		var task = nextQ[i];
+		task.run();
 	}
-	comp._propTimer = setTimeout(function(){
-		//通知属性变更
-		callLifecycle(comp,LC_CO.propsChange,[comp._propMap]);
 
-		//restore
-		comp._propMap = {};
-	},20);
+	//restore
+	taskQ = [];
+	nextQ = [];
+	waiting = true;
+	executing = false;
+	called = {};
 }
