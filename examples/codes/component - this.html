@@ -25,13 +25,14 @@
             this.$name: {{$name}}
 
             <x-a 
-                @click.native.self="showName()" 
-                @onload="childLoad()"
+                @click.native.self="showName" 
+                @onload="childLoad"
                 >
                 this.$name: {{$name}}  click
                 <x-b @onload="Global.fn()">
                     this.$name: {{$name}}
-                    <x-c @click.native="$parent.$parent.showName($event)">
+                    <x-c @onload="$parent.$parent.childLoad()" 
+                    	@click.native="$parent.$parent.showName($event)">
                         this.$name: {{$name}} click
                     </x-c>
                 </x-b>
@@ -45,7 +46,7 @@
                     this.childLoad = this.$props.childLoad;
                 },
                 mounted:function(argument) {
-                    this.$emit('onload',1,1,2);
+                    this.$emit('onload','x-a',1,2);
                 }
             });
             impex.component('x-b',{
@@ -55,7 +56,10 @@
                 }
             });
             impex.component('x-c',{
-                template:'<div><slot></slot></div>'
+                template:'<div><slot></slot></div>',
+                mounted:function(argument) {
+                    this.$emit('onload','x-c',this);
+                }
             });
             impex.component('x-d',{
                 template:'<div><input .value="v"></div>',
@@ -85,8 +89,8 @@
                 showName:function(e) {
                     console.log('showName',this.$name+' clicked',e);
                 },
-                childLoad:function(argument) {
-                    console.log(this.$name+' loaded');
+                childLoad:function() {
+                    console.log(this.$name+' loaded',arguments);
                 },
                 toggleShow:function(argument) {
                     if(this.value>20){

@@ -137,16 +137,20 @@ function buildEvalStr(comp,raw,root){
             var ev = raw.events[k];
             var tmp = JSON.stringify(ev);
             var modifiers = ev.modifiers;
-            var val = 'function($event,$vnode){ '+ev.exp+'}';
-            //native
-            if(raw.isComp && (!modifiers || modifiers.indexOf(EVENT_MODIFIER_NATIVE)<0)){
-                var onlyName = !/\(.*\)/.test(ev.exp);
-                if(onlyName){
-                    val = ev.exp;
-                }else{
-                    val = ev.exp.substr(0,ev.exp.indexOf('('));
-                }
+            var exp = ev.exp;
+            var isOnlyName = !/\(.*\)/.test(exp);
+            if(isOnlyName){
+                exp += '()';
             }
+            //组件自定义事件无论是否写了参数，都以实际触发时的参数为准
+            if(raw.isComp && (!modifiers || modifiers.indexOf(EVENT_MODIFIER_NATIVE)<0)){
+                var args = '';
+                var context = exp.substring(0,exp.lastIndexOf('.')) || 'this';
+                exp = exp.substr(0,exp.indexOf('('));
+                exp += '.apply('+context+',arguments)';
+            }
+            var val = 'function($event,$vnode){ '+exp+'}';
+
             tmp = tmp.substr(0,tmp.length - 1) + ',value:'+val+'}';
             events += ','+k+':'+tmp;
         }
