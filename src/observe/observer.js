@@ -5,54 +5,66 @@
  *  计算属性
  *  ...
  */
-function observe(state,target) {
-   	target.$state = defineProxy(state,null,target,true)||{};
-}
-function defineProxy(state,pmonitor,target,isRoot) {
-    var t = Array.isArray(state)?wrapArray(state,target,pmonitor):state;
-    for(var k in state){
-        var v = state[k];
-        var react = null;
-        var monitor = null;
+function observe(target,comp) {
+   	//遍历属性进行监控
+    for(var k in target){
+        var v = target[k];
 
-        //对象被重新赋值后触发
-        if(pmonitor && pmonitor.value){
-            var desc = Object.getOwnPropertyDescriptor(pmonitor.value,k);
-            if(desc && desc.get){
-                monitor = desc.get.__mm__;
-            }
-        }
-        
-        //monitor has existed
-        var needProxy = true;
-        var desc = Object.getOwnPropertyDescriptor(state,k);
+        //已有monitor
+        var desc = Object.getOwnPropertyDescriptor(target,k);
         if(desc && desc.get){
-            monitor = desc.get.__mm__;
-            needProxy = false;
+            continue;
         }
-        if(!monitor){
-            monitor = new Monitor();
-        }
-        if(pmonitor)
-            monitor.parent = pmonitor;
-        if(isObject(v)){
-            v = defineProxy(v,monitor,target,false);
-        }
-        if(needProxy)
-            proxy(k,v,t,target,isRoot,monitor);
-    }
-    return t;
-}
-function proxy(k,v,t,target,isRoot,monitor) {
-    monitor.key = k;
-    monitor.target = t;
-    monitor.value = v;
-    var getter = function() {
-            //收集依赖
-            monitor.collect();
+        var monitor = new Monitor(k,v,target);
 
-            return monitor.value;
-        };
+        if(isObject(v)){//如果子属性是对象，递归代理
+            defineProxy(v,monitor);
+        }
+
+        //进行监控
+        var handler = proxy(monitor);
+        Object.defineProperty(target,k,handler);
+        Object.defineProperty(comp,k,handler);
+    }
+}
+/**
+ * 对一个对象进行属性代理，拥有能监控对象已有属性的变更能力
+ * @param  {Object}  target 代理的目标对象，可以是数组或者对象
+ * @return proxyObj
+ */
+function defineProxy(target,pmonitor){
+    if(!isObject(target))return;
+    //遍历属性进行监控
+    for(var k in target){
+        var v = target[k];
+
+        //已有monitor
+        var desc = Object.getOwnPropertyDescriptor(target,k);
+        if(desc && desc.get){
+            continue;
+        }
+        var monitor = new Monitor(k,v,target,pmonitor);
+
+        if(isObject(v)){//如果子属性是对象，递归代理
+            defineProxy(v,monitor);
+        }
+
+        //进行监控
+        var handler = proxy(monitor);
+        Object.defineProperty(target,k,handler);
+    }
+    if(Array.isArray(target)){
+        wrapArray(target,pmonitor);
+    }
+}
+
+function proxy(monitor){
+    var getter = function() {
+        //收集依赖
+        monitor.collect();
+
+        return monitor.value;
+    };
     Object.defineProperty(getter,'__mm__',{value:monitor});
     var handler = {
         enumerable:true,
@@ -62,23 +74,16 @@ function proxy(k,v,t,target,isRoot,monitor) {
             if(v === monitor.value)return;
             
             if(isObject(v)){
-                v = defineProxy(v,monitor,target,false);
-                if (Array.isArray(v)) {
-                    v = wrapArray(v,target,monitor);
-                }
+                defineProxy(v,monitor);
             }
             
             //触发更新
             monitor.notify(v);
         }
     };
-    
-    Object.defineProperty(t,k,handler);
-    if(isRoot){
-        Object.defineProperty(target,k,handler);
-    }
-    return monitor;
+    return handler;
 }
+
 var AP_PUSH = Array.prototype.push;
 var AP_POP = Array.prototype.pop;
 var AP_SHIFT = Array.prototype.shift;
@@ -86,7 +91,7 @@ var AP_UNSHIFT = Array.prototype.unshift;
 var AP_SPLICE = Array.prototype.splice;
 var AP_REVERSE = Array.prototype.reverse;
 var AP_SORT = Array.prototype.sort;
-function wrapArray(ary,component,monitor) {
+function wrapArray(ary,monitor) {
     if(ary.push !== AP_PUSH)return ary;
     Object.defineProperties(ary,{
         'push':{
@@ -95,8 +100,8 @@ function wrapArray(ary,component,monitor) {
                 var nl = AP_PUSH.apply(this,arguments);
                 if(nl > bl){
                     //proxy
-                    var rv = defineProxy(this,monitor,component,false);
-                    monitor.notify(rv,'add');
+                    defineProxy(this,monitor);
+                    monitor.notify(this,'add');
                 }
                 return nl;
             }
@@ -117,8 +122,8 @@ function wrapArray(ary,component,monitor) {
                 var nl = AP_UNSHIFT.apply(this,arguments);
                 if(nl > bl){
                     //proxy
-                    var rv = defineProxy(this,monitor,component,false);
-                    monitor.notify(rv,'add');
+                    defineProxy(this,monitor);
+                    monitor.notify(this,'add');
                 }
                 return nl;
             }
@@ -146,7 +151,7 @@ function wrapArray(ary,component,monitor) {
                 var ary = AP_SPLICE.apply(this,arguments);
                 if(type != 'del'){
                     //proxy
-                    var rv = defineProxy(this,monitor,component,false);
+                    defineProxy(this,monitor);
                     monitor.notify(this,type);
                 }
                 if((ary && ary.length>0) || bl != this.length){
@@ -178,6 +183,4 @@ function wrapArray(ary,component,monitor) {
             }
         },
     });
-
-    return ary;
 }

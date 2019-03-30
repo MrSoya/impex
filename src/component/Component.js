@@ -309,6 +309,7 @@ function preprocess(comp) {
 
 	//observe state
 	observe(state,comp);
+	comp.$state = state;
 
 	//removeIf(production)
     //check computeState
@@ -333,7 +334,7 @@ function preprocess(comp) {
 		Monitor.target = null;
 
 		comp.$state[k] = v;
-		defineProxy(comp.$state,null,comp,true);
+		observe(comp.$state,comp);
 	}
 
 	//编译前可以对模版视图或者slot的内容进行操作

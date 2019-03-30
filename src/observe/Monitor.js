@@ -1,12 +1,12 @@
 /**
  * 监控属性的变更以及依赖收集
  */
-function Monitor(){
-	this.key;
-	this.target;
-	this.value;
+function Monitor(key,value,target,parent){
+	this.key = key;
+	this.target = target;
+	this.value = value;
 	this.watchers = [];
-	this.parent;
+	this.parent = parent;
 }
 Monitor.prototype = {
 	/**
