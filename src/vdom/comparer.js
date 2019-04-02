@@ -239,6 +239,9 @@ function updateTxt(nv,ov){
     ov.txt = nv.txt;
     var dom = ov.dom;
     dom.textContent = nv.txt;
+    if(dom.parentElement.tagName == "TEXTAREA"){
+        dom.parentElement.value = nv.txt;
+    }
 }
 
 var PATCHES = [updateAttrs,updateRef,updateClass,updateStyle,updateEvents,updateDirectives];
