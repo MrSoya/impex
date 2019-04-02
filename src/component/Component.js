@@ -477,6 +477,8 @@ function mountComponent(comp,parentVNode){
 
 //////	update flow
 function updateComponent(comp,changeMap){
+	if(!comp.$id)return;//destroyed
+	
 	var renderable = true;
 	renderable = callLifecycle(comp,LC_CO.willUpdate,[changeMap]);
 	if(renderable === false)return;
