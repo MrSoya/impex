@@ -28,7 +28,6 @@ var gulp = require('gulp'),
         'src/core/util.js',
         'src/core/parser.js',
         'src/core/compiler.js',
-        'src/core/event.js',
 
         'src/observe/Change.js',
         'src/observe/Monitor.js',
