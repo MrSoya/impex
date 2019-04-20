@@ -237,5 +237,11 @@
 		this.Component = Component;
 
 		this.EventEmitter = EventEmitter;
+
+
+		//removeIf(production)
+		this._$error = error;
+		this._$getStack = getStack;
+		//endRemoveIf(production)
 	}
 

@@ -20,7 +20,7 @@
 			<section name="going-list" x-show="showGoing">
 				<template x-for="wishList as wish">
 					<template x-if="!wish.done">
-						<x-wish @done="changeList()" @progress="setProgress()" .id="wish.id" .title="wish.title" .done="wish.done" .cost="wish.cost" .progress="wish.progress"></x-wish>
+						<x-wish @done="changeList" @progress="setProgress" .id="wish.id" .title="wish.title" .done="wish.done" .cost="wish.cost" .progress="wish.progress"></x-wish>
 						<hr>
 					</template>
 				</template>
@@ -28,7 +28,7 @@
 			<section name="done-list" x-show="!showGoing">
 				<template x-for="wishList as wish">
 					<template x-if="wish.done">
-						<x-wish @done="changeList()" .id="wish.id" .title="wish.title" .cost="wish.cost" .done="true" .time="wish.doneTime"></x-wish>
+						<x-wish @done="changeList" .id="wish.id" .title="wish.title" .cost="wish.cost" .done="true" .time="wish.doneTime"></x-wish>
 						<hr>
 					</template>
 				</template>

@@ -11,13 +11,16 @@
     <body>
         model -> view
         <div id="demo">
-            <x-a>
+        	<div x-for="xx">33</div>
+            <x-a @click="onclick2()">
+                <x-d>111</x-d>
                 store.value in x-a: {{store.value}}<br>
                 rootV : {{rootV}}
+                {{1212 => xx}} {{1212 => yy|xx}} 
                 <x-b >
                     store.value in x-b: {{store.value}}<br>
                     rootV : {{rootV}}
-                    <x-c>
+                    <x-c @click.native="onclick1(999)">
                         store.value in x-c: {{store.value}}<br>
                         rootV : {{rootV}}
                     </x-c>

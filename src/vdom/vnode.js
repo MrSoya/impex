@@ -15,25 +15,9 @@ function RawNode(tag) {
     this.events;
     this.class;
     this.style;
-    this.slot;//slot="xx"
     this.isComp = false;
-    this.slotMap;
     this.outerHTML;
     this.innerHTML;
-}
-RawNode.prototype = {
-    getInnerHTML:function() {
-        var r = new RegExp('<\s*\/\s*'+this.tag+'\s*>','img');
-        var rs = this.innerHTML.trim();
-        var match = r.exec(rs);
-        if(match){
-            return rs.substring(0,match.index);
-        }
-        return rs;
-    },
-    getOuterHTML:function (){
-        return this.outerHTML+this.getInnerHTML()+'</'+this.tag+'>';
-    }
 }
 function VNode(tag,rawNode,attrs,di,events,ref,cls,style){
     this.tag = tag;
@@ -47,7 +31,6 @@ function VNode(tag,rawNode,attrs,di,events,ref,cls,style){
     this.ref = ref;
     this.class = cls;
     this.style = style;
-    this._slots;
     this.scope;//组件
     //原始信息
     this.raw = rawNode;

@@ -31,12 +31,8 @@ function createElement(rootNode,comp,cls,style,attrs,directs,events,rid,children
 
     if (isComp) {
         rs._comp = true;
-        
-        if(raw.children || raw.slotMap){
-            rs._hasSlots = true;
-            rs._slots = raw.children;
-            rs._slotMap = raw.slotMap;
-        }        
+        rs._innerHTML = raw.innerHTML;
+          
         return rs;
     }
     if(html != null){
@@ -104,9 +100,13 @@ function doFilter(v,filters,comp){
         var f = filters[i];
         var ins = FILTER_MAP[f[0]];
         if(!ins)ins = comp[f[0]];
+
         //removeIf(production)
-        assert(ins,comp.$name,XERROR.COMPILE.NOFILTER,"can not find filter '"+f[0]+"'");
+        if(!ins)error(comp.$name,"can not find filter '"+f[0]+"'",null,getStack(comp.$id,f[3],f[2],"filter"));
         //endRemoveIf(production)
+        
+        if(!ins)continue;
+        
         var params = f[1];
         params.unshift(v);
         v = ins.apply(comp,params);

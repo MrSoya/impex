@@ -11,7 +11,7 @@ function transform(vnode,comp){
 		vnode.dom = n;
 		
 		if(vnode._comp){
-			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode._slots,vnode._slotMap,vnode.attrs);
+			var c = newComponentOf(vnode,vnode.tag,n,comp,vnode.attrs);
 			vnode._comp = c;
 		}else{
 
@@ -42,7 +42,7 @@ function filterEntityTxt(str){
 	.replace(/&amp;/img,'&'):str;
 }
 //创建有类型组件
-function newComponentOf(vnode,type,el,parent,slots,slotMap,props){
+function newComponentOf(vnode,type,el,parent,props){
 	//handle component
 	if(type == 'component'){
 		type = props.is;
@@ -63,12 +63,8 @@ function newComponentOf(vnode,type,el,parent,slots,slotMap,props){
 	if(attrs && attrs[ATTR_ID_TAG]){
 		impex.id[attrs[ATTR_ID_TAG]] = c;
 	}
-	if(vnode._hasSlots){
-		c._hasSlots = true;
-		c._slots = slots;
-		c._slotMap = slotMap;
-		c._innerHTML = vnode.raw.getInnerHTML();
-	}	
+	
+	c._innerHTML = vnode._innerHTML;
 	
 	return c;
 }

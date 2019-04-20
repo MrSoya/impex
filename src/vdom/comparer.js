@@ -27,7 +27,7 @@ function isSameComponent(nv,ov) {
     var c = impex._cs[ov._cid];
     if(!c)return false;
     //compare slots
-    return nv._hasSlots?nv.raw.getInnerHTML() == c._innerHTML:true;
+    return c._slotted?nv._innerHTML == c._innerHTML:true;
 }
 function updateView(newVNode,oldVNode,comp){
     var dom = newVNode.dom = oldVNode.dom;

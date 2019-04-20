@@ -14,34 +14,84 @@ var TAG_ATTR_EXP = new RegExp('[a-zA-Z_'+EVENT_AB_PRIFX+BIND_AB_PRIFX+'][-a-zA-Z
 var TAG_END_EXP = /<\/([-a-z0-9]+)>/im;
 var TAG_END_EXP_G = /<\/([-a-z0-9]+)>/img;
 var SLOT = 'slot';
+var NODEPRIFIX = '>-)';
+var NODESPLIT = '(>.<)';
+var PRE = CMD_PREFIX+'pre';
 
 function parseHTML(str){
     var startNodeData = null;
     var endNodeData;
     var stack = [];
     var compStack = [];
+    var innerHTML = undefined;
     var roots = [];
-    var slotList = [];
     var compNode;
     var preRid = -1;
-    var outPre = true;
-    while(str.length>0){
-        if(!startNodeData){
-            startNodeData = TAG_START_EXP.exec(str);
-            //removeIf(production)
-            assert(startNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - syntax error in - \n"+str);
-            //endRemoveIf(production)
-            if(!startNodeData){}
-            var index = startNodeData.index + startNodeData[0].length;
-            str = str.substr(index);
+    var inPre = false;
+    var preTxt = '';
+    var rowNum = 0;
+    var parentNode;
+
+    var nodeList = str.replace(/(\n?\s*)?<\/?[^>]*>/img,function(a){return NODESPLIT+NODEPRIFIX+a+NODESPLIT}).split(NODESPLIT);
+    nodeList.forEach(function(str) {
+        var isTag = str.indexOf(NODEPRIFIX)==0;
+        if(isTag)str = str.replace(NODEPRIFIX,'');
+
+        //处理换行
+        var tmp = countRows(str);
+        var rows = tmp[0]
+        rowNum += rows;
+        str = tmp[1];
+
+        if(!str.trim())return;
+
+        if(isDefined(innerHTML)){
+            var lines = '';
+            for(var i=rows;i--;){
+                lines += '\n';
+            }
+            innerHTML += lines+str;
         }
-        //build RawNode
-        if(outPre){
+
+        if(inPre && isUndefined(innerHTML)){
+            preTxt += str;
+            return;
+        }
+
+        if(isTag){
+            endNodeData = TAG_END_EXP.exec(str);
+            if(endNodeData){
+                //进入弹出流程
+                var tagName = endNodeData[1];
+                var tmp = stack[stack.length-1];
+                if(tmp.tag == tagName)
+                    stack.pop();
+
+                if(compNode && compNode.tag == tagName){
+                    compStack.pop();
+                    compNode.innerHTML = innerHTML.substring(0,innerHTML.lastIndexOf(str));
+                    innerHTML = undefined;
+                    compNode = compStack[compStack.length-1];
+                }
+
+                return;
+            }
+            if(isDefined(innerHTML))return;
+
+            startNodeData = TAG_START_EXP.exec(str);
+
+            //进入压栈流程
             var tagName = startNodeData[1];
+
+            if(tagName == PRE){
+                inPre = true;
+                preTxt = '';
+                return;
+            }
+            //build RawNode
             var node = new RawNode(tagName);
-            node.outerHTML = startNodeData[0];
-            node.innerHTML = str;
-            var parentNode = stack[stack.length-1];
+
+            parentNode = stack[stack.length-1];
             if(parentNode){
                 if(!parentNode.children)parentNode.children = [];
                 parentNode.children.push(node);
@@ -52,117 +102,59 @@ function parseHTML(str){
                 compNode = node;
                 node.isComp = true;
                 compStack.push(node);
+                innerHTML = '';
             }
             var attrStr = startNodeData[2].trim();
             var attrAry = attrStr.match(TAG_ATTR_EXP);
             if(attrAry){
-                preRid = parseAttrs(attrAry,node,compNode);
+                parseAttrs(attrAry,node,rowNum,str,compNode);
             }
+
+            if(VOIDELS.indexOf(tagName)<0)stack.push(node);
         }
-        
+        if(!isTag && isUndefined(innerHTML))
+            parseHTML_txt(str,stack[stack.length-1],rowNum);
+    });
 
-        if(preRid>-1 && outPre){
-            outPre = false;
-        }
-
-        //handle void el root
-        if(str.length<1)break;
-
-        //handle slot
-        if(outPre){
-            if(tagName === SLOT){
-                slotList.push([parentNode,node,node.attrs?node.attrs.name.replace(/"/mg,''):null]);
-            }else if(node.slot){
-                var slotComp = compNode;
-                if(slotComp === node){//component can be inserted into slots
-                    slotComp = compStack[compStack.length-1-1];
-                }
-                if(slotComp){
-                    if(!slotComp.slotMap)slotComp.slotMap = {};
-                    slotComp.slotMap[node.slot] = node;
-                }
-            }
-        }
-        if(VOIDELS.indexOf(tagName)<0)stack.push(node);
-        else{
-            node.innerHTML = '';
-        }
-        
-
-        //check
-        var nextNodeData = TAG_START_EXP.exec(str);
-        if(nextNodeData){
-            startNodeData = nextNodeData;
-        }
-        endNodeData = TAG_END_EXP.exec(str);
-        var endIndex = endNodeData?endNodeData.index:-1;
-        var nextIndex = nextNodeData?nextNodeData.index:-1;
-        parentNode = stack[stack.length-1];
-        if(nextIndex>-1 && nextIndex < endIndex){
-            if(outPre)parseHTML_txt(str.substr(0,nextIndex),parentNode);
-
-            str = str.substr(nextIndex + nextNodeData[0].length);
-        }else{
-            if(outPre)parseHTML_txt(str.substr(0,endIndex),parentNode);
-
-            var lastEndIndex = endIndex + endNodeData[0].length;
-            TAG_END_EXP_G.lastIndex = 0;
-            TAG_END_EXP_G.exec(str);
-            do{
-                var tmp = stack.pop();
-                if(tmp === compNode){
-                    compStack.pop();
-                    compNode = compStack[compStack.length-1];
-                }
-                if(outPre && tmp === node){
-                    if(node.innerHTML == endNodeData.input){
-                        node.innerHTML = endNodeData.input.substring(0,endNodeData.index);
-                    }else{
-                        var part = node.innerHTML.replace(endNodeData.input,'');
-                        node.innerHTML = part + endNodeData.input.substring(0,endNodeData.index);
-                    }                        
-                }
-                if(stack.length<1)break;
-                endNodeData = TAG_END_EXP_G.exec(str);
-                //removeIf(production)
-                assert(endNodeData,compStack.length<1?'ROOT':compStack[compStack.length-1],XERROR.COMPILE.HTML,"html template compile error - there's no end tag of <"+tagName+"> - \n"+str);
-                //endRemoveIf(production)
-                endIndex = endNodeData.index;
-                var txt = str.substring(lastEndIndex,endNodeData.index);
-                if(outPre && txt.trim()){
-                    if(endIndex>nextIndex){
-                        var tmp = TAG_START_EXP.exec(txt);
-                        if(tmp){
-                            txt = txt.substr(0,tmp.index).trim();
-                        }
-                    }
-                    if(txt.trim()){
-                        node = stack[stack.length-1];
-                        parseHTML_txt(txt,node);
-                    }                    
-                }
-                if(!outPre && tmp.rid === preRid && stack[stack.length-1].rid !== preRid){
-                    outPre = true;
-                    preRid = -1;
-                    var preTxt = new RawNode();
-                    preTxt.txtQ = [parentNode.getInnerHTML()];
-                    parentNode.children.push(preTxt);
-                }
-                lastEndIndex = endIndex + endNodeData[0].length;
-            }while(endIndex < nextIndex);
-            
-            if(!nextNodeData)break;
-            str = str.substr(nextIndex + nextNodeData[0].length);
-        }
-    }
-
-    return [roots,slotList];
+    return roots;
 }
+function countRows(str) {
+    var i = str.indexOf('\n');
+    var rows = 0;
+    while(i>-1){
+        str = str.substr(i+1);
+        rows++;
+        i = str.indexOf('\n');
+    }
+    return [rows,str];
+}
+//替换slot为对应内容
+function filterSlot(innerHTML,tmpl) {
+    var slotTagExp = /<slot([^>]*)>.*?<\/slot>/img;
+    var slotRefExp = /<([^\s]+)[^>]*slot="([^'"]+)"[^>]*>.*?<\/\1>/img;
+
+    var rs = tmpl.replace(slotTagExp,function(match,attrs) {
+        var name = null;
+        if(attrs){
+            /name\s*=\s*['"]([^'"]+)['"]/.exec(attrs);
+            name = RegExp.$1;
+        }
+        if(name){
+            var attrMatch;
+            slotRefExp.lastIndex = 0;
+            while((attrMatch=slotRefExp.exec(innerHTML))){
+                if(attrMatch[2] == name)return attrMatch[0];
+            }
+        }
+        return innerHTML;
+    });
+    return rs;
+}
+
 /**
- * 解析节点属性，
+ * 解析节点属性
  */
-function parseAttrs(attrs,node,compNode){
-    var isCompNode = compNode && node == compNode;
+function parseAttrs(attrs,node,rowNum,str,compNode){
     for(var i=attrs.length;i--;){
         var attrStr = attrs[i];
         var splitIndex = attrStr.indexOf('=');
@@ -189,9 +181,7 @@ function parseAttrs(attrs,node,compNode){
         var dName = params.shift();
         if(params.length<1)params = null;
 
-        //pre only
-        if(dName == CMD_PREFIX+'pre')return node.rid;
-        //ref only
+        //ref
         if(dName == ATTR_REF_TAG){
             node[ATTR_REF_TAG] = value;
             continue;
@@ -201,6 +191,7 @@ function parseAttrs(attrs,node,compNode){
             node[ATTR_SLOT_TAG] = value;
             continue;
         }
+
 
         var isEvent = false;
         var isBind = false;
@@ -213,7 +204,8 @@ function parseAttrs(attrs,node,compNode){
             isBind = true;
         }
         //解析value
-        var expStr = null,expFilterAry = null;
+        var expStr = null,
+            expFilterAry = null;
         if(value && (isDi||isEvent||isBind)){
             //convert
             value = value.replace(/&amp;/mg,'&');
@@ -227,7 +219,9 @@ function parseAttrs(attrs,node,compNode){
                 filterStr = value.substring(splitIndex+2,value.length);
             }
             expStr = expStr.trim();
-            expFilterAry = parseExpFilter(filterStr);
+            if(filterStr){
+                expFilterAry = parseExpFilter(filterStr,false,rowNum,expStr,str.indexOf(attrStr)+attrStr.indexOf(expStr),node);
+            }            
 
             //class & style
             if(!node.isComp && (dName.indexOf('class')>0 || dName.indexOf('style')>0)){
@@ -235,12 +229,19 @@ function parseAttrs(attrs,node,compNode){
                 continue;
             }
         }
+
+        var colPos = str.indexOf(attrStr);
+        if(isDi)colPos += CMD_PREFIX.length;
+        var waveLen = attrStr.length;
         
         if(isDi){
             dName = dName.substr(2);
             var parseDir = true;
             switch(dName){
                 case 'for':
+                    //removeIf(production)
+                    setDebugMap(node,dName,rowNum,colPos,waveLen,'directs');
+                    //endRemoveIf(production)
                     node.for = parseDirectFor(expStr,expFilterAry,compNode);
                     parseDir = false;
                     break;
@@ -261,28 +262,45 @@ function parseAttrs(attrs,node,compNode){
                     parseDir = false;
                     break;
             }
+            //removeIf(production)
+            switch(dName){
+                case 'if':
+                case 'else-if':
+                case 'html':
+                    setDebugMap(node,dName,rowNum,colPos,waveLen,'directs');
+            }
+            //endRemoveIf(production)
 
             if(parseDir){
                 if(!node.directives){
                     node.directives = {};
                 }
-                node.directives[toCamelCase(dName)] = {
+                var aName = toCamelCase(dName);
+                node.directives[aName] = {
                     name:dName,
                     args:params,
                     modifiers:modifiers,
                     exp:expStr,
                     filters:expFilterAry
                 };
+
+                //removeIf(production)
+                setDebugMap(node,aName,rowNum,colPos,waveLen,'directs');
+                //endRemoveIf(production)
             }
         }else if(isEvent){
             dName = dName.substr(1);
             if(!node.events)node.events = {};
-            node.events[toCamelCase(dName)] = {
+            var aName = toCamelCase(dName);
+            node.events[aName] = {
                 modifiers:modifiers,
                 exp:expStr,
                 args:params,
                 modifiers:modifiers
             };
+            //removeIf(production)
+            setDebugMap(node,aName,rowNum,colPos,waveLen,'events');
+            //endRemoveIf(production)
         }else{
             if(isBind){
                 dName = dName.substr(1);
@@ -291,7 +309,11 @@ function parseAttrs(attrs,node,compNode){
                 value = JSON.stringify(value);
             }
             if(!node.attrs)node.attrs = {};
-            node.attrs[toCamelCase(dName)] = value;
+            var aName = toCamelCase(dName);
+            node.attrs[aName] = value;
+            //removeIf(production)
+            setDebugMap(node,aName,rowNum,colPos,waveLen,'attrs');
+            //endRemoveIf(production)
         }
     }
 }
@@ -300,39 +322,52 @@ function toCamelCase(str) {
         return a.replace('-','').toUpperCase();
     });
 }
-function parseHTML_txt(txt,node){
-    txt = txt.trim();
+function parseHTML_txt(str,node,rowNum){
+    var txt = str//.trim();
     var txtQ = [];
     if(txt){
+        var tn = new RawNode();
         var expData = null;
         var lastIndex = 0;
         while(expData = EXP_EXP.exec(txt)){
             var t = txt.substring(lastIndex,expData.index);
             if(t)txtQ.push(t);
-            txtQ.push([expData[1],parseExpFilter(expData[2],true)]);
             lastIndex = expData.index + expData[0].length;
+            var k = expData[1];
+            txtQ.push([k,parseExpFilter(expData[2],true,rowNum,expData[0],expData.index,tn,k)]);
+
+            //removeIf(production)
+            setDebugMap(tn,k,rowNum,str.indexOf(expData[0]),expData[0].length,'txt');
+            //endRemoveIf(production)
         }
         if(lastIndex < txt.length){
             txtQ.push(txt.substr(lastIndex));
         }
         if(txtQ.length<1)txtQ.push(txt);
-        var tn = new RawNode();
         tn.txtQ = txtQ;
 
         if(!node.children)node.children = [];
         node.children.push(tn);
     }
 }
-function parseExpFilter(filterStr,isTxt){
+function parseExpFilter(filterStr,isTxt,rowNum,str,startPos,node){
     var filterAry = null;
     if(filterStr){
         filterAry = [];
         var filters = filterStr.split('|');
         for(var i=0;i<filters.length;i++){
             var parts = filters[i].split(':');
+            var filterName = parts[0].trim();
+            
+            //removeIf(production)
+            setDebugMap(node,str+":"+filterName,rowNum,str.indexOf(filterName)+startPos,filterName.length,'filter');
+            //endRemoveIf(production)
+            
             filterAry.push({
-                name:parts[0].trim(),
-                param:parts.slice(1)
+                name:filterName,
+                param:parts.slice(1),
+                id:str+":"+filterName,
+                rid:node.rid
             });
         }
     }
@@ -344,9 +379,8 @@ function parseDirectFor(expStr,expFilterAry,compNode){
     var rs = null;//k,v,filters,ds1,ds2;
     var forExpStr = expStr;
     var filters = expFilterAry;
-    //removeIf(production)    
-    assert(forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/),compNode?compNode.name:'ROOT',XERROR.COMPILE.EACH,'invalid for expression : '+forExpStr);
-    //endRemoveIf(production)
+    forExpStr.match(/^([\s\S]*?)\s+as\s+([\s\S]*?)$/);
+    
     var alias = RegExp.$2;
     var kv = alias.split(',');
     var k = kv.length>1?kv[0]:null;

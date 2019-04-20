@@ -52,6 +52,7 @@ var Component = extend(function(props) {
 	this.$props = props;
 	this._watchers = [];//use to del
 	this._updateMap = {};
+	this._slotted = false;//组件是否支持插槽
 	impex._cs[this.$id] = this;
 },EventEmitter,{
 	$setState:function(stateObj) {
@@ -173,8 +174,17 @@ var Component = extend(function(props) {
 
 		callLifecycle(this,LC_CO.created);
 
-		if(this._processedTmpl)
+		var tmpl = this._processedTmpl;
+		if(tmpl){
+			this._processedTmpl = filterSlot(this._innerHTML,tmpl);
+		    if(this._processedTmpl != tmpl){
+		        this._slotted = true;
+		    }
+			//removeIf(production)
+			this._tmplRows = this._processedTmpl.split('\n');
+			//endRemoveIf(production)
 			compileComponent(this);
+		}
 
 		//挂载组件
 		if(this.$el && this.$el.parentElement){
@@ -347,11 +357,7 @@ function preprocess(comp) {
 
 		comp._processedTmpl = tmpl.trim()
 	    .replace(/<!--[\s\S]*?-->/mg,'')
-	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'')
-	    .replace(/^\s+|\s+$/img,' ')
-	    .replace(/>\s([^<]*)\s</,function(a,b){
-	            return '>'+b+'<';
-	    });
+	    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/mg,'');
 	}
 }
 function checkProps(comp,input){
@@ -434,15 +440,17 @@ function bindCustomEvent(events,comp) {
 		for(var k in events){
 			var ev = events[k];
 			var modifiers = ev.modifiers;
+			var evName = k;
 			//native
 			var handler = ev.value;
 			if(modifiers && modifiers.indexOf(EVENT_MODIFIER_NATIVE)>-1){
-				ev.value = getCustomEvHandler(k,comp);
+				evName = ev.cName;
+				ev.value = getCustomEvHandler(evName,comp);
 				if(!natives)natives = {};
 				natives[k] = ev;
 			}
 
-			comp.$on(k,handler,comp.$parent);
+			comp.$on(evName,handler,comp.$parent);
 		}
 	}
 	comp._natives = natives;
@@ -505,13 +513,20 @@ function updateComponent(comp,changeMap){
 function buildVDOMTree(comp){
     var root = null;
     var fn = compile(comp._processedTmpl,comp);
+    var argAry = [comp];
+    var p = comp.$parent;
+    while(p){
+        argAry.unshift(p);
+        p = p.$parent;
+    }
+    argAry.push(createElement,createTemplate,createText,createElementList,doFilter,compileVDOMStr);
     //removeIf(production)
     try{
     //endRemoveIf(production)
-        root = fn.call(comp,comp,createElement,createTemplate,createText,createElementList,doFilter,compileVDOMStr);
+        root = fn.apply(comp,argAry);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.$name,XERROR.COMPILE.ERROR,"compile error with attributes "+JSON.stringify(comp.$props)+": ",e);
+        assert(false,comp.$name,"compile error ",e);
     }
     //endRemoveIf(production)
 

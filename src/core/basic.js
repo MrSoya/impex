@@ -58,15 +58,68 @@
 		'propsChange':'propsChange'
 	};
 
+	//debugs
+	var DebugMap = {
+		attrs:{},
+		events:{},
+		directs:{},
+		txt:{},
+		filter:{}
+	};
+	function setDebugMap(node,name,rowNum,colPos,len,type) {
+		var map = DebugMap[type][node.rid];
+		if(!map){
+			map = DebugMap[type][node.rid] = {};
+		}
+		map[name] = {r:rowNum,c:colPos,l:len};
+	}
+
 	var PluginInited = false;
 
 	//removeIf(production)
-	function error(compName,code,msg,e){
-		console && console.error('xerror[' + compName +'] - #'+code+' - '+msg,e||'','\n\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror');
+	function error(compName,desc,e,stack){
+		var msg = 'Impex error : '
+				+(desc||'')
+				+'('+(e?e.message:'-')+')'
+				+'\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror'
+				+'\n\n';
+		if(stack)msg += stack;
+		msg += '\n[Scope in <' + compName +'>]';
+		console.error(msg);
 	}
 	function assert(isTrue,compName,code,msg,e) {
-		!isTrue && error(compName,code,msg,e);
+		!isTrue && error(compName,msg,e);
 	}
+	function getStack(compId,rid,k,type) {
+		var comp = impex._cs[compId];
+		var map = DebugMap[type][rid];
+		var debugInfo = map[k];
+
+		//生成调试信息
+		var stack = '';
+		comp._tmplRows.forEach(function(str,i) {
+			stack += i+str+'\n';
+			if(debugInfo.r == i){
+				var waveLine = '';
+				for(var s=0;s<str.length;s++){
+					if(s<debugInfo.c){
+						waveLine += ' ';
+					}else if(s>=debugInfo.c+debugInfo.l){
+						break;
+					}else{
+						waveLine += '^';
+					}
+				}
+				var blanks = '';
+				for(var l=(i+'').length;l--;){
+					blanks += ' ';
+				}
+				stack += blanks+waveLine+'\n';
+			}
+		});
+		return stack;
+	}
+
 	var XERROR = {
 		COMPONENT:{//1XXX
 			CONTAINER:1001,

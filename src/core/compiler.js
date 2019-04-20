@@ -10,27 +10,38 @@
 
 var VDOM_CACHE = {};
 function compile(str,comp){
-    if(VDOM_CACHE[comp.$name] && !comp._hasSlots){
+    if(VDOM_CACHE[comp.$name] && !comp._slotted){
         return VDOM_CACHE[comp.$name];
     }
-    if(comp._compiler && comp._hasSlots){
-        return comp._compiler;
-    }
 
-    var rs = 'with(comp){return '+compileVDOMStr(str,comp)+'}';
-    rs = new Function('comp,_ce,_tmp,_ct,_li,_fi,_cs',rs);
-    
-    if(comp.$name == 'ROOT' || !comp._hasSlots){
+    var compiled = compileVDOMStr(str,comp);
+
+    var scopeStart= '';
+    var scopeEnd= '';
+    var p = comp;
+    var i = 0;
+    var argAry = [];
+    while(p){
+        var compName = 'comp'+ i++;
+        argAry.unshift(compName);
+        scopeStart = 'with('+compName+'){'+scopeStart;
+        scopeEnd += '}';
+        p = p.$parent;
+    }
+    argAry.push('_ce','_tmp','_ct','_li','_fi','_cs');
+
+    var rs = scopeStart+'return '+compiled+scopeEnd;
+    rs = new Function(argAry.join(','),rs);
+
+    if(comp.$name == 'ROOT' || !comp._slotted){
         VDOM_CACHE[comp.$name] = rs;
-    }else{
-        comp._compiler = rs;
     }
 
     return rs;
 }
 function compileVDOMStr(str,comp,isHTML){
-    var pair = parseHTML(str);
-    var roots = pair[0];
+
+    var roots = parseHTML(str);
 
     //removeIf(production)
     assert(roots.length==1,comp.$name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
@@ -43,29 +54,8 @@ function compileVDOMStr(str,comp,isHTML){
     assert(!COMP_MAP[rs.tag],comp.$name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
     //endRemoveIf(production)
     
-    //doslot
-    doSlot(pair[1],comp._slots,comp._slotMap);
     var str = buildEvalStr(comp,rs,!isHTML);
     return str;
-}
-function doSlot(slotList,slots,slotMap){
-    if(slots || slotMap)
-        slotList.forEach(function(slot){
-            var parent = slot[0];
-            var node = slot[1];
-            var name = slot[2];
-            //update slot position everytime
-            var pos = parent.children.indexOf(node);
-            var params = [pos,1];
-            
-            if(name){
-                if(slotMap && slotMap[name])
-                    params.push(slotMap[name]);
-            }else{
-                params = params.concat(slots);
-            }
-            parent.children.splice.apply(parent.children,params);
-        });
 }
 
 var FORSCOPE_COUNT = 0;
@@ -76,10 +66,19 @@ function buildEvalStr(comp,raw,root){
         var children = '';
         RNODE_MAP[raw.rid] = raw;
         var attrs = '';
+        var attrsDebug = '';
         for(var k in raw.attrs){
+            //removeIf(production)
+            attrsDebug += 'try{'+raw.attrs[k]
+            +'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","attrs"))}';
+            //endRemoveIf(production)
+            
             attrs += ','+k+':'+raw.attrs[k];
         }
         attrs = '{'+attrs.substr(1)+'}';
+        //removeIf(production)
+        attrs = '(function(){'+attrsDebug+';return '+attrs+'}).call(this)';
+        //endRemoveIf(production)
         if(!raw.isComp){
             var startIf = false,ifStr = '';
             if(raw.children)
@@ -116,44 +115,72 @@ function buildEvalStr(comp,raw,root){
         var ifStr = raw.if || raw.elseif;
         var ifStart = '',ifEnd = '';
         if(ifStr){
+            //removeIf(production)
+            ifStr = '(function(){try{return '+ifStr+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+(raw.if?'if':'else-if')+'","directs"))}}).call(this)';
+            //endRemoveIf(production)
             ifStart = '('+ifStr+')?';
             ifEnd = ':';
         }
 
         //指令
         var diStr = '';
+        var diDebug = '';
         for(var k in raw.directives){
             var di = raw.directives[k];
             var tmp = JSON.stringify(di);
             tmp = tmp.substr(0,tmp.length - 1) + ',value:'+di.exp+'}';
+
+            //removeIf(production)
+            diDebug += 'try{'+di.exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","directs"))}';
+            //endRemoveIf(production)
+
             diStr += ','+k+':'+tmp;
         }
         diStr = diStr?'{'+diStr.substr(1)+'}':undefined;
-        
+        //removeIf(production)
+        diStr = '(function(){'+diDebug+';return '+diStr+'}).call(this)';
+        //endRemoveIf(production)
 
         //事件
         var events = '';
+        var eventsDebug = '';
         for(var k in raw.events){
             var ev = raw.events[k];
             var tmp = JSON.stringify(ev);
             var modifiers = ev.modifiers;
-            var exp = ev.exp;
-            var isOnlyName = !/\(.*\)/.test(exp);
-            if(isOnlyName){
-                exp += '()';
-            }
+            var isNative = modifiers && modifiers.indexOf(EVENT_MODIFIER_NATIVE)>-1;
+            var exp = ev.exp.trim();
+            //是否为变量名
+            var isVar = /^[$_a-z][$_a-z0-9]*$/i.test(exp);
+            var val;
+            var cName = null;
             //组件自定义事件无论是否写了参数，都以实际触发时的参数为准
-            if(raw.isComp && (!modifiers || modifiers.indexOf(EVENT_MODIFIER_NATIVE)<0)){
-                var args = '';
-                var parts = exp.split(' ');
-                parts = parts[parts.length-1];
-                var context = parts.substring(0,parts.lastIndexOf('.')) || 'this';
-                exp = exp.substr(0,exp.indexOf('('));
-                exp += '.apply('+context+',arguments)';
+            if(raw.isComp && !isNative){
+                if(isVar){
+                    //removeIf(production)
+                    exp = '(function(){try{return '+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}}).call(this)';
+                    //endRemoveIf(production)
+                    val = exp;
+                }else{
+                    //removeIf(production)
+                    exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
+                    //endRemoveIf(production)
+                    val = 'function(){'+exp+'}';
+                }
+            }else{
+                if(raw.isComp && isNative){
+                    cName = k + Date.now();
+                }
+                if(isVar){
+                    exp += '()';
+                }
+                //removeIf(production)
+                exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
+                //endRemoveIf(production)
+                val = 'function($event,$vnode){ '+exp+'}';
             }
-            var val = 'function($event,$vnode){ '+exp+'}';
 
-            tmp = tmp.substr(0,tmp.length - 1) + ',value:'+val+'}';
+            tmp = tmp.substr(0,tmp.length - 1) + ',value:'+val+ ',cName:"'+cName+'"}';
             events += ','+k+':'+tmp;
         }
         events = events?'{'+events.substr(1)+'}':undefined;
@@ -161,7 +188,10 @@ function buildEvalStr(comp,raw,root){
         //html
         var html = 'null';
         if(raw.html){
-            html = "eval(_cs('<"+raw.tag+">'+("+raw.html+")+'</"+raw.tag+">',comp,true))";
+            html = "eval(_cs('<"+raw.tag+">'+("+raw.html+")+'</"+raw.tag+">',this,true))";
+            //removeIf(production)
+            html = '(function(){try{return '+html+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","html","directs"))}}).call(this)';
+            //endRemoveIf(production)
         }
 
         var nodeStr = '_ce('+root+',this,'+(raw.class||undefined)+','+(raw.style||undefined)+','+attrs+','+diStr+','+events+',"'+raw.rid+'",['+children+'],'+html;
@@ -169,7 +199,12 @@ function buildEvalStr(comp,raw,root){
             nodeStr = '_tmp(['+children+']';
         }
         nodeStr = ifStart + nodeStr;
-        if(raw.for){
+        //removeIf(production)
+        if(raw.for && !raw.for[1]){
+            error(comp.$name,"invalid x-for expression",null,getStack(comp.$id,raw.rid,'for',"directs"));
+        }
+        //endRemoveIf(production)
+        if(raw.for && raw.for[1]){
             var k = (raw.for[0]||'').trim();
             k = k?','+k:'';
             var v = raw.for[1].trim();
@@ -182,32 +217,37 @@ function buildEvalStr(comp,raw,root){
                 dsStr = "(function(){var rs=[];for(var i="+ds1+";i<="+ds2+";i++)rs.push(i);return rs;}).call(this)"
             }
             if(filters){
-                dsStr = "_fi("+dsStr+","+buildFilterStr(filters)+",comp)";
+                dsStr = "_fi("+dsStr+","+buildFilterStr(filters)+",this)";
             }
             str = '_li('+dsStr+',function($index,'+v+k+'){'+declare+' return '+nodeStr+')'+(ifEnd?':null':'')+'},this)';
         }else{
             str = nodeStr+')'+ifEnd;
         }
     }else{
-        var tmp = buildTxtStr(raw.txtQ);
+        var tmp = buildTxtStr(raw.txtQ,comp.$name,comp.$id,raw.rid);
         str += '_ct('+tmp+')';
     }
 
     return str;
 }
-function buildTxtStr(q){
+function buildTxtStr(q,cname,cid,rid){
     var rs = '';
     q.forEach(function(item){
         if(item instanceof Array){
             var exp = item[0];
             var filter = item[1];
+            var evalStr = '';
             if(filter){
-                rs += "+_fi("+exp+","+buildFilterStr(filter)+",comp)";
+                evalStr = "+_fi("+exp+","+buildFilterStr(filter)+",this)";
             }else{
-                rs += "+("+exp+")";
+                evalStr = "+("+exp+")";
             }
+            //removeIf(production)
+            evalStr = '+(function(){try{return ""'+evalStr+'}catch(e){impex._$error("'+cname+'","txt",e,impex._$getStack("'+cid+'","'+rid+'","'+exp+'","txt"))}}).call(this)';
+            //endRemoveIf(production)
+            rs += evalStr;
         }else if(item){
-            rs += "+"+JSON.stringify(item);
+            rs += "+" + JSON.stringify(item);
         }
     });
     rs = rs.replace(/\n/mg,'');
@@ -217,7 +257,7 @@ function buildTxtStr(q){
 function buildFilterStr(filters){
     var rs = '';
     filters.forEach(function(f){
-        var tmp = '["'+f.name+'",['+f.param.toString()+']]';
+        var tmp = '["'+f.name+'",['+f.param.toString()+'],"'+f.id+'","'+f.rid+'"]';
         rs += ','+tmp;
     });
     return '['+rs.substr(1)+']';
