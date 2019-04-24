@@ -263,7 +263,16 @@ function callLifecycle(comp,lcName,argAry) {
 	lcq && lcq.forEach(function(lcMap) {
 		lcMap[lcName] && (rs = lcMap[lcName].apply(comp,argAry));
 	});
-	comp[lcName] && (rs = comp[lcName].apply(comp,argAry));
+	//removeIf(production)
+	try{
+	//endRemoveIf(production)
+		comp[lcName] && (rs = comp[lcName].apply(comp,argAry));
+	//removeIf(production)
+	}catch(e){
+		error(comp.$name,'errors in lifecycle ['+lcName+']',e);
+	}
+	//endRemoveIf(production)
+	
 	return rs;
 }
 

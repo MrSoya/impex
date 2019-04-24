@@ -80,7 +80,7 @@
 	function error(compName,desc,e,stack){
 		var msg = 'Impex error : '
 				+(desc||'')
-				+'('+(e?e.message:'-')+')'
+				+(e?' - '+e.message:'')
 				+'\nFor more information about the xerror,please visit the following address: http://impexjs.org/doc/techniques.html#techniques-xerror'
 				+'\n\n';
 		if(stack)msg += stack;
