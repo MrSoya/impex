@@ -44,14 +44,14 @@ function compileVDOMStr(str,comp,isHTML){
     var roots = parseHTML(str);
 
     //removeIf(production)
-    assert(roots.length==1,comp.$name,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
+    assert(roots.length==1,comp,XERROR.COMPILE.ONEROOT,"should only have one root in your template");
     //endRemoveIf(production)
     
     var rs = roots[0];
 
     //removeIf(production)
-    assert(rs.tag && rs.tag != 'template' && rs.tag != 'slot' && !rs.for,comp.$name,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
-    assert(!COMP_MAP[rs.tag],comp.$name,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
+    assert(rs.tag && rs.tag != 'template' && rs.tag != 'slot' && !rs.for,comp,XERROR.COMPILE.ROOTTAG,"root element cannot be <template> or <slot>");
+    assert(!COMP_MAP[rs.tag],comp,XERROR.COMPILE.ROOTCOMPONENT,"root element <"+rs.tag+"> should be a non-component tag");
     //endRemoveIf(production)
     
     var str = buildEvalStr(comp,rs,!isHTML);
@@ -70,7 +70,7 @@ function buildEvalStr(comp,raw,root){
         for(var k in raw.attrs){
             //removeIf(production)
             attrsDebug += 'try{'+raw.attrs[k]
-            +'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","attrs"))}';
+            +'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","attrs"))}';
             //endRemoveIf(production)
             
             attrs += ','+k+':'+raw.attrs[k];
@@ -116,7 +116,7 @@ function buildEvalStr(comp,raw,root){
         var ifStart = '',ifEnd = '';
         if(ifStr){
             //removeIf(production)
-            ifStr = '(function(){try{return '+ifStr+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+(raw.if?'if':'else-if')+'","directs"))}}).call(this)';
+            ifStr = '(function(){try{return '+ifStr+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+(raw.if?'if':'else-if')+'","directs"))}}).call(this)';
             //endRemoveIf(production)
             ifStart = '('+ifStr+')?';
             ifEnd = ':';
@@ -131,7 +131,7 @@ function buildEvalStr(comp,raw,root){
             tmp = tmp.substr(0,tmp.length - 1) + ',value:'+di.exp+'}';
 
             //removeIf(production)
-            diDebug += 'try{'+di.exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","directs"))}';
+            diDebug += 'try{'+di.exp+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","directs"))}';
             //endRemoveIf(production)
 
             diStr += ','+k+':'+tmp;
@@ -158,12 +158,12 @@ function buildEvalStr(comp,raw,root){
             if(raw.isComp && !isNative){
                 if(isVar){
                     //removeIf(production)
-                    exp = '(function(){try{return '+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}}).call(this)';
+                    exp = '(function(){try{return '+exp+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}}).call(this)';
                     //endRemoveIf(production)
                     val = exp;
                 }else{
                     //removeIf(production)
-                    exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
+                    exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
                     //endRemoveIf(production)
                     val = 'function(){'+exp+'}';
                 }
@@ -175,7 +175,7 @@ function buildEvalStr(comp,raw,root){
                     exp += '()';
                 }
                 //removeIf(production)
-                exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
+                exp = 'try{'+exp+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","'+k+'","events"))}';
                 //endRemoveIf(production)
                 val = 'function($event,$vnode){ '+exp+'}';
             }
@@ -190,7 +190,7 @@ function buildEvalStr(comp,raw,root){
         if(raw.html){
             html = "eval(_cs('<"+raw.tag+">'+("+raw.html+")+'</"+raw.tag+">',this,true))";
             //removeIf(production)
-            html = '(function(){try{return '+html+'}catch(e){impex._$error("'+comp.$name+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","html","directs"))}}).call(this)';
+            html = '(function(){try{return '+html+'}catch(e){impex._$error("'+comp.$id+'","",e,impex._$getStack("'+comp.$id+'","'+raw.rid+'","html","directs"))}}).call(this)';
             //endRemoveIf(production)
         }
 
@@ -201,7 +201,7 @@ function buildEvalStr(comp,raw,root){
         nodeStr = ifStart + nodeStr;
         //removeIf(production)
         if(raw.for && !raw.for[1]){
-            error(comp.$name,"invalid x-for expression",null,getStack(comp.$id,raw.rid,'for',"directs"));
+            error(comp,"invalid x-for expression",null,getStack(comp.$id,raw.rid,'for',"directs"));
         }
         //endRemoveIf(production)
         if(raw.for && raw.for[1]){
@@ -243,7 +243,7 @@ function buildTxtStr(q,cname,cid,rid){
                 evalStr = "+("+exp+")";
             }
             //removeIf(production)
-            evalStr = '+(function(){try{return ""'+evalStr+'}catch(e){impex._$error("'+cname+'","txt",e,impex._$getStack("'+cid+'","'+rid+'","'+exp+'","txt"))}}).call(this)';
+            evalStr = '+(function(){try{return ""'+evalStr+'}catch(e){impex._$error("'+cid+'","txt",e,impex._$getStack("'+cid+'","'+rid+'","'+exp+'","txt"))}}).call(this)';
             //endRemoveIf(production)
             rs += evalStr;
         }else if(item){

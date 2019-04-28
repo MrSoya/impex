@@ -102,7 +102,7 @@ function doFilter(v,filters,comp){
         if(!ins)ins = comp[f[0]];
 
         //removeIf(production)
-        if(!ins)error(comp.$name,"can not find filter '"+f[0]+"'",null,getStack(comp.$id,f[3],f[2],"filter"));
+        if(!ins)error(comp,"can not find filter '"+f[0]+"'",null,getStack(comp.$id,f[3],f[2],"filter"));
         //endRemoveIf(production)
         
         if(!ins)continue;

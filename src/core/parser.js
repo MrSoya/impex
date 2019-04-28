@@ -337,7 +337,7 @@ function parseHTML_txt(str,node,rowNum){
             txtQ.push([k,parseExpFilter(expData[2],true,rowNum,expData[0],expData.index,tn,k)]);
 
             //removeIf(production)
-            setDebugMap(tn,k,rowNum,str.indexOf(expData[0]),expData[0].length,'txt');
+            setDebugMap(tn,k,rowNum,str.replace(/\t/mg,'    ').indexOf(expData[0]),expData[0].length,'txt');
             //endRemoveIf(production)
         }
         if(lastIndex < txt.length){

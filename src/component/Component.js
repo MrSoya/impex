@@ -269,7 +269,7 @@ function callLifecycle(comp,lcName,argAry) {
 		comp[lcName] && (rs = comp[lcName].apply(comp,argAry));
 	//removeIf(production)
 	}catch(e){
-		error(comp.$name,'errors in lifecycle ['+lcName+']',e);
+		error(comp,'errors in lifecycle ['+lcName+']',e);
 	}
 	//endRemoveIf(production)
 	
@@ -336,7 +336,7 @@ function preprocess(comp) {
 		var cs = computeState[k];
 		var fn = cs.get || cs;
 
-		assert(fn instanceof Function,comp.$name,XERROR.COMPONENT.COMPUTESTATE,"invalid computeState '"+k+"' ,it must be a function or an object with getter");
+		assert(fn instanceof Function,comp,XERROR.COMPONENT.COMPUTESTATE,"invalid computeState '"+k+"' ,it must be a function or an object with getter");
 	}
 	//endRemoveIf(production)
 
@@ -411,7 +411,7 @@ function checkProps(comp,input){
 
 	//removeIf(production)
 	//check requires
-	assert(Object.keys(requires).length==0,comp.$name,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
+	assert(Object.keys(requires).length==0,comp,XERROR.INPUT.REQUIRE,"input props ["+Object.keys(requires).join(',')+"] are required");
 	//endRemoveIf(production)
 }
 
@@ -535,7 +535,7 @@ function buildVDOMTree(comp){
         root = fn.apply(comp,argAry);
     //removeIf(production)
     }catch(e){
-        assert(false,comp.$name,"compile error ",e);
+    	error(comp,"compile error ",e);
     }
     //endRemoveIf(production)
 

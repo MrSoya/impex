@@ -187,14 +187,18 @@
 			var el = opts.el;
 			if(el instanceof HTMLElement){
 				//removeIf(production)
-	            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+	            if(!document.body.contains(el)){
+	            	error(null,"root element must be inside <body> tag");
+	            }
 	            //endRemoveIf(production)
 				tmpl = el.outerHTML;
 			}else if(isString(el) && el.trim()){
 				try{
             		el = document.querySelector(el);
             		//removeIf(production)
-		            assert(el.tagName !== 'BODY','ROOT',XERROR.COMPONENT.CONTAINER,"root element must be inside <body> tag");
+		            if(!document.body.contains(el)){
+		            	error(null,"root element must be inside <body> tag");
+		            }
 		            //endRemoveIf(production)
             		tmpl = el.outerHTML;
 				}catch(e){
